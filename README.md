@@ -1,6 +1,6 @@
 # PadoGrid
 
-PadoGrid is a collection of add-on components and tools specifically designed for data grid products to deliver shrink-wrapped solutions. It introduces the concept of distributed workspaces for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared. A workspace provides a sandbox environment completely isolated from other workspaces. A workspace can have multiple data grid clusters including apps, VMs, and Docker/Kubernetes containers. A workspace can span any number of nodes and a workspace snapshot can be taken at any time in the form of a bundle. Bundles are portable such that they can be installed and run on another workspace created by another user on another platform. Because of their portability, bundles provide the means to shrink-wrap fully operational use cases. Leveraging this feature, PadoGrid includes online catalogs of bundles that are readily available for installation.
+PadoGrid is a collection of add-on components and tools specifically designed for data grid products to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of distributed workspaces for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared. A workspace provides a sandbox environment completely isolated from other workspaces. A workspace can have multiple data grid clusters including apps, VMs, and Docker/Kubernetes containers. A workspace can span any number of nodes and a workspace snapshot can be taken at any time in the form of a bundle. Bundles are portable such that they can be installed and run on another workspace created by another user on another platform. Because of their portability, bundles provide the means to shrink-wrap fully operational use cases. Leveraging this feature, PadoGrid includes online catalogs of bundles that are readily available for installation.
 
 - [PadoGrid Manual](https://github.com/padogrid/padogrid/wiki)
 - [Quick Start](https://github.com/padogrid/padogrid/wiki/Quick-Start)
@@ -11,7 +11,7 @@ PadoGrid is a collection of add-on components and tools specifically designed fo
 ## PadoGrid Features
 
 - [Distributed Workspaces](https://github.com/padogrid/padogrid/wiki/Understanding-Workspaces)
-- [Support for Multiple Data Grid Products](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products)
+- [Multiple Data Grid Products](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products)
 - [Performance Test App](https://github.com/padogrid/padogrid/wiki/Geode-perf_test-App)
 - [Data Grid Desktop App](https://github.com/padogrid/padogrid/wiki/Hazelcast-Desktop-App)
 - [Grafana App](https://github.com/padogrid/padogrid/wiki/Geode-Grafana-App)
