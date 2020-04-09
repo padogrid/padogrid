@@ -124,4 +124,4 @@ The PadoGrid Manual describes product concepts and provides complete instruction
 
 PadoGrid has been built with use cases in mind. It aims to deliver out-of-the-box turnkey solutions on top of data grid products. The bundle catalogs provide compiled lists of readily available solutions. Just install and run.
 
-[Bundle Catalogs]((https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+[Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
