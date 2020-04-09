@@ -287,6 +287,7 @@ HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
 # IMPORTANT: Do NOT remove this call.
 # -------------------------------------------------------------------------------
 . $SCRIPT_DIR/.argenv.sh "$@"
+. $SCRIPT_DIR/.utilenv_hazelcast.sh
 
 # Disagnostics logging
 DEFAULT_DIAGNOSTICS_ENABLED="true"
