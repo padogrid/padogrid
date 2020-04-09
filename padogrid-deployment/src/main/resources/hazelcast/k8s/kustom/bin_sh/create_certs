@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh > /dev/null
+
+EXECUTABLE="`basename $0`"
+SECRET_FILE=overlay-base/cm-adapter-serving-certs.yaml
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   $EXECUTABLE"
+   echo ""
+   echo "  Generates the following secret file that contains TLS certificates. This command"
+   echo "  must be run first before applying Kubernetes Prometheus and Horizontal Pod Autoscaler (HPA)"
+   echo "  configuration files."
+   echo ""
+   echo "  File to generate:"
+   echo "     $APP_ETC_DIR/custom-metrics/$SECRET_FILE"
+   echo ""
+   echo "Default: $EXECUTABLE"
+   echo ""
+   exit
+fi
+
+# Generates TLS certs for the Prometheus custom metrics API adapter
+PURPOSE=metrics
+SERVICE_NAME=custom-metrics-apiserver
+ALT_NAMES=\"custom-metrics-apiserver.monitoring\",\"custom-metrics-apiserver.monitoring.svc\"
+
+pushd $APP_ETC_DIR/custom-metrics > /dev/null 2>&1
+
+echo "Generating TLS certs"
+docker pull cfssl/cfssl
+mkdir -p output
+touch output/apiserver.pem
+touch output/apiserver-key.pem
+openssl req -x509 -sha256 -new -nodes -days 365 -newkey rsa:2048 -keyout ${PURPOSE}-ca.key -out ${PURPOSE}-ca.crt -subj "/CN=ca"
+echo '{"signing":{"default":{"expiry":"43800h","usages":["signing","key encipherment","'${PURPOSE}'"]}}}' > "${PURPOSE}-ca-config.json"
+echo "{\"CN\":\"${SERVICE_NAME}\",\"hosts\":[${ALT_NAMES}],\"key\":{\"algo\":\"rsa\",\"size\":2048}}" | docker run  -v ${HOME}:${HOME} -v ${PWD}/metrics-ca.key:/go/src/github.com/cloudflare/cfssl/metrics-ca.key -v ${PWD}/metrics-ca.crt:/go/src/github.com/cloudflare/cfssl/metrics-ca.crt -v ${PWD}/metrics-ca-config.json:/go/src/github.com/cloudflare/cfssl/metrics-ca-config.json -i cfssl/cfssl gencert -ca=metrics-ca.crt -ca-key=metrics-ca.key -config=metrics-ca-config.json - | docker run --entrypoint=cfssljson -v ${HOME}:${HOME} -v ${PWD}/output:/go/src/github.com/cloudflare/cfssl/output -i cfssl/cfssl -bare output/apiserver
+
+# Generate secret
+echo "Generating ${SECRET_FILE}"
+echo "apiVersion: v1" > ${SECRET_FILE}
+echo "kind: Secret" >> ${SECRET_FILE}
+echo "metadata:" >> ${SECRET_FILE}
+echo " name: cm-adapter-serving-certs" >> ${SECRET_FILE}
+echo " namespace: monitoring" >> ${SECRET_FILE}
+echo "data:" >> ${SECRET_FILE}
+if [[ $OS_NAME == DARWIN* ]]; then
+   echo " serving.crt: $(cat output/apiserver.pem | base64)" >> ${SECRET_FILE}
+   echo " serving.key: $(cat output/apiserver-key.pem | base64)" >> ${SECRET_FILE}
+else
+   echo " serving.crt: $(cat output/apiserver.pem | base64 -w 0)" >> ${SECRET_FILE}
+   echo " serving.key: $(cat output/apiserver-key.pem | base64 -w 0)" >> ${SECRET_FILE}
+fi
+
+# Remove certificate files
+rm -f apiserver-key.pem apiserver.csr apiserver.pem
+rm -f metrics-ca-config.json metrics-ca.crt metrics-ca.key
+
+echo "Secret file generated: "
+echo "   $APP_ETC_DIR/custom-metrics/$SECRET_FILE"
+echo ""
+popd > /dev/null 2>&1

@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -clustergroup -cpgroup -id -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Forcifully close the specified session in the specified
+                 padogrid cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-clustergroup cluster_group_name]
+               [-cpgroup cp_group_name] [-?] -id session_id
+
+DESCRIPTION
+   Forcifully closes the specified session. Use this command when a CP session
+   does not terminate immediately due to a Hazelcast member instance that owns
+   the session crashed.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -clustergroup cluster_group_name
+             Cluster group name. Default: dev
+
+   -cpgroup cp_group_name
+             CP group name.
+
+   -id session_id
+             Session ID (long type). Required.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -clustergroup dev -cpgroup default -id session_id
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "cp_*" $EXECUTABLE
+   exit
+fi
+
+if [ "$ID" == "" ]; then
+   echo "ERROR: Session ID not specified. Command aborted."
+   exit 1
+fi
+
+if [ "$CLUSTER_GROUP" == "" ]; then
+   CLUSTER_GROUP="dev"
+fi
+if [ "$GROUP_PW" != "" ]; then
+   __DATA="${CLUSTER_GROUP}&${GROUP_PW}"
+else
+   __DATA=$CLUSTER_GROUP
+fi
+
+if [ "$CP_GROUP" == "" ]; then
+   CP_GROUP="default"
+fi
+
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM-1
+HOST_NAME=localhost
+
+BASE_URL=http://$HOST_NAME:$MEMBER_PORT
+
+if [ "`which jq`" != "" ]; then
+   curl -s -X POST --data "${__DATA}" $BASE_URL/hazelcast/rest/cp-subsystem/groups/${CP_GROUP}/sessions/${ID}/remove | jq
+else
+   curl -s -X POST --data "${__DATA}" $BASE_URL/hazelcast/rest/cp-subsystem/groups/${CP_GROUP}/sessions/${ID}/remove
+fi

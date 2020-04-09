@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the present (current) padogrid workspace information 
+
+SYNOPSIS
+   $EXECUTABLE [-all] [-?]
+
+DESCRIPTION
+   Displays the nam of th epresent (current) working workspace. If the '-all' option
+   is present then it displays current environment details.
+
+OPTIONS
+   -all
+             If specified then it displays the current environment details.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+
+if [ "$ALL" = "true" ]; then
+   echo "----------------------------------------------------------------"
+   if [ "$CLUSTER_TYPE" == "padogrid" ]; then
+   echo "              GEODE_HOME: $GEODE_HOME"
+   else
+   echo "            GEMFIRE_HOME: $GEODE_HOME"
+   fi
+   echo "           PADOGRID_HOME: $PADOGRID_HOME"
+   echo "PADOGRID_WORKSPACES_HOME: $PADOGRID_WORKSPACES_HOME"
+   echo "      PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "            CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "       Current Workspace: $WORKSPACE"
+   echo "         Current Cluster: $CLUSTER"
+   echo "----------------------------------------------------------------"
+else
+   echo "$WORKSPACE"
+fi

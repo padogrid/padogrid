@@ -1,0 +1,47 @@
+version: '2.4'
+
+services:
+  locator:
+    image: apachegeode/geode:${VERSION}
+    hostname: locator
+    mem_limit: 512m
+    expose:
+     - "$LOCATOR_PORT"
+     - "$LOCATOR_JMX_PORT"
+     - "$JMX_MANAGER_HTTP_PORT"
+     - "$JMX_MANAGER_PORT"
+    ports:
+     - "${LOCATOR_PORT}:$LOCATOR_PORT"
+     - "${HOST_LOCATOR_JMX_PORT}:$LOCATOR_JMX_PORT"
+     - "${HOST_JMX_MANAGER_HTTP_PORT}:$JMX_MANAGER_HTTP_PORT"
+     - "${HOST_JMX_MANAGER_PORT}:$JMX_MANAGER_PORT"
+    volumes:
+     - ./padogrid:/padogrid/
+    command:
+      - bash
+      - -c 
+      - |
+        export LOG_FILE=/padogrid/log/`hostname`.log \
+        && \
+        gfsh start locator --name=`hostname` --mcast-port=0 \
+            --hostname-for-clients=${HOSTNAME_FOR_CLIENTS} \
+            --locators=locator[$LOCATOR_PORT] \
+            --port=$LOCATOR_PORT \
+            --properties-file=/padogrid/etc/gemfire.properties \
+            --J=-Dgemfire.statistic-archive-file=/padogrid/stats/`hostname`.gfs \
+            --J=-Dgemfire.log-file=/padogrid/log/`hostname`.log \
+            --J=-Dlog4j.configurationFile=/padogrid/etc/log4j2.properties \
+            --J=-Xms$LOCATOR_MIN_HEAP_SIZE \
+            --J=-Xmx$LOCATOR_MAX_HEAP_SIZE \
+            --J=-Xloggc:/padogrid/log/`hostname`-gc.log \
+            --J=-XX:+PrintGCDetails \
+            --J=-XX:+PrintGCDateStamps \
+            --J=-Dgemfire.jmx-manager=true \
+            --J=-Dgemfire.jmx-manager-port=$JMX_MANAGER_PORT \
+            --J=-Dgemfire.jmx-manager-http-port=$JMX_MANAGER_HTTP_PORT \
+            --J=-Dpulse.Log-File-Name=pulse-`hostname` \
+            --J=-Dpulse.Log-File-Location=/padogrid/log \
+        && \
+        while true; do
+           sleep 10
+        done

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-folder <folder-name>] [-?]"
+   echo ""
+   echo "   Displays the ID of the specified Grafana folder."
+   echo ""
+   echo "Default: ./$EXECUTABLE -folder $DEFAULT_FOLDER"
+   echo ""
+   exit
+fi
+
+if [ "$FOLDER" == "" ]; then
+   FOLDER=$DEFAULT_FOLDER
+fi
+
+TMP_FILE=$TMP_DIR/folders.json
+./get_folders > $TMP_FILE
+
+
+# Cygwin path conversion
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   TMP_FILE="$(cygpath -wp "$TMP_FILE")"
+fi
+
+ARRAY_LEN=`jq '.|length' $TMP_FILE`
+let LAST_INDEX=ARRAY_LEN-1
+for i in $(seq 0 $LAST_INDEX); do
+   TITLE=`jq '.['$i'].title' $TMP_FILE`
+   TITLE=`trimDoubleQuotes $TITLE`
+   if [ "$TITLE" == "$FOLDER" ]; then
+      __ID=`jq '.['$i'].id' $TMP_FILE`
+      break;
+   fi 
+done;
+echo $__ID

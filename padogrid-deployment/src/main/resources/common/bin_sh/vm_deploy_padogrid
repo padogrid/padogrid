@@ -1,0 +1,287 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -vm -simulate -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+#
+# Determeint $TAR_BALL_PATH
+#
+ROOT_DIR_NAME=$(basename $BASE_DIR)
+TOP_DIR="$(dirname "$BASE_DIR")"
+TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+TAR_BALL_GZ_PATH=$PADOGRID_WORKSPACE/bundles/$TAR_BALL_GZ_NAME
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Deploy the padogrid distribution to VMs
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-simulate] [-quiet] [-?]
+
+DESCRIPTION
+   Deploys the padogrid distribution to all the VMs defined by the VM_HOSTS
+   environment variable in the workspace 'setenv.sh' file. To deploy to only the
+   cluster VMs, specify the cluster with the '-cluster' option. To deploy to a select
+   list of VMs, specify the VM list with the '-vm' option.
+
+   It first scans the VMs and displays the VMs that already have padogrid installed.
+   It then prompts for optionally overwriting the existing installations. The VMs'
+   padogrid installation directory path is defined by VM_PADOGRID_HOME
+   set in the workspace 'setenv.sh' file.
+
+   Note that this command and all other commands that begin with the "vm_" preprefix are
+   available only on VM workspaces.
+
+   The '-vm' option overrides both the '-cluster' option and VM_HOSTS. The '-cluster' option
+   overrides VM_HOSTS. 
+   
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -vm comma_separated_hosts
+             A comma separated list of VM hosts or addresses. If the list contains spaces
+             then enclosed it in quotes.
+
+   -simulate
+             Print the remote commands but do not execute.
+
+   -quiet
+             Quiet mode. Supresses all interactive prompts.
+
+CAUTION
+   The -quiet option overwrites existing installations if any.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+EOF
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "vm_*" $EXECUTABLE
+   exit
+fi
+
+# Available only on VM workspaces
+if [ "$VM_ENABLED" != "true" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: The workspace is not a VM workspace. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1 
+fi
+
+# If the -vm option is specified then it overrides all other options
+if [ "$VM_SPECIFIED" == "true" ]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+      VM_HOSTS=$VM_HOSTS_ARG
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "ERROR: Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+else
+   # The -cluster option overrides VM_HOSTS
+   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+      if [ "`isClusterExist "$CLUSTER"`" == "false" ]; then 
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Cluster does not exist [$CLUSTER]. Command aborted."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+      if [ "$VM_ENABLED" == "false" ]; then
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+         echo >&2 "       in the 'etc/cluster.properties' file."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         if [ "$VM_HOSTS" == "" ]; then
+            echo "----------------------------------------------------------------"
+            echo "WORKSPACE: $PADOGRID_WORKSPACE"
+            echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
+            echo >&2 "           file. Command aborted."
+            echo "----------------------------------------------------------------"
+            exit 1
+         fi
+      fi
+   fi
+fi
+
+echo "----------------------------------------------------------------"
+echo "WORKSPACE: $PADOGRID_WORKSPACE"
+echo "Deploying padogrid to the following VM hosts:"
+echo "    $VM_HOSTS"
+echo "----------------------------------------------------------------"
+
+# Replace , with space
+__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+DEFAULT_USER=$(whoami)
+VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+if [ "$VM_KEY" != "" ]; then 
+   VM_KEY="-i $VM_KEY"
+fi
+
+# Fail fast: Exit if any of the hosts is not reachable
+for VM_HOST in $__VM_HOSTS; do
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
+   EXIT_CODE=$?
+   if [ "$EXIT_CODE" != "0" ]; then
+      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+      echo "       Command aborted."
+      exit 1
+   fi
+done
+
+# Simulation runs in the quite mode
+if [ "$SIMULATE" == "true" ]; then
+   QUIET=$SIMULATE
+fi
+
+# Find all existing and new hosts
+EXISTING_HOSTS=
+NEW_HOSTS=
+THIS_VM_HOSTNAME=`hostname`
+COMMAND="if [ -d "$VM_PADOGRID_HOME" ]; then echo true; else echo false; fi"
+EXISTING_HOST_COUNT=0
+NEW_HOST_COUNT=0
+for VM_HOST in $__VM_HOSTS; do
+   HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+   if [ "$HOST_NAME" == "$THIS_VM_HOSTNAME" ]; then
+      continue
+   fi
+   DIR_EXISTS=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no $COMMAND`
+   if [ "$DIR_EXISTS" == "true" ]; then
+      EXISTING_HOSTS="$EXISTING_HOSTS $VM_HOST"
+      let EXISTING_HOST_COUNT=EXISTING_HOST_COUNT+1
+   else
+      NEW_HOSTS="$NEW_HOSTS $VM_HOST"
+      let NEW_HOST_COUNT=NEW_HOST_COUNT+1
+   fi
+done
+
+echo ""
+echo "padogrid installation found in the following host(s):"
+echo "   $EXISTING_HOSTS"
+echo ""
+echo "padogrid not found in the following host(s):"
+echo "   $NEW_HOSTS"
+echo ""
+DEPLOYMENT_HOST_COUNT=$NEW_HOST_COUNT
+INPUT=
+if [ "$QUIET" == "false" ]; then
+   if [ "$EXISTING_HOSTS" != "" ]; then
+      echo "Do you want to overwrite the existing installations?"
+      echo "('overwrite' + Enter to overwrite the installations, other keys to continue.)"
+      read INPUT
+      echo ""
+   fi
+   
+   OVERWRITE="false"
+   if [ "$INPUT" == "overwrite" ]; then
+      OVERWRITE="true"
+      let DEPLOYMENT_HOST_COUNT=DEPLOYMENT_HOST_COUNT+EXISTING_HOST_COUNT
+      echo "This installation will be deployed to both existing and new hosts."
+   else
+      echo "Existing installations will be skipped."
+   fi
+   echo "Do you want to continue?"
+   echo "('continue' + Enter to continue deployment, other keys to quit.)"
+   read INPUT
+   echo ""
+   # trim string
+   INPUT=`echo "$INPUT" | xargs`
+   if [ "$INPUT" != "continue" ]; then
+      echo "Addon deployment aborted."
+      exit
+   fi
+fi
+
+if [ $DEPLOYMENT_HOST_COUNT -eq 0 ]; then
+   echo "No qualified hosts found. Command aborted." 
+   echo ""
+   exit
+fi
+
+echo "Total deployment host count: $DEPLOYMENT_HOST_COUNT"
+echo "Creating a tar ball..."
+ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
+TAR_BALL_NAME=$ROOT_DIR_NAME.tar
+TAR_BALL_PATH=$PADOGRID_WORKSPACE/bundles/$TAR_BALL_NAME
+VM_PADOGRID_HOME_PARENT_DIR="$(dirname "$VM_PADOGRID_HOME")"
+
+if [ "$SIMULATE" != "true" ]; then
+   pushd $PADOGRID_HOME/.. 
+   tar czf $TAR_BALL_GZ_PATH $ROOT_DIR_NAME
+   popd
+fi
+
+if [ "$NEW_HOSTS" != "" ]; then
+   echo "New Hosts:"
+   for VM_HOST in $NEW_HOSTS; do
+      echo "   Deploying to $VM_HOST..."
+      if [ "$SIMULATE" == "true" ]; then
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         echo scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         echo ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+      fi
+   done
+fi
+
+if [ "$EXISTING_HOSTS" != "" ]; then
+   echo "Existing Hosts:"
+   for VM_HOST in $EXISTING_HOSTS; do
+      echo "   Deploying to $VM_HOST..."
+      if [ "$SIMULATE" == "true" ]; then
+         scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+      else
+         scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+      fi
+   done
+fi
+echo ""
+if [ "$SIMULATE" == "true" ]; then
+   echo "Simulation deployment complete."
+else
+   echo "Deployment complete."
+fi

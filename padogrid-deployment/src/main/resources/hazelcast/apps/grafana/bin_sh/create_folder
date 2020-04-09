@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-folder <folder-name>] [-?]"
+   echo ""
+   echo "   Creates the specfied Grafana folder."
+   echo ""
+   echo "Default: ./$EXECUTABLE -folder $DEFAULT_FOLDER"
+   echo ""
+   exit
+fi
+
+if [ "$FOLDER" == "" ]; then
+   FOLDERS=$DEFAULT_FOLDER
+fi
+
+curl -sS -X POST $GRAFANA_URL/api/folders -H "Content-Type: application/json" -d '{"title": "'"$FOLDER"'"}' | jq

@@ -1,0 +1,66 @@
+  ${SERVER_NAME}:
+    image: apachegeode/geode:${VERSION}
+    hostname: ${SERVER_NAME}
+    mem_limit: 1g
+    depends_on:
+     - locator
+    expose:
+     - "${SERVER_PORT}"
+     - "$HTTP_PORT"
+     - "$JMX_PORT"
+     - "$DEBUG_PORT"
+     - "$PROMETHEUS_PORT"
+    ports:
+     - "${SERVER_PORT}:${SERVER_PORT}"
+     - "${HTTP_PORT}:$HTTP_PORT"
+     - "${HOST_JMX_PORT}:$JMX_PORT"
+     - "${HOST_DEBUG_PORT}:$DEBUG_PORT"
+     - "${HOST_PROMETHEUS_PORT}:$PROMETHEUS_PORT"
+    volumes:
+     - ./padogrid:/padogrid/
+    command:
+      - bash
+      - -c 
+      - |
+        if [ ! -d /run ]; then mkdir /run; fi \
+        && \
+        export LOG_FILE=/padogrid/log/`hostname`.log \
+        && \
+        gfsh start server \
+            --name=`hostname` \
+            --locators=locator[$LOCATOR_PORT] \
+            --dir=/run \
+            --initial-heap=$MIN_HEAP_SIZE \
+            --max-heap=$MAX_HEAP_SIZE \
+            --hostname-for-clients=$HOSTNAME_FOR_CLIENTS \
+            --classpath=/padogrid/lib/*:/padogrid/plugins/* \
+            --cache-xml-file=/padogrid/etc/cache.xml \
+            --statistic-archive-file=/padogrid/stats/`hostname`.gfs \
+            --start-rest-api=true \
+            --http-service-port=${HTTP_PORT} \
+            --J=-Dpadogrid.server.port=${SERVER_PORT} \
+            --J=-Dlog4j.configurationFile=/padogrid/etc/log4j2.properties \
+            --J=-Dcom.sun.management.jmxremote.port=$JMX_PORT \
+            --J=-Dcom.sun.management.jmxremote.ssl=false \
+            --J=-Dcom.sun.management.jmxremote.authenticate=false \
+            --J=-Dgeode.jmx=true \
+            --J=-Xdebug \
+            --J='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9101' \
+            --J=-javaagent:/padogrid/lib/${PROMETHEUS_JAR}=$PROMETHEUS_PORT:/padogrid/etc/prometheus.yml \
+            --J=-Xloggc:/padogrid/log/`hostname`-gc.log \
+            --J=-XX:+PrintGCDetails \
+            --J=-XX:+PrintGCDateStamps \
+            --J=-Djava.awt.headless=true \
+            --J=-Djava.net.preferIPv4Stack=true \
+            --J=-XX:+UseParNewGC \
+            --J=-XX:+UseConcMarkSweepGC \
+            --J=-XX:CMSInitiatingOccupancyFraction=75 \
+            --J=-DgemfirePropertyFile=/padogrid/etc/gemfire.properties \
+            --J=-Dgemfire.log-file=/padogrid/log/`hostname`.log \
+            --J=-Dgemfire.PREFER_SERIALIZED=true \
+            --J=-Dgemfire.BucketRegion.alwaysFireLocalListeners=false \
+        && \
+        while true; do
+           sleep 10
+        done
+    restart: on-failure

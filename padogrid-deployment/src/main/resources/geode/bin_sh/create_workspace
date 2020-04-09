@@ -1,0 +1,773 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-name -cluster -product -java -vm -vm-java -vm-product -vm-addon -vm-workspaces -vm-user -vm-key -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a padogrid workspace environment
+
+SYNOPSIS
+   $EXECUTABLE [-name workspace_name] 
+               [-cluster default_cluster]
+               [-java local_JAVA_HOME]
+               [-product local_product_home_path]
+               [-vm comma_separated_host_names]
+               [-vm-java vm_JAVA_HOME]
+               [-vm-product vm_product_home_path]
+               [-vm-padogrid vm_padogrid_path]
+               [-vm-workspaces vm_workspaces_path]
+               [-vm-user vm_user_name]
+               [-vm-key private_key_file_path]
+               [-quiet] [-?]
+
+DESCRIPTION
+   Creates a padogrid workspace environment where you can run padogrid
+   and your applications. By default, workspaces are created locally to run the
+   specified product clusters. To run clusters remotely, you must specify the
+   '-vm' option to create a VM workspace. With a VM workspace, you can control
+   and manage VMs from your local environment which can be completely synchronized
+   with all the VMs by executing the 'vm_sync' command.
+
+   This command is by default interactive. If you want to suppress the interactive mode,
+   then specify '-quiet' option along with the other options to configure the workspace.
+
+   Once the workspace has been created, you can modify the configurations set by 
+   this command in the workspace's 'setenv.sh' file.
+
+OPTIONS
+   -name workspace_name
+             Workspace name. All of your workspace changes will be stored under
+             this name. Use this option if the workspaces have been intialized
+             by executing init_addon.
+
+   -cluster default_cluster
+              Default cluster name.
+
+   -java local_JAVA_HOME_path
+              Local Java home path.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+              Default: $JAVA_HOME
+EOF
+fi
+cat <<EOF
+
+   -product local_product_home_path
+              Local Geode, GemFire, Hazelcast, or Jet home path.
+
+   -vm comma_separated_host_names
+              A comma separated list of VM host names (or IP addresses). If the list contains
+              spaces then enclosed it in quotes. Note that this option enables VMs. If it is
+              not specified then all other '-vm-' options are still recorded but the workspace
+              will not be VM enabled and all clusters will be locally created instead.
+   
+   -vm-java vm_JAVA_HOME
+              VM JAVA_HOME path. If the VMs do not have Java installed in this path, then
+              you can install it by executing 'vm_install' after the workspace has locally
+              been created.
+
+   -vm-product vm_product_home_path
+              VM Geode, GemFire, Hazelcast, or Jet home path. If the VMs do not have the product
+              installed, then you can install it by executing 'vm_install' after the workspace
+              has locally been created.
+
+   -vm-padogrid vm_padogrid_path
+              VM PadoGrid home path. If the VMs do not have PadoGrid installed in this path,
+              then when you execute 'vm_sync' it will be automactically installed.
+
+   -vm-workspaces vm_workspaces_path
+              VM workspaces home path. This is the root directory path in which all the VM
+              workspaces will be created, including the workspace you are creating with
+              this 'create_workspace' command.
+
+   -vm-user vm_user_name
+              VM user name. All VMs must be accessible via ssh with this user name.
+
+   -vm-key private_key_file_path
+              Local private key file path. Some VMs such as AWS EC2 VMs require the '.pem' private
+              key file. If the private key file is required then specify the full path to the
+              private key file in your local file system. It will be copied to the workspace
+              and deployed to the VMs when you execute 'vm_sync' later.
+
+   -quiet
+              Quiet mode. Supresses the interactive prompts. The options not specified will
+              default to their default values. You can change the option values in the workspace's
+              'setenv.sh' file as needed after the workspace is created.
+
+DEFAULT
+   $EXECUTABLE
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$PADOGRID_WORKSPACES_HOME" == "" ] || [ ! -d $PADOGRID_WORKSPACES_HOME ]; then
+   if [ "$WORKSPACE_DIR" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "ERROR: Workspace directory path not specified. Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+if [ "$JAVA_HOME_ARG" == "" ]; then
+   JAVA_HOME_ARG="$JAVA_HOME"
+fi
+
+# Default cluster
+if [ $CLUSTER_SPECIFIED == "false" ]; then
+   CLUSTER=""
+fi
+
+PARENT_DIR="$(dirname "$BASE_DIR")"
+
+# VM
+VM_ENABLED=$VM_SPECIFIED
+
+if [ "$QUIET" == "true" ]; then
+   WORKSPACE=$NAME_ARG
+   if [ "$WORKSPACE" == "" ]; then
+      echo >&2 "ERROR: Workspace name not specified. Use the '-name' option to set the workspace name."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+
+   WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/$WORKSPACE
+   if [ -d "$WORKSPACE_DIR" ]; then
+      echo >&2 "ERROR: Workspace already exists [$WORKSPACE]. Command aborted."
+      exit
+   fi
+   if [ -f "$WORKSPACE_DIR" ]; then
+      echo >&2 "ERROR: A file with the sanem workspace name exists in the RWE parent directory."
+      echo >&2 "       [$WORKSPACE_DIR]"
+      echo >&2 "       Please remove the file and try again. Command aborted."
+      exit 1
+   fi
+
+   if [ "$PRODUCT_HOME_ARG" == "" ]; then
+      echo >&2 "ERROR: Product home path not specified. Use the '-product' option."
+      echo >&2 "       Command aborted."
+      exit
+   else
+      if [ ! -d "$PRODUCT_HOME_ARG" ]; then
+         echo >&2 "ERROR: The specified product home path does not exists [$PRODUCT_HOME_ARG]."
+         echo >&2 "       Command aborted."
+         exit
+      fi
+   fi
+   if [ "$JAVA_HOME_ARG" != "" ]; then
+      if [ ! -d "$JAVA_HOME_ARG" ]; then
+         echo >&2 "ERROR: The specified Java home path does not exists [$JAVA_HOME_ARG]."
+         echo >&2 "       Command aborted."
+         exit
+      fi
+   fi
+
+   JAVA_HOME="$JAVA_HOME_ARG"
+   PRODUCT_HOME=$PRODUCT_HOME_ARG
+   WORKSPACE=$NAME_ARG
+   
+   determineProduct
+
+   VM_JAVA_HOME="$VM_JAVA_HOME_ARG"
+   VM_PADOGRID_HOME=$VM_PADOGRID_HOME_ARG
+   VM_PADOGRID_WORKSPACES_HOME=$VM_PADOGRID_WORKSPACES_HOME_ARG
+   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+      VM_HOSTS=$VM_HOSTS_ARG
+   fi
+   # Remove all spaces from VM_HOSTS
+   VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/ //g")
+   VM_USER=$VM_USER_ARG
+   VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE_ARG
+
+   if [ "$VM_JAVA_HOME" == "" ]; then
+      VM_JAVA_HOME="$JAVA_HOME"
+   fi
+   if [ "$VM_PADOGRID_HOME" == "" ]; then
+      VM_PADOGRID_HOME=$PADOGRID_HOME
+   fi
+   if [ "$VM_PADOGRID_WORKSPACES_HOME" == "" ]; then
+      VM_PADOGRID_WORKSPACES_HOME=$PADOGRID_WORKSPACES_HOME
+   fi
+   VM_PADOGRID_WORKSPACE=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE
+
+   echo ""
+   echo "You have entered the following."
+   echo "                     JAVA_HOME: $JAVA_HOME"
+   echo "                  PRODUCT_HOME: $PRODUCT_HOME"
+   echo "            PADOGRID_WORKSPACE: $WORKSPACE_DIR"
+   echo "               Default Cluster: $CLUSTER"
+   echo "                    VM_ENABLED: $VM_ENABLED"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "                  VM_JAVA_HOME: $VM_JAVA_HOME"
+   echo "               VM_PRODUCT_HOME: $VM_PRODUCT_HOME"
+   echo "              VM_PADOGRID_HOME: $VM_PADOGRID_HOME"
+   echo "   VM_PADOGRID_WORKSPACES_HOME: $VM_PADOGRID_WORKSPACES_HOME"
+   echo "         VM_PADOGRID_WORKSPACE: $VM_PADOGRID_WORKSPACE"
+   echo "                      VM_HOSTS: $VM_HOSTS"
+   echo "                       VM_USER: $VM_USER"
+   echo "           VM_PRIVATE_KEY_FILE: $VM_PRIVATE_KEY_FILE"
+   fi
+else
+   echo ""
+   echo "Please answer the prompts that appear below. If you are not able to complete"
+   echo "the prompts at this time then use the '-quiet' option to bypass the prompts."
+   echo "You can complete the requested values later in the generated 'setenv.sh' file"
+   echo "You can abort this command at any time by entering 'Ctrl-C'."
+   echo ""
+   __JAVA_HOME=$JAVA_HOME_ARG
+   __PRODUCT_HOME=$PRODUCT_HOME_ARG
+   __WORKSPACE=$NAME_ARG
+   VM_JAVA_HOME="$VM_JAVA_HOME_ARG"
+   VM_PRODUCT_HOME="$VM_PRODUCT_HOME_ARG"
+   VM_PADOGRID_HOME="$VM_PADOGRID_HOME_ARG"
+   VM_PADOGRID_WORKSPACES_HOME="$VM_WORKSPACES_HOME_ARG"
+   VM_PADOGRID_WORKSPACE="VM_WORKSPACE_ARG"
+   if [ "$VM_HOSTS_ARG" != "" ]; then
+      VM_HOSTS="$VM_HOSTS_ARG"
+   fi
+   VM_USER=""
+   VM_PRIVATE_KEY_FILE=""
+   REDO=true
+   while [ "$REDO" == "true" ]; do
+
+      # JAVA_HOME
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+
+         echo "Enter Java home path."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+	    echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$__JAVA_HOME]:"
+
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __JAVA_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __JAVA_HOME=$(cygpath -au "$__JAVA_HOME")
+         fi
+         if [ ! -d "$__JAVA_HOME" ]; then
+            echo "Directory does not exist or not a directory."
+            __JAVA_HOME=$JAVA_HOME_ARG
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      JAVA_HOME=$__JAVA_HOME
+
+      # PRODUCT_HOME
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+
+         echo "Enter the local product home directory path. Choose one"
+         echo "from the defaults listed below or enter another."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            echo "Enter only Unix absoulte path. Windows path not allowed."
+         fi
+         if [ "$HAZELCAST_HOME" != "" ]; then
+            echo "   $HAZELCAST_HOME"
+         fi
+         if [ "$JET_HOME" != "" ]; then
+            echo "   $JET_HOME"
+         fi
+         if [ "$GEODE_HOME" != "" ]; then
+            echo "   $GEODE_HOME"
+         fi
+         echo "[$__PRODUCT_HOME]:"
+
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __PRODUCT_HOME=$INPUT
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __PRODUCT_HOME="$(cygpath -au $__PRODUCT_HOME)"
+         fi
+         if [ ! -d "$__PRODUCT_HOME" ]; then
+            echo "Directory does not exist or not a directory."
+            __PRODUCT_HOME=$PRODUCT_HOME_ARG
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      PRODUCT_HOME="$__PRODUCT_HOME"
+      determineProduct
+
+      # WORKSPACE
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+
+         echo "Enter workspace name."
+         echo "[$__WORKSPACE]:"
+
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __WORKSPACE="$INPUT"
+         fi
+         __WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/$__WORKSPACE
+         if [ -d "$__WORKSPACE_DIR" ]; then
+            echo "Workspace already exists. Please enter another workspace name."
+            __WORKSPACE=$NAME_ARG
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      WORKSPACE=$__WORKSPACE
+      WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/$WORKSPACE
+
+      # CLUSTER
+      echo "Enter default cluster name."
+      echo "[$CLUSTER]:"
+      read -p "" INPUT
+      # trim string
+      INPUT=`echo "$INPUT" | xargs`
+      if [ "$INPUT" != "" ]; then
+         CLUSTER=$INPUT
+      fi
+
+      # VM
+      INNER_LOOP=true
+      while [ "$INNER_LOOP" == "true" ]; do
+         read -p "Enable VM? Enter 'true' or 'false' [$VM_ENABLED]: " INPUT 
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" == "" ]; then
+            INPUT=$VM_ENABLED
+         fi
+         if [ "$INPUT" == "true" ] || [ "$INPUT" == "false" ]; then
+            VM_ENABLED=$INPUT
+            REDO=false;
+            INNER_LOOP=false;
+         fi
+      done
+
+      if [ "$VM_PADOGRID_WORKSPACES_HOME" == "" ]; then
+         VM_PADOGRID_WORKSPACES_HOME=$PADOGRID_WORKSPACES_HOME
+      fi
+      if [ "$VM_ENABLED" == "true" ]; then
+         if [ "$VM_JAVA_HOME" == "" ]; then
+            VM_JAVA_HOME=$JAVA_HOME
+         fi
+         # VM_JAVA_HOME
+         echo "Enter VM JDK home path."
+         echo "[$VM_JAVA_HOME]:"
+         read -p "" INPUT 
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            VM_JAVA_HOME=$INPUT
+         fi
+
+         # VM_PRODUCT_HOME
+         if [ "$VM_PRODUCT_HOME" == "" ]; then
+            VM_PRODUCT_HOME=$PRODUCT_HOME
+         fi
+         echo "Enter VM product home path."
+         echo "[$VM_PRODUCT_HOME]:"
+         read -p "" INPUT 
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            VM_PRODUCT_HOME=$INPUT
+         fi
+
+         # VM_PADOGRID_HOME
+         if [ "$VM_PADOGRID_HOME" == "" ]; then
+            VM_PADOGRID_HOME=$PADOGRID_HOME
+         fi
+         echo "Enter VM padogrid home path."
+         echo "[$VM_PADOGRID_HOME]:"
+         read -p "" INPUT 
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            VM_PADOGRID_HOME=$INPUT
+         fi
+
+         # VM_PADOGRID_WORKSPACES_HOME
+         if [ "$VM_PADOGRID_WORKSPACES_HOME" == "" ]; then
+            VM_PADOGRID_WORKSPACES_HOME=$PADOGRID_WORKSPACES_HOME
+         fi
+         echo "Enter VM workspaces path."
+         echo "[$VM_PADOGRID_WORKSPACES_HOME]:"
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            VM_PADOGRID_WORKSPACES_HOME=$INPUT
+         fi
+
+         # VM_HOSTS
+         echo "Enter VM host names or IP addresses separated by comma."
+         echo "[$VM_HOSTS]:"
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            VM_HOSTS=$INPUT
+         fi
+         # Remove spaces
+         VM_HOSTS=${VM_HOSTS//[[:space:]]/}
+
+         # VM_USER
+         echo "Enter VM user name."
+         read -p "[$VM_USER]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            VM_USER=$INPUT
+         fi
+
+         # VM_PRIVATE_KEY_FILE
+         __REDO=true
+         echo "Enter VM SSH private key path. If you don't have the key file (.pem) then"
+         echo "leave it blank for now. You can place the file in the workspace directory or"
+         echo "set the path in the workspace 'setenv.sh' file later."
+         while [ "$__REDO" == "true" ]; do
+
+            if [[ $OS_NAME == CYGWIN* ]]; then
+	       echo "Enter only Unix absolute path. Windows path not allowed."
+            fi
+            echo "[$__VM_PRIVATE_KEY_FILE]:"
+            read -p "" INPUT
+
+            # trim string
+            INPUT=`echo "$INPUT" | xargs`
+            if [ "$INPUT" != "" ]; then
+               __VM_PRIVATE_KEY_FILE="$INPUT"
+            fi
+            if [[ $OS_NAME == CYGWIN* ]]; then
+               __VM_PRIVATE_KEY_FILE=$(cygpath -au "$__VM_PRIVATE_KEY_FILE")
+            fi
+            if [ "$__VM_PRIVATE_KEY_FILE" != "" ] && [ ! -f "$__VM_PRIVATE_KEY_FILE" ]; then
+               echo "Invalid file path. The file does not exist."
+               __VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE_ARG
+               __REDO=true
+            else
+               __REDO=false
+            fi
+         done
+         VM_PRIVATE_KEY_FILE=$__VM_PRIVATE_KEY_FILE
+      else
+         VM_PADOGRID_HOME=$PADOGRID_HOME
+         VM_PADOGRID_WORKSPACES_HOME=$PADOGRID_WORKSPACES_HOME
+         VM_HOSTS=""
+         VM_USER=""
+         VM_PRIVATE_KEY_FILE=""
+      fi
+      VM_PADOGRID_WORKSPACE=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE
+
+      echo ""
+      echo "You have entered the following."
+      echo "                     JAVA_HOME: $JAVA_HOME"
+      echo "                  PRODUCT_HOME: $PRODUCT_HOME"
+      echo "            PADOGRID_WORKSPACE: $WORKSPACE_DIR"
+      echo "               Default Cluster: $CLUSTER"
+      echo "                    VM_ENABLED: $VM_ENABLED"
+      if [ "$VM_ENABLED" == "true" ]; then
+      echo "                  VM_JAVA_HOME: $VM_JAVA_HOME"
+      echo "               VM_PRODUCT_HOME: $VM_PRODUCT_HOME"
+      echo "              VM_PADOGRID_HOME: $VM_PADOGRID_HOME"
+      echo "   VM_PADOGRID_WORKSPACES_HOME: $VM_PADOGRID_WORKSPACES_HOME"
+      echo "         VM_PADOGRID_WORKSPACE: $VM_PADOGRID_WORKSPACE"
+      echo "                      VM_HOSTS: $VM_HOSTS"
+      echo "                       VM_USER: $VM_USER"
+      echo "           VM_PRIVATE_KEY_FILE: $VM_PRIVATE_KEY_FILE"
+      fi
+
+      REDO=true
+      INNER_LOOP=true
+      while [ "$INNER_LOOP" == "true" ]; do
+         read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
+         case $INPUT in
+            [Cc]* ) REDO=false; INNER_LOOP=false;;
+            [Rr]* ) REDO=true; INNER_LOOP=false;;
+            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+         esac
+      done
+   done
+fi
+
+mkdir -p $WORKSPACE_DIR/clusters
+mkdir -p $WORKSPACE_DIR/pods
+mkdir -p $WORKSPACE_DIR/apps
+mkdir -p $WORKSPACE_DIR/lib
+mkdir -p $WORKSPACE_DIR/plugins
+mkdir -p $WORKSPACE_DIR/bundles
+mkdir -p $WORKSPACE_DIR/k8s
+mkdir -p $WORKSPACE_DIR/docker
+
+#
+# Create setenv.sh
+#
+echo "#!/usr/bin/env bash" > $WORKSPACE_DIR/setenv.sh
+echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\${BASH_SOURCE[0]}\")\" && pwd -P)\"" >> $WORKSPACE_DIR/setenv.sh
+echo ". \$SCRIPT_DIR/.addonenv.sh \$@" >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "# The following environment variables are required. Without them, padogrid may not" >> $WORKSPACE_DIR/setenv.sh
+echo "# function properly. Note that for non-local pods, they are set separately in the" >> $WORKSPACE_DIR/setenv.sh
+echo "# node initialization file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACE_DIR/setenv.sh
+echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "if [ \"\$POD\" == \"\" ] || [ \"\$POD\" == \"local\" ]; then" >> $WORKSPACE_DIR/setenv.sh
+if [ "$JAVA_HOME" != "" ]; then
+   echo "   export JAVA_HOME=\"$JAVA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+else
+   echo "   #export JAVA_HOME=" >> $WORKSPACE_DIR/setenv.sh
+fi
+
+if [ "$PRODUCT" == "geode" ]; then
+   if [ "$GEODE_HOME" != "" ]; then
+      echo "   export GEODE_HOME=\"$GEODE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "   #export GEODE_HOME=" >> $WORKSPACE_DIR/setenv.sh
+   fi
+else
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      if [ "$JET_HOME" != "" ]; then
+         echo "   export JET_HOME=\"$JET_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+         if [ -d "$JET_HOME/hazelcast-jet-management-center" ]; then
+            echo "   export HAZELCAST_MC_HOME=\"\$JET_HOME/hazelcast-jet-management-center\"" >> $WORKSPACE_DIR/setenv.sh
+         else
+            echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+         fi
+      else
+         echo "   export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      fi
+   else
+      if [ "$HAZELCAST_HOME" != "" ]; then
+         echo "   export HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+         if [ -d "$HAZELCAST_HOME/management-center" ]; then
+            echo "   export HAZELCAST_MC_HOME=\"\$HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
+         else
+            echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+         fi
+      else
+         echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      fi
+   fi
+fi
+echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACE_DIR/setenv.sh
+echo "fi" >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "# Remote VM environment variables" >> $WORKSPACE_DIR/setenv.sh
+echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "# Set true to enable remote commands, false to disable remote commands." >> $WORKSPACE_DIR/setenv.sh
+echo "VM_ENABLED=\"$VM_ENABLED\"" >> $WORKSPACE_DIR/setenv.sh
+echo "# Enter a comma-separated VM host names with NO spaces. If VM_ENABLED is true then" >> $WORKSPACE_DIR/setenv.sh
+echo "# VM_HOSTS must be set, otherwise, VM_HOSTS and other VM_ variables are ignored." >> $WORKSPACE_DIR/setenv.sh
+echo "VM_HOSTS=\"$VM_HOSTS\"" >> $WORKSPACE_DIR/setenv.sh
+echo "# VM user name." >> $WORKSPACE_DIR/setenv.sh
+echo "VM_USER=\"$VM_USER\"" >> $WORKSPACE_DIR/setenv.sh
+echo "# VM private key file path. If not set, then it defaults to the first .pem file" >> $WORKSPACE_DIR/setenv.sh
+echo "# found in the workspace directory." >> $WORKSPACE_DIR/setenv.sh
+
+if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+   cp $VM_PRIVATE_KEY_FILE $WORKSPACE_DIR/
+   __VM_PRIVATE_KEY_FILE="$(basename $VM_PRIVATE_KEY_FILE)"
+   chmod 400 $WORKSPACE_DIR/$__VM_PRIVATE_KEY_FILE
+else
+   __VM_PRIVATE_KEY_FILE=""
+fi
+if [ "$VM_ENABLED" == "true" ]; then
+   echo "# VM JDK home directory path." >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_JAVA_HOME=\"$VM_JAVA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   if [ "$PRODUCT" == "geode" ]; then
+      echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_GEODE_HOME=\"$VM_GEODE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_HAZELCAST_HOME=\"$VM_HAZELCAST_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "# VM Jet home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_JET_HOME=\"$VM_JET_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   fi
+   echo "# VM hosts may have the padogrid home path different from the local path." >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PADOGRID_HOME=\"$VM_PADOGRID_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM hosts may have the workspaces and workspace paths from the local paths." >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PADOGRID_WORKSPACES_HOME=\"$VM_PADOGRID_WORKSPACES_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PADOGRID_WORKSPACE=\"\$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $WORKSPACE_DIR/setenv.sh
+   if [ "$__VM_PRIVATE_KEY_FILE" != "" ]; then
+      echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   fi
+else
+   echo "# VM JDK home directory path." >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_JAVA_HOME=\$VM_JAVA_HOME" >> $WORKSPACE_DIR/setenv.sh
+   if [ "$PRODUCT" == "geode" ]; then
+      echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_GEODE_HOME=\$GEODE_HOME" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_HAZELCAST_HOME=\$HAZELCAST_HOME" >> $WORKSPACE_DIR/setenv.sh
+      echo "# VM Jet home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_JET_HOME=\$JET_HOME" >> $WORKSPACE_DIR/setenv.sh
+   fi
+   echo "# VM hosts may have the padogrid home path different from the local path." >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PADOGRID_HOME=\$PADOGRID_HOME" >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM hosts may have the workspaces and workspace paths different from the local paths." >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PADOGRID_WORKSPACES_HOME=\$PADOGRID_WORKSPACES_HOME" >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PADOGRID_WORKSPACE=\$PADOGRID_WORKSPACE" >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "# Add your workspace-wide environment variables in this file." >> $WORKSPACE_DIR/setenv.sh
+echo "# The environment variables set in this file are used for all clusters running" >> $WORKSPACE_DIR/setenv.sh
+echo "# in this workspace. Cluster specifics should be added in clusters/<cluster>/setenv.sh." >> $WORKSPACE_DIR/setenv.sh
+echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "# Set default cluster name. This cluster name is used if the '-cluster' option is not specified" >> $WORKSPACE_DIR/setenv.sh
+echo "# when running padogrid commands." >> $WORKSPACE_DIR/setenv.sh
+echo "if [ \"\$CLUSTER\" == \"\" ]; then" >> $WORKSPACE_DIR/setenv.sh
+echo "   export CLUSTER=\"$CLUSTER\"" >> $WORKSPACE_DIR/setenv.sh
+echo "fi" >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "# Set default pod name. This pod name is used if the '-pod' option is not specified" >> $WORKSPACE_DIR/setenv.sh
+echo "# when running padogrid commands" >> $WORKSPACE_DIR/setenv.sh
+echo "#export POD=" >> $WORKSPACE_DIR/setenv.sh
+echo " " >> $WORKSPACE_DIR/setenv.sh
+echo "# Set Java options. Your Java options are added to the padogrid Java options." >> $WORKSPACE_DIR/setenv.sh
+echo "#JAVA_OPTS=" >> $WORKSPACE_DIR/setenv.sh
+echo " " >> $WORKSPACE_DIR/setenv.sh
+if [ "$PRODUCT" == "hazelcast" ]; then
+   echo "# Set Management Center Java options, i.e., -Dhazelcast.mc.forceLogoutOnMultipleLogin=true" >> $WORKSPACE_DIR/setenv.sh
+   echo "#MC_JAVA_OPTS=" >> $WORKSPACE_DIR/setenv.sh
+   echo " " >> $WORKSPACE_DIR/setenv.sh
+fi
+echo "# Set your class path. This class path is prepended to the padogrid class path." >> $WORKSPACE_DIR/setenv.sh
+echo "# The class path is defined in the following order:" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$CLASSPATH" >> $WORKSPACE_DIR/setenv.sh >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_WORKSPACE/clusters/<cluster>/plugins/*" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_WORKSPACE/clusters/<cluster>/lib/*" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_WORKSPACE/plugins/*" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_WORKSPACE/lib/*" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_HOME/plugins/*" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_HOME/plugins/v?/*" >> $WORKSPACE_DIR/setenv.sh
+echo "#    \$PADOGRID_HOME/lib/v?/*" >> $WORKSPACE_DIR/setenv.sh
+if [ "$PRODUCT" == "geode" ]; then
+   if [ "$IS_GEODE_ENTERPRISE" == "true" ]; then
+   echo "#    \$GEODE_HOME/lib/padogrid-enterprise-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
+   else
+   echo "#    \$GEODE_HOME/lib/padogrid-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
+   fi
+   echo "#    \$GEODE_HOME/user-lib/*" >> $WORKSPACE_DIR/setenv.sh
+else
+   if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+   echo "#    \$HAZELCAST_HOME/lib/hazelcast-enterprise-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
+   else
+   echo "#    \$HAZELCAST_HOME/lib/hazelcast-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
+   fi
+   echo "#    \$HAZELCAST_HOME/user-lib/*" >> $WORKSPACE_DIR/setenv.sh
+fi
+echo "#CLASSPATH=" >> $WORKSPACE_DIR/setenv.sh
+
+#
+# Copy initenv.sh
+#
+cp $BASE_DIR/etc/init/initenv.sh $WORKSPACE_DIR
+
+#
+# Create .addonenv.sh
+#
+echo "#!/usr/bin/env bash" > $WORKSPACE_DIR/.addonenv.sh
+echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\${BASH_SOURCE[0]}\")\" && pwd -P)\"" >> $WORKSPACE_DIR/.addonenv.sh
+echo "" >> $WORKSPACE_DIR/.addonenv.sh
+echo "export PADOGRID_WORKSPACE=\$SCRIPT_DIR" >> $WORKSPACE_DIR/.addonenv.sh
+echo "export CLUSTERS_DIR=\$PADOGRID_WORKSPACE/clusters" >> $WORKSPACE_DIR/.addonenv.sh
+echo "export PODS_DIR=\$PADOGRID_WORKSPACE/pods" >> $WORKSPACE_DIR/.addonenv.sh
+echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
+if [ "$PRODUCT" == "geode" ]; then
+   echo "export PRODUCT=geode" >> $WORKSPACE_DIR/.addonenv.sh
+else
+   echo "export CLUSTER_TYPE=$CLUSTER_TYPE" >> $WORKSPACE_DIR/.addonenv.sh
+   echo "export PRODUCT=hazelcast" >> $WORKSPACE_DIR/.addonenv.sh
+fi
+
+#
+# Switch workspace and create cluster. This is done is sub-shell and hence
+# the exported variables do not carry on to the parent shell.
+#
+export PADOGRID_WORKSPACE=$WORKSPACE_DIR
+export CLUSTER
+$SCRIPT_DIR/switch_workspace
+if [ "$VM_ENABLED" == "true" ]; then
+   $PARENT_DIR/$PRODUCT/bin_sh/create_cluster -vm -cluster $CLUSTER
+else
+   $PARENT_DIR/$PRODUCT/bin_sh/create_cluster -cluster $CLUSTER
+fi
+
+# Create product env file
+createProductEnvFile "$PRODUCT" "$PADOGRID_WORKSPACES_HOME"
+
+# Update the defaultenv.sh file if this is the sole workspace
+if [ "$(list_workspaces)" == "$WORKSPACE" ]; then
+   updateDefaultEnv
+fi
+
+#
+# Display workspace information
+#
+echo ""
+echo "Workspace created:"
+echo "   $WORKSPACE_DIR"
+echo ""
+echo "The workspace directory also contains the following files."
+echo ""
+echo "   initenv.sh -  Workspace initialization file. Source this file in to"
+echo "                 enter the workspace."
+echo ""
+echo "   setenv.sh -  You can set your workspace-wide environment variables in"
+echo "                this file."
+echo ""
+echo "   .addonenv.sh - A hidden file containing the workspace environment variables."
+echo "                  You can overwrite them in setenv.sh as needed."
+echo ""
+echo "IMPORTANT:"
+echo "----------"
+echo "To use this workspace, execute the 'switch_workspace' command as follows:"
+echo -e "   ${CLightGreen}switch_workspace $WORKSPACE${CNone}"
+if [ "$VM_ENABLED" == "true" ]; then
+   echo ""
+   echo "You have created a VM workspace. To add or remove VM hosts, set VM_HOSTS in"
+   echo "the workspace 'setenv.sh' file. Note that VM_HOSTS applies to the entire workspace"
+   echo "whereas the 'vm.hosts' property in the cluster 'etc/cluster.properties' file applies"
+   echo "only to the defining cluster. By default, 'vm.hosts' is initially set to VM_HOSTS."
+   echo -e "   ${CLightGreen}$WORKSPACE_DIR/setenv.sh${CNone}"
+fi
+echo ""

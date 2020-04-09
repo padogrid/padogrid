@@ -1,0 +1,46 @@
+apiVersion: v1
+data:
+  hazelcast.yaml: |-
+    hazelcast:
+      hot-restart-persistence:
+        auto-remove-stale-data: true
+        base-dir: /data/hot-restart
+        data-load-timeout-seconds: 900
+        enabled: ${hazelcast.hotRestart}
+        validation-timeout-seconds: 1200
+      management-center:
+        enabled: ${hazelcast.mancenter.enabled}
+        url: ${hazelcast.mancenter.url}
+      network:
+        join:
+          kubernetes:
+            enabled: true
+            namespace: ${namespace}
+            resolve-not-ready-addresses: true
+            service-name: ${serviceName}
+          multicast:
+            enabled: false
+        ssl:
+          enabled: ${hazelcast.ssl}
+      partition-group:
+        enabled: true
+        group-type: ZONE_AWARE
+      serialization:
+        portable-factories:
+        - class-name: org.hazelcast.demo.nw.data.PortableFactoryImpl
+          factory-id: 1
+        - class-name: org.hazelcast.addon.hql.impl.PortableFactoryImpl
+          factory-id: 10000
+        portable-version: 1
+      map:
+        eligibility:
+          time-to-live-seconds: 120
+        profile:
+          time-to-live-seconds: 120
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: my-release
+    app.kubernetes.io/name: hazelcast-enterprise
+  name: my-release-hazelcast-enterprise-configuration
+  namespace: default

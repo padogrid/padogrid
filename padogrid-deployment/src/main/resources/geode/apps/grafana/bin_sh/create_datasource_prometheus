@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-datasource <datasource-name>] [-?]"
+   echo ""
+   echo "   Creates the Prometheus datasource in Grafana."
+   echo "     <datasource-name>  Datasource name."
+   echo ""
+   echo "Default: ./$EXECUTABLE -datasource $DEFAULT_DATASOURCE"
+   echo ""
+   exit
+fi
+
+if [ "$DATASOURCE" == "" ]; then
+   DATASOURCE=$DEFAULT_DATASOURCE
+fi
+
+curl -sS -X POST $GRAFANA_URL/api/datasources -H "Content-Type: application/json" -d '{"name": "'"$DATASOURCE"'", "type": "prometheus", "url": "http://'"$PROMETHEUS_URL"'", "access": "proxy", "basicAuth": false, "jsonData": { "httpMethod": "GET", "keepCookies": [] } }' | jq

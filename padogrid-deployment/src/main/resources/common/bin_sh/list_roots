@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-tree -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - List all the root environments initialized by 'init_addon'
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+DESCRIPTION
+   Lists all the RWEs (Root Worksaces Environments).
+
+DEFAULT
+   $EXECUTABLE
+
+SEE ALSO
+EOF
+   printSeeAlsoList "list_*" $EXECUTABLE
+   exit
+fi
+
+if [ "$PADOGRID_WORKSPACES_HOME" == "" ]; then
+   echo "ERROR: Workspaces not initialized. Please first run 'init_addon' to initialize workspaces."
+   echo "       Command aborted."
+   exit 1
+fi
+if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
+   echo "ERROR: Invalid workspaces. Please run 'init_addon' to initialize workspaces."
+   echo "       Command aborted."
+   exit 1
+fi
+
+getRweList

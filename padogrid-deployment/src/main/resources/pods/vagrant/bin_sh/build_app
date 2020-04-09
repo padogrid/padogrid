@@ -1,0 +1,167 @@
+#!/bin/bash 
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+#. $SCRIPT_DIR/.addonenv.sh > /dev/null
+. $SCRIPT_DIR/.addonenv.sh 
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-?]"
+   echo ""
+   echo "   Builds a Vagrant pod environment."
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+
+# Assume the pod type is vagrant for now unitl other types are supported.
+POD_TYPE=`getPodProperty "pod.type"`
+POD_BOX_IMAGE=`getPodProperty "pod.box.image"`
+
+HOST_NAME=`hostname`
+
+#
+# Get vagrant properties from the cluster.properties file
+#
+NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
+NODE_COUNT=`getPodProperty "node.count" $NODE_COUNT`
+HOST_PRODUCTS_DIR=`getPodProperty "host.productsDir" $HOST_PRODUCTS_DIR`
+
+# Host private IP address. This address must be accessible from VitualBox
+if [ "$HOST_PRIVATE_IP" == "" ]; then
+   AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
+   if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
+      echo >&2 "ERROR: Private IP address not specified and unable to determine. Please add"
+      echo >&2 "       a host-only ethernet adapter to VirtualBox. Command aborted."
+      exit 1
+   fi
+   # Pick the first one in the list
+   for i in $AVAILABLE_IP_ADDRESSES; do
+      HOST_PRIVATE_IP=$i
+      break;
+   done
+fi
+
+TEMPLATE_FILE="$ETC_DIR/template-Vagrantfile-private-ip-seq"
+
+NODEENV_FILE=$POD_DIR/.nodeenv.sh
+BOOTSTRAP_FILE=$POD_DIR/bootstrap.sh
+
+if [ -z $HAZELCAST_ADDON_WORKSPACE ]; then
+   HAZELCAST_ADDON_WORKSPACE=$BASE_DIR
+fi
+GUEST_HOME_DIR="/home/vagrant"
+HAZELCAST_ADDON_WORKSPACE_NAME=$(basename "$HAZELCAST_ADDON_WORKSPACE")
+HAZELCAST_ADDON_WORKSPACES_HOME_NAME=$(basename "$HAZELCAST_ADDON_WORKSPACES_HOME")
+GUEST_HAZELCAST_ADDON_WORKSPACES_HOME="$GUEST_HOME_DIR/$HAZELCAST_ADDON_WORKSPACES_HOME_NAME"
+GUEST_HAZELCAST_ADDON_WORKSPACE="$GUEST_HAZELCAST_ADDON_WORKSPACES_HOME/$HAZELCAST_ADDON_WORKSPACE_NAME"
+HAZELCAST_ADDON_DIR_NAME=$(basename "$BASE_DIR")
+HAZELCAST_ADDON_HOME="$GUEST_HOME_DIR/$HAZELCAST_ADDON_DIR_NAME"
+PODS_DIR=$GUEST_HAZELCAST_ADDON_WORKSPACE/pods
+
+# Find all installed products in the host product dir and
+# set the guest environment variables with them.
+HAZELCAST_HOME=""
+JET_HOME=""
+JAVA_HOME=""
+PROMETHEUS_HOME=""
+GRAFANA_HOME=""
+JQ_HOME=""
+pushd $HOST_PRODUCTS_DIR > /dev/null 2>&1
+for i in *; do
+   if [[ $i == hazelcast-enterprise* ]]; then
+      HAZELCAST_HOME="$GUEST_HOME_DIR/products/$i"  
+   elif [[ $i == hazelcast-jet-enterprise* ]]; then
+      JET_HOME="$GUEST_HOME_DIR/products/$i"  
+   elif [[ $i == jdk* ]]; then
+      JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
+   elif [[ $i == prometheus* ]]; then
+      PROMETHEUS_HOME="$GUEST_HOME_DIR/products/$i"  
+   elif [[ $i == grafana* ]]; then
+      GRAFANA_HOME="$GUEST_HOME_DIR/products/$i"
+   elif [[ $i == jq* ]]; then
+      JQ_HOME="$GUEST_HOME_DIR/products/$i"
+   fi
+done
+popd > /dev/null 2>&1
+
+# Create the .nodeenv.sh file which is sourced in during login by boostrap.sh
+# and during remote execution by .addonenv.sh
+echo "#!/bin/bash" > $NODEENV_FILE
+echo "" >> $NODEENV_FILE
+echo "export HOST_OS_HOSTNAME=`hostname`" >> $NODEENV_FILE
+echo "export HAZELCAST_HOME=$HAZELCAST_HOME" >> $NODEENV_FILE
+echo "export JET_HOME=$JET_HOME" >> $NODEENV_FILE
+echo "export HAZELCAST_ADDON_HOME=$HAZELCAST_ADDON_HOME" >> $NODEENV_FILE
+echo "export HAZELCAST_ADDON_WORKSPACES_HOME=$GUEST_HAZELCAST_ADDON_WORKSPACES_HOME" >> $NODEENV_FILE
+echo "export HAZELCAST_ADDON_WORKSPACE=$GUEST_HAZELCAST_ADDON_WORKSPACE" >> $NODEENV_FILE
+echo "export PODS_DIR=$PODS_DIR" >> $NODEENV_FILE
+echo "export POD=$POD" >> $NODEENV_FILE
+echo "export OS_POD=$POD" >> $NODEENV_FILE
+echo "export JAVA_HOME=$JAVA_HOME" >> $NODEENV_FILE
+echo "export PROMETHEUS_HOME=$PROMETHEUS_HOME" >> $NODEENV_FILE
+echo "export GRAFANA_HOME=$GRAFANA_HOME" >> $NODEENV_FILE
+echo "export JQ_HOME=$JQ_HOME" >> $NODEENV_FILE
+if [ "$CLUSTER_TYPE" == "imdg" ]; then
+   echo "export PATH=\$JAVA_HOME/bin:\$HAZELCAST_HOME/bin:\$HAZELCAST_ADDON_HOME/bin_sh:\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
+else
+   echo "export PATH=\$JAVA_HOME/bin:\$JET_HOME/bin:\$HAZELCAST_ADDON_HOME/bin_sh:\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
+fi
+
+# Create the bootstrap file. This file is executed when the user
+# logs in.
+echo "#!/bin/bash" > $BOOTSTRAP_FILE
+echo "" >> $BOOTSTRAP_FILE
+echo ". /vagrant/.nodeenv.sh" >> $BOOTSTRAP_FILE
+echo "" >> $BOOTSTRAP_FILE
+echo "pushd $HAZELCAST_ADDON_HOME/bin_sh > /dev/null 2>&1" >> $BOOTSTRAP_FILE
+echo ". $HAZELCAST_ADDON_HOME/bin_sh/.hzaddon_completion.bash" >> $BOOTSTRAP_FILE
+echo "popd > /dev/null 2>&1" >> $BOOTSTRAP_FILE
+echo "set -o vi" >> $BOOTSTRAP_FILE
+
+if [[ $OS_NAME == CYGWIN* ]]; then
+   # Convert to the proper path form for Ruby.
+   HOST_PRODUCTS_DIR="$(cygpath -w $HOST_PRODUCTS_DIR)"
+   HOST_PRODUCTS_DIR="${HOST_PRODUCTS_DIR//\\/\\\\\\\\}"
+   HAZELCAST_ADDON_WORKSPACES_HOME="$(cygpath -w $HAZELCAST_ADDON_WORKSPACES_HOME)"
+   HAZELCAST_ADDON_WORKSPACES_HOME="${HAZELCAST_ADDON_WORKSPACES_HOME//\\/\\\\\\\\}"
+   HAZELCAST_ADDON_HOME="$(cygpath -w $BASE_DIR)"
+   HAZELCAST_ADDON_HOME="${HAZELCAST_ADDON_HOME//\\/\\\\\\\\}"
+
+   # Replace '/' to avoid expansion for the subsequent use.
+   POD_BOX_IMAGE="${POD_BOX_IMAGE//\//\\/}"
+else
+   # Replace '/' to avoid expansion for the subsequent use.
+   HOST_PRODUCTS_DIR="${HOST_PRODUCTS_DIR//\//\/}"
+   HAZELCAST_ADDON_WORKSPACES_HOME="${HAZELCAST_ADDON_WORKSPACES_HOME//\//\/}"
+   HAZELCAST_ADDON_HOME="${BASE_DIR//\//\/}"
+   POD_BOX_IMAGE="${POD_BOX_IMAGE//\//\/}"
+fi
+
+# Extract the first three octets from the primary IP.
+BASE_PRIVATE_IP_FIRST_THREE_OCTETS=${HOST_PRIVATE_IP%.*}
+BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
+BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
+
+# Substitute the variables in the template file with the actual values.
+sed -e 's/\${POD}/'${POD}'/g' \
+    -e 's/\${POD_BOX_IMAGE}/'${POD_BOX_IMAGE}'/g' \
+    -e 's/\${NODE_NAME_PRIMARY}/'${NODE_NAME_PRIMARY}'/g' \
+    -e 's/\${NODE_COUNT}/'${NODE_COUNT}'/g' \
+    -e 's/\${BASE_PRIVATE_IP}/'${BASE_PRIVATE_IP}'/g' \
+    -e 's/\${NODE_NAME_PREFIX}/'${NODE_NAME_PREFIX}'/g' \
+    -e 's/\${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}/'${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}'/g' \
+    -e 's/\${BASE_PRIVATE_IP_LAST_OCTET}/'${BASE_PRIVATE_IP_LAST_OCTET}'/g' \
+    -e 's/\${HAZELCAST_ADDON_WORKSPACES_HOME}/'${HAZELCAST_ADDON_WORKSPACES_HOME}'/g' \
+    -e 's/\${HAZELCAST_ADDON_WORKSPACES_HOME_NAME}/'${HAZELCAST_ADDON_WORKSPACES_HOME_NAME}'/g' \
+    -e 's/\${HAZELCAST_ADDON_HOME}/'${HAZELCAST_ADDON_HOME}'/g' \
+    -e 's/\${HAZELCAST_ADDON_DIR_NAME}/'${HAZELCAST_ADDON_DIR_NAME}'/g' \
+    -e 's/\${HOST_PRODUCTS_DIR}/'${HOST_PRODUCTS_DIR}'/g' \
+    -e 's/\${HOST_NAME}/'${HOST_NAME}'/g' \
+    -e 's/\${NODE_PRIMARY_MEMORY_SIZE}/'${NODE_PRIMARY_MEMORY_SIZE}'/g' \
+    -e 's/\${NODE_MEMORY_SIZE}/'${NODE_MEMORY_SIZE}'/g' \
+    $TEMPLATE_FILE > $POD_DIR/Vagrantfile

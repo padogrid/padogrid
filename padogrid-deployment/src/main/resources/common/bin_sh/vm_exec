@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -vm -all -simulate -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Execute the specified command in the specified VMs except this VM
+                 by default in padogrid environment
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-all] [-simulate] "commands" [-?]
+
+   Executes the specified commands in all the workspace VMs defined by the VM_HOSTS
+   environment variable in the workspace 'setenv.sh' file. To execute only in the
+   cluster VMs, specify the cluster with the '-cluster' option. To execute in a select
+   list of VMs, specify the VM list with the '-vm' option.
+
+   The specified commands will not be executed on this VM (the VM from which '$EXECUTABLE'
+   is executed). To include this VM, specify the '-all' option.
+
+   Note that this command and all other commands that begin with the "vm_" preprefix are
+   available only on VM workspaces.
+
+   The '-vm' option overrides both the '-cluster' option and VM_HOSTS. The '-cluster' option
+   overrides VM_HOSTS. 
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -vm comma_separated_hosts
+             A comma separated list of VM hosts or addresses. If the list contains spaces
+             then enclosed it in quotes.
+
+   -all
+             Execute the command on all VMs including this VM. If not specified
+             then the command will not execute on this VM.
+
+   -simulate
+             Print the remote commands but do not execute.
+
+   "commands"
+             Remote commands separated by ';' or '&&'. Commands should be in double quotes.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER "commands"
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "vm_*" $EXECUTABLE
+   exit
+fi
+
+# Available only on VM workspaces
+if [ "$VM_ENABLED" != "true" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: The workspace is not a VM workspace. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1 
+fi
+
+# If the -vm option is specified then it overrides all other options
+if [ "$VM_SPECIFIED" == "true" ]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+      VM_HOSTS=$VM_HOSTS_ARG
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "ERROR: Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+else
+   # The -cluster option overrides VM_HOSTS
+   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+      if [ "`isClusterExist "$CLUSTER"`" == "false" ]; then 
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Cluster does not exist [$CLUSTER]. Command aborted."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+      if [ "$VM_ENABLED" == "false" ]; then
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+         echo >&2 "       in the 'etc/cluster.properties' file."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         if [ "$VM_HOSTS" == "" ]; then
+            echo "----------------------------------------------------------------"
+            echo "WORKSPACE: $PADOGRID_WORKSPACE"
+            echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
+            echo >&2 "           file. Command aborted."
+            echo "----------------------------------------------------------------"
+            exit 1
+         fi
+      fi
+   fi
+fi
+
+#
+# Reconstruct command
+#
+COMMAND=
+PREV_VAL=
+for i in $*; do
+   if [[ "$i" == "${CLUSTER}" ]]; then
+       if [ -z $CLUSTER_SPECIFIED ]; then
+          COMMAND="$COMMAND $i"
+       fi
+   elif [[ "$i" != "-cluster" ]]  && [[ "$i" != "-vm" ]]  && [[ "$i" != "-all" ]] && [[ "$i" != "-simulate" ]]; then
+      if [ "$PREV_VAL" != "-vm" ]; then
+         COMMAND="$COMMAND $i"
+      fi
+   fi
+   PREV_VAL=$i
+done
+
+# Replace , with space
+__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+   VM_USER=`getClusterProperty "vm.user"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+fi
+if [ "$VM_USER" == "" ]; then
+   VM_USER=$(whoami)
+fi
+if [ "$VM_KEY" != "" ]; then 
+   VM_KEY="-i $VM_KEY"
+fi
+THIS_VM_HOSTNAME=`hostname`
+for VM_HOST in $__VM_HOSTS; do
+     HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+     if [ "$ALL" != "true" ] && [ "$HOST_NAME" == "$THIS_VM_HOSTNAME" ]; then
+        continue
+     fi
+
+     echo "---------- $VM_HOST ----------"
+     if [ "$SIMULATE" == "true" ]; then
+         echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no $COMMAND"
+     else
+        ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no $COMMAND
+     fi
+     echo ""
+done
+if [ "$SIMULATE" == "true" ]; then
+   echo "Simulation complete."
+fi

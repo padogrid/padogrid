@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+# Get all folders from the dashbarod dir
+pushd $DASHBOARDS_DIR > /dev/null 2>&1
+__FOLDERS=`ls`
+FOLDERS=""
+for i in $__FOLDERS; do
+   FOLDERS="$FOLDERS $i"
+done
+popd > /dev/null 2>&1
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-folder <folder-name>] [-datasource <datasource-name>] [-all] [-?]"
+   echo ""
+   echo "   Imports all of the dashboards in the specified folder to Grafana."
+   echo ""
+   echo "     <folder-name>      Folder name."
+   echo "     <datasource-name>  Datasource name."
+   echo "     -all               Import all folders."
+   echo ""
+   echo "   For a complete list of folders that can be imported, run the 'list_folders' command"
+   echo "   or see the following directory:"
+   echo "      $DASHBOARDS_DIR"
+   echo ""
+   echo "Default: ./$EXECUTABLE -folder $DEFAULT_FOLDER -datasource $DEFAULT_DATASOURCE"
+   echo ""
+   exit
+fi
+
+if [ "$FOLDER" != "" ]; then
+   FOLDERS=$FOLDER
+elif [ "$ALL" != "true" ]; then
+   FOLDERS=$DEFAULT_FOLDER
+fi
+if [ "$DATASOURCE" == "" ]; then
+   DATASOURCE=$DEFAULT_DATASOURCE
+fi
+
+# 1. create the Prometheus data source
+./create_datasource_prometheus -datasource $DATASOURCE
+
+for FOLDER in $FOLDERS; do
+   # 2. Create the perf_test folder to which all of the dashboards are to be imported.
+   ./create_folder -folder $FOLDER
+
+   # 3. Get all folders from Grafana and find the perf_test folder ID
+   TMP_FILE=$TMP_DIR/folders-$FOLDER.json
+   ./get_folders > $TMP_FILE
+   __ID=`./get_folder_id -folder $FOLDER`
+
+   # 4. Insert the folder ID to the databoard files and import the modified files to Grafana.
+   if [ ! -d $TMP_DIR/dashboards ]; then
+      mkdir -p $TMP_DIR/dashboards
+   fi
+   DASHBOARD_DIR=$DASHBOARDS_DIR/$FOLDER
+   for FILE in $DASHBOARD_DIR/*.json; do
+      FILE_NAME=$(basename "$FILE")
+      TMP_FILE=$TMP_DIR/dashboards/$FILE_NAME
+      sed 's/\"\${FOLDER_ID}\"/'$__ID'/g' "$FILE" | sed 's/\${DATASOURCE}/'$DATASOURCE'/g' > "$TMP_FILE"
+      curl -sS -X POST $GRAFANA_URL/api/dashboards/db -H "Content-Type: application/json" -d "@$TMP_FILE" | jq
+   done
+done

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display all CP group names in the specified
+                 padogrid cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Displays all CP group names.
+
+OPTIONS
+   -cluster cluste_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "cp_*" $EXECUTABLE
+   exit
+fi
+
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM-1
+HOST_NAME=localhost
+
+BASE_URL=http://$HOST_NAME:$MEMBER_PORT
+
+if [ "`which jq`" != "" ]; then
+   curl -s $BASE_URL/hazelcast/rest/cp-subsystem/groups | jq
+else
+   curl -s $BASE_URL/hazelcast/rest/cp-subsystem/groups | jq
+fi

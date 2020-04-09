@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+REPO_NAME=hazelcast-desktop
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-clean] [-?]"
+   echo ""
+   echo "   Builds the jet_demo jar files that can readily be submitted to Jet. It downloads"
+   echo "   all the necessary files to build the jar files. It places jar files in the"
+   echo "   following directory:"
+   echo ""
+   echo "      $APP_DIR/lib"
+   echo ""
+   echo "   -clean Cleans up the build files after the build completes."
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+
+# Download hazelcast-jet-code-samples.git
+BUILD_DIR=$APP_DIR/build
+if [ ! -d $BUILD_DIR ]; then
+   mkdir -p $BUILD_DIR
+fi
+
+# Checkout hazelcast-desktop
+pushd $BUILD_DIR > /dev/null
+git clone https://github.com/hazelcast/hazelcast-jet-code-samples.git
+pushd $BUILD_DIR/hazelcast-jet-code-samples > /dev/null
+git checkout 3.1-maintenance
+git pull
+# Do not build for now. We just need books from the repo.
+#mvn -DskipTests package
+popd > /dev/null
+popd > /dev/null
+
+# Copy books to the 
+cp -r $BUILD_DIR/hazelcast-jet-code-samples/wordcount/src/main/resources/books $APP_DIR/
+
+# Build jet_demo jar files
+pushd $APP_DIR > /dev/null
+mvn -DskipTests clean package
+popd > /dev/null
+
+# Remove the build files if the -clean option is specified.
+if [ "$CLEAN" == "true" ]; then
+   rm -rf $APP_DIR/build
+fi
+
+#
+# Display build information
+#
+echo ""
+echo "Workspace: $PADOHUB_WORKSPACE"
+echo ""
+echo "Built jet_demo jar files that are ready to be submitted to Jet in the following directory:"
+echo ""
+echo "   $APP_DIR/lib"
+echo ""
+echo "To submit jar files to Jet run the 'jet.sh' executable. For example,"
+echo ""
+echo "   cd $APP_DIR/lib"
+echo "   jet.sh submit WordCountJob.jar"
+echo "   jet.sh -a localhost:5701 submit WordCountJob.jar"
+echo ""
+echo "If the job outputs can be monitored by running 'show_log'. For example,"
+echo ""
+echo "   show_log"
+echo "   show_log -num 2"
+echo "   show_log -cluster myjet -num 2"
+echo ""

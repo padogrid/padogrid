@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+REPO_NAME=hazelcast-desktop
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-clean] [-?]"
+   echo ""
+   echo "   Builds $REPO_NAME in the padogrid environment. Upon successfully execution,"
+   echo "   it deploys the latest $REPO_NAME distribuion in the following app directory."
+   echo "      $APP_DIR/${REPO_NAME}_<version>"
+   echo ""
+   echo "   -clean Cleans up the build files after the build completes."
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+
+#
+# Determine the addon version
+#
+ADDON_CORE_JAR_FILE_PATH=`ls $BASE_DIR/lib/v$HAZELCAST_MAJOR_VERSION_NUMBER/hazelcast-addon-core-*.jar`
+ADDON_CORE_JAR_FILE_NAME="`basename $ADDON_CORE_JAR_FILE_PATH`"
+ADDON_CORE_PREFIX="hazelcast-addon-core-$HAZELCAST_MAJOR_VERSION_NUMBER-"
+ADDON_CORE_NAME=${ADDON_CORE_JAR_FILE_NAME%.jar}
+ADDON_VERSION=${ADDON_CORE_NAME#$ADDON_CORE_PREFIX}
+
+ADDON_CORE_JAR_FILE_PATH_3="$BASE_DIR/lib/v3/hazelcast-addon-core-3-$ADDON_VERSION.jar"
+ADDON_CORE_JAR_FILE_PATH_4="$BASE_DIR/lib/v4/hazelcast-addon-core-4-$ADDON_VERSION.jar"
+
+# Install the addon-core jar to the local Maven repo
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   ADDON_CORE_JAR_FILE_PATH_3="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_3")"
+   ADDON_CORE_JAR_FILE_PATH_4="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_4")"
+   __SED_BACKUP="0"
+fi
+
+# SED backup prefix
+if [[ ${OS_NAME} == DARWIN* ]]; then
+   # Mac - space required
+   __SED_BACKUP=" 0"
+else
+   __SED_BACKUP="0"
+fi
+
+# Install padogrid to the local repo
+mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_3 -DgroupId=padogrid.addon \
+    -DartifactId=hazelcast-addon-core-3 -Dversion=$ADDON_VERSION -Dpackaging=jar
+mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_4 -DgroupId=padogrid.addon \
+    -DartifactId=hazelcast-addon-core-4 -Dversion=$ADDON_VERSION -Dpackaging=jar
+
+#
+# Build hazelcast-desktop
+#
+BUILD_DIR=$APP_DIR/build
+if [ ! -d $BUILD_DIR ]; then
+   mkdir -p $BUILD_DIR
+fi
+
+# Checkout hazelcast-desktop
+pushd $BUILD_DIR > /dev/null
+git clone https://github.com/netcrest/hazelcast-desktop.git
+popd > /dev/null
+
+# Determine the latest release version
+pushd $BUILD_DIR/hazelcast-desktop
+TAGS=`git tag`
+for i in $TAGS; do
+   REPO_VERSION=$i
+done
+
+# Checkout the latest desktop release
+git checkout tags/$REPO_VERSION
+
+# Change the addon version number in the desktop pom.xml
+sed -i${__SED_BACKUP} 's/<padogrid.version>.*<\/padogrid.version>/<padogrid.version>'$ADDON_VERSION'<\/padogrid.version>/' pom.xml
+
+# Build the desktop
+mvn -DskipTests package
+popd > /dev/null
+
+# 
+# Inflate the hazelcast-desktop distribution
+#
+REPO_NAME_VERSION=${REPO_NAME}_${REPO_VERSION}
+tar -C $APP_DIR -xzf $BUILD_DIR/$REPO_NAME/${REPO_NAME}-deployment/target/assembly/${REPO_NAME}_${REPO_VERSION}.tar.gz
+
+# Copy the .addonenv.sh to hazelcast-desktop/bin_sh and adjust the directory level.
+# This allows the desktop to pickup the cluster CLASSPATH.
+cp $SCRIPT_DIR/.addonenv.sh $APP_DIR/$REPO_NAME_VERSION/bin_sh/
+sed -i${__SED_BACKUP} 's/__DESKTOP_DIR=\$SCRIPT_DIR/__DESKTOP_DIR="\$(dirname "\$SCRIPT_DIR")"/' $APP_DIR/$REPO_NAME_VERSION/bin_sh/.addonenv.sh
+
+# Set the Hazelcast major version number in the desktop setenv.sh/setenv.bat files
+sed -i${__SED_BACKUP} 's/HAZELCAST_MAJOR_VERSION_NUMBER=.*$/HAZELCAST_MAJOR_VERSION_NUMBER='${HAZELCAST_MAJOR_VERSION_NUMBER}'/' $APP_DIR/$REPO_NAME_VERSION/bin_sh/setenv.sh
+sed -i${__SED_BACKUP} 's/HAZELCAST_MAJOR_VERSION_NUMBER=.*$/HAZELCAST_MAJOR_VERSION_NUMBER='${HAZELCAST_MAJOR_VERSION_NUMBER}'/' $APP_DIR/$REPO_NAME_VERSION/bin_win/setenv.bat
+
+# Remove the build files if the -clean option is specified.
+if [ "$CLEAN" == "true" ]; then
+   rm -rf $BUILD_DIR
+fi
+
+#
+# Display desktop information
+#
+echo ""
+echo "Deployed $REPO_NAME_VERSION in the following directory:"
+echo "   $APP_DIR/$REPO_NAME_VERSION"
+echo ""
+echo "1. Place your client jar files that contain domain classes, etc. in the 'plugins/'"
+echo "   directory."
+echo "2. Update the 'etc/hazelcast-client.xml' as necessary. By default, the desktop connects"
+echo "   to 'localhost:5701', i.e., the 'myhz' cluster."
+echo "3. Change directory to the 'bin_sh/' directory and run 'desktop'."
+echo ""

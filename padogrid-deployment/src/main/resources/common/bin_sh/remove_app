@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-app -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified app from the current padogrid workspace
+
+WARNING
+   This command removes the entire app directory including the config and log files
+   only in the local file system. It will NOT remove the app from the remote VM hosts.
+
+SYNOPSIS
+   $EXECUTABLE -app app_name [-quiet] [-?]
+
+DESCRIPTION
+   Removes the specified app.
+
+   -app app_name
+             App name. The app name is required.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+DEFAULT
+   $EXECUTABLE -app app_name
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*app*" $EXECUTABLE
+   exit
+fi
+
+# Prompt if the app exists
+APP_DIR=$APPS_DIR/$APP
+if [ -d $APP_DIR ]; then
+   if [ "$QUIET" == "false" ]; then
+      echo "        WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "App to Remove: $APP"
+      echo "   This command removes the entire app including config, log, and data store files."
+      echo "Do you want to continue?"
+      echo "(Enter 'continue' + Enter to continue the app removal, other keys to abort.)"
+      read INPUT
+      if [ "$INPUT" != "continue" ]; then
+         echo "App removal aborted."
+         exit
+      fi
+   fi
+else
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The specified app does not exist: [$APP]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Remove the app in the local file system
+CURRENT_DIR=`pwd`
+rm -rf $APP_DIR
+
+echo "----------------------------------------------------------------"
+echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+echo "App Removed: $APP"
+echo "    APP_DIR: $APP_DIR"
+echo "----------------------------------------------------------------"
+
+if [ "$CURRENT_DIR" != "" ] && [ ! -d "$CURRENT_DIR" ]; then
+   echo "You are currently in the removed directory."
+   echo "Please change directory to a valid directory before executing any commands."
+fi

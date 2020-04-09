@@ -1,0 +1,409 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+	
+	<id>padogrid-assembly</id>
+	<formats>
+		<format>zip</format>
+		<format>tar.gz</format>
+	</formats>
+	<includeBaseDirectory>true</includeBaseDirectory>
+	<baseDirectory>padogrid_${padogrid.version}</baseDirectory>
+
+	<dependencySets>
+		<dependencySet>
+			<outputDirectory>lib</outputDirectory>
+			<includes>
+				<include>io.prometheus.jmx:**</include>
+				<include>org.apache.logging.log4j:**</include>
+			</includes>
+		</dependencySet>
+	</dependencySets>
+
+	<moduleSets>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:geode-addon-core</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>geode/lib</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:hazelcast-addon-common</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>hazelcast/lib</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:hazelcast-addon-core-3</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>hazelcast/lib/v3</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:hazelcast-addon-core-4</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>hazelcast/lib/v4</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+	</moduleSets>
+
+	<fileSets>
+		<!-- Collect all resources -->
+
+		<!-- ==== Hazelcast ==== -->
+		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/common/bin_sh</directory>
+			<outputDirectory>hazelcast/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/bin_sh</directory>
+			<outputDirectory>hazelcast/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+
+		<!-- etc -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/etc</directory>
+			<outputDirectory>hazelcast/etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+
+		<!-- clusters -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/clusters</directory>
+			<outputDirectory>hazelcast/clusters/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		
+		<!-- pods: pods files except for README.md go to etc/ -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/pods</directory>
+			<outputDirectory>hazelcast/etc/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>README.md</exclude>
+			</excludes>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/pods/bin_sh</directory>
+			<outputDirectory>hazelcast/etc/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		
+		<!-- pods: place READEME.md to pods/ -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/pods</directory>
+			<outputDirectory>hazelcast/pods/</outputDirectory>
+			<includes>
+				<include>README.md</include>
+			</includes>
+		</fileSet>
+		
+		<!-- k8s: k8s files -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/k8s</directory>
+			<outputDirectory>hazelcast/k8s/</outputDirectory>
+			<excludes>
+				<exclude>kustom/README-KUSTOM.md</exclude>
+				<exclude>kustom/Hazelcast-Kustom.pdf</exclude>
+			</excludes>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/k8s/kustom/bin_sh</directory>
+			<outputDirectory>hazelcast/k8s/kustom/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		
+		<!-- docker: docker files -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/docker</directory>
+			<outputDirectory>hazelcast/docker/</outputDirectory>
+		</fileSet>
+
+		<!-- apps -->
+		<!-- Make app bin_sh files executable. -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/desktop/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/desktop/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/grafana/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/grafana/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/perf_test/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/jet_demo/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<!-- Include the entire apps dir -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps</directory>
+			<outputDirectory>hazelcast/apps/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		<!-- Include jet_demo source code -->
+		<fileSet>
+			<directory>../hazelcast-addon-jet-demo/src</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/src</outputDirectory>
+		<!-- 	<includes>
+				<include>**/**</include>
+			</includes> -->
+		</fileSet>
+
+		<!-- test (include test jar in the test/ dir) -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+		<fileSet>
+			<directory>../hazelcast-addon-core-3/target</directory>
+			<outputDirectory>hazelcast/plugins/v3</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet>
+		<fileSet>
+			<directory>../hazelcast-addon-core-4/target</directory>
+			<outputDirectory>hazelcast/plugins/v4</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet>
+		
+		<!-- ==== Geode ==== -->
+		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/common/bin_sh</directory>
+			<outputDirectory>geode/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/geode/bin_sh</directory>
+			<outputDirectory>geode/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		
+		<!-- etc -->
+		<fileSet>
+			<directory>src/main/resources/geode/etc</directory>
+			<outputDirectory>geode/etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		
+		<!-- k8s: k8s files -->
+		<fileSet>
+			<directory>src/main/resources/geode/k8s</directory>
+			<outputDirectory>geode/k8s/</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/geode/k8s/kustom/bin_sh</directory>
+			<outputDirectory>geode/k8s/kustom/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		
+		<!-- docker: docker files -->
+		<fileSet>
+			<directory>src/main/resources/geode/docker</directory>
+			<outputDirectory>geode/docker/</outputDirectory>
+		</fileSet>
+		
+		<!-- apps -->
+		<!-- Make app bin_sh files executable. -->
+		<fileSet>
+			<directory>src/main/resources/geode/apps/grafana/bin_sh</directory>
+			<outputDirectory>geode/apps/grafana/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/geode/apps/perf_test/bin_sh</directory>
+			<outputDirectory>geode/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<!-- Include the entire apps dir -->
+		<fileSet>
+			<directory>src/main/resources/geode/apps</directory>
+			<outputDirectory>geode/apps/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+
+		<!-- test (include test jar in the test/ dir) -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+		<fileSet>
+			<directory>../geode-addon-core/target</directory>
+			<outputDirectory>geode/plugins</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet>
+		
+		<!-- ==== All === -->
+		<!-- common/etc -->
+		<fileSet>
+			<directory>src/main/resources/common/etc</directory>
+			<outputDirectory>etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+
+		<!-- pods: pods files except for README.md go to etc/ -->
+		<fileSet>
+			<directory>src/main/resources/common/pods</directory>
+			<outputDirectory>pods</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/common/pods/vagrant/bin_sh</directory>
+			<outputDirectory>pods/vagrant/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		
+		<!-- Others -->
+		<fileSet>
+			<directory>..</directory>
+			<includes>
+				<include>license/**</include>
+				<include>LICENSE</include>
+				<include>NOTICE</include>
+				<include>README.md</include>
+				<include>RELEASE_NOTES.txt</include>
+			</includes>
+			<outputDirectory>.</outputDirectory>
+		</fileSet>
+
+	</fileSets>
+
+	<!-- Copy template files to clusters and apps, copy kustom overlay files -->
+	<files>
+	    <!-- Copy create_root to bin_sh/ -->
+	    <file>
+			<source>src/main/resources/common/bin_sh/create_root</source>
+			<outputDirectory>bin_sh</outputDirectory>
+			<fileMode>0755</fileMode>
+		</file>
+		<file>
+			<source>src/main/resources/common/bin_sh/.argenv.sh</source>
+			<outputDirectory>bin_sh</outputDirectory>
+		</file>
+		<file>
+			<source>src/main/resources/common/bin_sh/.utilenv.sh</source>
+			<outputDirectory>bin_sh</outputDirectory>
+		</file>
+		
+		<!-- Copy files that may need to be modified in the overlay directories -->
+		<file>
+			<source>src/main/resources/hazelcast/k8s/kustom/etc/hazelcast/base/statefulset.yaml</source>
+			<outputDirectory>hazelcast/k8s/kustom/etc/hazelcast/overlay-base</outputDirectory>
+		</file>
+		<file>
+			<source>src/main/resources/hazelcast/k8s/kustom/etc/hazelcast/base/mc-statefulset.yaml</source>
+			<outputDirectory>hazelcast/k8s/kustom/etc/hazelcast/overlay-base</outputDirectory>
+		</file>
+		<file>
+			<source>src/main/resources/hazelcast/k8s/kustom/etc/hazelcast/base/hazelcast-hpa-custom.yaml</source>
+			<outputDirectory>hazelcast/k8s/kustom/etc/hazelcast/overlay-base</outputDirectory>
+		</file>
+		<file>
+			<source>src/main/resources/hazelcast/k8s/kustom/etc/hazelcast/storage/gke/nfs/nfs-pv.yaml</source>
+			<outputDirectory>hazelcast/k8s/kustom/etc/hazelcast/overlay-nfs</outputDirectory>
+		</file>
+		
+	</files>
+
+</assembly>

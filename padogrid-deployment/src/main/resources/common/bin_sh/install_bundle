@@ -1,0 +1,325 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-preview -download -list -header -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Install the specified bundle file in the current padogrid workspace
+
+WARNING
+   This command OVERWRITES the files in the current padogrid workspace that have
+   the same paths. As a safety measure, it will back up the workspace by executing
+   the 'create_bundle -all' command before  installing the specified bundle.
+
+
+SYNOPSIS
+   $EXECUTABLE -list|-header [-?]
+   $EXECUTABLE [-preview] [-download] [-quiet] bundle_file_path
+
+DESCRIPTION
+   Installs the specified bundle file in the current padogrid workspace. Make
+   sure to terminate all of the conflicting clusters and apps before executing
+   this command. Otherwise, the running processes may produce unpredictable behavior.
+
+OPTIONS
+   -list
+            Lists all bundles available in the remote padogrid bundle repo.
+
+   -header
+             Lists all bundles along with header information describing each bundle in the
+             remote padogrid bundle repo.
+
+   -preview
+            Do not install but display the bundle contents.
+
+   -download
+            Downloads and installs the specified bundle from the remote padogrid
+            bundle repo. To prevent it from installing, specify the '-preview' option.
+            If the '-preview' option is specified, then it downloads and displays the
+            contents but does not install the bundle. You can install the downloaded
+            bundle later by specifying the bundle file path.
+
+   -quiet
+            Quiet mode. Supresses the interactive prompt.
+
+   bundle_file_path
+             Bundle file path if local or bundle name if download.
+
+DEFAULT
+   $EXECUTABLE -list
+
+EXAMPLES
+   To list remote bundles:
+      $EXECUTABLE -list
+
+   To list headers of remote bundles:
+      $EXECUTABLE -header
+
+   To preview a remote bundle:
+      $EXECUTABLE -download -preview geode-1.11-cluster-app-ln-ny-perf_test_wan
+
+   To install a remote bundle:
+      $EXECUTABLE -download geode-1.11-cluster-app-ln-ny-perf_test_wan
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+FILES
+   $PADOGRID_WORKSPACE/bundles
+             The current workspace bundles directory where locally generated bundles are stored.
+EOF
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*bundle*" $EXECUTABLE
+   exit
+fi
+
+if [ "$1" == "" ]; then
+   LIST="true"
+fi
+
+if [ "$HEADER" == "true" ]; then
+   show_bundle -header
+   exit
+elif [ "$LIST" == "true" ]; then
+   show_bundle -list
+   exit
+fi
+
+BUNDLE_FILE_PATH=${@: -1}
+
+if [ "$DOWNLOAD" == "true" ]; then
+   IS_DOWNLOAD="true"
+   GIT_DIR=$PADOGRID_WORKSPACE/bundles/$BUNDLE_FILE_PATH
+   TARBALL=${BUNDLE_FILE_PATH}.tar.gz
+   TARBALL_PATH=$PADOGRID_WORKSPACE/bundles/$TARBALL
+   if [ "$QUIET" == "false" ] && [ -f "$TARBALL_PATH" ]; then
+      echo "Specified bundle exists in the bundles directory."
+      echo "   $PADOGRID_WORKSPACE/bundles/$TARBALL"
+      REDO=true
+      INNER_LOOP=true
+      while [ "$INNER_LOOP" == "true" ]; do
+         read -p "Enter 'e' to install the existing bundle, 'd' to download, 'q' to quit: " INPUT
+         case $INPUT in
+            [Ee]* ) IS_DOWNLOAD="false"; INNER_LOOP=false;;
+            [Dd]* ) IS_DOWNLOAD="true"; INNER_LOOP=false;;
+            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+            * ) INNER_LOOP=true;;
+         esac
+      done
+   fi
+
+   if [ "$IS_DOWNLOAD" == "true" ]; then
+      if [ -d $GIT_DIR ]; then
+         rm -rf $GIT_DIR
+      fi
+      pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
+      git clone $BUNDLE_REPO/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
+      echo git clone $BUNDLE_REPO/${BUNDLE_FILE_PATH}.git 
+      popd > /dev/null 2>&1 
+      if [ ! -d "$GIT_DIR" ]; then
+         echo >&2 "ERROR: Specified bundle does not exist in the repo. Command aborted."
+         exit 1
+      fi
+      pushd $GIT_DIR > /dev/null 2>&1 
+      mvn package
+      popd > /dev/null 2>&1 
+      mv $GIT_DIR/target/assembly/$TARBALL $PADOGRID_WORKSPACE/bundles
+      rm -rf $GIT_DIR
+
+      if [ -f $TARBALL_PATH ]; then
+         BUNDLE_FILE_PATH=$TARBALL_PATH
+      else
+         echo >&2 "ERROR: File not found. Command aborted."
+         exit 1
+      fi
+   else
+      BUNDLE_FILE_PATH=$TARBALL_PATH
+   fi
+fi
+
+
+if [ ! -f $BUNDLE_FILE_PATH ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The specified file not found. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1 
+fi
+
+file_name="`basename $BUNDLE_FILE_PATH $0`"
+if [ "$PRODUCT" == "hazelcast" ]; then
+   if [[ "$file_name" == "hazelcast-"* ]]; then
+      cluster_type="imdg"
+   elif [[ "$file_name" == "jet-"* ]]; then
+      cluster_type="jet"
+   else
+      echo >&2 "ERROR: Unsupported bundle name. Command aborted."
+      exit 1
+   fi
+else
+   if [[ "$file_name" == "geode-"* ]]; then
+      cluster_type="geode"
+   elif [[ "$file_name" == "gemfire-"* ]]; then
+      cluster_type="gemfire"
+   else
+      echo >&2 "ERROR: Unsupported bundle name. Command aborted."
+      exit 1
+   fi
+fi
+
+if [ "$PREVIEW" == "false" ] && [ "$CLUSTER_TYPE" != "$cluster_type" ]; then
+   echo >&2 "ERROR: Invalid cluster type. This workspace is configured to run \"$CLUSTER_TYPE\""
+   echo >&2 "       but the bundle is for \"$cluster_type\". Command aborted."
+   exit 1
+fi
+
+if [ "$PREVIEW" == "false" ] && [ "$QUIET" == "false" ]; then
+   echo "        WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "Bundle to Install: $BUNDLE_FILE_PATH"
+   echo "   This command installs the specified bundle in the padogrid workspace."
+   echo "   Any conflicting files will be overwritten with the files in the bundle. Note that"
+   echo "   as a safety measure, it will automatically back up the padogrid workspace"
+   echo "   in the 'bundles' directory before installing the specified bundle."
+   echo "Do you want to continue?"
+   echo "(Enter 'continue' + Enter to continue the cluster removal, other keys to abort.)"
+   read INPUT
+   if [ "$INPUT" != "continue" ]; then
+      echo "Bundle installation aborted."
+      exit
+   fi
+fi
+
+#
+# Backup the entire workspace
+#
+if [ "$PREVIEW" == "false" ]; then
+   BUNDLE_DISPLAY_MESSAGE="Backup Bundle Created:"
+   echo ""
+   echo "BACKUP"
+   echo "------"
+   $SCRIPT_DIR/create_bundle -all -quiet
+fi
+
+# 
+# Find all pods, clusters and apps in the bundle
+#
+# Find all clusters
+PODS=""
+for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* clusters\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* pods\//pods\//'`; do
+   if [[ $i == pods/* ]]; then
+      str=${i#pods/}
+      pod=$(echo $str | sed 's/\/.*$//')
+      if [ "$pod" != "" ] && [[ "$PODS" != *"$pod"* ]]; then
+         PODS="$PODS $pod"
+      fi
+   fi
+done
+
+CLUSTERS=""
+for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* clusters\//clusters\//'`; do
+   if [[ $i == clusters/* ]]; then
+      str=${i#clusters/}
+      cluster=$(echo $str | sed 's/\/.*$//')
+      if [ "$cluster" != "" ] && [[ "$CLUSTERS" != *"$cluster"* ]]; then
+         CLUSTERS="$CLUSTERS $cluster"
+      fi
+   fi
+done
+
+# Find all apps
+APPS=""
+for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* clusters\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* apps\//apps\//'`; do
+   if [[ $i == apps/* ]]; then
+      str=${i#apps/}
+      app=$(echo $str | sed 's/\/.*$//')
+      if [ "$app" != "" ] && [[ "$APPS" != *"$app"* ]]; then
+         APPS="$APPS $app"
+      fi
+   fi
+done
+
+# Find all kubernetes
+K8S="" 
+for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* clusters\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* k8s\//k8s\//'`; do
+   if [[ $i == k8s/* ]]; then
+      str=${i#k8s/}
+      k8s=$(echo $str | sed 's/\/.*$//')
+      if [ "$k8s" != "" ] && [[ "$K8S" != *"$k8s"* ]]; then
+         K8S="$K8S $k8s"
+      fi
+   fi
+done
+
+# Find all dockers
+DOCKERS="" 
+for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* clusters\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\//docker\//'`; do
+   if [[ $i == docker/* ]]; then
+      str=${i#docker/}
+      docker=$(echo $str | sed 's/\/.*$//')
+      if [ "$docker" != "" ] && [[ "$DOCKERS" != *"$docker"* ]]; then
+         DOCKERS="$DOCKERS $docker"
+      fi
+   fi
+done
+
+#
+# Install the specified bundle
+# 
+if [ "$PREVIEW" == "true" ]; then
+   tar -tzvf $BUNDLE_FILE_PATH
+else
+   tar -C $PADOGRID_WORKSPACE -xzvf $BUNDLE_FILE_PATH
+fi
+
+echo ""
+if [ "$PREVIEW" == "true" ]; then
+   echo "PREVIEW"
+   echo "-------"
+else
+   echo "INSTALLED"
+   echo "---------"
+fi
+if [ "$PREVIEW" == "true" ]; then
+   echo "      Cluster Type: $cluster_type"
+   if [ "$DOWNLOAD" == "true" ]; then
+   echo " Downloaded Bundle: $BUNDLE_FILE_PATH"
+   else
+   echo "            Bundle: $BUNDLE_FILE_PATH"
+   fi
+   echo "Preview Cluster(s):$CLUSTERS"
+   echo "   Preview Apps(s):$APPS"
+else
+   echo "           WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "        Cluster Type: $cluster_type"
+   echo "              Bundle: $BUNDLE_FILE_PATH"
+   echo "    Installed Pod(s):$PODS"
+   echo "Installed Cluster(s):$CLUSTERS"
+   echo "    Installed App(s):$APPS"
+   echo "    Installed Docker:$DOCKERS"
+   echo "       Installed K8S:$K8S"
+   echo ""
+   echo "The specified bundle extracted and installed."
+fi
+echo ""

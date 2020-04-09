@@ -1,0 +1,242 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -all -long -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the status of Management Center in the specified cluster
+                 in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster <cluster-name>] [-all] [-long] [-?]
+
+DESCRIPTION
+   Displays Management Center status.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -long
+             Display detailed information.
+
+   -all
+             Display all management centers in the workspace clusters
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+   $LOG_DIR
+             The current cluster log directory.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*mc*" $EXECUTABLE
+   exit
+fi
+
+# Displays short status of a management center.
+function displayMcShort()
+{
+   # Determine the node host name for URL
+   POD=`getClusterProperty "pod.name" "local"`
+   NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE=`getOsNodeName`
+
+   MC_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
+   MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+   MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
+   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" $DEFAULT_MC_HTTPS_ENABLED`
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      if [ "$MC_HTTPS_ENABLED" == "false" ]; then
+         MC_URL="http://${MC_HOST}:${MC_HTTP_PORT}"
+      else
+         MC_URL="https://${MC_HOST}:${MC_HTTPS_PORT}"
+      fi
+   else
+      if [ "$MC_HTTPS_ENABLED" == "false" ]; then
+         MC_URL="http://${MC_HOST}:${MC_HTTP_PORT}/hazelcast-mancenter"
+      else
+         MC_URL="https://${MC_HOST}:${MC_HTTPS_PORT}/hazelcast-mancenter"
+      fi
+   fi
+   MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
+   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   WORKING_DIR=$RUN_DIR/$MC_NAME
+   LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
+   PID=`getMcPid $MC_NAME $WORKSPACE`
+
+   echo "----------------------------------------------------------------"
+   echo "        WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "             Name: $MC_NAME"
+   if [ "$PID" == "" ]; then
+   echo -e "            STATE: ${CLightRed}Down${CNone}"
+   echo "              PID: N/A"
+   else
+   echo -e "            STATE: ${CLightGreen}Running${CNone}"
+   echo "              PID: $PID"
+   fi
+   echo "          Cluster: $CLUSTER"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "       Deployment: VM"
+   fi
+   echo "              URL: $MC_URL"
+   echo "----------------------------------------------------------------"
+}
+
+# Displays long status of a management center.
+function displayMcLong()
+{
+   # Determine the node host name for URL
+   POD=`getClusterProperty "pod.name" "local"`
+   NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE=`getOsNodeName`
+
+   MC_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
+   MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+   MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
+   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" $DEFAULT_MC_HTTPS_ENABLED`
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      if [ "$MC_HTTPS_ENABLED" == "false" ]; then
+         MC_URL="http://${MC_HOST}:${MC_HTTP_PORT}"
+      else
+         MC_URL="https://${MC_HOST}:${MC_HTTPS_PORT}"
+      fi
+   else
+      if [ "$MC_HTTPS_ENABLED" == "false" ]; then
+         MC_URL="http://${MC_HOST}:${MC_HTTP_PORT}/hazelcast-mancenter"
+      else
+         MC_URL="https://${MC_HOST}:${MC_HTTPS_PORT}/hazelcast-mancenter"
+      fi
+   fi
+   MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
+   MC_JMX_URL="service:jmx:rmi:///jndi/rmi://${MC_HOST}:${MC_JMX_PORT}/jmxrmi"
+   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   WORKING_DIR=$RUN_DIR/$MC_NAME
+   LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
+   PID=`getMcPid $MC_NAME $WORKSPACE`
+
+   echo "----------------------------------------------------------------"
+   echo "        WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "             Name: $MC_NAME"
+   if [ "$PID" == "" ]; then
+   echo -e "            STATE: ${CLightRed}Down${CNone}"
+   echo "              PID: N/A"
+   else
+   echo -e "            STATE: ${CLightGreen}Running${CNone}"
+   echo "              PID: $PID"
+   fi
+   echo "          Cluster: $CLUSTER"
+   echo "Management Center: hazelcast-mancenter"
+   echo "              URL: $MC_URL"
+   echo "          JMX_URL: $MC_JMX_URL"
+   echo "      WORKING_DIR: $WORKING_DIR"
+   echo "        HTTP_PORT: $MC_HTTP_PORT"
+   echo "         JMX_PORT: $MC_JMX_PORT"
+   echo "          LOG_DIR: $LOG_DIR"
+   echo "         LOG_FILE: $LOG_FILE"
+   echo "----------------------------------------------------------------"
+}
+
+#
+# VM cluster
+#
+THIS_HOST_NAME=`hostname`
+MC_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_MC_HOST" ]; then
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then
+         VM_KEY="-i $VM_KEY"
+      fi
+      ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_mc -remote -workspace $VM_PADOGRID_WORKSPACE $*"
+      exit
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+if [ "$ALL" == "true" ]; then
+
+   # Display all clusters
+
+   pushd $CLUSTERS_DIR > /dev/null 2>&1
+   CLUSTERS=""
+   COUNT=0
+   for i in *; do
+      if [ -d "$i" ]; then
+         let COUNT=COUNT+1
+         if [ $COUNT -eq 1 ]; then
+            CLUSTERS="$i"
+         else
+            CLUSTERS="$CLUSTERS $i"
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+
+   echo "----------------------------------------------------------------"
+   echo "     Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
+   echo ""
+
+   if [ "$LONG" == "false" ]; then 
+      # Short display -all
+      for CLUSTER in ${CLUSTERS}; do
+         displayMcShort
+      done
+   else
+      # Long display -all
+      for CLUSTER in ${CLUSTERS}; do
+         displayMcLong
+      done
+   fi
+
+else
+
+   if  [ ! -d $CLUSTER_DIR ]; then
+      echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+      exit 1
+   fi
+
+   if [ "$LONG" == "false" ]; then
+      # Short display (single)
+      displayMcShort
+   else
+      # Long display (single)
+      displayMcLong
+   fi
+
+fi

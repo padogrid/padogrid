@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Stop Hazelcast Management Center in the specified padogrid cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Stops Hazelcast Management Center
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*mc*" $EXECUTABLE
+   exit
+fi
+
+#
+# VM cluster
+#
+THIS_HOST_NAME=`hostname`
+MC_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_MC_HOST" ]; then
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then
+         VM_KEY="-i $VM_KEY"
+      fi
+      ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote -workspace $VM_PADOGRID_WORKSPACE $*"
+      exit
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+# Determine the node host name for URL
+POD=`getClusterProperty "pod.name" "local"`
+NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+if [ "$POD" == "local" ]; then
+   NODE=`hostname`
+else
+   NODE="`hostname`.local"
+fi
+
+MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
+WORKING_DIR=$RUN_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}
+LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
+MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+PID=`getMcPid $MC_NAME $WORKSPACE`
+
+if [ -z $PID ]; then
+   echo "Management Center not running [$CLUSTER]. Command aborted."
+   exit
+else
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      taskkill /f /pid "${PID}"
+   else
+      kill -9 "${PID}"
+   fi
+
+   echo "----------------------------------------------------------------"
+   echo "        WORKSPACE $PADOGRID_WORKSPACE"
+   echo "       MC Stopped: $MC_NAME"
+   echo "          Cluster: $CLUSTER"
+   echo "Management Center: hazelcast-mancenter"
+   echo "              URL: http://${NODE}:${MC_HTTP_PORT}/hazelcast-mancenter"
+   echo "              PID: $PID"
+   echo "      WORKING_DIR: $RUN_DIR/hazelcast-mc-${MC_HTTP_PORT}"
+   echo "        HTTP_PORT: $MC_HTTP_PORT"
+   echo "         JMX_PORT: $MC_JMX_PORT"
+   echo "          LOG_DIR: $LOG_DIR"
+   echo "         LOG_FILE: $LOG_FILE"
+   echo "----------------------------------------------------------------"
+fi

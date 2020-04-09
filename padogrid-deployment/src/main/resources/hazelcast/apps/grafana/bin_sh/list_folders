@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+# Get all folders from the dashbarod dir
+pushd $DASHBOARDS_DIR > /dev/null 2>&1
+__FOLDERS=`ls`
+FOLDERS=""
+for i in $__FOLDERS; do
+   FOLDERS="$FOLDERS $i"
+done
+popd > /dev/null 2>&1
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-?]"
+   echo ""
+   echo "   Lists all of the folders that are available in the 'etc/dashboard' directory." 
+   echo "   The listed folders can be imported into Grafana using the 'import_folder' command."
+   echo "   This command is equivalent to the 'ls' command as follows:"
+   echo "      ls $APP_DIR/etc/dashboard"
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+
+echo "Folders on local file system. Run 'import_folder' to import them into Grafana." 
+for i in $FOLDERS; do
+   echo "   $i"
+done
+echo ""

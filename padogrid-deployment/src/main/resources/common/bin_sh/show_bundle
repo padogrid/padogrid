@@ -1,0 +1,186 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-console -list -header -catalog -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Show the specified bundle's READEME.md in the browser 
+
+SYNOPSIS
+   $EXECUTABLE [-console] [-list|-header|-catalog] [bundle_file_name]
+
+DESCRIPTION
+   Displays the specified bundle's README.md file in the browser by default. If it's
+   unable to launch the browser then it displays the README.md file on the console instead.
+
+OPTIONS
+   -list
+             Lists all bundles available in the remote padogrid bundle repo.
+
+   -header
+             Lists all bundles along with header information describing each bundle in the
+             remote padogrid bundle repo.
+            
+   -console
+             Displays README.md on the console. By default, if this option is not specified,
+             then it displays the README.md file in the browser. If the browser cannot be
+             launched then it displays the README.md file on the console instead.
+
+   -catalog
+             Displays the bundle catalog in the browser. If the browser cannot be launched
+             then it lists header information, i.e., the '-header' option is executed.
+
+
+   bundle_file_name
+             Bundle file name of README.md.
+
+DEFAULT
+   $EXECUTABLE bundle_file_name
+
+EXAMPLES
+   To list remote bundles:
+      $EXECUTABLE -list
+
+   To list headers of remote bundles:
+      $EXECUTABLE -header
+
+   To view the bundle (or use case) catalog in the browser:
+      $EXECUTABLE -catalog
+
+   To view a remote bundle help (READEME.md) in the browser:
+      $EXECUTABLE bundle-jet-3.2-cluster-trade.tar.gz
+
+   To view a remote bundle help (READEME.md) on the console:
+      $EXECUTABLE -console bundle-jet-3.2-cluster-trade.tar.gz
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+
+FILES
+   $PADOGRID_WORKSPACE/bundles
+             The current workspace bundles directory where locally generated bundles are stored.
+EOF
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*bundle*" $EXECUTABLE
+   exit
+fi
+
+if [ "$1" == "" ]; then
+   LIST="true"
+fi
+
+if [ "$CATALOG" == "true" ]; then
+   LIST="false"
+   HEADER="false"
+   BROWSER_URL="${CATALOG_URL}"
+   if [[ ${OS_NAME} == DARWIN* ]]; then
+      open "$BROWSER_URL"
+   elif [[ ${OS_NAME} == CYGWIN* ]] || [ "$(which cmd.exe)" != "" ]; then
+      cmd.exe /c start "" "$BROWSER_URL"
+   else
+      HEADER="true"
+      echo "(Catalog: $BROWSER_URL)"
+   fi
+   if [ "$HEADER" == "false" ]; then
+      exit
+   fi
+fi
+
+if [ "$LIST" == "true" ] || [ "$HEADER" == "true" ]; then
+   echo ""
+   echo "Remote Bundle List"
+   echo "------------------"
+   echo "(Repo: $BUNDLE_REPO)"
+   echo ""
+   let INDEX=0
+   TITLE=`curl -sS $BUNDLE_REPO | grep "title=\"${PRODUCT}\-"`
+   for i in $TITLE; do
+      if [[ $i == title=* ]]; then
+         let INDEX=INDEX+1
+	 BUNDLE_NAME=$(echo $i | sed -e "s/^.*>.*${PRODUCT}\-/${PRODUCT}\-/" -e "s/<.*//")
+         echo -e "[$INDEX] ${CLightGreen}${BUNDLE_NAME}${CNone}"
+         if [ "$HEADER" == "true" ]; then
+            RAW_FILE_URL="${RAW_BASE_URL}/${BUNDLE_NAME}/master/README_HEADER.md"
+            echo "    $(curl -sS $RAW_FILE_URL)"
+            echo ""
+         fi
+      fi
+   done
+
+   if [ "$HEADER" == "false" ]; then
+      echo ""
+      echo "Bundle Commands"
+      echo "---------------"
+      echo "View header descriptions: show_bundle -header"
+   else
+      echo "Bundle Commands"
+      echo "---------------"
+   fi
+
+   echo "View catalog (use cases): show_bundle -catalog"
+   echo "View bundle instructions: show_bundle bundle_file_name"
+   echo " Preview bundle contents: install_bundle -download -preview bundle_file_name"
+   echo "          Install bundle: install_bundle -download bundle_file_name"
+   echo ""
+
+   exit
+fi
+
+BUNDLE_FILE_PATH=${@: -1}
+
+CATALOG_TXT=`curl -sS "$RAW_BASE_URL/catalog-${PRODUCT}/master/catalog.txt"`
+for BUNDLE_NAME in $CATALOG_TXT; do
+   if [ "$BUNDLE_NAME" == "$BUNDLE_FILE_PATH" ]; then
+      BUNDLE_FOUND="true"
+   fi
+done
+if [ "$BUNDLE_FOUND" != "true" ]; then
+   echo >&2 "ERROR: Specified bundle does not exist in the repo. Command aborted."
+   exit 1
+fi
+
+BUNDLE_NAME=$BUNDLE_FILE_PATH
+BROWSER_URL="${BUNDLE_REPO}/${BUNDLE_NAME}"
+RAW_FILE_URL="${RAW_BASE_URL}/${BUNDLE_NAME}/master/README.md"
+
+if [ "$CONSOLE" == "true" ]; then
+   curl $RAW_FILE_URL
+   URL=$RAW_FILE_URL
+else
+   if [[ ${OS_NAME} == DARWIN* ]]; then
+      open "$BROWSER_URL"
+      URL=$BROWSER_URL
+   elif [[ ${OS_NAME} == CYGWIN* ]] || [ "$(which cmd.exe)" != "" ]; then
+      cmd.exe /c start "" "$BROWSER_URL"
+      URL=$BROWSER_URL
+   else
+      curl $RAW_FILE_URL
+      URL=$RAW_FILE_URL
+   fi
+fi
+
+echo ""
+echo $BROWSER_URL
+echo ""

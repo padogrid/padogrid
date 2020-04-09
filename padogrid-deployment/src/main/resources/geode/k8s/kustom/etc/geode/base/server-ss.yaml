@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-0
+  namespace: default
+spec:
+  ports:
+  - name: server
+    port: 40404
+    nodePort: 30404
+    protocol: TCP
+    targetPort: 40404
+  selector:
+    app: server
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-1
+  namespace: default
+spec:
+  ports:
+  - name: server
+    port: 40404
+    nodePort: 30405
+    protocol: TCP
+    targetPort: 40404
+  selector:
+    app: server
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-2
+  namespace: default
+spec:
+  ports:
+  - name: server
+    port: 40404
+    nodePort: 30406
+    protocol: TCP
+    targetPort: 40404
+  selector:
+    app: server
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: server
+spec:
+  selector:
+    matchLabels:
+      app: server
+  serviceName: "server"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: my-release
+        app.kubernetes.io/name: geode-cluster
+        app: server
+      annotations:
+        prometheus.io/scrape: 'true'
+    spec:
+      containers:
+      - name: server
+        #image: javapark07/geode:v4
+        #command: ["/startServer.sh"]
+              #              --initial-heap=1g
+              #--max-heap=1g
+        image: apachegeode/geode:latest
+        command:
+        - sh
+        - -c
+        - |
+          gfsh start server \
+              --name="${HOSTNAME}" \
+              --locators=${LOCATOR_0_SERVICE_HOST}[${LOCATOR_0_SERVICE_PORT}],${LOCATOR_1_SERVICE_HOST}[${LOCATOR_1_SERVICE_PORT}] \
+              --classpath=/data/custom/plugins/v1/* \
+              --dir=/data \
+              --disable-default-server=true \
+              --hostname-for-clients=minikube \
+              --cache-xml-file=/data/custom/etc/cache.xml \
+              --J=-Dpadohub.server.port=40404 \
+              --J=-javaagent:/data/custom/plugins/v1/jmx_prometheus_javaagent-0.11.0.jar=8080:/data/custom/etc/prometheus.yml \
+              --J=-Dcom.sun.management.jmxremote.port=1099 \
+              --J=-Dcom.sun.management.jmxremote.ssl=false \
+              --J=-Dcom.sun.management.jmxremote.authenticate=false \
+              && \
+          while true; do
+            sleep 2
+          done
+        ports:
+        - containerPort: 40404
+          name: server
+          protocol: TCP
+        - containerPort: 1099
+          name: jmx
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        volumeMounts:
+        - name: geode-data
+          mountPath: /data
+        - name: geode-custom
+          mountPath: /data/custom
+        resources:
+          limits:
+            cpu: 200m
+            memory: 768Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              PID=$(ps -ef | grep geode-core | grep -v grep | awk '{print $1}') && [ "$PID" != "" ]
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 20
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sh
+              - -c
+              - |
+                gfsh stop server --dir=/data
+      volumes:
+      - name: geode-config
+        configMap:
+          name: geode-config
+      - name: geode-data
+        persistentVolumeClaim:
+          claimName: geode-data
+      - name: geode-custom
+        persistentVolumeClaim:
+          claimName: geode-pv-claim
+  volumeClaimTemplates:
+  - metadata:
+      name: geode-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi

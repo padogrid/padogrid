@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Generate a member script from a padogrid cluster to run
+                 in the Hazelcast distribution
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name]
+
+DESCRIPTION
+   Generates a member script that runs the 'start.sh' executable included in the
+   Hazelcast distribution. The script is generated in the cluster directory.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/generated
+             The directory in which the script is generated.
+
+EOF
+fi
+   exit
+fi
+
+if [ "$(isClusterExist $CLUSTER)" == "false" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "  Cluster: $CLUSTER"
+   echo >&2 "    ERROR: This cluster has not been created. Please run the create_cluster command to"
+   echo >&2 "           to create the cluster before running this command. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+start_member -cluster $CLUSTER -create-script
+
+popd > /dev/null 2>&1

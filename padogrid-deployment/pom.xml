@@ -1,0 +1,142 @@
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>padogrid.addon</groupId>
+		<artifactId>padogrid-parent</artifactId>
+		<version>0.9.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>padogrid-deployment</artifactId>
+	<name>padogrid-deployment</name>
+	<url>http://maven.apache.org</url>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<padogrid.version>${project.version}</padogrid.version>
+		<geode-core.project.dir>../geode-addon-core</geode-core.project.dir>
+		<hazelcast-core-3.project.dir>../hazelcast-addon-core-3</hazelcast-core-3.project.dir>
+		<hazelcast-core-4.project.dir>../hazelcast-addon-core-4</hazelcast-core-4.project.dir>
+<!-- 		<kustom.version>1.0.0</kustom.version>
+		<cluster.ext.version>1.0.0</cluster.ext.version> -->
+	</properties>
+
+	<dependencies>
+		<!-- https://mvnrepository.com/artifact/io.prometheus.jmx/jmx_prometheus_javaagent -->
+		<dependency>
+			<groupId>io.prometheus.jmx</groupId>
+			<artifactId>jmx_prometheus_javaagent</artifactId>
+			<version>0.11.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.11.2</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>bundle-sources</id>
+						<phase>package</phase>
+						<goals>
+							<!-- produce source artifact for main project sources -->
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<!-- Additionalpadogrid assemblies -->
+			<plugin>
+				<groupId>com.soebes.maven.plugins</groupId>
+				<artifactId>iterator-maven-plugin</artifactId>
+				<version>0.3</version>
+				<executions>
+					<execution>
+						<id>hazelcast-addon-additions</id>
+						<phase>package</phase>
+						<goals>
+							<goal>iterator</goal>
+						</goals>
+						<configuration>
+							<items>
+			<!-- 					<item>hazelcast-addon-kustom</item>
+								<item>bundle-cluster-ext-3</item>
+								<item>bundle-cluster-ext-4</item> -->
+							</items>
+							<pluginExecutors>
+								<pluginExecutor>
+									<goal>single</goal>
+									<plugin>
+										<groupId>org.apache.maven.plugins</groupId>
+										<artifactId>maven-assembly-plugin</artifactId>
+										<version>2.5.5</version>
+									</plugin>
+									<configuration>
+										<descriptors>
+											<descriptor>${project.basedir}/src/main/assembly/${item}.xml</descriptor>
+										</descriptors>
+										<finalName>${item}</finalName>
+										<appendAssemblyId>false</appendAssemblyId>
+										<outputDirectory>target/assembly</outputDirectory>
+										<tarLongFileMode>gnu</tarLongFileMode>
+									</configuration>
+								</pluginExecutor>
+							</pluginExecutors>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!--padogrid distribution -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.5.5</version>
+				<executions>
+					<execution>
+						<id>Hazelcast 3.12</id>
+						<goals>
+							<goal>attached</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<descriptors>
+								<descriptor>src/main/assembly/assembly-descriptor.xml</descriptor>
+							</descriptors>
+							<finalName>padogrid_${project.version}</finalName>
+							<appendAssemblyId>false</appendAssemblyId>
+							<outputDirectory>target/assembly</outputDirectory>
+							<tarLongFileMode>gnu</tarLongFileMode>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

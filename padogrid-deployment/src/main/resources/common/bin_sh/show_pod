@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh 
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-pod -all -long -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the pod status in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-pod pod_name] [-all] [-long] [-?]
+
+DESCRIPTION
+   Displays pod status.
+
+OPTIONS
+   -pod pod_name
+             Pod name
+
+   -long
+             Display detailed information.
+
+   -all
+             Display all pods.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -pod $POD
+
+FILES
+   $PADOGRID_WORKSPACE/pods
+             The current workspace pods directory.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*pod*" $EXECUTABLE
+   exit
+fi
+
+POD_TYPE=`getPodProperty "pod.type" "local"`
+OS_ENV=`getOsEnv`
+
+# Display short status of a pod.
+function displayPodShort()
+{
+   POD_DIR=$PODS_DIR/$POD
+   POD_TYPE=`getPodProperty "pod.type" "local"`
+   NODE_PRIMARY_COUNT=1
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix"`
+   NODE_IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet"`
+   NODE_COUNT=`getPodProperty "node.count"`
+   POD_RUNNING=`isPodRunning $POD`
+
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "      POD: $POD"
+   echo " POD_TYPE: $POD_TYPE"
+   if [[ $OS_ENV == *g ]] && [ "$POD" != "local" ]; then
+      echo "POD State: Unknown"
+   elif [ "$POD_RUNNING" == "true" ]; then
+      echo "POD State: Running"
+   else
+      echo "POD State: Down"
+   fi
+   echo ""
+}
+
+function displayPodLong()
+{
+   POD_DIR=$PODS_DIR/$POD
+   POD_TYPE=`getPodProperty "pod.type" "local"`
+   NODE_PRIMARY_COUNT=1
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix"`
+   NODE_IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet"`
+   NODE_COUNT=`getPodProperty "node.count"`
+   POD_RUNNING=`isPodRunning $POD`
+
+   echo "         WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "               POD: $POD"
+   echo "          POD_TYPE: $POD_TYPE"
+   if [[ $OS_ENV == *g ]] && [ "$POD" != "local" ]; then
+      echo "         POD State: Unknown"
+   elif [ "$POD_RUNNING" == "true" ]; then
+      echo "         POD State: Running"
+   else
+      echo "         POD State: Down"
+   fi
+
+   if [ "$POD" != "local" ]; then
+      echo " NODE_NAME_PRIMARY: $NODE_NAME_PRIMARY"
+      echo "  NODE_NAME_PREFIX: $NODE_NAME_PREFIX"
+      echo "NODE_PRIMARY_COUNT: $NODE_PRIMARY_COUNT"
+      echo "   Data NODE_COUNT: $NODE_COUNT"
+      echo "NODE_IP_LAST_OCTET: $NODE_IP_LAST_OCTET"
+      echo "           POD_DIR: $POD_DIR"
+   fi
+   echo ""
+}
+
+if [ "$ALL" == "true" ]; then
+
+   # Display all pods
+
+   PODS=`getPods`
+
+   if [ "$PODS" == "" ]; then
+      echo "No pods found. To create one, execute the 'create_pod' command."
+      exit 0
+   fi
+
+   echo "----------------------------------------------------------------"
+   echo "Pods: $PODS"
+   echo "----------------------------------------------------------------"
+   echo ""
+   if [ "$LONG" == "true" ]; then
+      # Long display -all
+      for POD in ${PODS}; do
+         displayPodLong
+      done
+   else
+      # Short display -all
+      for POD in ${PODS}; do
+         displayPodShort
+      done
+   fi
+   echo "----------------------------------------------------------------"
+   echo "Pods: $PODS"
+   echo "----------------------------------------------------------------"
+
+else
+
+   # Display single cluster status
+   if [ ! -d $POD_DIR ] && [ "${POD}" != "local" ]; then
+      echo >&2 "ERROR: The specified pod does not exist: [$POD]. Command aborted."
+      exit 1
+   fi
+
+   if [ "$LONG" == "true" ]; then
+      # Long display (single)
+      displayPodLong
+   else
+      # Short display (single)
+      displayPodShort
+   fi
+fi

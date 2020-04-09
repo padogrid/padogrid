@@ -1,0 +1,71 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+BOX_IMAGE = "${POD_BOX_IMAGE}"
+
+# The primary node name
+NODE_NAME_PRIMARY = "${NODE_NAME_PRIMARY}"
+
+# Number of nodes not including the base node
+NODE_COUNT = ${NODE_COUNT}
+
+# Base private IP address. The node IP addresses are incremented
+# from this base address.
+BASE_PRIVATE_IP = "${BASE_PRIVATE_IP}"
+
+Vagrant.configure("2") do |config|
+  config.ssh.password = 'vagrant'
+  config.vm.define "${NODE_NAME_PRIMARY}", primary: true do |primary|
+    primary.vm.box = BOX_IMAGE
+    primary.vm.hostname = NODE_NAME_PRIMARY
+    #subconfig.vm.network :private_network, ip: "10.0.0.10"
+    primary.vm.network :private_network, ip: BASE_PRIVATE_IP
+    primary.vm.provider "virtualbox" do |vb|
+       vb.name = "${POD}.${NODE_NAME_PRIMARY}"
+       vb.memory = "${NODE_PRIMARY_MEMORY_SIZE}"
+    end
+  end
+  
+  # Configure nodes
+  (1..NODE_COUNT).each do |i|
+    config.vm.define "${NODE_NAME_PREFIX}-0#{i}" do |subconfig|
+      subconfig.ssh.password = 'vagrant'
+      subconfig.vm.box = BOX_IMAGE
+      subconfig.vm.hostname = "${NODE_NAME_PREFIX}-0#{i}"
+      subconfig.vm.network :private_network, ip: "${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.#{i + ${BASE_PRIVATE_IP_LAST_OCTET}}"
+      subconfig.vm.provider "virtualbox" do |vb|
+         vb.name = "${POD}.${NODE_NAME_PREFIX}-0#{i}"
+         vb.memory = "${NODE_MEMORY_SIZE}"
+      end
+    end
+  end
+
+  # bootstrap.sh sets all the necessary environment variables.
+  config.vm.provision :shell, inline: "echo 'source /vagrant/bootstrap.sh' > /etc/profile.d/sa-environment.sh", :run => 'always'
+
+  # sync folders: <host-dir> to <guest-dir>
+  config.vm.synced_folder "${HAZELCAST_ADDON_WORKSPACES_HOME}", "/home/vagrant/${HAZELCAST_ADDON_WORKSPACES_HOME_NAME}"
+  config.vm.synced_folder "${HAZELCAST_ADDON_HOME}", "/home/vagrant/${HAZELCAST_ADDON_DIR_NAME}"
+  config.vm.synced_folder "${HOST_PRODUCTS_DIR}", "/home/vagrant/products"
+
+  # Provision required software.
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get update
+    # avahi for local mDNS
+    apt-get install -y avahi-daemon libnss-mdns
+    # For grafana API calls
+    apt-get install -y curl
+
+    # Configure password-less ssh
+    mkdir -p /home/vagrant/.ssh
+    chmod 700 /home/vagrant/.ssh
+    chown -R vagrant:vagrant /home/vagrant/.ssh
+    su vagrant -c "ssh-keygen -t rsa -P '' -f /home/vagrant/.ssh/id_rsa"
+    if [ ! -d /vagrant/tmp/ssh ]; then
+      mkdir -p /vagrant/tmp/ssh
+    fi
+
+    # Copy the public key to the host OS to build authorized_keys during the post configuration time.
+    cp /home/vagrant/.ssh/id_rsa.pub /vagrant/tmp/ssh/`hostname`.pub
+  SHELL
+end

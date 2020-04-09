@@ -1,0 +1,574 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh 
+
+# vagrant is the default
+if [ "$POD_TYPE" == "local" ]; then
+   POD_TYPE="vagrant"
+fi
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-pod -primary -prefix -ip -pm -nm -count -box -dir -type -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a new pod in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-pod pod_name]
+               [-primary primary_node_name] [-prefix node_name_prefix]
+               [-ip host_os_private_ip] [-octet node_last_IP_octet]
+               [-pm primary_node_memory_size_in_MiB]
+               [-nm data_node_memory_size_in_MiB]
+               [-count data_node_count]
+               [-box vagrant_box_image]
+               [-dir host_OS_products_directory_path]
+               [-type $HELP_VALID_POD_TYPE_LIST]
+               [-quiet] [-?]
+
+DESCRIPTION
+   Creates a new pod under the specified name.
+
+OPTIONS
+   -pod pod_name
+             Unique pod name. The pod name is prepended to all node names.
+
+   -primary primary_node_name
+             The primary node name. The primary node can be used to
+             run all commands and/or run client applications.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $NODE_NAME_PRIMARY
+EOF
+fi
+cat <<EOF
+
+   -prefix node_name_prefix
+             Data Node name prefix. Each data node name begins with this
+             prefix follwed by a number assigned by the pod builder.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $NODE_NAME_PREFIX
+EOF
+fi
+cat <<EOF
+
+   -ip node_IP_last_octet
+             The last octect of the first node IP address. The pod buillder
+             assigns IP addresses to all nodes starting from this octect.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $NODE_IP_LAST_OCTET
+EOF
+fi
+cat <<EOF
+
+   -pm primary_node_memory_size_in_MiB
+             Primary node memory size in MiB.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $NODE_PRIMARY_MEMORY_SIZE
+EOF
+fi
+cat <<EOF
+
+   -nm data_node_memory_size_in_MiB
+             Data node memory size in MiB.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $NODE_MEMORY_SIZE
+EOF
+fi
+cat <<EOF
+
+   -count data-node-count
+             Number of data nodes (VMs).
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $DATA_NODE_COUNT
+EOF
+fi
+cat <<EOF
+
+   -box vagrant-box-image
+             Vagrant box image name. Search a Vagrant box from the link shown below.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $POD_BOX_IMAGE
+EOF
+fi
+cat <<EOF
+
+             https://app.vagrantup.com/boxes/search
+
+   -dir host_OS_products_directory_path
+             Host OS products directory where all of the required software
+             products are installed.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+             Default: $HOST_PRODUCTS_DIR
+EOF
+fi
+cat <<EOF
+
+   -type $HELP_VALID_POD_TYPE_LIST
+             Pod type.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+DEFAULT
+   $EXECUTABLE -pod $POD -primary $NODE_NAME_PRIMARY -prefix $NODE_NAME_PREFIX
+
+FILES
+   $PADOGRID_WORKSPACE/pods
+             The current workspace pods directory.
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*pod*" $EXECUTABLE
+   exit
+fi
+
+# Disallow users from creating pods from guest OS
+OS_ENV=`getOsEnv`
+if [[ $OS_ENV == *g ]]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Guest OS is not allowed to create pods. Please run this command from the host OS."
+   echo >&2 "           Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Collect command options if provided. POD and POD_TYPE are collected by default.
+if [ "$POD_SPECIFIED" == "false" ]; then
+   POD="mypod"
+   if [ "`isPodExist $POD`" == "true" ]; then
+      __num=0
+      while true; do
+         let __num=__num+1
+         POD="mypod${__num}"
+         if [ "`isPodExist $POD`" == "false" ]; then
+            break;
+         fi
+      done
+   fi
+fi
+if [ "$PRIMARY" != "" ]; then
+   NODE_NAME_PRIMARY=$PRIMARY
+fi
+if [ "$PREFIX" != "" ]; then
+   NODE_NAME_PREFIX=$PREFIX
+fi
+if [ "$OCTET" != "" ]; then
+   NODE_IP_LAST_OCTET=$OCTET
+fi
+if [ "$PM" != "" ]; then
+   NODE_PRIMARY_MEMORY_SIZE=$PM
+fi
+if [ "$NM" != "" ]; then
+   NODE_MEMORY_SIZE=$NM
+fi
+if [ "$COUNT" == "" ]; then
+   DATA_NODE_COUNT=2
+else
+   DATA_NODE_COUNT=$COUNT
+fi
+if [ "$BOX" != "" ]; then
+   POD_BOX_IMAGE=$BOX
+fi
+if [ "$DIR" != "" ]; then
+   HOST_PRODUCTS_DIR=$DIR
+fi
+
+
+# Interactive mode - collect options inputted by the user.
+if [ "$QUIET" == "false" ]; then
+   EXISTING_PODS=`getPods`
+   AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
+   if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: It seems you have not created host-only VirtualBox network adapter."
+      echo >&2 "           Plase open the VirtualBox Manager and create one."
+      if [[ $OS_NAME == DARWIIN* ]]; then
+      echo >&2 "           On Mac OS X, you may need to assign the IP address with a network mask"
+      echo >&2 "           after you have created a host-only adapter. For example, the following"
+      echo >&2 "           command assigns 192.168.56.1 to the network mask 255.255.255.0:"
+      echo >&2 ""
+      echo >&2 "           sudo ifconfig vboxnet0 inet 192.168.56.1 netmask 255.255.255.0"
+      echo >&2 "           See the following file for details:"
+      echo >&2 ""
+      fi
+      echo >&2 "           $PODS_DIR/README.md"
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+   # Pick the first IP as the default IP.
+   for HOST_PRIVATE_IP in $AVAILABLE_IP_ADDRESSES; do
+      break;
+   done
+   echo ""
+   echo "Please answer the prompts that appear below. You can abort this command at any time"
+   echo "by entering 'Ctrl-C'."
+   echo ""
+   REDO=true
+   while [ "$REDO" == "true" ]; do
+     
+      # POD
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "Pod name [$POD]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            POD=$INPUT
+         fi
+         if [ "`isPodExist $POD`" == "true" ]; then
+            echo "Invalid pod name. Pod already exists."
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+
+      # NODE_NAME_PRIMARY
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "Primary node name [$NODE_NAME_PRIMARY]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if ! [[ "$INPUT" =~ [^a-zA-Z0-9\-] ]]; then
+            __REDO=false
+         else
+            echo "Invalid node name."
+            __REDO=true
+         fi
+         if [ "$__REDO" == "false" ] && [ "$INPUT" != "" ]; then
+            NODE_NAME_PRIMARY=$INPUT
+         fi
+      done
+
+      # NODE_NAME_PREFIX
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "Data node name prefix [$NODE_NAME_PREFIX]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if ! [[ "$INPUT" =~ [^a-zA-Z0-9\-] ]]; then
+            __REDO=false
+         else
+            echo "Invalid node name."
+            __REDO=true
+         fi
+         if [ "$__REDO" == "false" ] && [ "$INPUT" != "" ]; then
+            NODE_NAME_PREFIX=$INPUT
+         fi
+      done
+
+      # HOST_PRIVATE_IP
+      __REDO=true
+      echo "This machine has the following IP addresses. Choose one from the list. The IP address"
+      echo "must be a private IP address."
+      for i in $AVAILABLE_IP_ADDRESSES; do
+         echo $i
+      done
+      while [ "$__REDO" == "true" ]; do
+         read -p "Host private IP address [$HOST_PRIVATE_IP]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            HOST_PRIVATE_IP=$INPUT
+         fi
+         if [ "$HOST_PRIVATE_IP" = "" ]; then
+            echo "Invalid IP addres."
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+
+      # NODE_IP_LAST_OCTET
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "First node IP address' octect [$NODE_IP_LAST_OCTET]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            NODE_IP_LAST_OCTET=$INPUT
+         fi
+         if [[ "$(isNumber $NODE_IP_LAST_OCTET)" == "false" ]] ||
+            [ "$NODE_IP_LAST_OCTET" -le "0" ] || [ "$NODE_IP_LAST_OCTET" -ge 100 ]; then
+            echo "Invalid octet entered. Valid range: [1, 255]."
+            NODE_IP_LAST_OCTET=10
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+
+      # NODE_PRIMARY_MEMORY_SIZE
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "Primary node memory size in MiB [$NODE_PRIMARY_MEMORY_SIZE]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            NODE_PRIMARY_MEMORY_SIZE=$INPUT
+         fi
+         if [[ "$(isNumber $NODE_PRIMARY_MEMORY_SIZE)" == "false" ]]; then
+            echo "Invalid entry. Must be a number in MiB."
+            NODE_PRIMARY_MEMORY_SIZE=$DEFAULT_NODE_PRIMARY_MEMORY_SIZE
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+
+      # NODE_MEMORY_SIZE
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "Data node memory size in MiB [$NODE_MEMORY_SIZE]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            NODE_MEMORY_SIZE=$INPUT
+         fi
+         if [[ "$(isNumber $NODE_MEMORY_SIZE)" == "false" ]] ||
+            [ "$NODE_IP_LAST_OCTET" -le "0" ]; then
+            echo "Invalid number entered."
+            NODE_MEMORY_SIZE=$DEFAULT_NODE_MEMORY_SIZE
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+
+      # DATA_NODE_COUNT
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "Number of data nodes  [$DATA_NODE_COUNT]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            DATA_NODE_COUNT=$INPUT
+         fi
+         if [[ "$(isNumber $DATA_NODE_COUNT)" == "false" ]]; then
+            echo "Invalid entry. Must be a number in MiB."
+            DATA_NODE_COUNT=$DEFAULT_DATA_NODE_COUNT
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+
+      # HOST_PRODUCTS_DIR
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+
+         echo "Products installation directory path."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+	    echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$HOST_PRODUCTS_DIR]:"
+
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            HOST_PRODUCTS_DIR=$INPUT
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            HOST_PRODUCTS_DIR="$(cygpath -au $HOST_PRODUCTS_DIR)"
+         fi
+         if [ ! -d "$HOST_PRODUCTS_DIR" ]; then
+            echo "Directory does not exist or not a directory."
+            HOST_PRODUCTS_DIR=$DEFAULT_HOST_PRODUCTS_DIR
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+
+      # POD_BOX_IMAGE
+      read -p "Vagrant box image [$POD_BOX_IMAGE]: " INPUT
+      # trim string
+      INPUT=`echo "$INPUT" | xargs`
+      if [ "$INPUT" != "" ]; then
+         POD_BOX_IMAGE=$INPUT
+      fi
+
+
+      echo ""
+      echo "You have entered the following."
+      echo "                       Pod name: $POD"
+      echo "              Primary node name: $NODE_NAME_PRIMARY"
+      echo "          Data node name prefix: $NODE_NAME_PREFIX"
+      echo "        Host private IP address: $HOST_PRIVATE_IP"
+      echo "      Node IP addres last octet: $NODE_IP_LAST_OCTET"
+      echo " Primary node memory size (MiB): $NODE_PRIMARY_MEMORY_SIZE"
+      echo "    Data node memory size (MiB): $NODE_MEMORY_SIZE"
+      echo "                Data node count: $DATA_NODE_COUNT"
+      echo "             Products directory: $HOST_PRODUCTS_DIR"
+      echo "              Vagrant box image: $POD_BOX_IMAGE"
+
+      REDO=true
+      INNER_LOOP=true
+      if [[ "$(isNumber $NODE_IP_LAST_OCTET)" == "false" ]]; then
+         echo "Server number must be a number."
+         NODE_IP_LAST_OCTET=10
+         INNER_LOOP=false
+      elif [ "$NODE_IP_LAST_OCTET" -le "0" ] || [ "$NODE_IP_LAST_OCTET" -ge 100 ]; then
+         echo "Invalid octet number $NODE_IP_LAST_OCTET. Valid range: [1, 255]."
+         NODE_IP_LAST_OCTET=10
+         INNER_LOOP=false
+      fi
+
+      while [ "$INNER_LOOP" == "true" ]; do
+         read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
+         case $INPUT in
+            [Cc]* ) REDO=false; INNER_LOOP=false;;
+            [Rr]* ) REDO=true; INNER_LOOP=false;;
+            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+         esac
+      done
+   done
+fi
+
+if [ -z $POD ] || [ "$POD" == "local" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The pod already exists: [local]. Specify a new pod name using the '-pod' option. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Abort if the pod exists
+POD_DIR=$PODS_DIR/$POD
+if [ -d $POD_DIR ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Pod already exists: [$POD]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [[ $OS_NAME == CYGWIN* ]]; then
+   HOST_PRODUCTS_DIR="$(cygpath -w $HOST_PRODUCTS_DIR)"
+fi
+
+# Scan all existing clusters to determine the debug start port number.
+pushd $POD_DIR > /dev/null 2>&1
+PODS=""
+COUNT=0
+for i in *; do
+   if [ -d "$i" ]; then
+      let COUNT=COUNT+1
+      if [ $COUNT -eq 1 ]; then
+         PODS="$i"
+      else
+         PODS="$PODS $i"
+      fi
+   fi
+done
+popd > /dev/null 2>&1
+
+# Create the pod sub-directories and files.
+ETC_DIR=$POD_DIR/etc
+LOG_DIR=$POD_DIR/log
+mkdir -p $LOG_DIR
+
+# Copy the Vagrant files
+cp -rf $BASE_DIR/etc/vagrant/* $POD_DIR/
+chmod 755 $POD_DIR/bin_sh/*
+
+# Append the host ip address to setenv.sh
+echo "" >> $POD_DIR/bin_sh/setenv.sh
+echo "# Host private IP address." >> $POD_DIR/bin_sh/setenv.sh
+echo "HOST_PRIVATE_IP=$HOST_PRIVATE_IP" >> $POD_DIR/bin_sh/setenv.sh
+
+# Create $ETC_DIR/pod.properties
+echo "# padogrid pod properties." > $ETC_DIR/pod.properties
+echo "# These properties pertain to all of the nodes belonging to the named pod below." >> $ETC_DIR/pod.properties
+echo "# Pod Creation Date: `date`" >> $ETC_DIR/pod.properties
+echo "" >> $ETC_DIR/pod.properties
+
+# Pod
+echo "# Pod name" >> $ETC_DIR/pod.properties
+echo "pod.name=$POD" >> $ETC_DIR/pod.properties
+echo "pod.type=$POD_TYPE" >> $ETC_DIR/pod.properties
+echo "pod.box.image=$POD_BOX_IMAGE" >> $ETC_DIR/pod.properties
+echo "" >> $ETC_DIR/pod.properties
+
+# Node (Guest)
+NODE_PRIMARY_COUNT=1
+echo "# Node (guest) properties." >> $ETC_DIR/pod.properties
+echo "node.name.primary=$NODE_NAME_PRIMARY" >> $ETC_DIR/pod.properties
+echo "node.name.prefix=$NODE_NAME_PREFIX" >> $ETC_DIR/pod.properties
+echo "node.ip.lastOctet=$NODE_IP_LAST_OCTET" >> $ETC_DIR/pod.properties
+echo "node.memory.primary=$NODE_PRIMARY_MEMORY_SIZE" >> $ETC_DIR/pod.properties
+echo "node.memory.data=$NODE_MEMORY_SIZE" >> $ETC_DIR/pod.properties
+echo "node.count=$DATA_NODE_COUNT" >> $ETC_DIR/pod.properties
+echo "" >> $ETC_DIR/pod.properties
+
+# Host
+echo "# Host properties." >> $ETC_DIR/pod.properties
+echo "host.productsDir=$HOST_PRODUCTS_DIR" >> $ETC_DIR/pod.properties
+echo "" >> $ETC_DIR/pod.properties
+
+# Display pod information
+echo ""
+echo "-------------------------------------------------------------------"
+echo "               WORKSPACE: $PADOGRID_WORKSPACE"
+echo "             Pod Created: $POD"
+echo "                POD_TYPE: $POD_TYPE"
+echo "           POD_BOX_IMAGE: $POD_BOX_IMAGE"
+echo "       NODE_NAME_PRIMARY: $NODE_NAME_PRIMARY"
+echo "        NODE_NAME_PREFIX: $NODE_NAME_PREFIX"
+echo "      NODE_PRIMARY_COUNT: $NODE_PRIMARY_COUNT"
+echo "      NODE_IP_LAST_OCTET: $NODE_IP_LAST_OCTET"
+echo "NODE_PRIMARY_MEMORY_SIZE: $NODE_PRIMARY_MEMORY_SIZE"
+echo "   Data NODE_MEMORY_SIZE: $NODE_MEMORY_SIZE"
+echo "         Data NODE_COUNT: $DATA_NODE_COUNT"
+echo "       HOST_PRODUCTS_DIR: $HOST_PRODUCTS_DIR"
+echo "           POD_BOX_IMAGE: $POD_BOX_IMAGE"
+echo ""
+echo "POD_DIR: $POD_DIR"
+echo ""
+echo "The specified pod has successfully been created and configured."
+echo "To add more nodes, run 'add_node'."
+echo "To remove nodes, run 'remove_node'."
+echo "The parameters have been saved in the following file (You can edit this"
+echo "file before running 'build_pod'):"
+echo ""
+echo "ETC_DIR: $ETC_DIR/pod.properties"
+echo ""
+echo "The pod is ready to be built. Execute the following command to build the pod."
+echo ""
+echo -e "   ${CLightGreen}build_pod -pod $POD${CNone}"
+echo "-------------------------------------------------------------------"
+echo ""

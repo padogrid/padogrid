@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-pod -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Build the specified pod in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-pod pod_name] [-?]
+ 
+DESCRIPTION
+   Builds the specified pod environment. This command initializes and starts the pod.
+
+NOTES
+   This command should be run once to build the pod. Once the pod is built and running,
+   manage the pod (Vagrant) environment using the Vagrant commands, from the pod directory.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -pod $POD
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*pod*" $EXECUTABLE
+   exit
+fi
+
+POD_TYPE=`getPodProperty "pod.type" $POD_TYPE`
+OS_ENV=`getOsEnv`
+
+if [[ $OS_ENV == *g ]]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Guest OS is not allowed to build pods. Please run this command from the host OS."
+   echo >&2 "           Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+if  [ "$POD" == "local" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The default pod is 'local'. This command does not apply to the 'local' pod."
+   echo >&2 "           Please use the -pod option to specify the pod. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+if  [ ! -d $POD_DIR ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "      Pod: $POD"
+   echo >&2 "    ERROR: This pod has not been created. Please run the create_pod command to"
+   echo >&2 "           to create the pod before running this command. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# First, build Vagrantfile
+pushd $POD_DIR/bin_sh > /dev/null 2>&1
+./build_app
+popd > /dev/null 2>&1
+
+# Bring up Vagrant
+pushd $POD_DIR > /dev/null 2>&1
+vagrant up
+popd > /dev/null 2>&1
+
+# Post-configure nodes
+pushd $POD_DIR/bin_sh > /dev/null 2>&1
+./configure_nodes
+popd > /dev/null 2>&1
+
+NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+NODE_COUNT=`getPodProperty "node.count" $NODE_COUNT`
+
+for i in $(seq 1 $NODE_COUNT); do
+   if [ $i -lt 10 ]; then
+      NODE=${NODE_NAME_PREFIX}-0$i
+   else
+      NODE=${NODE_NAME_PREFIX}-$i
+   fi
+   if [ $i -eq 1 ]; then
+      FIRST_NODE=$NODE
+   fi
+   NODE_LIST="$NODE_LIST $NODE"
+   NODE_LOCAL=${NODE}.local
+   NODE_LOCAL_LIST="$NODE_LOCAL_LIST $NODE_LOCAL" 
+done
+
+GUEST_HOME_DIR="/home/vagrant"
+PADOGRID_WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+PADOGRID_WORKSPACE="$GUEST_HOME_DIR/$PADOGRID_DIR_NAME"
+PADOGRID_DIR_NAME=$(basename "$BASE_DIR")
+PADOGRID_HOME="$GUEST_HOME_DIR/$PADOGRID_DIR_NAME"
+
+echo ""
+echo "------------------------------------------------------------------------------------"
+echo "The following nodes have been configured. (The primary node is for managing the"
+echo "PadoGrid cluster and running client programs. It is not a data node."
+echo ""
+echo "Primary Node:"
+echo "   $NODE_NAME_PRIMARY"
+echo ""
+echo "Data Nodes:"
+for i in $NODE_LIST; do
+echo "   $i"
+done
+echo ""
+echo "You can login to one of the nodes as follows:"
+echo "   vagrant ssh $FIRST_NODE"
+echo "   user name: vagrant"
+echo "    password: vagrant"
+echo ""
+echo "This pod runs in a local network with the avahi DNS service, which appends '.local' to all"
+echo "host names. Once you logged on to a node, you must use the following node host names."
+for i in $NODE_LOCAL_LIST; do
+echo "   $i"
+done
+echo ""
+echo "The padogrid directory has been auto-mounted on all nodes in the vagrant home"
+echo "directory. Its bin_sh directory is included in your PATH, so you can run"
+echo "padogrid commands from any where in the file system."
+echo ""
+echo "   To start the cluster:"
+echo "      start_cluster"
+echo ""
+echo "   To check cluster status:"
+echo "      show_cluster"
+echo ""
+echo "   To stop cluster:"
+echo "      stop_cluster"
+echo ""
+echo "WORKSPACE"
+echo "   $PADOGRID_WORKSPACE"
+echo ""
+echo "Pod padogrid directory:" 
+echo "   $PADOGRID_HOME"
+echo ""
+echo "To login to the primary node, change directory to the pod directory and run 'vagrant ssh' as shown below."
+echo "   cd $POD_DIR"
+echo "   vagrant ssh"
+echo "   password: vagrant"
+echo "------------------------------------------------------------------------------------"
+echo ""

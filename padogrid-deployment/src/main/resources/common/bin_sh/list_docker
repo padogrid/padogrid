@@ -1,0 +1,62 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - List all the Docker clusters in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+DESCRIPTION
+   Lists all the Docker clusters in the current workspace.
+
+DEFAULT
+   $EXECUTABLE
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*docker*" $EXECUTABLE
+   exit
+fi
+
+if [ "$PADOGRID_WORKSPACES_HOME" == "" ]; then
+   >&2 echo "ERROR: Workspaces not initialized. Please first run 'init_addon' to initialize workspaces."
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
+   >&2 echo "ERROR: Invalid workspaces. Please run 'init_addon' to initialize workspaces."
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+
+if [ "$PADOGRID_WORKSPACE" == "" ]; then
+   >&2 echo "ERROR: Workspace undefined. Please first create a workspace."
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+if [ ! -d "$PADOGRID_WORKSPACE" ]; then
+   >&2 echo "ERROR: Invalid workspace. Directory does not exist."
+   >&2 echo "       $PADOGRID_WORKSPACE"
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+
+ls $PADOGRID_WORKSPACE/docker

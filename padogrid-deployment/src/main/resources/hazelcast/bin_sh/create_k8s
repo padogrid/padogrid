@@ -1,0 +1,169 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-k8s -cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a Kubernetes environment in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-k8s minikube|gke] -cluster cluster_name [-?]
+
+DESCRIPTION
+   Creates a Kubernetes environment that includes Hazelcast deployment files for
+   one of the following cloud platforms:
+ 
+   minikube  Minikube on your laptop or PC
+   gke       Goggle Kubernetes Engine in GCP
+
+   To use the created environment, you must have access to one of the platforms
+   with all the required software installed and a valid account. Each environment
+   comes with a document describing the prerequisites and detailed instructions.
+
+OPTIONS
+   -k8s minikube
+             Minikube on your local machine.
+
+   -k8s gke
+             Google Kubuernetes Engine.
+
+   -cluster cluster_name
+             Required Kubernetes cluster name. This name is used to create
+             a cluster in the cloud platform if it does not exist.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -k8s $DEFAULT_K8S -cluster cluster_name
+
+FILES
+   $PADOGRID_WORKSPACE/k8s
+             The current workspace Kubernetes directory.
+
+EOF
+fi
+   exit
+fi
+
+if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+   >&2 echo "ERROR: The -cluster option is not specified. Command aborted."
+   exit
+fi
+
+if [ "$K8S" == "" ]; then
+   K8S=$DEFAULT_K8S
+fi
+if [ "$K8S" != "minikube" ] && [ "$K8S" != "gke" ]; then
+   >&2 echo "ERROR: Unsupported Kubernetes cloud platform. Please use the '-?' option"
+   >&2 echo "       to see the usage. Command aborted."
+   exit
+fi
+
+#
+# k8s directory
+#
+K8S_DIR=$PADOGRID_WORKSPACE/k8s
+CLUSTER_DIR=$K8S_DIR/$CLUSTER
+
+if [ -d $CLUSTER_DIR ]; then
+   >&2 echo "ERROR: The specified Kubernetes cluster exists. Command aborted."
+   exit
+fi
+   
+
+if [ ! -d $CLUSTER_DIR ]; then
+   mkdir -p $CLUSTER_DIR
+fi
+
+create_setenv_file()
+{
+  echo "#" > $SETENV_FILE
+  echo "# Enter app specifics in this file." >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "" >> $SETENV_FILE
+  echo "# Cluster level variables:" >> $SETENV_FILE
+  echo "# ------------------------" >> $SETENV_FILE
+  echo "# BASE_DIR - padogrid base dir" >> $SETENV_FILE
+  echo "# ETC_DIR - Cluster etc dir" >> $SETENV_FILE
+  echo "" >> $SETENV_FILE
+  echo "# App level variables:" >> $SETENV_FILE
+  echo "# --------------------" >> $SETENV_FILE
+  echo "# APPS_DIR - <padogrid>/apps dir" >> $SETENV_FILE
+  echo "# APP_DIR - App base dir" >> $SETENV_FILE
+  echo "# APP_ETC_DIR - App etc dir" >> $SETENV_FILE
+}
+
+SETENV_FILE="$CLUSTER_DIR/bin_sh/setenv.sh"
+
+if [ "$K8S" == "minikube" ]; then
+
+  K8S_DOC="README-Minikube.md"
+  cp -rf $BASE_DIR/k8s/kustom/bin_sh $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/kustom/etc $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/kustom/README-Minikube.md $CLUSTER_DIR
+  rm -r $CLUSTER_DIR/etc/hazelcast/storage/gke
+  rm $CLUSTER_DIR/bin_sh/setenv.sh
+  create_setenv_file
+  echo "" >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "# Follow the instructions in $K8S_DOC using the following" >> $SETENV_FILE
+  echo "# environment variable." >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "export HAZELCAST_KUSTOM_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
+
+elif [ "$K8S" == "gke" ]; then
+
+  K8S_DOC="README-GKE.md"
+  cp -rf $BASE_DIR/k8s/kustom/bin_sh $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/kustom/etc $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/kustom/README-GKE.md $CLUSTER_DIR
+  rm -r $CLUSTER_DIR/etc/hazelcast/storage/minikube
+  rm $CLUSTER_DIR/bin_sh/setenv.sh
+  create_setenv_file
+  echo "" >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "# Set the following variables with your values and follow the instructions" >> $SETENV_FILE
+  echo "# in $K8S_DOC. Note that you would need to create a GKE cluster" >> $SETENV_FILE
+  echo "# first before you can set INSTANCE_NAME." >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "export HAZELCAST_KUSTOM_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
+  echo "export CLUSTER_NAME=$CLUSTER" >> $SETENV_FILE
+  echo "export GCR_HOSTNAME=gcr.io" >> $SETENV_FILE
+  echo "export PROJECT_ID=my-project" >> $SETENV_FILE
+  echo "export REGION=us-east1" >> $SETENV_FILE
+  echo "export ZONE=us-east1-b" >> $SETENV_FILE
+  echo "export INSTANCE_NAME=gke-kustomize-test-default-pool-c82eb23e-bzft" >> $SETENV_FILE
+
+fi
+
+#
+# Display K8S Environment
+#
+echo ""
+echo "     WORKSPACE: $PADOGRID_WORKSPACE"
+echo "    Kubernetes: $K8S"
+echo "Kubernetes Environment:"
+echo "   $CLUSTER_DIR"
+echo ""
+echo "Please follow the instructions in the $K8S_DOC document in the"
+echo "above directory."
+echo ""

@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-?]"
+   echo ""
+   echo "   Converts all the dashboard files found in the following default export directory:"
+   echo "      $EXPORT_DASHBOARD_DIR"
+   echo ""
+   echo "   and places them in the following default template directory:"
+   echo "      $EXPORT_TEMPLATE_DIR"
+   echo ""
+   echo "   To export dashboards, run the 'export_folder' command."
+   echo ""
+   echo "   To import the templates, place them in the following directory and run the 'import_folder' command:"
+   echo "      $DASHBOARDS_DIR"
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+
+if [ ! -d $EXPORT_DASHBOARD_DIR ]; then
+   echo ""
+   echo "ERROR: Folders have not been exported. Run 'export_folder' to export folders first"
+   echo "       before executing this command. Command aborted."
+   echo ""
+   exit 1
+fi
+
+if [ ! -d $EXPORT_TEMPLATE_DIR ]; then
+   mkdir $EXPORT_TEMPLATE_DIR
+fi
+
+pushd $EXPORT_DASHBOARD_DIR > /dev/null 2>&1
+for EXPORT_FOLDER_DIR in *; do
+   FOLDER_NAME=$(basename "$EXPORT_FOLDER_DIR")
+   
+   # Create the folder dir in the template dir
+   if [ -d $EXPORT_TEMPLATE_DIR/$FOLDER_NAME ]; then
+      rm -rf $EXPORT_TEMPLATE_DIR/$FOLDER_NAME
+   fi
+   mkdir $EXPORT_TEMPLATE_DIR/$FOLDER_NAME
+
+   # Convert the exported files to templates and place them 
+   # in the template dir.
+   pushd $FOLDER_NAME > /dev/null 2>&1
+   for file in *; do
+     `cat "$file" | jq ".dashboard.annotations.list[].datasource=\"\\${DATASOURCE}\" 
+                  | .dashboard.panels[].datasource=\"\\${DATASOURCE}\" 
+                  | del(.meta) 
+                  | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
+                  | del(.dashboard.version, .dashboard.uid, .dashboard.id) 
+                  " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
+   done
+   popd > /dev/null 2>&1
+  
+   echo "Template folder created: $FOLDER_NAME"
+done
+popd > /dev/null 2>&1
+
+echo "Template folders generated in the following directory:"
+echo "   $EXPORT_TEMPLATE_DIR"
+echo ""
+

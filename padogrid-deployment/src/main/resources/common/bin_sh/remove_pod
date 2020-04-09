@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-pod -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified pod in the current padogrid workspace
+
+WARNING
+   This command removes the entire pod directory including the config and log files.
+
+SYNOPSIS
+   $EXECUTABLE -pod pod_name [-quiet] [-?]
+
+   Removes the specified pod.
+
+   -pod pod_name
+             Unique pod name. The pod name is required.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+DEFAULT
+   $EXECUTABLE -pod pod_name
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*pod*" $EXECUTABLE
+   exit
+fi
+
+# Disallow users from removing pods from guest OS
+OS_ENV=`getOsEnv`
+if [[ $OS_ENV == *g ]]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Guest OS is not allowed to remove pods. Please run this command from the host OS."
+   echo >&2 "           Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ "$POD_SPECIFIED" == "false" ]; then
+   echo >&2 "ERROR: pod name is not specified. Command aborted." 
+   exit 1
+fi
+
+# Prompt if the cluster exists
+if [ -d $POD_DIR ]; then
+   if [ "$QUIET" == "false" ]; then
+      echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "Pod to Remove: $POD"
+      echo "   This command removes (destroys) the entire pod including VMs, config, log files."
+      echo "   It will make a backup bundle containing config files before removing the pod, however."
+      echo "Do you want to continue?"
+      echo "(Enter 'continue' + Enter to continue the cluster removal, other keys to abort.)"
+      read INPUT
+      if [ "$INPUT" != "continue" ]; then
+         echo "Pod removal aborted."
+         exit
+      fi
+   fi
+else
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The specified pod does not exist: [$POD]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# See if any nodes in the pod are still running. If so, abort.
+if [ "`isPodRunning $POD`" == "true" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The pod is running. Run 'stop_pod' first before running this command. [$POD]"
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+ETC_DIR=$POD_DIR/etc
+LOG_DIR=$POD_DIR/log
+
+# Destroy Vagrant VMs
+pushd $POD_DIR > /dev/null 2>&1
+if [ "$QUIET" == "false" ]; then
+   vagrant destroy
+else 
+   vagrant destroy -f
+fi
+popd > /dev/null 2>&1
+
+# Make a backup bundle
+$SCRIPT_DIR/create_bundle -pod $POD
+
+CURRENT_DIR=`pwd`
+rm -rf $POD_DIR
+
+echo "----------------------------------------------------------------"
+echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+echo "Pod Removed: $POD"
+echo "    POD_DIR: $POD_DIR"
+echo "----------------------------------------------------------------"
+
+if [ "$CURRENT_DIR" != "" ] && [ ! -d "$CURRENT_DIR" ]; then
+   echo "You are currently in the removed directory."
+   echo "Please change directory to a valid directory before executing any commands."
+fi

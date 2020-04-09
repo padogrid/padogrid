@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified Kubernetes cluster from the current padogrid workspace
+
+WARNING
+   This command permanently removes the specified Kubernetes cluster directory.
+
+SYNOPSIS
+   $EXECUTABLE -cluster cluster_name [-quiet] [-?]
+
+DESCRIPTION
+   Removes the specified Kubernetes cluster.
+
+   -cluster cluster_name
+             Kubernetes cluster name. The cluster name is required.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+DEFAULT
+   $EXECUTABLE -cluster cluster_name
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*k8s*" $EXECUTABLE
+   exit
+fi
+
+# Prompt if the k8s exists
+CLUSTER_DIR=$K8S_DIR/$CLUSTER
+if [ -d $CLUSTER_DIR ]; then
+   if [ "$QUIET" == "false" ]; then
+      echo "        WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "Cluster to Remove: $CLUSTER"
+      echo "   This command permanently removes the specified Kubernetes cluster."
+      echo "Do you want to continue?"
+      echo "(Enter 'continue' + Enter to continue the Kubernetes cluster removal, other keys to abort.)"
+      read INPUT
+      if [ "$INPUT" != "continue" ]; then
+         echo "Kubernetes cluster removal aborted."
+         exit
+      fi
+   fi
+else
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The specified Kubernetes cluster does not exist: [$CLUSTER]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Remove the cluster in the local file system
+CURRENT_DIR=`pwd`
+rm -rf $CLUSTER_DIR
+
+echo "----------------------------------------------------------------"
+echo "                 WORKSPACE: $PADOGRID_WORKSPACE"
+echo "Kubernetes Cluster Removed: $CLUSTER"
+echo "    Kubernetes Cluster Dir: $CLUSTER_DIR"
+echo "----------------------------------------------------------------"
+
+if [ "$CURRENT_DIR" != "" ] && [ ! -d "$CURRENT_DIR" ]; then
+   echo "You are currently in the removed directory."
+   echo "Please change directory to a valid directory before executing any commands."
+fi

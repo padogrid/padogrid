@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-pod -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start the specified pod in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE -pod pod_name [-?]
+
+DESCRIPTION
+   Starts the specified pod by executing the Vagrant 'up' command.
+
+OPTIONS
+   -pod pod_name
+             Pod name. Required.
+
+DEFAULT
+   $EXECUTABLE -pod pod_name
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*pod*" $EXECUTABLE
+   exit
+fi
+
+POD_TYPE=`getPodProperty "pod.type" $POD_TYPE`
+OS_ENV=`getOsEnv`
+
+if [[ $OS_ENV == *g ]]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Guest OS is not allowed to start pods. Please run this command from the host OS."
+   echo >&2 "           Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+if [ "$POD_SPECIFIED" == "false" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Pod not specified. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+if  [ ! -d $POD_DIR ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: This pod does not exist [$POD]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Bring up Vagrant
+pushd $POD_DIR > /dev/null 2>&1
+vagrant up
+popd > /dev/null 2>&1

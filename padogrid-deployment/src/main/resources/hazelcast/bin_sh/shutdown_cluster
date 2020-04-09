@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-group -password -cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Gracefully shutdown all active Hazelcast members in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-group group_name] [-password group_password] [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Gracefully shuts down all active Hazelcast members using 'curl'.
+
+OPTIONS
+   -group group_name
+             Group name. Default: dev
+
+   -password group_password
+             Group password. Default: <no password>
+
+   -cluster cluster_name
+             Cluster name
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -group dev -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+if [ ! -d $CLUSTER_DIR ]; then
+   >&2 echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+   exit 1
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+#
+# Finds the first active VM member in the cluster and sets the following variables:
+#    ACTIVE_MEMBER_FOUND "true" if active member(s) found, "false" otherwise
+#    MEMBER      Member name
+#    HOST_NAME   Member host name
+#    MEMBER_PORT Member port
+#
+function getVmActiveMember()
+{
+   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+
+   OS_ENV=`getOsEnv $NODE`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   pushd $RUN_DIR > /dev/null 2>&1
+   MEMBER_PREFIX=`getMemberPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+
+   echo "----------------------------------------------------------------"
+   echo "      WORKSPACE: $PADOGRID_WORKSPACE"
+   if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
+      echo "        CLUSTER: $CLUSTER (default)"
+   else
+      echo "        CLUSTER: $CLUSTER"
+   fi
+      echo "     Deployment: VM"
+   echo "----------------------------------------------------------------"
+
+   ACTIVE_MEMBER_FOUND="false"
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   for VM_HOST in ${VM_HOSTS}; do
+      MEMBER=`getVmMemberName $VM_HOST`
+      let MEMBER_COUNT=MEMBER_COUNT+1
+      MEMBER_DIR=$RUN_DIR/$MEMBER
+
+      # Increment port numbers for host OS
+      MEMBER_PORT=$MEMBER_START_PORT
+      if [ $MEMBER_COUNT -lt 10 ]; then
+         NUM="0"$MEMBER_COUNT
+      else
+         NUM=$MEMBER_COUNT
+      fi
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      if [ "$pid" != "" ]; then
+         ACTIVE_MEMBER_FOUND="true"
+         HOST_NAME=$VM_HOST
+         break
+      fi
+   done
+
+   if [ "$ACTIVE_MEMBER_FOUND" == "false" ]; then 
+      HOST_NAME="" 
+      MEMBER=""
+      MEMBER_PORT=""
+   fi
+} # getVmActiveMember
+
+#
+# Finds the first active member in the cluster and sets the following variables:
+#    ACTIVE_MEMBER_FOUND "true" if active member(s) found, "false" otherwise
+#    MEMBER      Member name
+#    HOST_NAME   Member host name
+#    MEMBER_PORT Member port
+#
+function getActiveMember()
+{
+   POD=`getClusterProperty "pod.name" "local"`
+   POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE=`getOsNodeName`
+   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+
+   OS_ENV=`getOsEnv $NODE`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   pushd $RUN_DIR > /dev/null 2>&1
+   MEMBER_PREFIX=`getMemberPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+
+   echo "----------------------------------------------------------------"
+   echo "      WORKSPACE: $PADOGRID_WORKSPACE"
+   if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
+      echo "        CLUSTER: $CLUSTER (default)"
+   else
+      echo "        CLUSTER: $CLUSTER"
+   fi
+   echo "   CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "            POD: $POD"
+   echo "       POD_TYPE: $POD_TYPE"
+   echo "----------------------------------------------------------------"
+
+   ACTIVE_MEMBER_FOUND="false"
+   UNKNOWN_POD_CLUSTER="false"
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   DOWN_MEMBER_COUNT=0
+   for i in ${MEMBER_PREFIX}*; do
+      if [ -d "$i" ]; then
+         let MEMBER_COUNT=MEMBER_COUNT+1
+         pushd $i > /dev/null 2>&1
+         MEMBER=$i
+         MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
+         MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+         MEMBER_DIR=$RUN_DIR/$MEMBER
+         #if [ "$POD_TYPE" == "local" ]; then
+         if [ "$OS_ENV" == "hh" ]; then
+            NODE=`getOsNodeName`
+         else
+            NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
+            NODE=`getOsNodeName $NODE`
+         fi
+         if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
+            ( [ "$OS_ENV" == "gg" ] );  then
+
+            # Same port number for guest OS
+            MEMBER_PORT=$MEMBER_START_PORT
+
+         else
+
+            # Increment port numbers for host OS
+            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+
+         fi
+         if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
+            NODE_LOCAL=$NODE
+            if [ "$OS_ENV" == "gg" ] && [ "$POD" != "local" ]; then
+               REMOTE_SPECIFIED=false
+            else
+               REMOTE_SPECIFIED=true
+            fi
+            pid=`getMemberPid $MEMBER $WORKSPACE`
+            if [ "$pid" != "" ]; then
+               HOST_NAME=$NODE_LOCAL
+               ACTIVE_MEMBER_FOUND="true"
+               break
+            fi
+         else
+            UNKNOWN_POD_CLUSTER="true"
+            break
+         fi
+         popd > /dev/null 2>&1
+      fi
+   done
+   if [ "$ACTIVE_MEMBER_FOUND" == "false" ]; then 
+      HOST_NAME=""
+      MEMBER=""
+      MEMBER_PORT=""
+   fi
+} # getActiveMember
+
+# 
+# VM cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      >&2 echo "ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      >&2 echo "       $ETC_DIR/cluster.properties"
+      >&2 echo "       Command aborted."
+      >&2 exit 1
+   fi
+   # Replace , with space
+   VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+   getVmActiveMember
+else
+   getActiveMember
+fi
+
+if [ "$ACTIVE_MEMBER_FOUND" == "false" ]; then
+   if [ "$UNKNOWN_POD_CLUSTER" == "true" ]; then
+      echo >&2 "ERROR: Unable to determine the non-local pod state. You must execute"
+      echo >&2 "       the command from one of the  pod nodes. Command aborted."
+      exit 1
+   else
+      echo "Cluster is already down. Command aborted."
+      exit
+   fi
+fi
+if [ "$GROUP" == "" ]; then
+   GROUP="dev"
+fi
+echo "Issuing cluster shutdown command to member on ${HOST_NAME}:${MEMBER_PORT} using 'curl'..."
+request="http://${HOST_NAME}:${MEMBER_PORT}/hazelcast/rest/management/cluster/clusterShutdown"
+response=$(curl --data "${GROUP}&${PASSWORD}" --silent "${request}");
+STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
+
+if [ "$STATUS" = "fail" ];then
+   echo "Status: An error occured while shutting down cluster!";
+elif [ "$STATUS" = "forbidden" ];then
+   echo >&2  "ERROR: Shutdown command execution forbidden for this group/password."
+   echo >&2  "       Command aborted."
+elif [ "$STATUS" = "success" ];then
+   echo "Status: Cluster shutdown succesfully executed. This may take a while to complete."
+else
+   echo >&2 "ERROR: No response from the member. Shutdown command may have failed."
+   echo >&2 "       rest-api/CLUSTER_WRITE for the member may have not been enabled."
+fi
+echo "Execute 'show_cluster' to check the cluster status."

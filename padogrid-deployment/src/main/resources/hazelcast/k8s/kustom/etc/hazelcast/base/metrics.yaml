@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/scrape: "true"
+  labels:
+    app.kubernetes.io/instance: my-release
+    app.kubernetes.io/name: hazelcast-enterprise
+  name: my-release-hazelcast-enterprise-metrics
+  namespace: default
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    app: imdg
+#    app.kubernetes.io/instance: my-release
+#    app.kubernetes.io/name: hazelcast-enterprise
+  sessionAffinity: None
+  type: ClusterIP

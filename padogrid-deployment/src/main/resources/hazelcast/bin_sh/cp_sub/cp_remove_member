@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -clustergroup -uuid -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified member from the specified CP group
+                 in the specified padogrid cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-clustergroup cluster_group_name]
+               [-uuid cp_member_uuid] [-?]
+
+DESCRIPTION
+   Removes the specified member from the specified CP group.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -clustergroup cluster_group_name
+             Cluster group name. Default: dev
+
+   -uuid cp-member-uuid
+             CP member UUID. Run 'cp_show_members' to get the UUID.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -clustergroup -uuid cp_member_uuid
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "cp_*" $EXECUTABLE
+   exit
+fi
+
+if [ "$UUID" == "" ]; then
+   echo "ERROR: CP member UUID not specified. Command aborted."
+   exit 1
+fi
+
+if [ "$CLUSTER_GROUP" == "" ]; then
+   CLUSTER_GROUP="dev"
+fi
+if [ "$GROUP_PW" != "" ]; then
+   __DATA="${CLUSTER_GROUP}&${GROUP_PW}"
+else
+   __DATA=$CLUSTER_GROUP
+fi
+
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM-1
+HOST_NAME=localhost
+
+BASE_URL=http://$HOST_NAME:$MEMBER_PORT
+
+if [ "`which jq`" != "" ]; then
+   curl -s -X POST --data "$__DATA" $BASE_URL/hazelcast/rest/cp-subsystem/members/${UUID}/remove | jq
+else
+   curl -s -X POST --data "$__DATA" $BASE_URL/hazelcast/rest/cp-subsystem/members/${UUID}/remove
+fi

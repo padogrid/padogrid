@@ -1,0 +1,190 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+if [ -f $SCRIPT_DIR/.addonenv.sh ]; then
+   . $SCRIPT_DIR/.addonenv.sh
+   BASE_DIR="$(dirname "$BASE_DIR")"
+else
+   . $SCRIPT_DIR/.argenv.sh
+   BASE_DIR="$(dirname "$SCRIPT_DIR")"
+fi
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-product -path -rwe -workspace -cluster -datagrid -jet -java -vm -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+PadoGrid Initialization
+
+NAME
+   $EXECUTABLE - Initialize a padogrid workspaces environment
+
+SYNOPSIS
+   $EXECUTABLE [-product product_home_path]
+               [-path workspaces_path]
+               [-java JAVA_HOME_path]
+               [-workspace default_workspace]
+               [-cluster default_cluster]
+               [-vm]
+               [-quiet] [-?]
+
+DESCRIPTION
+   Initializes a workspaces environment by setting the default paths to the required
+   software installation directories.
+
+OPTIONS
+   -product product_home_path
+             Geode, GemFire, Hazelcast, or Jet home path.
+
+   -path workspaces_path
+	     Workspaces home path where workspaces will be store. If not specified,
+             then it defaults to the current workspaces path if exists, otherwise,
+             it displays an error message.
+
+   -java JAVA_HOME_path
+             JDK home path.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ] && [ "$JAVA_HOME" != "" ]; then
+cat <<EOF
+             Default: $JAVA_HOME
+EOF
+fi
+cat <<EOF
+
+   -workspace default_workspace
+             Default workspace to be created.
+             Default: $DEFAULT_WORKSPACE
+
+   -cluster default_cluster
+             Default cluster name.
+
+   -vm
+             Specify '-vm' to enable VM cluster.
+ 
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+DEFAULT
+   $EXECUTABLE
+
+EOF
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*root*" $EXECUTABLE
+   exit
+fi
+
+PRODUCTS="geode hazelcast"
+__PRODUCT_HOME="$PRODUCT_HOME_ARG"
+
+function isValidProduct
+{
+   local PRODUCT=$1
+   local FOUND="false"
+   for i in $PRODUCTS; do
+      if [ "$i" == "$PRODUCT" ]; then
+         FOUND="true"
+      fi
+   done
+   echo $FOUND
+}
+
+if [ "$QUIET" == "true" ] && [ "$PRODUCT_ARG" == "" ]; then
+   echo >&2 "ERROR: The '-product' option not specified. Supported products are [$PRODUCTS]."
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+
+# Determin the default product
+if [ "$__PRODUCT_HOME" == "" ]; then
+   if [ "$PRODUCT" != "hazelcast" ]; then
+      if [ "$CLUSTER_TYPE" == "imdg" ]; then
+         __PRODUCT_HOME="$JET_HOME"
+      else
+         __PRODUCT_HOME="$HALZECAST_HOME"
+      fi
+   elif [ "$PRODUCT" != "geode" ]; then
+      __PRODUCT_HOME="$GEODE_HOME"
+   else
+      __PRODUCT_HOME=""
+   fi
+fi
+
+if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
+   REDO=true
+   while [ "$REDO" == "true" ]; do
+      echo "Enter the product home path. The supported products are Geode, GemFire, Hazelcast IMDG, Hazelcast Jet."
+      if [[ $OS_NAME == CYGWIN* ]]; then
+          echo "Enter only Unix absoulte path. Windows path not allowed."
+      fi
+      if [ "$HAZELCAST_HOME" != "" ]; then
+         echo "   $HAZELCAST_HOME"
+      fi
+      if [ "$JET_HOME" != "" ]; then
+         echo "   $JET_HOME"
+      fi
+      if [ "$GEODE_HOME" != "" ]; then
+         echo "   $GEODE_HOME"
+      fi
+      echo "[$__PRODUCT_HOME]:"
+      read -p "" INPUT
+      # trim string
+      INPUT=`echo "$INPUT" | xargs`
+      if [ "$INPUT" != "" ]; then
+         __PRODUCT_HOME=$INPUT
+      fi
+      if [[ $OS_NAME == CYGWIN* ]]; then
+         __PRODUCT_HOME="$(cygpath -au $__PRODUCT_HOME)"
+      fi
+      if [ ! -d "$__PRODUCT_HOME" ]; then
+         echo "Directory does not exist or not a directory."
+         __PRODUCT_HOME=$PRODUCT_HOME_ARG
+      fi
+      PRODUCT_HOME="$__PRODUCT_HOME"
+      determineProduct
+
+      echo "Product selected: $PRODUCT"
+
+      if [ `isValidProduct "$PRODUCT"` == "false" ]; then
+         echo "Invalid product home path entered. Supported products are Geode, GemFire, Hazelcast IMDG, Hazelcast Jet."
+         REDO=true
+      else
+         REDO=false
+      fi
+   done
+else
+   PRODUCT_HOME="$__PRODUCT_HOME"
+   determineProduct
+fi
+
+if [ `isValidProduct "$PRODUCT"` == "false" ]; then
+  echo >&2 "ERROR: Invalid product: [$PRODUCT]. Supported products are [$PRODUCTS]."
+  echo >&2 "       Command aborted."
+  exit 1
+fi
+
+# Create env file for the 'init_' command to source in.
+TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
+echo "PRODUCT_HOME_ARG=\"$PRODUCT_HOME\"" > $TMP_ENV_FILE
+echo "PRODUCT_ARG=\"$PRODUCT_HOME\"" > $TMP_ENV_FILE
+echo "JAVA_HOME_ARG=\"$JAVA_HOME_ARG\"" >> $TMP_ENV_FILE
+echo "PATH_ARG=\"$PATH_ARG\"" >> $TMP_ENV_FILE
+echo "NAME_ARG=\"$NAME_ARG\"" >> $TMP_ENV_FILE
+echo "WORKSPACE_ARG=\"$WORKSPACE_ARG\"" >> $TMP_ENV_FILE
+echo "VM_SPECIFIED=\"$VM_SPECIFIED\"" >> $TMP_ENV_FILE
+
+# Initialize the product RWE environment.
+$BASE_DIR/${PRODUCT}/bin_sh/init_${PRODUCT} -env $TMP_ENV_FILE -quiet
+rm $TMP_ENV_FILE
+

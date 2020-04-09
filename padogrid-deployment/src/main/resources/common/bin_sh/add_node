@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-pod -count -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Add one or more nodes to the specified pod in the current
+                 padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-pod pod_name] [-count number_of_nodes] [-?]
+
+DESCRIPTION
+   Adds one or more nodes to the specified pod.
+
+OPTIONS
+   -pod pod_name
+             Pod name. Required.
+
+   -count number_of_nodes
+             Number of nodes to add. If not specified then it adds one node.
+
+DEFAULT
+   $EXECUTABLE -pod pod_name -count 1
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*node*" $EXECUTABLE
+   exit
+fi
+
+# Disallow users from creating nodes from guest OS
+OS_ENV=`getOsEnv`
+if [[ $OS_ENV == *g ]]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Guest OS is not allowed to create nodes. Please run this command from the host OS."
+   echo >&2 "           Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+POD_TYPE=`getPodProperty "pod.type" $POD_TYPE`
+
+if  [ "$POD" == "local" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE $PADOGRID_WORKSPACE"
+   echo "    ERROR: The default pod is 'local'. This command does not apply to the 'local' pod."
+   echo "           Please use the -pod option to specify the pod."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+if  [ ! -d $POD_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "    WORKSPACE $PADOGRID_WORKSPACE"
+   echo "          Pod: $POD"
+   echo "        ERROR: This pod has not been created. Please run the create_pod command to"
+   echo "               to create the pod before running this command. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ "$COUNT" == "" ]; then
+   NODE_COUNT=1
+else
+   NODE_COUNT=$COUNT
+fi
+
+OLD_NODE_COUNT=`getPodProperty "node.count" 0`
+let NEW_NODE_COUNT=NODE_COUNT+OLD_NODE_COUNT
+echo `setPodProperty "node.count" $NEW_NODE_COUNT`
+
+echo "----------------------------------------------------------------"
+echo "        WORKSPACE $PADOGRID_WORKSPACE"
+echo "              Pod: $POD"
+echo "         Pod Type: $POD_TYPE"
+echo "Node Count Before: $OLD_NODE_COUNT"
+echo "   Node Count Now: $NEW_NODE_COUNT"
+echo "          Pod Dir: $POD_DIR"
+echo ""
+echo "IMPORTANT: To apply the changes, the pod must be restarted."
+echo "----------------------------------------------------------------"
+popd > /dev/null 2>&1

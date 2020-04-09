@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+# Results directory
+RESULTS_DIR="$APP_DIR/results"
+
+# Perf properties file
+PERF_PROPERTIES_FILE=$APP_DIR/etc/group.properties
+
+# Export LOG_FILE (See etc/log4j2.properties)
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   RESULTS_DIR="$(cygpath -wp "$RESULTS_DIR")"
+   PERF_PROPERTIES_FILE="$(cygpath -wp "$PERF_PROPERTIES_FILE")"
+   export LOG_FILE=$LOG_DIR\\$EXECUTABLE.log
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+else
+   export LOG_FILE=$LOG_DIR/$EXECUTABLE.log
+fi
+
+# Application executable name. Useful for displaying usage.
+JAVA_OPTS="$JAVA_OPTS -Dexecutable.name=$EXECUTABLE"
+JAVA_OPTS="$JAVA_OPTS -Dperf.properties.file=$PERF_PROPERTIES_FILE -Dresults.dir=$RESULTS_DIR"
+
+"$JAVA" $JAVA_OPTS org.apache.geode.addon.test.perf.GroupTest $*

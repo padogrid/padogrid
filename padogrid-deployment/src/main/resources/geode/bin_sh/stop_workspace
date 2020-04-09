@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -all -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$WORKSPACE_ARG" != "" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+else
+   WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Stop all running Geode clusters including members and locators 
+           in the specified workspace
+
+WARNING
+   This command does not wait for migration operations to complete before
+   terminating members. For graceful shutdown, use 'shutdown_workspace' instead.
+
+SYNOPSIS
+   $EXECUTABLE [-workspace workspace_name | -all] [-?]
+
+DESCRIPTION
+   Stops all running Geode clusters by executing 'stop_cluster -all' on each cluster
+   in the workspace. Note that it kills both members and locators of all clusters.
+
+OPTIONS
+   -workspace workspace_name
+             Workspace name. If not specified, then stops the current workspace.
+
+   -all
+             Stops all workspaces. The '-all' option overrides the '-workspace' option.
+             
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -workspace $WORKSPACE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$QUIET" == "false" ]; then
+   if [ "$ALL" == "true" ]; then
+      echo "This command stops all workspaces."
+   else
+      echo "Workspace: $WORKSPACE"
+      echo "   This command stops all clusters in the workspace."
+   fi
+   echo "Do you want to continue?"
+   echo "(Enter 'continue' + Enter to continue to stop all clusters, other keys to abort.)"
+   read INPUT
+   if [ "$INPUT" != "continue" ]; then
+      echo "Command aborted."
+      exit
+   fi
+fi
+
+CURRENT_DIR="`pwd`"
+CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+CURRENT_CLUSTER=$CLUSTER
+
+if [ "$ALL" == "true" ]; then
+   __WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
+   __WORKSPACES=$(removeTokens "$__WORKSPACES" "initenv.sh setenv.sh")
+   __WORKSPACES=( $__WORKSPACES )
+else
+   __WORKSPACES=( $WORKSPACE )
+fi
+
+let NUM_WORKSPACES=${#__WORKSPACES[@]};
+for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
+   __WORKSPACE="${__WORKSPACES[$__i]}"
+   if [ $NUM_WORKSPACES -eq 1 ]; then
+      if [ "$__WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+         switch_workspace $__WORKSPACE
+      fi
+   else
+      switch_workspace $__WORKSPACE
+   fi
+   echo ""
+   echo -e "${CLightRed}Stopping workspace $__WORKSPACE...${CNone}"
+   for j in $PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/*; do
+      CLUSTER="`basename $j`"
+      echo ""
+      echo -e "${CLightRed}Stopping cluster $CLUSTER...${CNone}"
+      stop_cluster -cluster $CLUSTER -all
+   done
+done
+if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+   switch_workspace $CURRENT_WORKSPACE
+   switch_cluster $CLUSTER
+   cd $CURRENT_DIR
+fi

@@ -1,0 +1,71 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Display the specified padogrid workspace information
+
+SYNOPSIS
+   $EXECUTABLE [-workspace] [-?]
+
+DESCRIPTION
+   Displays the specified workspace information.
+
+OPTIONS
+   -workspace workspace_name
+             Workspace name. If not specified, then it displays the current
+             workspace information.
+
+DEFAULT
+   $EXECUTABLE
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$WORKSPACE_ARG" == "" ]; then
+   WORKSPACE_DIR=$PADOGRID_WORKSPACE
+else
+   WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG
+fi
+echo ""
+echo "Workspaces Home:"
+echo "   $PADOGRID_WORKSPACES_HOME"
+echo ""
+echo "Workspace:"
+echo "   $WORKSPACE_DIR"
+echo ""
+echo "Workspace Type: "
+if [ "$VM_ENABLED" == "true" ]; then
+echo "   VM"
+else
+echo "   local"
+fi
+NODES="apps clusters docker k8s pods"
+for NODE in $NODES; do
+   ITEMS=$(getClusters "$NODE" $WORKSPACE_ARG)
+   if [ "$ITEMS" != "" ]; then
+      echo ""
+      echo "$NODE"
+      showTree "$ITEMS"
+   fi
+done
+echo ""

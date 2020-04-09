@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/instance: my-release
+    app.kubernetes.io/name: hazelcast-enterprise
+  name: my-release-hazelcast-enterprise
+  namespace: default
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: my-release
+      app.kubernetes.io/name: hazelcast-enterprise
+      role: hazelcast
+  serviceName: my-release-hazelcast-enterprise
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: my-release
+        app.kubernetes.io/name: hazelcast-enterprise
+        role: hazelcast
+        app: imdg
+      annotations:
+        prometheus.io/scrape: 'true'
+    spec:
+      containers:
+      - env:
+        - name: HZ_LICENSE_KEY
+          value: <License key goes here -- done by overlay-base>
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: PROMETHEUS_PORT
+          value: "8080"
+        - name: JAVA_OPTS
+          value: -Dhazelcast.rest.enabled=true -Dhazelcast.config=/data/hazelcast/hazelcast.yaml
+            -DserviceName=my-release-hazelcast-enterprise -Dnamespace=default -Dhazelcast.mancenter.enabled=true
+            -Dhazelcast.ssl=false -Dhazelcast.hotRestart=false -Dhazelcast.mancenter.url=http://my-release-hazelcast-enterprise-mancenter:8080/hazelcast-mancenter
+            -Dhazelcast.shutdownhook.policy=GRACEFUL -Dhazelcast.shutdownhook.enabled=true
+            -Dhazelcast.graceful.shutdown.max.wait=600  -Dhazelcast.cluster.version.auto.upgrade.enabled=true
+            -Dhazelcast.jmx=true -cp /opt/hazelcast/*:/opt/hazelcast/lib/*:/data/custom/plugins/v1/*
+            -Dcom.sun.management.jmxremote.port=12000 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dhazelcast.jmx=true
+        image: hazelcast/hazelcast-enterprise:3.12.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /hazelcast/health/node-state
+            port: 5701
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: my-release-hazelcast-enterprise
+        ports:
+        - containerPort: 5701
+          name: hazelcast
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /hazelcast/health/node-state
+            port: 5701
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        resources:
+          limits:
+            cpu: 200m
+            memory: 768Mi
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data/hazelcast
+          name: hazelcast-storage
+        - mountPath: /data/custom
+          name: hazelcast-custom
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccount: enterprise
+      serviceAccountName: enterprise
+      terminationGracePeriodSeconds: 600
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: my-release-hazelcast-enterprise-configuration
+        name: hazelcast-storage
+      - name: hazelcast-custom
+        persistentVolumeClaim:
+          claimName: hazelcast-pv-claim
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate

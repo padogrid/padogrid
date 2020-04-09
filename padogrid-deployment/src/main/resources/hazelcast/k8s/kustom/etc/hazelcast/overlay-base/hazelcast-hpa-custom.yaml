@@ -1,0 +1,17 @@
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: my-release-hazelcast
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: my-release-hazelcast-enterprise
+  minReplicas: 2
+  maxReplicas: 10
+#  targetCPUUtilizationPercentage: 80
+  metrics:
+  - type: Pods
+    pods:
+      metricName: on_heap_ratio
+      targetAverageValue: 850m

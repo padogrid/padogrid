@@ -1,0 +1,266 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -vm -simulate -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+#
+# Determeint $TAR_BALL_PATH
+#
+ROOT_DIR_NAME=$(basename $BASE_DIR)
+TOP_DIR="$(dirname "$BASE_DIR")"
+TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+TAR_BALL_GZ_PATH=$BASE_DIR/bundles/$TAR_BALL_GZ_NAME
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+WARNING:
+   This command overwrites existing files in the VMs. Symbolic links may not
+   work and not supported.
+
+NAME
+   $EXECUTABLE - Copy the specified file or directory to the same path in the
+                 specified VMs in padogrid environment
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-mirror] [-simulate] [-?] file_path
+
+DESCRIPTION
+   Copies the specified file or directory to all the VMs defined by the VM_HOSTS
+   environment variable in the workspace 'setenv.sh' file. To copy to only the
+   cluster VMs, specify the cluster with the '-cluster' option. To copy to a select
+   list of VMs, specify the VM list with the '-vm' option.
+
+   The file path can be an absolute or a relative path but it must exist in the workspace
+   directory hiearchy. To copy non-workspace files, specify the 'mirror' option, which
+   copies the file to the same path as the local path.
+
+   If the file path is a directory then all of the files in the directory are recursively
+   copied.
+
+   Note that this command and all other commands that begin with the "vm_" preprefix are
+   available only on VM workspaces.
+
+   The '-vm' option overrides both the '-cluster' option and VM_HOSTS. The '-cluster' option
+   overrides VM_HOSTS. 
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -vm comma_separated_hosts
+             A comma separated list of VM hosts or addresses. If the list contains spaces
+             then enclosed it in quotes.
+
+   -mirror
+             If this option is specified, then the absolute path of the specified
+             file is duplicated in the remote VMs such that both local and remote
+             files paths will be identical. If the absolute path does not exist in
+             the remote VMs, then this command will fail.
+
+   -simulate
+             Print the remote commands but do not execute.
+
+   file_path
+             File or directory path. Multiple files not supported. If directory, then
+             the entire directory is recursively copied to all the VMs.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER file_path
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+EOF
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "vm_*" $EXECUTABLE
+   exit
+fi
+
+# Available only on VM workspaces
+if [ "$VM_ENABLED" != "true" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: The workspace is not a VM workspace. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1 
+fi
+
+# If the -vm option is specified then it overrides all other options
+if [ "$VM_SPECIFIED" == "true" ]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+      VM_HOSTS=$VM_HOSTS_ARG
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "ERROR: Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+else
+   # The -cluster option overrides VM_HOSTS
+   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+      if [ "`isClusterExist "$CLUSTER"`" == "false" ]; then 
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Cluster does not exist [$CLUSTER]. Command aborted."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+      if [ "$VM_ENABLED" == "false" ]; then
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+         echo >&2 "       in the 'etc/cluster.properties' file."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         if [ "$VM_HOSTS" == "" ]; then
+            echo "----------------------------------------------------------------"
+            echo "WORKSPACE: $PADOGRID_WORKSPACE"
+            echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
+            echo >&2 "           file. Command aborted."
+            echo "----------------------------------------------------------------"
+            exit 1
+         fi
+      fi
+   fi
+fi
+
+# Check file path
+FILE_PATH=${@: -1}
+ABS_PATH=$(getAbsPath "$FILE_PATH")
+if [ "$ABS_PATH" == "-1" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: Invalid path [$FILE_PATH]. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Fail fast: Exit if any of the hosts is not reachable
+for VM_HOST in $__VM_HOSTS; do
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
+   EXIT_CODE=$?
+   if [ "$EXIT_CODE" != "0" ]; then
+      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+      echo "       Command aborted."
+      exit 1
+   fi
+done
+
+# 
+# VM cluster
+#
+if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+   VM_HOSTS=$VM_HOSTS_ARG
+fi
+
+# Replace , with space
+__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+DEFAULT_USER=$(whoami)
+VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+
+if [ "$KEY" == "" ]; then
+   KEY=`getClusterProperty "vm.privateKeyFile"`
+fi
+VM_KEY=""
+if [ "$KEY" != "" ]; then 
+   if [ ! -f "$KEY" ]; then
+      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+   VM_KEY="-i $KEY"
+fi
+
+# Find all existing and new hosts
+EXISTING_HOSTS=
+NEW_HOSTS=
+THIS_VM_HOSTNAME=`hostname`
+COMMAND="if [ -d "$BASE_DIR" ]; then echo true; else echo false; fi"
+EXISTING_HOST_COUNT=0
+NEW_HOST_COUNT=0
+echo "Copy $ABS_PATH to other VMs."
+if [ "$MIRROR_SPECIFIED" == "true" ]; then
+   if [ -d $ABS_PATH ]; then
+      TO_PATH="$(dirname "$ABS_PATH")"
+   else
+      TO_PATH=$ABS_PATH
+   fi
+else
+   # Determine the path relative to the workspace directory
+   pushd $PADOGRID_WORKSPACE > /dev/null 2>&1
+   WORKSPACE_DIR=$(pwd)
+   popd > /dev/null 2>&1
+   
+   __CRUMB="012345678901234567890" 
+   __ABS_PATH=${ABS_PATH}${__CRUMB}
+   REL_FILE_PATH=${__ABS_PATH##${WORKSPACE_DIR}}
+   if [[ "$REL_FILE_PATH" == "$__ABS_PATH" ]]; then
+      echo >&2 "ERROR: Invalid file. The specified file is not in the current workspace."
+      echo >&2 "       Use the '-mirror' option for copying non-workspace files."
+      echo >&2 "       Command aborted."
+      exit 1
+   else
+      REL_FILE_PATH=${ABS_PATH##${WORKSPACE_DIR}}
+   fi
+   TO_PATH=${VM_PADOGRID_WORKSPACE}${REL_FILE_PATH=$REL_FILE_PATH}
+   if [ -d $ABS_PATH ]; then
+      TO_PATH="$(dirname "$TO_PATH")"
+   fi
+fi
+for VM_HOST in $__VM_HOSTS; do
+   if [ "$VM_HOST" == "$THIS_VM_HOSTNAME" ]; then
+      continue
+   fi
+   HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+   if [ "$HOSTNAME" == "" ]; then
+      echo "Invalid host [$VM_HOST]"
+      continue
+   elif [ "$HOSTNAME" == "$THIS_VM_HOSTNAME" ]; then
+      continue
+   fi
+
+   echo "   Copying to $VM_HOST..."
+   if [ "$SIMULATE" == "true" ]; then
+      echo scp -q -r -o stricthostkeychecking=no $VM_KEY $ABS_PATH $VM_USER@$VM_HOST:$TO_PATH
+   else
+      scp -q -r -o stricthostkeychecking=no $VM_KEY $ABS_PATH $VM_USER@$VM_HOST:$TO_PATH
+   fi
+done
+
+if [ "$SIMULATE" == "true" ]; then
+   echo "Simulation copy complete."
+elif [ "$VM_SPECIFIED" == "true" ]; then
+   echo "VM copy complete."
+elif [ "$CLUSTER_SPECIFIED" == "true" ]; then
+   echo "Cluster copy complete."
+else
+   echo "Workspace copy complete."
+fi

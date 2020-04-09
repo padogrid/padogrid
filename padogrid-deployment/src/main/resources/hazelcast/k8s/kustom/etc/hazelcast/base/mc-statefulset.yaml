@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  generation: 1
+  labels:
+    app.kubernetes.io/instance: my-release
+    app.kubernetes.io/name: hazelcast-enterprise
+  name: my-release-hazelcast-enterprise-mancenter
+  namespace: default
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: my-release
+      app.kubernetes.io/name: hazelcast-enterprise
+      role: mancenter
+  serviceName: my-release-hazelcast-enterprise-mancenter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: my-release
+        app.kubernetes.io/name: hazelcast-enterprise
+        role: mancenter
+    spec:
+      containers:
+      - env:
+        - name: MC_LICENSE_KEY
+          value: <License key goes here -- done by overlay-base>
+        - name: JAVA_OPTS
+          value: '-Dhazelcast.mc.license=$(MC_LICENSE_KEY) -Dhazelcast.mc.tls.enabled=false '
+        image: hazelcast/management-center:3.12
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /hazelcast-mancenter/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: my-release-hazelcast-enterprise-mancenter
+        ports:
+        - containerPort: 8080
+          name: mancenter
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /hazelcast-mancenter/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 65534
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data
+          name: mancenter-storage
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 65534
+      serviceAccount: enterprise
+      serviceAccountName: enterprise
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: mancenter-storage
+        persistentVolumeClaim:
+          claimName: my-release-hazelcast-enterprise-mancenter
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate

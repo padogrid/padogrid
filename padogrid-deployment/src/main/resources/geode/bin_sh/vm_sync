@@ -1,0 +1,341 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-vm -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+#
+# Determeint $TAR_BALL_PATH
+#
+ROOT_DIR_NAME=$(basename $BASE_DIR)
+TOP_DIR="$(dirname "$BASE_DIR")"
+TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+TAR_BALL_GZ_PATH=$BASE_DIR/bundles/$TAR_BALL_GZ_NAME
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Synchronize the rmote VMs with the local workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-simulate] [-?]
+
+DESCRIPTION
+   Synchronizes all the VMs defined by VM_HOSTS environment variable in the workspace
+   'setenv.sh' file with the local workspace. To synchronize only the cluster VMs, specify
+   the cluster with the '-cluster' option. To synchronize a select list of VMs, specify
+   the VM list with the '-vm' option.
+
+   Note that this command and all other commands that begin with the "vm_" preprefix are
+   available only on VM workspaces.
+
+   The '-vm' option overrides both the '-cluster' option and VM_HOSTS. The '-cluster' option
+   overrides VM_HOSTS. 
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -vm comma_separated_hosts
+             A comma separated list of VM hosts or addresses. If the list contains spaces
+             then enclosed it in quotes.
+
+   -simulate
+             Print the remote commands but do not execute.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER file_path
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+EOF
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "vm_*" $EXECUTABLE
+   exit
+fi
+
+# Available only on VM workspaces
+if [ "$VM_ENABLED" != "true" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: The workspace is not a VM workspace. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1 
+fi
+
+# If the -vm option is specified then it overrides all other options
+if [ "$VM_SPECIFIED" == "true" ]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+      VM_HOSTS=$VM_HOSTS_ARG
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "ERROR: Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+else
+   # The -cluster option overrides VM_HOSTS
+   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+      if [ "`isClusterExist "$CLUSTER"`" == "false" ]; then 
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Cluster does not exist [$CLUSTER]. Command aborted."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+      if [ "$VM_ENABLED" == "false" ]; then
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+         echo >&2 "       in the 'etc/cluster.properties' file."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         if [ "$VM_HOSTS" == "" ]; then
+            echo "----------------------------------------------------------------"
+            echo "WORKSPACE: $PADOGRID_WORKSPACE"
+            echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
+            echo >&2 "           file. Command aborted."
+            echo "----------------------------------------------------------------"
+            exit 1
+         fi
+      fi
+   fi
+fi
+
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+
+# Replace , with space
+__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+DEFAULT_USER=$(whoami)
+VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+
+if [ "$KEY" == "" ]; then
+   KEY=`getClusterProperty "vm.privateKeyFile"`
+fi
+VM_KEY=""
+if [ "$KEY" != "" ]; then 
+   if [ ! -f "$KEY" ]; then
+      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+   VM_KEY="-i $KEY"
+fi
+
+# Fail fast: Exit if any of the hosts is not reachable
+for VM_HOST in $__VM_HOSTS; do
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
+   EXIT_CODE=$?
+   if [ "$EXIT_CODE" != "0" ]; then
+      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+      echo "       Command aborted."
+      exit 1
+   fi
+done
+
+# Check if we need to deploy padogrid to any of the VMs
+ADDON_COMMAND="if [ -d "$VM_PADOGRID_HOME" ]; then echo true; else echo false; fi"
+JAVA_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
+GEODE_COMMAND="if [ -d "$VM_GEODE_HOME" ]; then echo true; else echo false; fi"
+INSTALL_ADDON_HOST_LIST=""
+for VM_HOST in $__VM_HOSTS; do
+   # padogrid
+   ADDON_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$ADDON_COMMAND")
+   if [[ "$ADDON_EXISTS" == *"false" ]]; then
+      INSTALL_ADDON_HOST_LIST="$INSTALL_ADDON_HOST_LIST $VM_HOST"
+   fi
+done
+if [ "$INSTALL_ADDON_HOST_LIST" != "" ]; then
+   ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
+   TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+   TAR_BALL_GZ_PATH=/tmp/$TAR_BALL_GZ_NAME
+   VM_PADOGRID_HOME_PARENT_DIR="$(dirname "$VM_PADOGRID_HOME")"
+   pushd $PADOGRID_HOME/.. > /dev/null 2>&1
+   tar czf $TAR_BALL_GZ_PATH $ROOT_DIR_NAME
+   popd > /dev/null 2>&1
+
+   for VM_HOST in $INSTALL_ADDON_HOST_LIST; do
+      echo "Deploying $ROOT_DIR_NAME to $VM_HOST..."
+      if [ "$SIMULATE" == "true" ]; then
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         echo scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+      fi
+   done
+fi
+
+echo ""
+
+# Find all existing and new hosts
+EXISTING_HOSTS=
+NEW_HOSTS=
+THIS_VM_HOSTNAME=`hostname`
+COMMAND="if [ -d "$BASE_DIR" ]; then echo true; else echo false; fi"
+EXISTING_HOST_COUNT=0
+NEW_HOST_COUNT=0
+ABS_PATH="$PADOGRID_WORKSPACE"
+INITENV_COMMAND="if [ -f "$VM_PADOGRID_WORKSPACES_HOME/initenv.sh" ]; then echo true; else echo false; fi"
+ADDONENV_COMMAND="if [ -f "$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh" ]; then echo true; else echo false; fi"
+SETENV_COMMAND="if [ -f "$VM_PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then echo true; else echo false; fi"
+
+# Prepare workspace setenv.sh file for VMs
+sed -e 's|export JAVA_HOME=.*$|export JAVA_HOME='\"${VM_JAVA_HOME}\"'|' \
+    -e 's|export GEODE_HOME=.*$|export GEODE_HOME='\"${VM_GEODE_HOME}\"'|' \
+    -e 's|export JET_HOME=.*$|export JET_HOME='\"${VM_JET_HOME}\"'|' \
+    -e 's|export PADOGRID_HOME=.*$|export PADOGRID_HOME='\"${VM_PADOGRID_HOME}\"'|' \
+    $PADOGRID_WORKSPACE/setenv.sh > /tmp/setenv.sh
+
+# Prepare workspaces setenv.sh file for VMs
+sed -e 's|export JAVA_HOME=.*$|export JAVA_HOME='\"${VM_JAVA_HOME}\"'|' \
+    -e 's|export GEODE_HOME=.*$|export GEODE_HOME='\"${VM_GEODE_HOME}\"'|' \
+    -e 's|export JET_HOME=.*$|export JET_HOME='\"${VM_JET_HOME}\"'|' \
+    -e 's|export PADOGRID_HOME=.*$|export PADOGRID_HOME='\"${VM_PADOGRID_HOME}\"'|' \
+    -e 's|export PADOGRID_WORKSPACE=.*$|export PADOGRID_WORKSPACE='\"${VM_PADOGRID_WORKSPACE}\"'|' \
+    $PADOGRID_WORKSPACES_HOME/setenv.sh > /tmp/workspaces_setenv.sh
+
+echo "Workspace sync: $WORKSPACE_NAME"
+if [ -f "$VM_PRIVATE_KEY_FILE" ]; then
+   PRIVATE_KEY_FILE_NAME=$(basename $VM_PRIVATE_KEY_FILE)
+else
+   PRIVATE_KEY_FILE_NAME=""
+fi
+pushd $ABS_PATH > /dev/null 2>&1
+tar czf /tmp/vm_sync.tar.gz .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
+popd > /dev/null 2>&1
+for VM_HOST in $__VM_HOSTS; do
+   HOSTNAME=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname")
+   if [ "$HOSTNAME" == "" ]; then
+      echo "Invalid host [$VM_HOST]"
+      continue
+   elif [ "$HOSTNAME" == "$THIS_VM_HOSTNAME" ]; then
+      continue
+   fi
+
+   echo "   Synchronizing $VM_HOST..."
+   if [ "$SIMULATE" == "true" ]; then
+      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_WORKSPACE"
+      echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/vm_sync.tar.gz $VM_USER@$VM_HOST:/tmp/
+      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_WORKSPACE -xzf /tmp/vm_sync.tar.gz; rm /tmp/vm_sync.tar.gz"
+      echo scp -q -o stricthostkeychecking=no $VM_KEY /tmp/setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/
+   else
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_WORKSPACE"
+      scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/vm_sync.tar.gz $VM_USER@$VM_HOST:/tmp/
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_WORKSPACE -xzf /tmp/vm_sync.tar.gz && rm /tmp/vm_sync.tar.gz"
+      scp -q -o stricthostkeychecking=no $VM_KEY /tmp/setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/
+   fi
+
+   # Configure the workspaces directory if not configured already
+   INITENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$INITENV_COMMAND")
+   ADDONENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$ADDONENV_COMMAND")
+   SETENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$SETENV_COMMAND")
+
+   if [[ "$INITENV_EXISTS" == *"false" ]]; then
+      scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+   fi
+   if [[ "$ADDONENV_EXISTS" == *"false" ]]; then
+      sed -e 's|export PADOGRID_WORKSPACES_HOME=.*$|export PADOGRID_WORKSPACES_HOME='\"$VM_PADOGRID_WORKSPACES_HOME\"'|' \
+          $PADOGRID_WORKSPACES_HOME/.addonenv.sh > /tmp/.addonenv.sh
+      if [ "$SIMULATE" == "true" ]; then
+         echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+      else
+         scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+      fi
+   fi
+   if [[ "$SETENV_EXISTS" == "false" ]]; then
+      if [ "$SIMULATE" == "true" ]; then
+         echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
+      else
+         scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
+      fi
+   fi
+done
+
+# Remove up temp files
+rm /tmp/vm_sync.tar.gz > /dev/null 2>&1
+rm /tmp/setenv.sh  > /dev/null 2>&1
+rm /tmp/.addonenv.sh  > /dev/null 2>&1
+rm /tmp/workspaces_setenv.sh  > /dev/null 2>&1
+
+# Determine and display all VMs that do not have Java and Geode installed.
+JAVA_HOME_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
+GEODE_HOME_COMMAND="if [ -d "$VM_GEODE_HOME" ]; then echo true; else echo false; fi"
+JAVA_HOME_NOT_FOUND_LIST=""
+GEODE_HOME_NOT_FOUND_LIST=""
+for VM_HOST in $__VM_HOSTS; do
+   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$JAVA_HOME_COMMAND")
+   GEODE_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$GEODE_HOME_COMMAND")
+   if [[ "$JAVA_HOME_EXISTS" == *"false" ]]; then
+      JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
+   fi
+   if [[ "$GEODE_HOME_EXISTS" == *"false" ]]; then
+      GEODE_HOME_NOT_FOUND_LIST="$GEODE_HOME_NOT_FOUND_LIST $VM_HOST"
+   fi
+done
+
+if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
+   JAVA_DIR_NAME=$(basename $VM_JAVA_HOME)
+   echo "------------------------------------------------------------------------------------------"
+   echo -e "${CLightRed}WARNING:${CNone}"
+   echo "$VM_JAVA_HOME"
+   echo "   JDK not installed on the following VMs. The workspace will not be operational"
+   echo "   until you install JDK on these VMs."
+   echo "      $JAVA_HOME_NOT_FOUND_LIST"
+   echo "VM Java Home Path:"
+   echo "      $VM_JAVA_HOME"
+   echo "To install Java on the above VMs, download the correct version of JDK and execute 'vm_install'."
+   echo "Example:"
+   echo "   vm_install -java $JAVA_DIR_NAME.tar.gz"
+   echo "------------------------------------------------------------------------------------------"
+fi
+if [ "$GEODE_HOME_NOT_FOUND_LIST" != "" ]; then
+   GEODE_DIR_NAME=$(basename $VM_GEODE_HOME)
+   echo "------------------------------------------------------------------------------------------"
+   echo -e "${CLightRed}WARNING:${CNone}"
+   echo "   Geode is not installed on the following VMs. The workspace will not be operational"
+   echo "   until you install Geode on these VMs."
+   echo "      $GEODE_HOME_NOT_FOUND_LIST"
+   echo "VM Geode Path:"
+   echo "    $VM_GEODE_HOME"
+   echo "To install Geode on the above VMs, download the correct version of JDK and execute 'vm_install'."
+   echo "Example:"
+   echo "   vm_install -padogrid $GEODE_DIR_NAME.tar.gz"
+   echo "------------------------------------------------------------------------------------------"
+fi
+
+echo -e "${CLightGreen}Workspace sync complete.${CNone}"
+echo ""
+if [ "$SIMULATE" == "true" ]; then
+   echo "Simulation complete."
+fi

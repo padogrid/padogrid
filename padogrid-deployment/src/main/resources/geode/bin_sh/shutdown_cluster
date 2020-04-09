@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Gracefully shutdown all active Geode members in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
+
+DESCRIPTION
+   Gracefully shuts down all active members in the specified cluster. It will not
+   shutdown locators unless the '-all' option is specified.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name
+
+   -all
+             If specified, then it shuts down both members and locators.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -group dev -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+if [ ! -d $CLUSTER_DIR ]; then
+   >&2 echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+   exit 1
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
+LOCATOR_TCP_LIST=""
+
+# 
+# VM cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_LOCATOR_HOSTS=`getClusterProperty "vm.locator.hosts"`
+   if [ "$VM_LOCATOR_HOSTS" == "" ]; then
+      >&2 echo "ERROR: VM hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
+      >&2 echo "       $ETC_DIR/cluster.properties"
+      >&2 echo "       Command aborted."
+      >&2 exit 1
+   fi
+   # Replace , with space
+   VM_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+   
+   # Find an active locator
+   for VM_HOST in ${VM_LOCATOR_HOSTS}; do
+      LOCATOR=`getVmLocatorName $VM_HOST`
+      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE`
+      if [ "$pid" != "" ]; then
+         BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress" "$VM_HOST"`
+         LOCATOR_TCP_LIST="$BIND_ADDRESS[$LOCATOR_START_PORT]"
+      fi
+   done
+
+elif [ "$POD" == "local" ]; then
+   HOST_NAME=`hostname`
+   LOCATOR_PREFIX=`getLocatorPrefix`
+
+   # Determine the locators to connect
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${LOCATOR_PREFIX}*; do
+   if [ -d "$i" ]; then
+    __LOCATOR=$i
+    pid=`getLocatorPid $__LOCATOR $WORKSPACE`
+    if [ "$pid" != "" ]; then
+       __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
+       __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
+       let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
+       if [ "$LOCATOR_TCP_LIST" == "" ]; then
+          LOCATOR_TCP_LIST="$HOST_NAME[$__LOCATOR_PORT]"
+       else
+          LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$HOST_NAME[$__LOCATOR_PORT]"
+       fi
+    fi
+   fi
+   done
+   popd > /dev/null 2>&1
+else
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
+   LOCATOR_PREFIX=`getLocatorPrefix`
+
+   # Locators
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${LOCATOR_PREFIX}*; do
+      if [ -d "$i" ]; then
+         __LOCATOR=$i
+         __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
+         if [ "$OS_ENV" == "hh" ]; then
+            NODE_LOCAL=`getOsNodeName`
+         else
+            NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+            NODE_LOCAL="${NODE_NAME_PRIMARY}.local"
+         fi
+         pid=`getLocatorPid $__LOCATOR $WORKSPACE`
+         if [ "$pid" != "" ]; then
+             __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
+             __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
+             let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
+             if [ "$LOCATOR_TCP_LIST" == "" ]; then
+                LOCATOR_TCP_LIST="$NODE_LOCAL[$__LOCATOR_PORT]"
+             else
+                LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$NODE_LOCAL[$__LOCATOR_PORT]"
+             fi
+         fi
+      fi
+   done
+fi
+
+
+if [ "$LOCATOR_TCP_LIST" == "" ]; then
+   echo >&2 "ERROR: All locators are down. Shutdown requires at least one (1) active locator. Command aborted."
+   exit 1
+fi
+
+echo gfsh -e \"connect --locator=$LOCATOR_TCP_LIST\" -e \"shutdown --time-out=30 --include-locators=$ALL\"
+gfsh -e "connect --locator=$LOCATOR_TCP_LIST" -e "shutdown --time-out=30 --include-locators=$ALL"
+
+echo "Shudown may take a long time to complete. Execute 'show_cluster' to check the cluster status."

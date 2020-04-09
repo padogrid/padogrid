@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the name of the present (current) working RWE (Root Workspaces Environment)
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+DESCRIPTION
+   Displays the name of the present (current) working root environments.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*root*" $EXECUTABLE
+   exit
+fi
+
+ROOT_NAME="$(basename "$PADOGRID_WORKSPACES_HOME")"
+echo $ROOT_NAME

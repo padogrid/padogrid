@@ -1,0 +1,274 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-docker -host -port -cluster -count -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+# Get the host IP. Last IPv4 in the list.
+for i in $(getHostIPv4List); do
+   HOST_IP=$i
+done
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a Docker environment in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-docker compose] [-host host_ip] [-port first_port_number]
+               [-count member_count] -cluster cluster_name [-?]
+
+DESCRIPTION
+   Creates a Docker environment that includes Hazelcast cluster configuration files for
+   one of the following Docker tools:
+ 
+   compose  docker-compose Dockfile based cluster orchestration
+
+   To use the created environment, you must have the specified Docker tool installed.
+
+OPTIONS
+   -docker compose
+             Docker compose driven Hazelcast cluster.
+
+   -host host_ip
+             Host IP address that is acccessible from the Docker containers. If this option
+             is not specified then the IP address of the host name is assigned. If the host
+             is running Docker Desktop, then you may specify the the host name, host.docker.internal,
+             which resolves to the internal IP address used by the host. Note that host.docker.internal
+             is for development only and not for production.
+
+   -port first_port_number
+             First member's port number. Port number is incremented
+             starting from this port number for the subsquent members.
+             Default: 5701 for IMDG, 6701 for Jet
+
+   -count member_count
+             Number of members (servers) in the cluster. Default: 2
+
+   -cluster cluster_name
+             Required Hazelcast cluster name. This name is used to create a Docker compose project,
+             for example.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -docker $DEFAULT_DOCKER -host $HOST_IP -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
+
+EXAMPLES
+   To create 'mydocker' cluster with the host IP 'host.docker.internal':
+      $EXECUTABLE -host host.docker.internal -cluster mydocker
+
+   To create 'mydocker' cluster with the host IP '$HOST_IP' and member (server) count of 4:
+      $EXECUTABLE -host $HOST_IP -cluster mydocker -count 4
+
+   To create 'mydocker' cluster with the host IP '$HOST_IP':
+      $EXECUTABLE -host $HOST_IP -cluster mydocker
+
+FILES
+   $PADOGRID_WORKSPACE/docker
+             The current workspace Docker directory.
+
+EOF
+fi
+   exit
+fi
+
+if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+   >&2 echo "ERROR: The -cluster option is not specified. Command aborted."
+   exit 1
+fi
+
+if [ "$DOCKER" == "" ]; then
+   DOCKER=$DEFAULT_DOCKER
+fi
+if [ "$DOCKER" != "compose" ]; then
+   >&2 echo "ERROR: Unsupported Docker tool [$DOCKER]. Please use the '-?' option to see the usage. Command aborted."
+   exit 1
+fi
+if [ "$COUNT" == "" ]; then
+   COUNT=2
+fi
+if [ $COUNT -lt 1 ]; then
+   >&2 echo "ERROR: Inalid count [$COUNT]. Member (server) count cannot be less than 1. Command aborted."
+   exit 1
+fi
+
+if [ "$HOST" != "" ]; then
+   HOST_IP=$HOST
+fi
+
+#
+# docker directory
+#
+DOCKER_DIR=$PADOGRID_WORKSPACE/docker
+CLUSTER_DIR=$DOCKER_DIR/$CLUSTER
+
+if [ -d $CLUSTER_DIR ]; then
+   >&2 echo "ERROR: The specified Docker cluster exists. Command aborted."
+   exit
+fi
+   
+if [ ! -d $CLUSTER_DIR ]; then
+   mkdir -p $CLUSTER_DIR
+fi
+
+if [ "$DOCKER" == "compose" ]; then
+
+   ETC_DIR=$CLUSTER_DIR/padogrid/etc
+   LIB_DIR=$CLUSTER_DIR/padogrid/lib
+   PLUGINS_DIR=$CLUSTER_DIR/padogrid/plugins
+   DOCKER_DOC="README.md"
+   mkdir -p $ETC_DIR
+   mkdir -p $LIB_DIR
+   mkdir -p $PLUGINS_DIR
+
+   # Copy Docker doc
+   cp -rf $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
+   # Copy the template hazelcast.xml file
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+      # Copy the template hazelcast-jet.xml file
+      cp $BASE_DIR/etc/template-hazelcast-jet-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-jet.xml
+      # Copy the template MC hazelcast-client.xml file
+      cp $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-client.xml
+      # Copy the template Jet MC application.properties file
+      cp $BASE_DIR/etc/template-jet-mc-application.properties $ETC_DIR/jet-mc-application.properties
+   else
+      cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+   fi
+   # Copy the template log4j2.properties file
+   cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
+   # Copy the template prometheus config file
+   cp $BASE_DIR/etc/template-prometheus.yml $ETC_DIR/prometheus.yml
+   # Copy the template hibernate config file
+   cp $BASE_DIR/etc/template-hibernate.cfg-mysql.xml $ETC_DIR/hibernate.cfg-mysql.xml
+   cp $BASE_DIR/etc/template-hibernate.cfg-postgresql.xml $ETC_DIR/hibernate.cfg-postgresql.xml
+
+   # Copy binary files
+   cp $BASE_DIR/lib/*.jar $LIB_DIR/ > /dev/null 2>&1
+   cp -r $BASE_DIR/lib/v$HAZELCAST_MAJOR_VERSION_NUMBER/* $LIB_DIR/
+   cp -r $BASE_DIR/plugins/*.jar $PLUGINS_DIR/ > /dev/null 2>&1
+   cp -r $BASE_DIR/plugins/v$HAZELCAST_MAJOR_VERSION_NUMBER/* $PLUGINS_DIR/
+
+   # Update .env file
+   if [ "$PORT_ARG" != "" ]; then
+      START_PORT=$PORT_ARG
+   else
+      START_PORT=$DEFAULT_MEMBER_START_PORT
+   fi
+   SERVER_PORT=$START_PORT
+   TCP_MEMBERS=""
+   for i in $(seq 1 $COUNT); do   
+      if [ $i -gt 1 ]; then
+         TCP_MEMBERS="$TCP_MEMBERS,"
+      fi
+      TCP_MEMBERS="${TCP_MEMBERS}$HOST_IP:$SERVER_PORT"
+      let SERVER_PORT=SERVER_PORT+1
+   done
+   if [ "$MC_LICENSE_KEY" == "" ]; then
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         MC_LICENSE_KEY="$JET_LICENSE_KEY"
+      else
+         MC_LICENSE_KEY="$HZ_LICENSE_KEY"
+      fi
+   fi
+   sed -e "s/\${HOSTNAME_FOR_CLIENTS}/$HOST_IP/g" \
+       -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
+       -e "s/\${TCP_MEMBERS}/$TCP_MEMBERS/g" \
+       -e "s/\${HZ_LICENSE_KEY}/$IMDG_LICENSE_KEY/g" \
+       -e "s/\${JET_LICENSE_KEY}/$JET_LICENSE_KEY/g" \
+       -e "s/\${MC_LICENSE_KEY}/$MC_LICENSE_KEY/g" \
+       $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-env > $CLUSTER_DIR/.env
+
+   # Update docker-compose.yaml
+   sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
+
+   # Append server services to docker-compose.yaml
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+         IMAGE_NAME="hazelcast-jet-enterprise"
+      else
+         IMAGE_NAME="hazelcast-jet"
+      fi
+   else
+      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+         IMAGE_NAME="hazelcast-enterprise"
+      else
+         IMAGE_NAME="hazelcast"
+      fi
+   fi
+   HOST_SERVER_PORT=$START_PORT
+   HOST_JMX_PORT=10991
+   HOST_DEBUG_PORT=9101
+   JET_CLUSTER_MEMBERS=""
+   for i in $(seq 1 $COUNT); do   
+      if [ $i -lt $COUNT ]; then
+         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}\t\t\t<address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>\n"
+      else
+         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}\t\t\t<address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
+      fi
+
+      SERVER_NAME="server$i"
+      sed -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
+          -e "s/\${VERSION}/$HAZELCAST_VERSION/g" \
+          -e "s/\${IMAGE_NAME}/$IMAGE_NAME/g" \
+          -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
+          -e "s/\${HOST_SERVER_PORT}/$HOST_SERVER_PORT/g" \
+          -e "s/\${HOST_JMX_PORT}/$HOST_JMX_PORT/g" \
+          -e "s/\${HOST_DEBUG_PORT}/$HOST_DEBUG_PORT/g" \
+          $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-server-docker-compose.yaml >> $CLUSTER_DIR/docker-compose.yaml
+      let HOST_SERVER_PORT=HOST_SERVER_PORT+1
+      let HOST_JMX_PORT=HOST_JMX_PORT+1
+      let HOST_DEBUG_PORT=HOST_DEBUG_PORT+1
+   done
+
+   # Insert cluster member list in hazelcast-client.xml
+   sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
+fi
+
+#
+# Display DOCKER Environment
+#
+echo ""
+echo "         WORKSPACE: $PADOGRID_WORKSPACE"
+echo "            Docker: $DOCKER"
+echo "      Member Count: $COUNT"
+echo "Docker Environment:"
+echo "   $CLUSTER_DIR"
+
+cat <<EOF
+
+$CLUSTER
+├── .env
+├── README.md
+├── docker-compose.yaml
+└── padogrid
+    ├── etc
+    ├── lib
+    └── plugins
+
+EOF
+echo -e "Please follow the instructions in the ${CLightGreen}$DOCKER_DOC${CNone} document."
+echo -e "  - Change environment variables in the ${CLightGreen}.env${CNone} file as needed."
+echo -e "  - Configure locator(s) and servers (members) as needed in the ${CLightGreen}docker-compose.yaml${CNone} file as needed."
+echo "To start Docker cluster:"
+echo -e "   ${CLightGreen}cd_docker $CLUSTER${CNone}"
+echo -e "   ${CLightGreen}docker-compose up${CNone}"
+echo ""
+
