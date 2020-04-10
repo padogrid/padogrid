@@ -124,29 +124,12 @@ WORKSPACES=( $WORKSPACES )
 let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
 for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
    WORKSPACE=${WORKSPACES[$j]}
-   GEODE_VERSION=$(grep "^export GEODE_HOME=" $PADOGRID_WORKSPACES_HOME/$WORKSPACE/setenv.sh)
-   if [[ "$GEODE_VERSION" == *"gemfire"* ]]; then
-      GEODE_VERSION=$(echo "$GEODE_VERSION" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
-      CLUSTER_TYPE="gemfire"
-   else
-      GEODE_VERSION=$(echo "$GEODE_VERSION" | sed -e 's/^.*apache-padogrid-//' -e 's/"//')
-      CLUSTER_TYPE="padogrid"
-   fi
-   VM_ENABLED=$(grep "VM_ENABLED=" $PADOGRID_WORKSPACES_HOME/$WORKSPACE/setenv.sh)
-   VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
-   if [ "$VM_ENABLED" == "true" ]; then
-   VM_WORKSPACE="vm, "
-   else
-   VM_WORKSPACE=""
-   fi
-   PADOGRID_VERSION=$(grep "^export PADOGRID_HOME=" $PADOGRID_WORKSPACES_HOME/$WORKSPACE/setenv.sh)
-   PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/^.*padogrid_//' -e 's/"//')
-   
+   WORKSPACE_INFO=$(getWorkspaceInfoList $WORKSPACE)
    if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
-      echo "├── $WORKSPACE (${CLUSTER_TYPE}_${GEODE_VERSION}, padogrid_$PADOGRID_VERSION)"
+   echo "├── $WORKSPACE [$WORKSPACE_INFO]"
       LEADING_BAR="│"
    else
-      echo "└── $WORKSPACE (${CLUSTER_TYPE}_${GEODE_VERSION}, padogrid_$PADOGRID_VERSION)"
+      echo "└── $WORKSPACE [$WORKSPACE_INFO]"
       LEADING_BAR=" "
    fi
 

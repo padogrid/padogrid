@@ -297,7 +297,7 @@ function getWorkspaces
                else
                   __WORKSPACES="$__WORKSPACES $i"
                fi
-	    fi
+       fi
          fi
       done
       popd > /dev/null 2>&1
@@ -649,7 +649,7 @@ function getActiveMemberCount
             pid=`getMemberPid $MEMBER $WORKSPACE`
             if [ "$pid" != "" ]; then
                let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
-	    fi
+       fi
          fi
       done
       popd > /dev/null 2>&1
@@ -954,9 +954,9 @@ function getPrivateNetworkAddresses
             vb_found="true"
          elif [ $vb_found == "true" ]; then
             if [[ $line == *"IPv4 Address"* ]]; then
-      	 ip_address=${line#*:}
-      	 __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
-      	 vb_found="false"
+          ip_address=${line#*:}
+          __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
+          vb_found="false"
             fi
          fi  
       done < "$__TMP_FILE"
@@ -969,8 +969,8 @@ function getPrivateNetworkAddresses
          elif [ $vb_found == "true" ]; then
             if [[ $line == *"inet"* ]]; then
             ip_address=`echo $line | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'`
-      	 __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
-      	 vb_found="false"
+          __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
+          vb_found="false"
             fi
          fi  
       done < "$__TMP_FILE"
@@ -1111,14 +1111,14 @@ function switch_workspace
       fi
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then
          __WORKSPACES=$(list_workspaces)
-	 for i in $__WORKSPACES; do
+    for i in $__WORKSPACES; do
             __WORKSPACE=$i
-	    break;
+       break;
          done
-	 if [ "$__WORKSPACE" == "" ]; then
+    if [ "$__WORKSPACE" == "" ]; then
             echo >&2 "ERROR: Workspace does not exist. Command aborted."
-	    return 1
-	 fi
+       return 1
+    fi
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
          updateDefaultEnv
       fi
@@ -1583,14 +1583,18 @@ function padogrid
       echo "   $EXECUTABLE [<padogrid-command>] [-version] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Executes the specified padogrid command."
+      echo "   Executes the specified padogrid command. If no options are specified then it displays"
+      echo "   the current workspace information."
       echo ""
       echo "OPTIONS"
       echo "   padogrid_command"
       echo "             Padogrid command to execute."
       echo ""
       echo "   -version"
-      echo "             If specified, then displays padogrid version"
+      echo "             If specified, then displays the current workspace padogrid version."
+      echo ""
+      echo "   -product"
+      echo "             If specified, then displays the current workspace product version."
       echo ""
       echo "COMMANDS"
       ls $SCRIPT_DIR
@@ -1604,18 +1608,126 @@ function padogrid
    elif [ "$1" == "-version" ]; then
       echo "$PADOGRID_VERSION"
       return 0
+   elif [ "$1" == "-product" ]; then
+      echo "$PRODUCT"
+      return 0
    else
       COMMAND=$1
       SHIFT_NUM=1
    fi
 
    if [ "$COMMAND" == "" ]; then
-      echo "ERROR: Argument not specified. Command aborted."
-      return 1
+      RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+      echo "PadoGrid"
+      echo "--------"
+      echo "  PadoGrid Version: $PADOGRID_VERSION"
+      echo "           PRODUCT: $PRODUCT"
+      echo "   Product Version: $PRODUCT_VERSION"
+      echo "PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "           CLUSTER: $CLUSTER"
+      echo "      CLUSTER_TYPE: $CLUSTER_TYPE"
+      echo "               POD: $POD"
+      echo "          POD_TYPE: $POD_TYPE"
+      echo ""
+      echo "Root Workspaces Environments (RWEs)"
+      echo "-----------------------------------"
+      local ROOTS="$(list_roots)"
+      echo "$RWE_HOME"
+      local RWES=( $ROOTS )
+      let RWES_LAST_INDEX=${#RWES[@]}-1
+      for ((i = 0; i < ${#RWES[@]}; i++)); do
+         RWE=${RWES[$i]}
+         if [ $i -lt $RWES_LAST_INDEX ]; then
+            echo "├── $RWE"
+            LEADING_BAR="│   "
+         else
+            echo "└── $RWE"
+            LEADING_BAR="    "
+         fi
+         local WORKSPACES=`ls $RWE_HOME/$RWE`
+         WORKSPACES=$(removeTokens "$WORKSPACES" "initenv.sh setenv.sh")
+         WORKSPACES=( $WORKSPACES )
+         let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
+         for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
+            local WORKSPACE=${WORKSPACES[$j]}
+            local WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$RWE_HOME/$RWE")
+            if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
+               echo "$LEADING_BAR├── $WORKSPACE [$WORKSPACE_INFO]"
+            else
+               echo "$LEADING_BAR└── $WORKSPACE [$WORKSPACE_INFO]"
+            fi
+         done
+
+      done
+      return 0
    fi
 
    shift $SHIFT_NUM
    $COMMAND $* 
+}
+
+#
+# Returns a comma separated list of the specified workspace info.
+#
+# @required PADOGRID_WORKSPACES_HOME
+# @param workspaceName Workspace name.
+# @param rwePath       RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assumed.
+#
+function getWorkspaceInfoList
+{
+   local WORKSPACE="$1"
+   local RWE_PATH="$2"
+   if [ "$WORKSPACE" == "" ]; then
+      echo ""
+      return 0
+   fi
+   if [ "$RWE_PATH" == "" ]; then
+      RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   fi
+   local WORKSPACE_PATH="$RWE_PATH/$WORKSPACE"
+   if [ ! -d "$WORKSPACE_PATH" ]; then
+      echo ""
+      return 0
+   fi
+
+   local CLUSTER_TYPE=$(grep "CLUSTER_TYPE" $WORKSPACE_PATH/.addonenv.sh)
+   CLUSTER_TYPE=$(echo "$CLUSTER_TYPE" | sed 's/^.*=//')
+   local __PRODUCT_VERSION
+   local PRODUCT_VERSION
+
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      __PRODUCT_VERSION=$(grep "export JET_HOME=" "$WORKSPACE_PATH/setenv.sh")
+      PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*jet-enterprise-//' -e 's/"//')
+      if [ "$PRODUCT_VERSION" == "" ]; then
+         PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*jet-//' -e 's/"//')
+      fi
+   elif [ "$CLUSTER_TYPE" == "imdg" ]; then
+      __PRODUCT_VERSION=$(grep "export HAZELCAST_HOME=" "$WORKSPACE_PATH/setenv.sh")
+      PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*hazelcast-enterprise-//' -e 's/"//')
+      if [ "$PRODUCT_VERSION" == "" ]; then
+         PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*hazelcast-//' -e 's/"//')
+      fi
+   else
+      PRODUCT_VERSION=$(grep "export GEODE_HOME=" "$WORKSPACE_PATH/setenv.sh")
+      if [[ "$PRODUCT_VERSION" == *"gemfire"* ]]; then
+         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
+         CLUSTER_TYPE="gemfire"
+      else
+         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/^.*apache-geode-//' -e 's/"//')
+         CLUSTER_TYPE="padogrid"
+      fi
+   fi
+
+   VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
+   VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_WORKSPACE="vm, "
+   else
+      VM_WORKSPACE=""
+   fi
+   PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
+   PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/^.*padogrid_//' -e 's/"//')
+   echo "${VM_WORKSPACE}${CLUSTER_TYPE}_${PRODUCT_VERSION}, padogrid_$PADOGRID_VERSION"
 }
 
 #
@@ -1756,7 +1868,7 @@ function getHostIPv4List
             HOST_IPS="$i"
          else
             HOST_IPS="$HOST_IPS $i"
-	 fi
+         fi
       fi
    done
    echo "$HOST_IPS"

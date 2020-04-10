@@ -160,7 +160,7 @@ __padogrid_complete()
          ;;
       esac
       ;;
-   -path | -datagrid | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
+   -path | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
      ;;
    *)
       if [ "$second_word" == "cp_sub" ]; then
@@ -201,12 +201,14 @@ __padogrid_complete()
       else
          if [ "$second_word" == "-version" ]; then
             type_list=""
+         elif [ "$second_word" == "-product" ]; then
+            type_list=""
          elif [ $len -gt 2 ]; then
             type_list=`$second_word -options`
          else
             type_list=`ls $SCRIPT_DIR`
             type_list=$(removeTokens "$type_list" "setenv.sh")
-            type_list="-version $type_list"
+            type_list="-version -product $type_list"
          fi
       fi
       ;;
