@@ -98,7 +98,7 @@ if [ "$CATALOG" == "true" ]; then
    if [[ ${OS_NAME} == DARWIN* ]]; then
       open "$BROWSER_URL"
    elif [[ ${OS_NAME} == CYGWIN* ]] || [ "$(which cmd.exe)" != "" ]; then
-      cmd.exe /c start "" "$BROWSER_URL"
+      cmd.exe /c start "" "$BROWSER_URL" > /dev/null 2>&1
    else
       HEADER="true"
       echo "(Catalog: $BROWSER_URL)"
@@ -108,6 +108,27 @@ if [ "$CATALOG" == "true" ]; then
    fi
 fi
 
+# Get bundle list
+BUNDLE_LIST=""
+if [ "$PRODUCT" == "hazelcast" ]; then
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      PREFIX="jet"
+   else
+      PREFIX="hazelcast"
+   fi
+else
+   PREFIX="geode"
+fi
+HREF=`curl -sS $BUNDLE_REPOS | grep "\/padogrid/${PREFIX}\-"`
+for i in $HREF; do
+   if [[ $i == *href=* ]]; then
+      let INDEX=INDEX+1
+      BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/padogrid\///")
+      BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
+   fi
+done
+
+
 if [ "$LIST" == "true" ] || [ "$HEADER" == "true" ]; then
    echo ""
    echo "Remote Bundle List"
@@ -115,17 +136,13 @@ if [ "$LIST" == "true" ] || [ "$HEADER" == "true" ]; then
    echo "(Repo: $BUNDLE_REPO)"
    echo ""
    let INDEX=0
-   TITLE=`curl -sS $BUNDLE_REPO | grep "title=\"${PRODUCT}\-"`
-   for i in $TITLE; do
-      if [[ $i == title=* ]]; then
-         let INDEX=INDEX+1
-	 BUNDLE_NAME=$(echo $i | sed -e "s/^.*>.*${PRODUCT}\-/${PRODUCT}\-/" -e "s/<.*//")
-         echo -e "[$INDEX] ${CLightGreen}${BUNDLE_NAME}${CNone}"
-         if [ "$HEADER" == "true" ]; then
-            RAW_FILE_URL="${RAW_BASE_URL}/${BUNDLE_NAME}/master/README_HEADER.md"
-            echo "    $(curl -sS $RAW_FILE_URL)"
-            echo ""
-         fi
+   for BUNDLE_NAME in $BUNDLE_LIST; do
+      let INDEX=INDEX+1
+      echo -e "[$INDEX] ${CLightGreen}${BUNDLE_NAME}${CNone}"
+      if [ "$HEADER" == "true" ]; then
+         RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README_HEADER.md"
+         echo "    $(curl -sS $RAW_FILE_URL)"
+         echo ""
       fi
    done
 
@@ -150,8 +167,7 @@ fi
 
 BUNDLE_FILE_PATH=${@: -1}
 
-CATALOG_TXT=`curl -sS "$RAW_BASE_URL/catalog-${PRODUCT}/master/catalog.txt"`
-for BUNDLE_NAME in $CATALOG_TXT; do
+for BUNDLE_NAME in $BUNDLE_LIST; do
    if [ "$BUNDLE_NAME" == "$BUNDLE_FILE_PATH" ]; then
       BUNDLE_FOUND="true"
    fi
@@ -173,7 +189,7 @@ else
       open "$BROWSER_URL"
       URL=$BROWSER_URL
    elif [[ ${OS_NAME} == CYGWIN* ]] || [ "$(which cmd.exe)" != "" ]; then
-      cmd.exe /c start "" "$BROWSER_URL"
+      cmd.exe /c start "" "$BROWSER_URL" > /dev/null 2>&1
       URL=$BROWSER_URL
    else
       curl $RAW_FILE_URL

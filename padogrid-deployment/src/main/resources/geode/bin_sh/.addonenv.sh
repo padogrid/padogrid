@@ -446,7 +446,8 @@ LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
 #
 # Remote Bundle URLs
 #
-BUNDLE_REPO=https://github.com/padogrid
+BUNDLE_REPO="https://github.com/padogrid"
+BUNDLE_REPOS="https://github.com/padogrid?tab=repositories"
 CATALOG_URL="$BUNDLE_REPO/catalog-geode/tree/master/Bundle-Catalog.md"
 RAW_BASE_URL="https://raw.githubusercontent.com/padogrid"
 

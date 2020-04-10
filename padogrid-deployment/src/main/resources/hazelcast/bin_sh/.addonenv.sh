@@ -474,7 +474,8 @@ SHUTDOWN_HOOK_PROPERTIES="-Dhazelcast.shutdownhook.enabled=true \
 #
 # Remote Bundle URLs
 #
-BUNDLE_REPO=https://github.com/padogrid
+BUNDLE_REPO="https://github.com/padogrid"
+BUNDLE_REPOS="https://github.com/padogrid?tab=repositories"
 CATALOG_URL="$BUNDLE_REPO/catalog-hazelcast/tree/master/Bundle-Catalog.md"
 RAW_BASE_URL="https://raw.githubusercontent.com/padogrid"
 
