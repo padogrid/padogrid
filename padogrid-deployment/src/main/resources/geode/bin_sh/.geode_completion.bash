@@ -167,9 +167,9 @@ __padogrid_complete()
          else
             type_list=`ls $SCRIPT_DIR/cp_sub`
          fi
-      elif [ "$second_word" == "switch_root" ] || [ "$second_word" == "cd_root" ]; then
+      elif [ "$second_word" == "switch_rwe" ] || [ "$second_word" == "cd_rwe" ]; then
             if [ $len -lt 4 ]; then
-               type_list=`list_roots`
+               type_list=`list_rwes`
             fi
       elif [ "$second_word" == "switch_workspace" ] || [ "$second_word" == "cd_workspace" ]; then
             if [ $len -lt 4 ]; then
@@ -228,7 +228,7 @@ __padogrid_complete()
    return 0
 }
 
-__root_complete()
+__rwe_complete()
 {
    local len cur_word type_list
    len=${#COMP_WORDS[@]}
@@ -237,7 +237,7 @@ __root_complete()
    if [ $len -ge 3 ]; then
      type_list=""
    else
-      type_list=`list_roots`
+      type_list=`list_rwes`
    fi
 
    COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
@@ -492,9 +492,9 @@ done
 # Register padogrid
 complete -F __padogrid_complete -o bashdefault -o default padogrid
 
-# Register switch_root, cd_root
-complete -F __root_complete -o bashdefault -o default switch_root
-complete -F __root_complete -o bashdefault -o default cd_root
+# Register switch_rwe, cd_rwe
+complete -F __rwe_complete -o bashdefault -o default switch_rwe
+complete -F __rwe_complete -o bashdefault -o default cd_rwe
 
 # Register switch_workspace, cd_workspace
 complete -F __workspaces_complete -o bashdefault -o default switch_workspace

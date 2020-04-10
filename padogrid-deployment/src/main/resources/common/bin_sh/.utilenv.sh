@@ -1013,36 +1013,36 @@ function retrieveDefaultEnv
 }
 
 #
-# Switches to the specified root environment. This function is provided
+# Switches to the specified root workspaces environment. This function is provided
 # to be executed in the shell along with other padogrid commands. It
 # sets the environment variables in the parent shell.
 #
 # @required PADOGRID_WORKSPACES_HOME Workspaces directory path.
-# @param    rootName   Optional root name.
+# @param    rweName   Optional RWE name.
 #
-function switch_root
+function switch_rwe
 {
-   EXECUTABLE=switch_root
+   EXECUTABLE=switch_rwe
    if [ "$1" == "-?" ]; then
       echo "NAME"
       echo "   $EXECUTABLE - Switch to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [root_name] [-?]"
+      echo "   $EXECUTABLE [rwe_name] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Switches to the specified root workspaces environment."
       echo ""
       echo "OPTIONS"
-      echo "   root_name"
-      echo "             Name of the root environment. If not specified, then switches"
-      echo "             to the current root environment."
+      echo "   rwe_name"
+      echo "             Name of the root workspaces environment. If not specified, then switches"
+      echo "             to the current root workspaces environment."
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
       echo ""
       echo "SEE ALSO"
-      printSeeAlsoList "*root*" $EXECUTABLE
+      printSeeAlsoList "*rwe*" $EXECUTABLE
       return
    elif [ "$1" == "-options" ]; then
       echo "-?"
@@ -1057,7 +1057,7 @@ function switch_root
    else
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid root name. Root name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
          return 1
       fi
       if [ ! -d "$PARENT_DIR/$1/clusters/$CLUSTER" ]; then
@@ -1065,7 +1065,7 @@ function switch_root
       fi
       . $PARENT_DIR/$1/initenv.sh -quiet
    fi
-   cd_root $1
+   cd_rwe $1
 }
 
 # 
@@ -1189,36 +1189,36 @@ function switch_cluster
 }
 
 #
-# Changes directory to the specified root directory. This function is provided
+# Changes directory to the specified RWE directory. This function is provided
 # to be executed in the shell along with other padogrid commands. It changes
 # directory in the parent shell.
 #
 # @required PADOGRID_WORKSPACES_HOME Workspaces directory path.
-# @param    rootName   Optional root name.
+# @param    rweName   Optional RWE name.
 #
-function cd_root
+function cd_rwe
 {
-   EXECUTABLE=cd_root
+   EXECUTABLE=cd_rwe
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Change directory to the specified root environment"
+      echo "   $EXECUTABLE - Change directory to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [root_name] [-?]"
+      echo "   $EXECUTABLE [rwe_name] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified root environment."
+      echo "   Changes directory to the specified root workspaces environment."
       echo ""
       echo "OPTIONS"
-      echo "   root_name"
+      echo "   rwe_name"
       echo "             Root environment name. If not specified then changes to the"
-      echo "             current root environment directory."
+      echo "             current root workspaces environment directory."
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
       echo ""
       echo "SEE ALSO"
-      printSeeAlsoList "*root*" $EXECUTABLE
+      printSeeAlsoList "*rwe*" $EXECUTABLE
       return
    elif [ "$1" == "-options" ]; then
       echo "-?"
@@ -1230,7 +1230,7 @@ function cd_root
    else
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid root name. Root name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
          return 1
       else
          cd $PARENT_DIR/$1
@@ -1634,7 +1634,7 @@ function padogrid
       echo ""
       echo "Root Workspaces Environments (RWEs)"
       echo "-----------------------------------"
-      local ROOTS="$(list_roots)"
+      local ROOTS="$(getRweList)"
       echo "$RWE_HOME"
       local RWES=( $ROOTS )
       let RWES_LAST_INDEX=${#RWES[@]}-1
