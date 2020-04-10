@@ -1882,11 +1882,11 @@ function getHostIPv4List
 # The following environment variables are set after invoking this function.
 #   PRODUCT        geode or hazelcast
 #   CLUSTER_TYPE   This is set to imdg or jet only if PRODUCT is hazelcast.
-#   CLUSTER        Default cluster name, i.e., mygeode, mygemfire, myhz, myjet.
+#   CLUSTER        Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet,
+#                  only if CLUSTER is not set.
 #   GEODE_HOME     Set to PRODUCT_HOME if PRODUCT is geode.
 #   HAZELCAST_HOME Set to PRODUCT_HOME if PRODUCT is hazelcast.
 #   JET_HOME       Set to PRODUCT_HOME if PRODUCT is hazelcast.
-#   VM_HAZELCAST_HOME
 # @required PRODUCT_HOME Product home path (installation path)
 #
 function determineProduct
@@ -1909,9 +1909,13 @@ function determineProduct
    elif [[ "$PRODUCT_HOME" == *"geode"* ]] ||  [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
       PRODUCT="geode"
       if [[ "$PRODUCT_HOME" == *"geode"* ]]; then
-         CLUSTER=$DEFAULT_GEODE_CLUSTER
+         if [ "$CLUSTER" == "" ]; then
+            CLUSTER=$DEFAULT_GEODE_CLUSTER
+         fi
       else
-          CLUSTER=$DEFAULT_GEMFIRE_CLUSTER
+         if [ "$CLUSTER" == "" ]; then
+            CLUSTER=$DEFAULT_GEMFIRE_CLUSTER
+         fi
       fi
       GEODE_HOME="$PRODUCT_HOME"
    else
