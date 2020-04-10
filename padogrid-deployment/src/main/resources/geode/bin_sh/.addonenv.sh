@@ -69,7 +69,7 @@ fi
 #JAVA_OPTS=
 
 #
-# Default workspace used when initializing workspaces by running init_addon.
+# Default workspace used when initializing workspaces by running init_geode.
 #
 DEFAULT_WORKSPACE=myws
 

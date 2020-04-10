@@ -76,7 +76,7 @@ fi
 #HAZELCAST_MC_HOME=$JET_HOME/hazelcast-jet-management-center
 
 #
-# Default workspace used when initializing workspaces by running init_addon.
+# Default workspace used when initializing workspaces by running init_hazelcast.
 #
 DEFAULT_WORKSPACE=myws
 
