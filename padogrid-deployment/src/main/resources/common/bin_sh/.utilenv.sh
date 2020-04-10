@@ -253,22 +253,25 @@ function getRweList
 {
    local RWE_HOME="$1"
    if [ "$RWE_HOME" == "" ]; then
-      RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+      if [ "$PADOGRID_WORKSPACES_HOME" != "" ] && [ -d "$PADOGRID_WORKSPACES_HOME" ]; then
+         RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+      fi
    fi
-
    local ROOTS=""
-   local ROOT_DIRS=$(ls "$RWE_HOME")
-   pushd $RWE_HOME > /dev/null 2>&1
-   for i in $ROOT_DIRS; do
-   if [ -f "$i/initenv.sh" ] && [ -f "$i/.addonenv.sh" ] && [ -f "$i/setenv.sh" ]; then
-    if [ "$ROOTS" == "" ]; then
-       ROOTS="$i"
-    else
-       ROOTS="$ROOTS $i"
-    fi
+   if [ "$RWE_HOME" != "" ]; then
+      local ROOT_DIRS=$(ls "$RWE_HOME")
+      pushd $RWE_HOME > /dev/null 2>&1
+      for i in $ROOT_DIRS; do
+      if [ -f "$i/initenv.sh" ] && [ -f "$i/.addonenv.sh" ] && [ -f "$i/setenv.sh" ]; then
+       if [ "$ROOTS" == "" ]; then
+          ROOTS="$i"
+       else
+          ROOTS="$ROOTS $i"
+       fi
+      fi
+      done
+      popd > /dev/null 2>&1
    fi
-   done
-   popd > /dev/null 2>&1
    echo "$ROOTS"
 }
 
