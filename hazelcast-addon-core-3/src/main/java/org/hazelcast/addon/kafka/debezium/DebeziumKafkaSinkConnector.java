@@ -1,4 +1,4 @@
-package org.hazelcast.addon.kfka.debezium;
+package org.hazelcast.addon.kafka.debezium;
 
 import java.util.ArrayList;
 import java.util.HashMap;

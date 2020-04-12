@@ -1,4 +1,4 @@
-package org.hazelcast.addon.kfka.debezium;
+package org.hazelcast.addon.kafka.debezium;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;

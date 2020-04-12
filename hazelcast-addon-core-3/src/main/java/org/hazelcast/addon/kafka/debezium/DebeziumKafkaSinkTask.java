@@ -1,4 +1,4 @@
-package org.hazelcast.addon.kfka.debezium;
+package org.hazelcast.addon.kafka.debezium;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
@@ -15,6 +15,7 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
+import org.hazelcast.addon.kafka.debezium.ObjectConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
