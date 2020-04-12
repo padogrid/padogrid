@@ -161,6 +161,7 @@ if [ "$DOCKER" == "compose" ]; then
    cp $BASE_DIR/etc/template-hibernate.cfg-postgresql.xml $ETC_DIR/hibernate.cfg-postgresql.xml
 
    # Copy binary files
+   cp $PADOGRID_HOME/lib/*.jar $LIB_DIR/ > /dev/null 2>&1
    cp $BASE_DIR/lib/*.jar $LIB_DIR/ > /dev/null 2>&1
    cp -r $BASE_DIR/lib/v$HAZELCAST_MAJOR_VERSION_NUMBER/* $LIB_DIR/
    cp -r $BASE_DIR/plugins/*.jar $PLUGINS_DIR/ > /dev/null 2>&1
@@ -217,6 +218,7 @@ if [ "$DOCKER" == "compose" ]; then
    HOST_JMX_PORT=10991
    HOST_DEBUG_PORT=9101
    JET_CLUSTER_MEMBERS=""
+   WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
    for i in $(seq 1 $COUNT); do   
       if [ $i -lt $COUNT ]; then
          JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}\t\t\t<address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>\n"
@@ -228,6 +230,7 @@ if [ "$DOCKER" == "compose" ]; then
       sed -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
           -e "s/\${VERSION}/$HAZELCAST_VERSION/g" \
           -e "s/\${IMAGE_NAME}/$IMAGE_NAME/g" \
+          -e "s/\${WORKSPACE_NAME}/$WORKSPACE_NAME/g" \
           -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
           -e "s/\${HOST_SERVER_PORT}/$HOST_SERVER_PORT/g" \
           -e "s/\${HOST_JMX_PORT}/$HOST_JMX_PORT/g" \
