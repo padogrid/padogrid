@@ -112,8 +112,12 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
    fi
 
-   ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_log -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $* -num 1"
+   # For Vagrant VMs, run local if '.local' is suffix
+   THIS_HOST_NAME=`hostname`
+   if [ "$VM_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_log -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $@ -num 1"
    exit
+   fi
 fi
 
 #
@@ -126,6 +130,9 @@ NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 MEMBER=`getMemberName $MEMBER_NUMBER`
 MEMBER_DIR=$RUN_DIR/$MEMBER
+MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+MC_DIR=$RUN_DIR/$MC_NAME
 
 if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
@@ -137,7 +144,16 @@ if  [ ! -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ ! -d $MEMBER_DIR ]; then
+if [ "$LOG" == "mc" ]; then
+   if [ ! -d $MC_DIR ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Status: Management Center has not been started."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+elif [ ! -d $MEMBER_DIR ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
    echo "  Cluster: $CLUSTER"
@@ -163,8 +179,6 @@ diag)
    ;;
 
 mc)
-   MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
-   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
    LOG_FILE=$LOG_DIR/${MC_NAME}.log
    ;;
 

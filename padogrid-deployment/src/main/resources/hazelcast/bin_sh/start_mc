@@ -64,8 +64,11 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       if [ "$VM_KEY" != "" ]; then
          VM_KEY="-i $VM_KEY"
       fi
-      ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/bin_sh/start_mc -remote -workspace $VM_PADOGRID_WORKSPACE $*"
-      exit
+      # For Vagrant VMs, run local if '.local' is suffix
+      if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
+         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/hazelcast/bin_sh/start_mc -remote -workspace $VM_PADOGRID_WORKSPACE $*"
+         exit
+      fi
    fi
 fi
 
