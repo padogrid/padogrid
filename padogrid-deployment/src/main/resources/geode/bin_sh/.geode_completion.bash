@@ -122,6 +122,14 @@ __padogrid_complete()
       fi
       ;;
 
+   -user)
+      GITHUB_USERS=""
+      if [ -f "$HOME/.padogrid/setenv.sh" ]; then
+         . $HOME/.padogrid/setenv.sh
+      fi
+      type_list="padogrid $GITHUB_USERS"
+      ;;
+
    -log)
       type_list="data gc locator"
       ;;
@@ -437,6 +445,13 @@ __command_complete()
       if [ "$command" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
       fi
+      ;;
+   -user)
+      GITHUB_USERS=""
+      if [ -f "$HOME/.padogrid/setenv.sh" ]; then
+         . $HOME/.padogrid/setenv.sh
+      fi
+      type_list="padogrid $GITHUB_USERS"
       ;;
    -log)
       type_list="data gc locator"

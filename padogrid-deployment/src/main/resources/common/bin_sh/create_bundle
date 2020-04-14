@@ -190,26 +190,23 @@ else
          CLUSTERS=$CLUSTER
       fi
    fi
-   if [ "$POD_SPECIFIED" == "false" ]; then
-      POD=""
-   fi
-   if [ "$POD" != "" ]; then
-      if  [ "`isPodExist $POD`" == "false" ]; then 
+   if [ "$APP" != "" ]; then
+      if  [ "`isAppExist $APP`" == "false" ]; then 
          echo "----------------------------------------------------------------"
          echo "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo "    ERROR: Undefined pod: [$POD]. Command aborted."
+         echo "    ERROR: Undefined app: [$APP]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
       fi
       if [ "$FILE_PREFIX" != "" ]; then
          FILE_PREFIX="${FILE_PREFIX}-"
       fi
-      FILE_PREFIX="${FILE_PREFIX}pod"
+      FILE_PREFIX="${FILE_PREFIX}app"
       if [ "$FILE_POSTFIX" != "" ]; then
          FILE_POSTFIX="${FILE_POSTFIX}-"
       fi
-      FILE_POSTFIX="${FILE_POSTFIX}$POD"
-     PODS=$POD
+      FILE_POSTFIX="${FILE_POSTFIX}$APP"
+     APPS=$APP
    fi
    if [ "$DOCKER" != "" ]; then
       if  [ "`isDockerExist $DOCKER`" == "false" ]; then
@@ -247,25 +244,38 @@ else
       FILE_POSTFIX="${FILE_POSTFIX}$K8S"
      K8S_CLUSTERS=$K8S
    fi
-   if [ "$APP" != "" ]; then
-      if  [ "`isAppExist $APP`" == "false" ]; then 
+   if [ "$POD_SPECIFIED" == "false" ]; then
+      POD=""
+   fi
+   if [ "$POD" != "" ]; then
+      if  [ "`isPodExist $POD`" == "false" ]; then 
          echo "----------------------------------------------------------------"
          echo "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo "    ERROR: Undefined app: [$APP]. Command aborted."
+         echo "    ERROR: Undefined pod: [$POD]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
       fi
       if [ "$FILE_PREFIX" != "" ]; then
          FILE_PREFIX="${FILE_PREFIX}-"
       fi
-      FILE_PREFIX="${FILE_PREFIX}app"
+      FILE_PREFIX="${FILE_PREFIX}pod"
       if [ "$FILE_POSTFIX" != "" ]; then
          FILE_POSTFIX="${FILE_POSTFIX}-"
       fi
-      FILE_POSTFIX="${FILE_POSTFIX}$APP"
-     APPS=$APP
+      FILE_POSTFIX="${FILE_POSTFIX}$POD"
+      PODS=$POD
    fi
-   BUNDLE_TAR_FILE_PATH=$BUNDLE_DIR/bundle-${CLUSTER_TYPE}-${PRODUCT_VERSION}-${FILE_PREFIX}-${FILE_POSTFIX}-${TIMESTAMP}.tar.gz
+   if [ "$PRODUCT" == "hazelcast" ]; then
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         __PRODUCT="jet"
+      else
+         __PRODUCT="hazelcast"
+      fi
+   else
+       __PRODUCT="$PRODUCT"
+   fi
+      
+   BUNDLE_TAR_FILE_PATH=$BUNDLE_DIR/bundle-${__PRODUCT}-${PRODUCT_VERSION}-${FILE_PREFIX}-${FILE_POSTFIX}-${TIMESTAMP}.tar.gz
 fi
 
 # clusters

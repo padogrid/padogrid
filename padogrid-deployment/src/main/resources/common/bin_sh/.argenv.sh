@@ -84,6 +84,7 @@ SIMULATE=false
 PREVIEW=false
 DOWNLOAD=false
 CONSOLE=false
+USER=
 LIST=false
 HEADER=false
 CATALOG=false
@@ -185,6 +186,8 @@ do
       ID=$i
    elif [ "$PREV" == "-remote" ]; then
       REMOTE=$i
+   elif [ "$PREV" == "-user" ]; then
+      USER=$i
    elif [ "$PREV" == "-vm" ]; then
       VM_HOSTS_ARG=$i
    elif [ "$PREV" == "-vm-java" ]; then

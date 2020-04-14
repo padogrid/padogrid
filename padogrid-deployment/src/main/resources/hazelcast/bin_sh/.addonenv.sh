@@ -472,14 +472,6 @@ SHUTDOWN_HOOK_PROPERTIES="-Dhazelcast.shutdownhook.enabled=true \
 -Dhazelcast.shutdownhook.policy=GRACEFUL"
 
 #
-# Remote Bundle URLs
-#
-BUNDLE_REPO="https://github.com/padogrid"
-BUNDLE_REPOS="https://github.com/padogrid?tab=repositories"
-CATALOG_URL="$BUNDLE_REPO/catalog-hazelcast/tree/master/Bundle-Catalog.md"
-RAW_BASE_URL="https://raw.githubusercontent.com/padogrid"
-
-#
 # Set Hazelcast IMDG Management Center home directory if undefined in setenv.sh
 #
 if [ "$CLUSTER_TYPE" == "jet" ]; then

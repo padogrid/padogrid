@@ -7,7 +7,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-preview -download -list -header -quiet -?"
+   echo "-user -preview -download -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -31,8 +31,7 @@ WARNING
 
 
 SYNOPSIS
-   $EXECUTABLE -list|-header [-?]
-   $EXECUTABLE [-preview] [-download] [-quiet] bundle_file_path
+   $EXECUTABLE [-user GitHub_user_name] [-preview] [-download] [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
    Installs the specified bundle file in the current padogrid workspace. Make
@@ -40,12 +39,9 @@ DESCRIPTION
    this command. Otherwise, the running processes may produce unpredictable behavior.
 
 OPTIONS
-   -list
-            Lists all bundles available in the remote padogrid bundle repo.
-
-   -header
-             Lists all bundles along with header information describing each bundle in the
-             remote padogrid bundle repo.
+   -user
+             GitHub user name. If specified, then it downloads the specified bundle
+             from this user's GitHub repos.
 
    -preview
             Do not install but display the bundle contents.
@@ -64,14 +60,11 @@ OPTIONS
              Bundle file path if local or bundle name if download.
 
 DEFAULT
-   $EXECUTABLE -list
+   $EXECUTABLE
 
 EXAMPLES
    To list remote bundles:
-      $EXECUTABLE -list
-
-   To list headers of remote bundles:
-      $EXECUTABLE -header
+      $EXECUTABLE
 
    To preview a remote bundle:
       $EXECUTABLE -download -preview geode-1.11-cluster-app-ln-ny-perf_test_wan
@@ -98,17 +91,18 @@ fi
 if [ "$1" == "" ]; then
    LIST="true"
 fi
-
-if [ "$HEADER" == "true" ]; then
-   show_bundle -header
-   exit
-elif [ "$LIST" == "true" ]; then
+if [ "$LIST" == "true" ]; then
    show_bundle -list
    exit
 fi
 
 BUNDLE_FILE_PATH=${@: -1}
 
+if [ "$USER" == "" ]; then
+   GITHUB_USER="padogrid"
+else
+   GITHUB_USER="$USER"
+fi
 if [ "$DOWNLOAD" == "true" ]; then
    IS_DOWNLOAD="true"
    GIT_DIR=$PADOGRID_WORKSPACE/bundles/$BUNDLE_FILE_PATH
@@ -134,9 +128,15 @@ if [ "$DOWNLOAD" == "true" ]; then
       if [ -d $GIT_DIR ]; then
          rm -rf $GIT_DIR
       fi
+
+      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+      BUNDLE_REPOS="https://github.com/$GITHUB_USER?tab=repositories"
+      CATALOG_URL="$GITHUB_USER_HOME/catalog-$PRODUCT/tree/master/Bundle-Catalog.md"
+      RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
+
       pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
-      echo git clone $BUNDLE_REPO/${BUNDLE_FILE_PATH}.git 
-      git clone $BUNDLE_REPO/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
+      echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
+      git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
       popd > /dev/null 2>&1 
       if [ ! -d "$GIT_DIR" ]; then
          echo >&2 "ERROR: Specified bundle does not exist in the repo. Command aborted."
@@ -158,7 +158,6 @@ if [ "$DOWNLOAD" == "true" ]; then
       BUNDLE_FILE_PATH=$TARBALL_PATH
    fi
 fi
-
 
 if [ ! -f $BUNDLE_FILE_PATH ]; then
    echo >&2 "----------------------------------------------------------------"

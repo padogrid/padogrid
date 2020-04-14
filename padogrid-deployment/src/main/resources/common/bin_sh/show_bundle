@@ -7,7 +7,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-console -list -header -catalog -?"
+   echo "-user -console -all -list -header -catalog -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -25,19 +25,29 @@ NAME
    $EXECUTABLE - Show the specified bundle's READEME.md in the browser 
 
 SYNOPSIS
-   $EXECUTABLE [-console] [-list|-header|-catalog] [bundle_file_name]
+   $EXECUTABLE [-console] [-all | [-list|-header|-catalog] ] [bundle_file_name]
 
 DESCRIPTION
    Displays the specified bundle's README.md file in the browser by default. If it's
    unable to launch the browser then it displays the README.md file on the console instead.
 
 OPTIONS
+   -all
+             Includes all product bundles available in the remote padogrid bundle repo.
+
    -list
-             Lists all bundles available in the remote padogrid bundle repo.
+             Lists product bundles available in the remote padogrid bundle repo. If '-all'
+             is specified then it lists bundles available for all products, other wise, it lists
+             bundles for only the the current workspace product.
 
    -header
-             Lists all bundles along with header information describing each bundle in the
-             remote padogrid bundle repo.
+             Lists product bundles along with header information describing each bundle in the
+             remote padogrid bundle repo. If '-all' is specified then it lists bundles available
+             for all products, other wise, it lists bundles for only the the current workspace product.
+
+   -user
+             GitHub user name. If specified, then the specified user's GitHub repos are searched
+             for bundles. 
             
    -console
              Displays README.md on the console. By default, if this option is not specified,
@@ -56,7 +66,10 @@ DEFAULT
    $EXECUTABLE bundle_file_name
 
 EXAMPLES
-   To list remote bundles:
+   To list remote bundles for the current workspace product:
+      $EXECUTABLE -list
+
+   To list all remote bundles:
       $EXECUTABLE -list
 
    To list headers of remote bundles:
@@ -108,46 +121,63 @@ if [ "$CATALOG" == "true" ]; then
    fi
 fi
 
-# Get bundle list
-BUNDLE_LIST=""
-if [ "$PRODUCT" == "hazelcast" ]; then
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      PREFIX="jet"
-   else
-      PREFIX="hazelcast"
-   fi
-else
-   PREFIX="geode"
+SETENV_FILE="$HOME/.padogrid/setenv.sh"
+if [ -f "$SETENV_FILE" ]; then
+   . $SETENV_FILE
 fi
-HREF=`curl -sS $BUNDLE_REPOS | grep "\/padogrid/${PREFIX}\-"`
-for i in $HREF; do
-   if [[ $i == *href=* ]]; then
-      let INDEX=INDEX+1
-      BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/padogrid\///")
-      BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
-   fi
-done
+GITHUB_USERS="padogrid $GITHUB_USERS"
+if [ "$ALL" == "true" ]; then
+   BUNDLE_PRODUCTS="geode gemfire hazelcast jet"
+else
+   BUNDLE_PRODUCTS="$PRODUCT"
+fi
 
+if [ "$ALL" == "true" ]; then
+    LIST="true"
+fi
 
+if [ "$USER" != "" ]; then
+   GITHUB_USERS="$USER"
+   LIST="true"
+fi
+   
 if [ "$LIST" == "true" ] || [ "$HEADER" == "true" ]; then
    echo ""
    echo "Remote Bundle List"
    echo "------------------"
-   echo "(Repo: $BUNDLE_REPO)"
    echo ""
-   let INDEX=0
-   for BUNDLE_NAME in $BUNDLE_LIST; do
-      let INDEX=INDEX+1
-      echo -e "[$INDEX] ${CLightGreen}${BUNDLE_NAME}${CNone}"
-      if [ "$HEADER" == "true" ]; then
-         RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README_HEADER.md"
-         echo "    $(curl -sS $RAW_FILE_URL)"
-         echo ""
-      fi
+   for GITHUB_USER in $GITHUB_USERS; do
+      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+      BUNDLE_REPOS="https://github.com/$GITHUB_USER?tab=repositories"
+      CATALOG_URL="$GITHUB_USER_HOME/catalog-$PRODUCT/tree/master/Bundle-Catalog.md"
+      RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
+
+      echo -e "(Repo: ${CLightGreen}$GITHUB_USER_HOME)${CNone}"
+      let BUNDLE_INDEX=0
+      for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
+         HREF=$(curl -sS $BUNDLE_REPOS | grep "\/$GITHUB_USER/${BUNDLE_PRODUCT}\-")
+         BUNDLE_LIST=""
+         for i in $HREF; do
+            if [[ $i == *href=* ]]; then
+               BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
+               BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
+            fi
+         done
+         for BUNDLE_NAME in $BUNDLE_LIST; do
+            let BUNDLE_INDEX=BUNDLE_INDEX+1
+            echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+            if [ "$HEADER" == "true" ]; then
+               RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README_HEADER.md"
+               echo "    $(curl -sS $RAW_FILE_URL)"
+               echo ""
+            fi
+         done
+      done
+      echo "---------------------------------------------------------------------------"
+      echo ""
    done
 
    if [ "$HEADER" == "false" ]; then
-      echo ""
       echo "Bundle Commands"
       echo "---------------"
       echo "View header descriptions: show_bundle -header"
@@ -178,7 +208,7 @@ if [ "$BUNDLE_FOUND" != "true" ]; then
 fi
 
 BUNDLE_NAME=$BUNDLE_FILE_PATH
-BROWSER_URL="${BUNDLE_REPO}/${BUNDLE_NAME}"
+BROWSER_URL="${GITHUB_USER_HOME}/${BUNDLE_NAME}"
 RAW_FILE_URL="${RAW_BASE_URL}/${BUNDLE_NAME}/master/README.md"
 
 if [ "$CONSOLE" == "true" ]; then
