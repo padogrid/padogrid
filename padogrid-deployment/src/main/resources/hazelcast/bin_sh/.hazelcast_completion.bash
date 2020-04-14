@@ -107,7 +107,9 @@ __padogrid_complete()
       ;;
 
    -product)
-      type_list="geode hazelcast"
+      if [ "$sconde_word" == "show_bundle" ]; then
+         type_list="$BUNDLE_PRODUCT_LIST"
+      fi
       ;;
 
    -rwe)
@@ -701,7 +703,9 @@ __command_complete()
       type_list=`getClusters $__ENV`
       ;;
    -product)
-      type_list="geode hazelcast"
+      if [ "$command" == "show_bundle" ]; then
+         type_list="$BUNDLE_PRODUCT_LIST"
+      fi
       ;;
    -rwe)
       type_list=`getRweList`
