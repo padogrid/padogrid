@@ -7,7 +7,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-tree -?"
+   echo "-?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -22,16 +22,10 @@ NAME
    $EXECUTABLE - List all the workspaces in the current padogrid workspaces environment
 
 SYNOPSIS
-   $EXECUTABLE [-tree] [-?]
+   $EXECUTABLE [-?]
 
 DESCRIPTION
-   Lists all the workspaces. If the '-tree' option is present then it lists all
-   workspaces and their constituents along with version information in a tree view.
-
-OPTIONS
-   -tree
-             If specified then displays workspaces and their constituents in
-             a tree view.
+   Lists all the workspaces in the current workspace environemt. 
 
 DEFAULT
    $EXECUTABLE
@@ -53,102 +47,5 @@ if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
    exit 1
 fi
 
-if [ "$TREE" == "false" ]; then
 WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
 removeTokens "$WORKSPACES" "initenv.sh setenv.sh"
-
-else
-
-#
-# Returns "true" if the specifie tree node has child nodes (items), otherwse returns "false".
-# @param treeNode            Workspace tree node, i.e., "apps", "clusters", etc.
-#
-function isTreeEmpty
-{
-   TOP_NODE=$1
-   if [ -d "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/$TOP_NODE" ]; then
-      ITEMS=`ls $PADOGRID_WORKSPACES_HOME/$WORKSPACE/$TOP_NODE`
-      ITEMS=$(removeTokens "$ITEMS" "initenv.sh setenv.sh")
-      ITEMS=( $ITEMS )
-      if [ "$ITEMS" != "" ]; then
-         echo "false"
-      else
-         echo "true"
-      fi
-   else
-      echo "true"
-   fi
-}
-
-#
-# Displays the specified tree node
-# @param treeNode            Workspace tree node, i.e., "apps", "clusters", etc.
-# @param isLastNonEmptyNode  "true" if the tree node is the last node in the workspace tree.
-#
-function displayTreeNode
-{
-   TOP_NODE="$1"
-   IS_LAST_NON_EMPTY_NODE="$2"
-   if [ -d "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/$TOP_NODE" ]; then
-      ITEMS=`ls $PADOGRID_WORKSPACES_HOME/$WORKSPACE/$TOP_NODE`
-      ITEMS=$(removeTokens "$ITEMS" "initenv.sh setenv.sh")
-      ITEMS=( $ITEMS )
-      if [ "$ITEMS" != "" ]; then
-      let LAST_INDEX=${#ITEMS[@]}-1
-      if [ "$IS_LAST_NON_EMPTY_NODE" == "true" ]; then
-         echo "$LEADING_BAR   └── $TOP_NODE"
-      else
-         echo "$LEADING_BAR   ├── $TOP_NODE"
-      fi
-      if [ "$IS_LAST_NON_EMPTY_NODE" == "true" ]; then
-         CHILD_LEADING_BAR="$LEADING_BAR       "
-      else
-         CHILD_LEADING_BAR="$LEADING_BAR   │   "
-      fi
-      for ((i = 0; i < ${#ITEMS[@]}; i++)); do
-         if [ $i -lt $LAST_INDEX ]; then
-            echo "$CHILD_LEADING_BAR├── ${ITEMS[$i]}"
-         else
-            echo "$CHILD_LEADING_BAR└── ${ITEMS[$i]}"
-         fi
-      done
-      fi
-   fi
-}
-
-echo ""
-echo "$PADOGRID_WORKSPACES_HOME"
-WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
-WORKSPACES=$(removeTokens "$WORKSPACES" "initenv.sh setenv.sh")
-WORKSPACES=( $WORKSPACES )
-let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
-for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
-   WORKSPACE=${WORKSPACES[$j]}
-   WORKSPACE_INFO=$(getWorkspaceInfoList $WORKSPACE)
-   if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
-   echo "├── $WORKSPACE [$WORKSPACE_INFO]"
-      LEADING_BAR="│"
-   else
-      echo "└── $WORKSPACE [$WORKSPACE_INFO]"
-      LEADING_BAR=" "
-   fi
-
-   NODES="apps clusters docker k8s pods"
-   LAST_NON_EMPTY_NODE=""
-   for NODE in $NODES; do
-      IS_EMPTY=$(isTreeEmpty "$NODE")
-      if [ "$IS_EMPTY" == "false" ]; then
-         LAST_NON_EMPTY_NODE="$NODE"
-      fi
-   done
-   
-   for NODE in $NODES; do
-      if [ "$NODE" == "$LAST_NON_EMPTY_NODE" ]; then
-         displayTreeNode "$NODE" "true"
-      else
-         displayTreeNode "$NODE" "false"
-      fi
-   done
-done
-echo ""
-fi

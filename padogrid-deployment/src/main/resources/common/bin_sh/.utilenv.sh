@@ -275,6 +275,26 @@ function getRweList
    echo "$ROOTS"
 }
 
+#
+# Returns "true" if the specified RWE exists in the current RWE environments and is valid.
+# @required PADOGRID_WORKSPACES_HOME
+# @param rweName     RWE name.
+#
+function isValidRwe
+{
+   local RWE="$1"
+   if [ "$RWE" != "" ]; then
+      local RWE_LIST=$(getRweList)
+      for i in $RWE_LIST; do
+         if [ "$i" == "$RWE" ]; then
+            echo "true"
+            return 0
+         fi
+      done
+   fi
+   echo "false"
+}
+
 # 
 # Returns a complete list of workspaces found in the specified workspace path.
 # If the workspaces path is not specified then it returns the workspaces in 
@@ -1634,6 +1654,8 @@ function padogrid
       echo ""
       echo "Root Workspaces Environments (RWEs)"
       echo "-----------------------------------"
+      local CURRENT_RWE="$(basename "$PADOGRID_WORKSPACES_HOME")"
+      local CURRENT_WORKSPACE="$(basename "$PADOGRID_WORKSPACE")"
       local ROOTS="$(getRweList)"
       echo "$RWE_HOME"
       local RWES=( $ROOTS )
@@ -1641,10 +1663,18 @@ function padogrid
       for ((i = 0; i < ${#RWES[@]}; i++)); do
          RWE=${RWES[$i]}
          if [ $i -lt $RWES_LAST_INDEX ]; then
-            echo "├── $RWE"
+            if [ "$RWE" == "$CURRENT_RWE" ]; then
+               echo -e "├── ${CLightGreen}$RWE${CNone}"
+            else
+               echo "├── $RWE"
+	    fi
             LEADING_BAR="│   "
          else
-            echo "└── $RWE"
+            if [ "$RWE" == "$CURRENT_RWE" ]; then
+               echo -e "└── ${CLightGreen}$RWE${CNone}"
+            else
+               echo "└── $RWE"
+	    fi
             LEADING_BAR="    "
          fi
          local WORKSPACES=`ls $RWE_HOME/$RWE`
@@ -1655,9 +1685,17 @@ function padogrid
             local WORKSPACE=${WORKSPACES[$j]}
             local WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$RWE_HOME/$RWE")
             if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
-               echo "$LEADING_BAR├── $WORKSPACE [$WORKSPACE_INFO]"
+               if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
+                  echo -e "$LEADING_BAR├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+               else
+                  echo "$LEADING_BAR├── $WORKSPACE [$WORKSPACE_INFO]"
+	       fi
             else
-               echo "$LEADING_BAR└── $WORKSPACE [$WORKSPACE_INFO]"
+               if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
+                  echo -e "$LEADING_BAR└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+               else
+                  echo "$LEADING_BAR└── $WORKSPACE [$WORKSPACE_INFO]"
+	       fi
             fi
          done
 

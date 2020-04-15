@@ -114,6 +114,10 @@ __padogrid_complete()
       fi
       ;;
 
+   -rwe)
+      type_list=`getRweList`
+      ;;
+      
    -workspace)
       type_list=`getWorkspaces`
       ;;
@@ -429,6 +433,9 @@ __command_complete()
       if [ "$command" == "show_bundle" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
       fi
+      ;;
+   -rwe)
+      type_list=`getRweList`
       ;;
    -workspace)
       if [ "$command" != "create_workspace" ]; then

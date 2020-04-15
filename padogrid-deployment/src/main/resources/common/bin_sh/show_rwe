@@ -1,0 +1,175 @@
+#!/usr/bin/env bash 
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-rwe -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Display all the workspaces in the current padogrid workspaces environment
+
+SYNOPSIS
+   $EXECUTABLE [-rwe rwe_name] [-?]
+
+DESCRIPTION
+   Displays a tree view of all the workspaces in the current or specified RWE environment. 
+
+OPTIONS
+   -rwe rwe_name
+             If specified then displays the specified RWE environment, otherwise, the current
+             RWE enviroment.
+
+DEFAULT
+   $EXECUTABLE
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$PADOGRID_WORKSPACES_HOME" == "" ]; then
+   echo >&2 "ERROR: Workspaces not initialized. Please first run 'create_rwe' to initialize workspaces."
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
+   echo >&2 "ERROR: Invalid workspaces. Please run 'create_rwe' to initialize workspaces."
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+
+if [ "$RWE_ARG" == "" ]; then
+   __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+else
+   RWE_PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+   __RWE_PATH="$RWE_PARENT_DIR/$RWE_ARG"
+   if [ ! -d "$__RWE_PATH" ]; then
+      echo >&2 "ERROR: Specified RWE does not exist [$RWE_ARG]. Command aborted."
+      exit 1
+   elif [ "$(isValidRwe $RWE_ARG)" == "false" ]; then
+      echo >&2 "ERROR: Specified RWE is not valid [$RWE_ARG]. Command aborted."
+      exit 1
+   fi
+fi
+
+#
+# Returns "true" if the specifie tree node has child nodes (items), otherwse returns "false".
+# @param treeNode            Workspace tree node, i.e., "apps", "clusters", etc.
+#
+function isTreeEmpty
+{
+   TOP_NODE=$1
+   if [ -d "$__RWE_PATH/$WORKSPACE/$TOP_NODE" ]; then
+      ITEMS=`ls $__RWE_PATH/$WORKSPACE/$TOP_NODE`
+      ITEMS=$(removeTokens "$ITEMS" "initenv.sh setenv.sh")
+      ITEMS=( $ITEMS )
+      if [ "$ITEMS" != "" ]; then
+         echo "false"
+      else
+         echo "true"
+      fi
+   else
+      echo "true"
+   fi
+}
+
+#
+# Displays the specified tree node
+# @param treeNode            Workspace tree node, i.e., "apps", "clusters", etc.
+# @param isLastNonEmptyNode  "true" if the tree node is the last node in the workspace tree.
+#
+function displayTreeNode
+{
+   TOP_NODE="$1"
+   IS_LAST_NON_EMPTY_NODE="$2"
+   if [ -d "$__RWE_PATH/$WORKSPACE/$TOP_NODE" ]; then
+      ITEMS=`ls $__RWE_PATH/$WORKSPACE/$TOP_NODE`
+      ITEMS=$(removeTokens "$ITEMS" "initenv.sh setenv.sh")
+      ITEMS=( $ITEMS )
+      if [ "$ITEMS" != "" ]; then
+      let LAST_INDEX=${#ITEMS[@]}-1
+      if [ "$IS_LAST_NON_EMPTY_NODE" == "true" ]; then
+         echo "$LEADING_BAR   └── $TOP_NODE"
+      else
+         echo "$LEADING_BAR   ├── $TOP_NODE"
+      fi
+      if [ "$IS_LAST_NON_EMPTY_NODE" == "true" ]; then
+         CHILD_LEADING_BAR="$LEADING_BAR       "
+      else
+         CHILD_LEADING_BAR="$LEADING_BAR   │   "
+      fi
+      local CHilight=""
+      for ((i = 0; i < ${#ITEMS[@]}; i++)); do
+         if [ "$TOP_NODE" == "clusters" ] && [ "${ITEMS[$i]}" == "$CLUSTER" ]; then 
+            CHilight="${CLightGreen}"
+         else
+            CHilight="${CNone}"
+         fi
+         if [ $i -lt $LAST_INDEX ]; then
+            echo -e "$CHILD_LEADING_BAR├── ${CHilight}${ITEMS[$i]}${CNone}"
+         else
+            echo -e "$CHILD_LEADING_BAR└── ${CHilight}${ITEMS[$i]}${CNone}"
+         fi
+      done
+      fi
+   fi
+}
+
+echo ""
+echo "$__RWE_PATH"
+CURRENT_WORKSPACE="$(basename "$PADOGRID_WORKSPACE")"
+WORKSPACES=`ls $__RWE_PATH`
+WORKSPACES=$(removeTokens "$WORKSPACES" "initenv.sh setenv.sh")
+WORKSPACES=( $WORKSPACES )
+let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
+for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
+   WORKSPACE=${WORKSPACES[$j]}
+   WORKSPACE_INFO=$(getWorkspaceInfoList $WORKSPACE)
+   if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
+      if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
+         echo -e "├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+      else
+         echo "├── $WORKSPACE [$WORKSPACE_INFO]"
+      fi
+      LEADING_BAR="│"
+   else
+      if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
+         echo -e "└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+      else
+         echo "└── $WORKSPACE [$WORKSPACE_INFO]"
+      fi
+      LEADING_BAR=" "
+   fi
+
+   NODES="apps clusters docker k8s pods"
+   LAST_NON_EMPTY_NODE=""
+   for NODE in $NODES; do
+      IS_EMPTY=$(isTreeEmpty "$NODE")
+      if [ "$IS_EMPTY" == "false" ]; then
+         LAST_NON_EMPTY_NODE="$NODE"
+      fi
+   done
+   
+   for NODE in $NODES; do
+      if [ "$NODE" == "$LAST_NON_EMPTY_NODE" ]; then
+         displayTreeNode "$NODE" "true"
+      else
+         displayTreeNode "$NODE" "false"
+      fi
+   done
+done
+echo ""
