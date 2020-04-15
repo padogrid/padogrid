@@ -447,15 +447,6 @@ fi
 LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
 
 #
-# Remote Bundle URLs
-#
-GITHUB_USER="padogrid"
-GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
-BUNDLE_REPOS="https://github.com/$GITHUB_USER?tab=repositories"
-CATALOG_URL="$GITHUB_USER_HOME/catalog-geode/tree/master/Bundle-Catalog.md"
-RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
-
-#
 # PATH
 #
 if [ "$JAVA_HOME" != "" ]; then
