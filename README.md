@@ -89,7 +89,7 @@ padogrid_0.9.1-SNAPSHOT
 
 ## Initializing PadoGrid
 
-Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe command is an interactive command that prompts for the workspaces directory and required software installation paths.
+Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```console
 ~/Padogrid/products/padogrid_0.9.1-SNAPSHOT/bin_sh/create_rwe
