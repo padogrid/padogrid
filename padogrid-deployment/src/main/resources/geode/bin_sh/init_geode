@@ -7,7 +7,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-path -product -workspace -cluster -java -vm -quiet -?"
+   echo "-path -rwe -product -workspace -cluster -java -vm -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -24,7 +24,8 @@ NAME
    $EXECUTABLE - Initialize a PadoGrid workspaces environment
 
 SYNOPSIS
-   $EXECUTABLE [-path workspaces_path]
+   $EXECUTABLE [-path rwe_home_path]
+               [-rwe rwe_name]
                [-product product_home_path]
                [-java JAVA_HOME_path]
                [-workspace default_workspace]
@@ -37,10 +38,12 @@ DESCRIPTION
    default paths to the required software installation directories.
 
 OPTIONS
-   -path workspaces_path
-            Workspaces home path where workspaces will be store. If not specified,
-             then it defaults to the current workspaces path if exists, otherwise,
-             it displays an error message.
+   -path rwe_home_path
+             RWE home path where RWEs will be store. If not specified, then 
+             then it defaults to the current RWE home path if exists.
+
+   -rwe rwe_name
+             A new RWE name.
 
    -product product_home_path
              Geode or GemFire installation directory path.
@@ -76,20 +79,11 @@ EOF
    exit
 fi
 
-WORKSPACES_HOME="$PATH_ARG"
-if [ "$WORKSPACES_HOME" == "" ]; then
-   WORKSPACES_HOME="$PADOGRID_WORKSPACES_HOME"
+RWE_HOME="$PATH_ARG"
+if [ "$RWE_HOME" == "" ]; then
+   RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
 fi
-
-if [ "$QUIET" == "true" ]; then
-   if [ "$WORKSPACES_HOME" == "" ]; then
-      echo >&2 "-------------------------------------------------------------------------"
-      echo >&2 "ERROR: Workspaces path not specified. Specify it with the '-path' option."
-      echo >&2 "       Command aborted."
-      echo >&2 "-------------------------------------------------------------------------"
-      exit 1
-   fi
-fi
+RWE_NAME="$RWE_ARG"
 
 if [ "$WORKSPACE_ARG" == "" ]; then
    WORKSPACE="$DEFAULT_WORKSPACE"
@@ -98,12 +92,32 @@ else
 fi
 
 # Remove trailing slashes ('/')
+RWE_HOME="$(echo "$RWE_HOME" | sed 's:/*$::')"
+if [ "$RWE_HOME" != "" ]; then
+   WORKSPACES_HOME="$RWE_HOME/$RWE_NAME"
+else
+   WORKSPACES_HOME=""
+fi
 WORKSPACES_HOME="$(echo "$WORKSPACES_HOME" | sed 's:/*$::')"
 
-if [ -d "$WORKSPACES_HOME" ]; then
-   if [ "$QUIET" == "true" ]; then
+if [ "$QUIET" == "true" ]; then
+   if [ "$RWE_NAME" == "" ]; then
       echo >&2 "-------------------------------------------------------------------------"
-      echo >&2 "ERROR: The specified workspaces directory already exists. A new directory required"
+      echo >&2 "ERROR: RWE name not specifed. Use '-rwe' to specify the new RWE name."
+      echo >&2 "       Command aborted."
+      echo >&2 "-------------------------------------------------------------------------"
+      exit 1
+   fi
+   if [ "$RWE_HOME" == "" ]; then
+      echo >&2 "-------------------------------------------------------------------------"
+      echo >&2 "ERROR: RWE home path not specifed. Use '-path' to specify the RWE home path."
+      echo >&2 "       Command aborted."
+      echo >&2 "-------------------------------------------------------------------------"
+      exit 1
+   fi
+   if [ -d "$WORKSPACES_HOME" ]; then
+      echo >&2 "-------------------------------------------------------------------------"
+      echo >&2 "ERROR: The specified RWE directory already exists. A new RWE name required."
       echo >&2 "          $WORKSPACES_HOME"
       echo >&2 "       Command aborted."
       echo >&2 "-------------------------------------------------------------------------"
@@ -180,65 +194,80 @@ else
    echo "You can abort this command at any time by entering 'Ctrl-C'."
    echo ""
    __WORKSPACES_HOME="$WORKSPACES_HOME"
+   __RWE_HOME="$RWE_HOME"
+   __RWE_NAME="$RWE_NAME"
    __JAVA_HOME="$JAVA_HOME_ARG"
    __PRODUCT_HOME="$PRODUCT_ARG"
    __WORKSPACE="$WORKSPACE"
-   RWE_LIST="$(getRweList)"
    RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
    REDO=true
    while [ "$REDO" == "true" ]; do
 
-      # WORKSPACES_HOME
+      # RWE_HOME
       __REDO=true
       while [ "$__REDO" == "true" ]; do
-         if [ "$RWE_LIST" != "" ]; then
-            echo "The following RWEs are available in the current RWE environment."
-            for i in $RWE_LIST; do
-               echo "   $RWE_HOME/$i"
-            done
-         fi
-         echo "Enter a new RWE home path where your new workspaces will be stored."
+         echo "Enter an RWE home path where your RWEs will be stored."
          if [[ $OS_NAME == CYGWIN* ]]; then
             echo "Enter only Unix absolute path. Windows path not allowed."
          fi
-         echo "[$__WORKSPACES_HOME]:"
+         echo "[$__RWE_HOME]:"
 
          read -p "" INPUT
          # trim string
          INPUT=`echo "$INPUT" | xargs`
          if [ "$INPUT" != "" ]; then
-            __WORKSPACES_HOME="$INPUT"
+            __RWE_HOME="$INPUT"
          fi
          if [[ $OS_NAME == CYGWIN* ]]; then
-            __WORKSPACES_HOME="$(cygpath -au "$__WORKSPACES_HOME")"
+            __RWE_HOME="$(cygpath -au "$__RWE_HOME")"
          fi
-         __WORKSPACES_HOME="$(trimString "$__WORKSPACES_HOME")"
-         if [ "$__WORKSPACES_HOME" == "" ]; then
+         __RWE_HOME="$(trimString "$__RWE_HOME")"
+         if [ "$__RWE_HOME" == "" ]; then
             __REDO=true
-         elif [[ $__WORKSPACES_HOME != /* ]]; then
+         elif [[ ! $__RWE_HOME == /* ]]; then
             echo "Absolute path required."
-            __WORKSPACES_HOME="$RWE_HOME"
+            __RWE_HOME="$RWE_HOME"
             __REDO=true
-         elif [ -d "$__WORKSPACES_HOME" ] || [ -f "$__WORKSPACES_HOME" ]; then
+         elif [ ! -d "$__RWE_HOME" ] && [ -f "$__RWE_HOME" ]; then
             __REDO=true
-            __WORKSPACES_HOME=""
-            echo "The specified workspaces directory already exists. A new directory required."
+            __RWE_HOME=""
+            echo "The specified path is not a directory. Please enter a directory path."
          else
             __REDO=false
          fi
       done
-      WORKSPACES_HOME="$__WORKSPACES_HOME"
+      RWE_HOME="$__RWE_HOME"
 
-#      if [ ! -d "$WORKSPACES_HOME" ]; then
-         echo "The specified workspaces path will be created."
-#      else
-         WORKSPACES_LIST=$(getWorkspaces "$WORKSPACES_HOME")
-#         if [ "$WORKSPACES_LIST" != "" ]; then
-#       echo "The specified workspaces path already exists and contains the following workspaces."
-#       echo "   $WORKSPACES_LIST"
-#       echo "A new workspace you create will be added in this workspaces path."
-#         fi
-#      fi
+      # RWE_NAME
+      __REDO=true
+      __RWE_NAME=$RWE_NAME
+      RWE_LIST="$(getRweList "$RWE_HOME")"
+      if [ "$RWE_LIST" != "" ]; then
+         echo "The following RWEs already exists in the specified RWE home path."
+         for i in $RWE_LIST; do
+            echo "   $i"
+         done
+      fi
+      while [ "$__REDO" == "true" ]; do
+         read -p "Enter a new RWE name [$__RWE_NAME]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __RWE_NAME="$INPUT"
+         fi
+         __RWE_NAME="$(trimString "$__RWE_NAME")"
+         if [ "$__RWE_NAME" == "" ]; then
+            __REDO=true
+         elif [ -d "$__RWE_HOME/$__RWE_NAME" ] || [ -f "$__RWE_HOME/$__RWE_NAME" ]; then
+            __REDO=true
+            __RWE_NAME=""
+            echo "The specified RWE already exists. Please enter a RWE name."
+         else
+            __REDO=false
+         fi
+      done
+      RWE_NAME="$__RWE_NAME"
+      WORKSPACES_HOME="$__RWE_HOME/$__RWE_NAME"
 
       # JAVA_HOME
       __REDO=true
@@ -353,13 +382,14 @@ else
       done
 
       echo ""
-      echo "You have entered the following."
-      echo "  PADOGRID_WORKSPACES: $WORKSPACES_HOME"
-      echo "            JAVA_HOME: $JAVA_HOME"
-      echo "         Product Home: $PRODUCT_HOME"
-      echo "    Default Workspace: $WORKSPACE"
-      echo "      Default Cluster: $CLUSTER"
-      echo "           VM Enabled: $VM_ENABLED"
+      echo "Creating an RWE as follows..."
+      echo "            RWE Home: $RWE_HOME"
+      echo "            RWE Name: $RWE_NAME"
+      echo "           JAVA_HOME: $JAVA_HOME"
+      echo "        Product Home: $PRODUCT_HOME"
+      echo "   Default Workspace: $WORKSPACE"
+      echo "     Default Cluster: $CLUSTER"
+      echo "          VM Enabled: $VM_ENABLED"
 
       REDO=true
       INNER_LOOP=true

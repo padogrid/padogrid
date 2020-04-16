@@ -258,7 +258,7 @@ function getRweList
       fi
    fi
    local ROOTS=""
-   if [ "$RWE_HOME" != "" ]; then
+   if [ "$RWE_HOME" != "" ] &&  [ -d "$RWE_HOME" ]; then
       local ROOT_DIRS=$(ls "$RWE_HOME")
       pushd $RWE_HOME > /dev/null 2>&1
       for i in $ROOT_DIRS; do

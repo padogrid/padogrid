@@ -32,6 +32,7 @@ NAME
 SYNOPSIS
    $EXECUTABLE [-product product_home_path]
                [-path workspaces_path]
+               [-rwe rwe_name]
                [-java JAVA_HOME_path]
                [-workspace default_workspace]
                [-cluster default_cluster]
@@ -45,6 +46,9 @@ DESCRIPTION
 OPTIONS
    -product product_home_path
              Geode, GemFire, Hazelcast, or Jet home path.
+
+   -rwe rwe_name
+             A new RWE name.
 
    -path workspaces_path
 	     Workspaces home path where workspaces will be store. If not specified,
@@ -100,21 +104,21 @@ function isValidProduct
    echo $FOUND
 }
 
-if [ "$QUIET" == "true" ] && [ "$PRODUCT_ARG" == "" ]; then
-   echo >&2 "ERROR: The '-product' option not specified. Supported products are [$PRODUCTS]."
-   echo >&2 "       Command aborted."
-   exit 1
-fi
+#if [ "$QUIET" == "true" ] && [ "$PRODUCT_ARG" == "" ]; then
+#   echo >&2 "ERROR: The '-product' option not specified. Supported products are [$PRODUCTS]."
+#   echo >&2 "       Command aborted."
+#   exit 1
+#fi
 
 # Determin the default product
 if [ "$__PRODUCT_HOME" == "" ]; then
-   if [ "$PRODUCT" != "hazelcast" ]; then
-      if [ "$CLUSTER_TYPE" == "imdg" ]; then
+   if [ "$PRODUCT" == "hazelcast" ]; then
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
          __PRODUCT_HOME="$JET_HOME"
       else
-         __PRODUCT_HOME="$HALZECAST_HOME"
+         __PRODUCT_HOME="$HAZELCAST_HOME"
       fi
-   elif [ "$PRODUCT" != "geode" ]; then
+   elif [ "$PRODUCT" == "geode" ]; then
       __PRODUCT_HOME="$GEODE_HOME"
    else
       __PRODUCT_HOME=""
@@ -180,12 +184,13 @@ echo "PRODUCT_HOME_ARG=\"$PRODUCT_HOME\"" > $TMP_ENV_FILE
 echo "PRODUCT_ARG=\"$PRODUCT_HOME\"" > $TMP_ENV_FILE
 echo "JAVA_HOME_ARG=\"$JAVA_HOME_ARG\"" >> $TMP_ENV_FILE
 echo "PATH_ARG=\"$PATH_ARG\"" >> $TMP_ENV_FILE
+echo "RWE_ARG=\"$RWE_ARG\"" >> $TMP_ENV_FILE
 echo "NAME_ARG=\"$NAME_ARG\"" >> $TMP_ENV_FILE
 echo "WORKSPACE_ARG=\"$WORKSPACE_ARG\"" >> $TMP_ENV_FILE
 echo "CLUSTER_SPECIFIED=\"$CLUSTER_SPECIFIED\"" >> $TMP_ENV_FILE
 echo "CLUSTER=\"$CLUSTER\"" >> $TMP_ENV_FILE
 echo "VM_SPECIFIED=\"$VM_SPECIFIED\"" >> $TMP_ENV_FILE
-echo "QUIEIT=\"$QUIEIT\"" >> $TMP_ENV_FILE
+echo "QUIET=\"$QUIET\"" >> $TMP_ENV_FILE
 
 # Initialize the product RWE environment.
 $BASE_DIR/${PRODUCT}/bin_sh/init_${PRODUCT} -env $TMP_ENV_FILE
