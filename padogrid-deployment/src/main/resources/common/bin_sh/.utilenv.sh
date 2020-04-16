@@ -1653,16 +1653,6 @@ EOF
 
    if [ "$COMMAND" == "" ]; then
       RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
-      echo "Current Workspace"
-      echo "-----------------"
-      echo "           PRODUCT: $PRODUCT"
-      echo "   Product Version: $PRODUCT_VERSION"
-      echo "PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
-      echo "           CLUSTER: $CLUSTER"
-      echo "      CLUSTER_TYPE: $CLUSTER_TYPE"
-      echo "               POD: $POD"
-      echo "          POD_TYPE: $POD_TYPE"
-      echo ""
       echo "Root Workspaces Environments (RWEs)"
       echo "-----------------------------------"
       local CURRENT_RWE="$(basename "$PADOGRID_WORKSPACES_HOME")"
@@ -1709,8 +1699,17 @@ EOF
 	       fi
             fi
          done
-
       done
+      echo ""
+      echo "Current Workspace"
+      echo "-----------------"
+      echo "           PRODUCT: $PRODUCT"
+      echo "   Product Version: $PRODUCT_VERSION"
+      echo "PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "           CLUSTER: $CLUSTER"
+      echo "      CLUSTER_TYPE: $CLUSTER_TYPE"
+      echo "               POD: $POD"
+      echo "          POD_TYPE: $POD_TYPE"
       return 0
    fi
 
