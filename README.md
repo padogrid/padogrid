@@ -65,9 +65,9 @@ padogrid-deployment/target/assembly/padogrid-all_<version>.zip
 Inflate one of the distribution files in your file system. For example,
 
 ```console
-mkdir ~/products
-tar -C ~/products/ -xzf padogrid_0.9.1-SNAPSHOT.tar.gz
-cd ~/products
+mkdir ~/Padogrid/products
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.1-SNAPSHOT.tar.gz
+cd ~/Padogrid/products
 tree -L 1 padogrid_0.9.1-SNAPSHOT
 ```
 
