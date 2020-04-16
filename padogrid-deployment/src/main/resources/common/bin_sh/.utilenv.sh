@@ -1639,11 +1639,22 @@ function padogrid
       SHIFT_NUM=1
    fi
 
+cat <<EOF
+.______      ___       _______   ______     _______ .______       __   _______ ™
+|   _  \    /   \     |       \ /  __  \   /  _____||   _  \     |  | |       \ 
+|  |_)  |  /  ^  \    |  .--.  |  |  |  | |  |  __  |  |_)  |    |  | |  .--.  |
+|   ___/  /  /_\  \   |  |  |  |  |  |  | |  | |_ | |      /     |  | |  |  |  |
+|  |     /  _____  \  |  '--'  |  '--'  | |  |__| | |  |\  \----.|  | |  '--'  |
+| _|    /__/     \__\ |_______/ \______/   \______| | _| '._____||__| |_______/ 
+Copyright 2020 Netcrest Technologies, LLC. All rights reserved.
+v$PADOGRID_VERSION
+
+EOF
+
    if [ "$COMMAND" == "" ]; then
       RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
-      echo "PadoGrid"
-      echo "--------"
-      echo "  PadoGrid Version: $PADOGRID_VERSION"
+      echo "Current Workspace"
+      echo "-----------------"
       echo "           PRODUCT: $PRODUCT"
       echo "   Product Version: $PRODUCT_VERSION"
       echo "PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
