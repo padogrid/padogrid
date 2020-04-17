@@ -113,7 +113,11 @@ __padogrid_complete()
       ;;
 
    -k8s) 
-      type_list=`getClusters k8s`
+      if [ "$second_word" == "create_k8s" ]; then
+         type_list="minikube"
+      else
+         type_list=`getClusters k8s`
+      fi
       ;;
 
    -docker) 
@@ -459,7 +463,11 @@ __command_complete()
       fi
       ;;
    -k8s)
-      type_list=`getClusters k8s`
+      if [ "$command" != "create_workspace" ]; then
+         type_list="minikube"
+      else
+         type_list=`getClusters k8s`
+      fi
       ;;
    -docker)
       if [ "$command" == "create_bundle" ]; then
