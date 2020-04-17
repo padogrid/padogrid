@@ -1929,15 +1929,32 @@ function showTree
 function getHostIPv4List
 {
    local HOST_IPS=""
-   for i in $(hostname -i); do
-      if [[ $i != 127* ]] && [[ $i != *::* ]]; then
-         if [ "$HOST_IPS" == "" ]; then
-            HOST_IPS="$i"
-         else
-            HOST_IPS="$HOST_IPS $i"
+   if [[ ${OS_NAME} == DARWIN* ]]; then
+      IP_LIST=$(ifconfig -u |grep "inet " |awk '{print $2}')
+      for i in $IP_LIST; do
+         if [[ "$i" != *".1" ]]; then
+            if [ "$HOST_IPS" == "" ]; then
+               HOST_IPS="$i"
+            else
+               HOST_IPS="$HOST_IPS $i"
+            fi
          fi
+      done
+      # Determine the IP address using the router to the google DNS server
+      if [ "$HOST_IPS" == "" ]; then
+         HOST_IPS=$(ipconfig getifaddr $(route get 8.8.8.8 | awk '/interface: / {print $2; }'))
       fi
-   done
+   else
+      for i in $(hostname -i); do
+         if [[ $i != 127* ]] && [[ $i != *::* ]]; then
+            if [ "$HOST_IPS" == "" ]; then
+               HOST_IPS="$i"
+            else
+               HOST_IPS="$HOST_IPS $i"
+            fi
+         fi
+      done
+   fi
    echo "$HOST_IPS"
 }
 
