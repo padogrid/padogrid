@@ -53,10 +53,10 @@ Running `kubectl` on Windows can be a challenge due to the lack of examples and 
 In your workspace, create a Kubernetes environment in which we will setup Hazelcast deployment files.
 
 ```console
-create_k8s -k8s minikube -cluster minikube-test
+create_k8s -k8s minikube -cluster minikube_test
 
 # Upon creation, source in the 'setenv.sh' file as follows.
-. $PADOGRID_WORKSPACE/k8s/minikube-test/bin_sh/setenv.sh
+. $PADOGRID_WORKSPACE/k8s/minikube_test/bin_sh/setenv.sh
 ```
 
 We will be using the `$HAZELCAST_KUSTOM_DIR` environment variable set by `setenv.sh` throughout the subsequent sections.
@@ -228,7 +228,7 @@ minikube dashboard &
 
 ```console
 # Change directory to $GEODE_KUSTOM_DIR/bin_sh
-cd_k8s minikube-test; cd bin_sh
+cd_k8s minikube_test; cd bin_sh
 
 # Convert minkube settings to Windows and run the dashboard
 cmd.exe /c set_minikube.bat && minikube.exe dashboard &
@@ -429,6 +429,7 @@ sudo ip route delete 10.0.0.0/8
 route DELETE 10.0.0.0
 
 # Uninstall custom metrics and Hazelcast.
+cd_k8s minikube_test; cd etc
 kubectl delete -k custom-metrics/overlay-base/
 kubectl delete -k hazelcast/overlay-base/
 kubectl delete -k hazelcast/storage/minikube/
