@@ -46,7 +46,7 @@ Before we begin, we must first install the following software. See the [Referenc
 
 Running `kubectl` on Windows can be a challenge due to the lack of examples and support for command auto-completion. To ease the pain, it is recommended that you install `kubectl` on WSL. The following article provides installation steps:
 
-[Hazelcast Minikube on WSL](Hazelcast-Minikube-on-WSL.md)
+[Hazelcast Minikube on WSL](Hazelcast-Minikube-on-WSL)
 
 ## Creating Kubernetes Environment
 
@@ -105,9 +105,6 @@ notepad C:\Windows\System32\drivers\etc\hosts
 With the `minikube` host name in place, you can now use it to login to the Minikube VM. Let's upload the required binary files to the host OS file system which we'll be mounting as a persistent volume shortly.
 
 ```console
-# Upload addon jar files to the minikube host.
-scp -r $PADOGRID_HOME/lib/* $PADOGRID_HOME/plugins/* docker@minikube:/data/custom/plugins/v1/
-
 # Switch cluster into the default cluster you created with 'create_workspace'. 
 switch_cluster
 
@@ -116,7 +113,10 @@ scp -r etc docker@minikube:/data/custom/
 
 # Upload addon jar files to the minikube host. 
 # IMPORTANT: Upload v3/* for Hazelcast 3.x, v4/* for Hazelcast 4.x.
-scp -r $PADOGRID_HOME/lib/v3/* $PADOGRID_HOME/plugins/v3/* docker@$(minikube ip):/data/custom/plugins/v1/
+scp -r $PADOGRID_HOME/lib/*  \
+$PADOGRID_HOME/lib/hazelcast/v3/* \
+$PADOGRID_HOME/plugins/hazelcast/v3/* \
+docker@minikube:/data/custom/plugins/v1/
 ```
 
 If you are using WSL then you will need to convert the minikube certificate file paths from Windows to Unix notations. From WSL, edit the `set_minikube` and `set_minikube.bat` scripts to enter the minikube IP and your user name, and run it as follows:
