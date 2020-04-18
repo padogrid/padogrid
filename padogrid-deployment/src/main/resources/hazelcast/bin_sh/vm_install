@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-java -hazelcast -vm -simulate -?"
+   echo "-java -product -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -51,7 +51,7 @@ NAME
 SYNOPSIS
    $EXECUTABLE [-vm comma_separated_hosts]
                [-java jdk_distribution_file]
-               [-hazelcast imdg_or_jet_distribution_file]
+               [-product imdg_or_jet_distribution_file]
                [-simulate] [-?]
 
 DESCRIPTION
@@ -77,7 +77,7 @@ OPTIONS
    -java java_distribution_file
               JDK distribution file, e.g. jdk-8u212-linux-x64.tar.gz.
 
-   -hazelcast imdg_or_jet_distribution_file
+   -product imdg_or_jet_distribution_file
               Hazelcast distribution file, e.g. hazelcast-enterprise-3.12.6.tar.gz or hazelcast-jet-enterprise-3.2.2.
 
    -simulate
@@ -102,8 +102,8 @@ EOF
    exit
 fi
 
-if [ "$JAVA_HOME_ARG" == "" ] && [ "$HAZELCAST_ARG" == "" ]; then
-   echo >&2 "ERROR: Must specify -java or -hazelcast. Command aborted."
+if [ "$JAVA_HOME_ARG" == "" ] && [ "$PRODUCT_ARG" == "" ]; then
+   echo >&2 "ERROR: Must specify -java or -product. Command aborted."
    exit 1
 fi
 
@@ -302,11 +302,11 @@ if [ "$JAVA_HOME_ARG" != "" ]; then
 fi
 
 # Install Hazelcast
-if [ "$HAZELCAST_ARG" != "" ]; then
+if [ "$PRODUCT_ARG" != "" ]; then
    # Arguments to installProduct function
    PRODUCT="Hazelcast"
    PRODUCT_HOME_NOT_FOUND_LIST=$HAZELCAST_HOME_NOT_FOUND_LIST
-   PRODUCT_PATH=$HAZELCAST_ARG
+   PRODUCT_PATH=$PRODUCT_ARG
    VM_PRODUCT_HOME=$VM_HAZELCAST_HOME
    
    installProduct
