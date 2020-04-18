@@ -2,27 +2,36 @@
 
 This directory contains Kubernetes configuration files for deploying Hazelcast, Prometheus, custom metrics API, and Horizontal Pod Autoscaler (HPA) on **Minikube**. The configuration files are to be used with the `kustomize` or `kubectl apply -k` command.
 
-## Initializing Workspace
+## WSL Users
 
-To follow instructions in this article, you must first install `padohub` and create a workspace. For example, the following creates the `ws-gke` workspace in the `~/padogrid/workspaces/myrwe` directory. Make sure to source in the `initenv.sh` file.
+To run this tutorial entirely on WSL even though Minikube runs on Windows, follow the steps shown below.
+
+- If you are running WSL, then make sure the workspace you create is on the shared folder between Windows and WSL. The Minikube settings must be converted when we switch between them. This is automatically done by a PadoGrid script as you will see in this tutorial.
+- Include the `.exe` extension to all `minikube` commands, i.e., run `minikube.exe` instead of `minikube`.
+
+## Creating Workspace
+
+For this tutorial, let's create a new workspace named `ws-minikube`.
 
 ```console
-mkdir -p ~/padogrid/workspaces/myrwe
-tar -C ~/padogrid/products/ -xzf padohub_0.9.0-SNAPSHOT
-~/padogrid/products/padohub_0.9.0-SNAPSHOT/bin_sh/create_workspace -workspace ~/padogrid/workspaces/myrwe/ws-minikube
-. ~/padogrid/workspaces/myrwe/ws-minikube/initenv.sh
+create_workspace -name ws-minikube
+```
+Upon completion of creating the workspace, switch into the workspace.
+
+```console
+switch_workspace ws-minikube
 ```
 
-We will be using the `$PADOHUB_WORKSPACE` environment variable set by `initenv.sh` throughout this article.
+We will be using the `$PADOGRID_WORKSPACE` environment variable set by `switch_workspace` throughout this article. You can check its value as follows:
 
 ```console
-echo $PADOHUB_WORKSPACE 
-/Users/dpark/padogrid/workspaces/myrwe/ws-minikube
+echo $PADOGRID_WORKSPACE 
+/Users/dpark/Padogrid/workspaces/myrwe/ws-minikube
 ```
 
 ## Required Software List
 
-Before you begin, you must first install the following software. See the [References](#References) section for URIs.
+Before we begin, we must first install the following software. See the [References](#References) section for URLs.
 
 - VirtualBox (for Windows, VirtualBox or Hyper-V)
 - minikube
@@ -35,7 +44,7 @@ Before you begin, you must first install the following software. See the [Refere
 
 ### `kubectl` on Windows 10
 
-Running `kubectl` on Windows can be a challenge due to the lack of examples and support for auto-completion. To ease the pain, it is recommended that you install `kubectl` on WSL. The following article provides installation steps:
+Running `kubectl` on Windows can be a challenge due to the lack of examples and support for command auto-completion. To ease the pain, it is recommended that you install `kubectl` on WSL. The following article provides installation steps:
 
 [Hazelcast Minikube on WSL](Hazelcast-Minikube-on-WSL.md)
 
@@ -46,40 +55,105 @@ In your workspace, create a Kubernetes environment in which we will setup Hazelc
 ```console
 create_k8s -k8s minikube -cluster minikube-test
 
-# Upon creation source in the setenv.sh file as follows.
-. $PADOHUB_WORKSPACE/k8s/minikube-test/bin_sh/setenv.sh
+# Upon creation, source in the 'setenv.sh' file as follows.
+. $PADOGRID_WORKSPACE/k8s/minikube-test/bin_sh/setenv.sh
 ```
 
-We will be using the `$HAZELCAST_KUSTOM_DIR` environment variable set by `setenv.sh` throughout in the subsequent sections.
+We will be using the `$HAZELCAST_KUSTOM_DIR` environment variable set by `setenv.sh` throughout the subsequent sections.
 
 ## Quick Start
 
+First, start the Minikube VM. If you are using Windows Hyper-V, then replace `--vm-driver=virtualbox` with `--vm-driver=hyperv`.
+
 ```console
-# Start minikube with 5Gi and 4 CPUs
+# Start minikube with 5Gi and 4 CPUs.
+# If you are using Hyper-V, then specify --vm-driver=hyperv.
 minikube start --extra-config=kubelet.authentication-token-webhook=true --memory=5120 --cpus=4 --vm-driver=virtualbox
 
-# Create TLS certificates for the Prometheus custom metrics API adapter
-cd $HAZELCAST_KUSTOM_DIR/bin_sh
-./create_certs
-
-# Configure a service account and RBAC
-cd $HAZELCAST_KUSTOM_DIR/etc
-kubectl apply -k hazelcast/init/
-
-# Create static persistent volume where we will store addon jar files
-kubectl apply -k hazelcast/storage/minikube/
-
-# Login to the host and create a directory on the persistent volume
-# and upload the addon jar files
+# Login to the host and create a directory in the host node (minikube)
+# where we will upload addon jar files. We'll be mounting /data/custom as
+# a persistent volume later.
 minikube ssh
 sudo mkdir -p /data/custom/plugins/v1
 sudo chmod -R 777 /data
 # Change password to docker
 sudo passwd docker
 exit
+```
 
+Let's add the Minikube IP address to the `/etc/hosts` file for convenience. The Kubernetes configuration files included in PadoGrid use the host name `minikube`.
+
+**Linux/macOS:**
+
+```console
+sudo echo "$(minikube ip)	minikube" >> /etc/hosts
+```
+
+**Windows:**
+
+If you are using WSL, you should also add the `minikube` host name in the Windows `hosts` file.
+
+```console
+minikube.exe ip
+172.17.34.252
+
+REM Edit the hosts file and add the minikube host name
+notepad C:\Windows\System32\drivers\etc\hosts
+172.17.34.252	minikube
+```
+
+With the `minikube` host name in place, you can now use it to login to the Minikube VM. Let's upload the required binary files to the host OS file system which we'll be mounting as a persistent volume shortly.
+
+```console
 # Upload addon jar files to the minikube host.
-scp -r $PADOHUB_HOME/lib/v3/* $PADOHUB_HOME/plugins/v3/* docker@$(minikube ip):/data/custom/plugins/v1/
+scp -r $PADOGRID_HOME/lib/* $PADOGRID_HOME/plugins/* docker@minikube:/data/custom/plugins/v1/
+
+# Switch cluster into the default cluster you created with 'create_workspace'. 
+switch_cluster
+
+# Upload the cluster's 'etc' directory that contains 'cache.xml'
+scp -r etc docker@minikube:/data/custom/
+
+# Upload addon jar files to the minikube host. 
+# IMPORTANT: Upload v3/* for Hazelcast 3.x, v4/* for Hazelcast 4.x.
+scp -r $PADOGRID_HOME/lib/v3/* $PADOGRID_HOME/plugins/v3/* docker@$(minikube ip):/data/custom/plugins/v1/
+```
+
+If you are using WSL then you will need to convert the minikube certificate file paths from Windows to Unix notations. From WSL, edit the `set_minikube` and `set_minikube.bat` scripts to enter the minikube IP and your user name, and run it as follows:
+
+```console
+# Edit both set_minikube and set_minikube.bat and enter the user name and minikube IP address
+cd $HAZELCAST_KUSTOM_DIR/bin_sh
+vi set_minikube set_minikube.bat
+
+USER_NAME=<your user name>
+MINIKUBE_IP=<minikube ip>
+
+# Save 'set_minikube' and 'set_minikube.bat' and run 'set_minikube'
+./set_minikube
+```
+
+:exclamation: Whenever you switch from WSL to Windows, you must run `set_minikube.bat` to set the correct paths, and vice versa.
+
+After running `set_minikube`, create certificates for Prometheus as follows.
+
+```console
+# Create TLS certificates for the Prometheus custom metrics API adapter
+cd $HAZELCAST_KUSTOM_DIR/bin_sh
+./create_certs
+```
+
+You are now ready to deploy containers.
+
+```console
+# Change directory to etc/ where the Kubernetes configuration files are located.
+cd $HAZELCAST_KUSTOM_DIR/etc
+
+# Configure a service account and RBAC
+kubectl apply -k hazelcast/init/
+
+# Create static persistent volume where we will store addon jar files
+kubectl apply -k hazelcast/storage/minikube/
 
 # Copy base files to the overlay directory. These files will be modified.
 cp hazelcast/base/statefulset.yaml hazelcast/overlay-base/
@@ -144,17 +218,30 @@ kustom
 
 Start the Kubernetes dashboard by running the following command. It will automatically launch the browser.
 
+#### Non-WSL
+
 ```console
 minikube dashboard &
+```
+
+#### WSL
+
+```console
+# Change directory to $GEODE_KUSTOM_DIR/bin_sh
+cd_k8s minikube-test; cd bin_sh
+
+# Convert minkube settings to Windows and run the dashboard
+cmd.exe /c set_minikube.bat && minikube.exe dashboard &
+
+# Convert minikube settings back to WSL
+./set_minikube
 ```
 
 ### Prometheus
 
 Prometheus runs in the `monitoring` namespace and has the port number `31190` exposed. Use the following URI in the browser.
 
-```console
-http://<minikube ip>:31190 
-```
+**URL:** http://minikube:31190 
 
 ### HPA (Horizontal Pod Autoscaler)
 
@@ -178,9 +265,7 @@ watch -d 'kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/defa
 
 The Hazelcast Management Center service port is `31000`.
 
-```console
-http://<minikube ip>:31000/hazelcast-mancenter/
-```
+**URL:** http://minikube:31000/hazelcast-mancenter/
 
 ## Running Client Applications
 
@@ -211,7 +296,7 @@ To connect to the Hazelcast cluster without enabling kubectl tunnel, you must di
 To run the `perf_test` app, for example, edit the `hazelcast-client.xml` file as follows (service ports `30000` and `30001` are exposed):
 
 ```xml
-<!-- $PADOHUB_WORKSPACE/apps/perf_test/etc/hazelcast-client.xml -->
+<!-- $PADOGRID_WORKSPACE/apps/perf_test/etc/hazelcast-client.xml -->
    <network>
       <smart-routing>false</smart-routing>
       <cluster-members>
@@ -242,7 +327,7 @@ kubectl get secret enterprise-token-2qdzz  -o jsonpath={.data.ca\\.crt} | base64
 Enter the encoded token and certificate in the `hazelcast-client.xml` file as shown below. Note that the service name is `my-service-lb` which is created when you applied the configuration files.
 
 ```xml
-<!-- $PADOHUB_WORKSPACE/apps/perf_test/etc/hazelcast-client.xml -->
+<!-- $PADOGRID_WORKSPACE/apps/perf_test/etc/hazelcast-client.xml -->
    <network>
       <smart-routing>true</smart-routing>
       <kubernetes enabled="true">
@@ -299,8 +384,10 @@ When the 'current' value reaches greater than 850m, HPA will add another pod to 
 
 To test HPA, configure the `test_perf`'s `hazelcast-client.xml` as described in the [Running Client Applications](#Running-Client-Applications) section and run the `test_ingestion` script as follows:
 
-```bash
-cd $PADOHUB_WORKSPACE/apps/test_perf/bin_sh
+Run `perf_test` as follows:
+
+```console
+cd_app perf_test; cd bin_sh
 ./test_ingestion -run
 ```
 

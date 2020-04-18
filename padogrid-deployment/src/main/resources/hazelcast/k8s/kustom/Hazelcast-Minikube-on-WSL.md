@@ -46,6 +46,8 @@ kubectl config use-context minikube
 kubectl get nodes
 ```
 
+:exclamation: Note that the PadoGrid's `k8s` component includes path conversion scripts for your convenience. You do not need to execute the above commands individually.
+
 The above commands are referenced from the following link:
 
 [https://www.jamessturtevant.com/posts/Running-Kubernetes-Minikube-on-Windows-10-with-WSL/](https://www.jamessturtevant.com/posts/Running-Kubernetes-Minikube-on-Windows-10-with-WSL/)
@@ -85,7 +87,7 @@ minikube ip
 
 ```console
 # Upload addon jar files to the minikube host.
-scp $HAZELCAST_ADDON_HOME/lib/v3/* $HAZELCAST_ADDON_HOME/plugins/v3/* docker@<minikube-ip>:/data/custom/plugins/v1/
+scp $PADOGRID_HOME/lib/v3/* $PADOGRID_HOME/plugins/v3/* docker@<minikube-ip>:/data/custom/plugins/v1/
 
 # Copy base files to the overlay directory. These files will be modified.
 cp hazelcast/base/statefulset.yaml hazelcast/overlay-base/
@@ -124,12 +126,6 @@ See Kubernetes API change details in the following link:
 
 [https://kubernetes.io/blog/2019/09/18/kubernetes-1-16-release-announcement/](https://kubernetes.io/blog/2019/09/18/kubernetes-1-16-release-announcement/)
 
-## Hazelcast on Minikube using `kustomize`
-
-To continue the Minikube example, go to the following link:
-
-[README-Minikube.md](README-Minikube.md)
-
 ## Troubleshooting Guide
 
 ### Executing `minikube dashboard` gets stuck with the following message:
@@ -140,7 +136,7 @@ To continue the Minikube example, go to the following link:
 
 **Solution:** This is due to the WSL Minikube file paths set in one of the above steps. You can set the paths using `kubectl.exe` from PowerShell or reinstall Minikube and make sure to execute `minikue dashboard` before configuring `kubectl` in WSL.
 
-To configure paths from Powershell:
+To configure paths from PowerShell:
 
 ```console
 kubectl.exe config set-cluster minikube --server=https://<minikube-ip>:<port> --certificate-authority=c:\Users\<windows-user-name>\.minikube\ca.crt
@@ -160,4 +156,3 @@ minikube delete
 erase C:\Users\<user>\.minikube\config\config.json 
 minikube start --extra-config=kubelet.authentication-token-webhook=true --memory=5120 --cpus=4 --vm-driver=virtualbox
 ```
-
