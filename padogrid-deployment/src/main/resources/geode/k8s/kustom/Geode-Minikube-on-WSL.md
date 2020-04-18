@@ -1,8 +1,8 @@
-# Minikube on WSL
+# Geode Minikube on WSL
 
 This article provides installation steps for setting up `kubectl` in Windows 10 WSL with bash auto-completion to deploy Geode. The steps described here are for Hyper-V and Docker Desktop.
 
-1. Install Docker Dekstop for Windows
+1. Install Docker Desktop for Windows
 [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
 
 2. Install WSL and kube tools as described in the link below.
@@ -46,11 +46,11 @@ kubectl config use-context minikube
 kubectl get nodes
 ```
 
+:exclamation: Note that the PadoGrid's `k8s` component includes path conversion scripts for your convenience. You do not need to execute the above commands individually.
+
 The above commands are referenced from the following link:
 
 [https://www.jamessturtevant.com/posts/Running-Kubernetes-Minikube-on-Windows-10-with-WSL/](https://www.jamessturtevant.com/posts/Running-Kubernetes-Minikube-on-Windows-10-with-WSL/)
-
-## Install Geode
 
 ## Troubleshooting Guide
 
@@ -82,4 +82,3 @@ minikube delete
 erase C:\Users\<user>\.minikube\config\config.json 
 minikube start --extra-config=kubelet.authentication-token-webhook=true --memory=5120 --cpus=4 --vm-driver=virtualbox
 ```
-
