@@ -1781,7 +1781,7 @@ function getWorkspaceInfoList
          CLUSTER_TYPE="gemfire"
       else
          PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/^.*apache-geode-//' -e 's/"//')
-         CLUSTER_TYPE="padogrid"
+         CLUSTER_TYPE="geode"
       fi
    fi
 
