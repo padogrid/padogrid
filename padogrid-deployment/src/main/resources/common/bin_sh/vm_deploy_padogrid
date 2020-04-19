@@ -34,7 +34,7 @@ fi
 #
 # Determeint $TAR_BALL_PATH
 #
-ROOT_DIR_NAME=$(basename $BASE_DIR)
+ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
 TOP_DIR="$(dirname "$BASE_DIR")"
 TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
 TAR_BALL_GZ_PATH=$PADOGRID_WORKSPACE/bundles/$TAR_BALL_GZ_NAME
@@ -62,7 +62,7 @@ DESCRIPTION
    padogrid installation directory path is defined by VM_PADOGRID_HOME
    set in the workspace 'setenv.sh' file.
 
-   Note that this command and all other commands that begin with the "vm_" preprefix are
+   Note that this command and all other commands that begin with the "vm_" prefix are
    available only on VM workspaces.
 
    The '-vm' option overrides both the '-cluster' option and VM_HOSTS. The '-cluster' option
@@ -273,25 +273,25 @@ if [ "$NEW_HOSTS" != "" ]; then
       if [ "$SIMULATE" == "true" ]; then
          echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
          echo scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         echo ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
       else
          ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
          scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
       fi
    done
 fi
 
-if [ "$EXISTING_HOSTS" != "" ]; then
+if [ "$EXISTING_HOSTS" != "" ] && [ "$OVERWRITE" == "true" ] ; then
    echo "Existing Hosts:"
    for VM_HOST in $EXISTING_HOSTS; do
       echo "   Deploying to $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
-         scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         echo scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         echo ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
       else
          scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
       fi
    done
 fi
