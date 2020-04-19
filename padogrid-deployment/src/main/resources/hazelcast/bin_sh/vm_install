@@ -210,7 +210,7 @@ echo ""
 REMOTE_VM_KEY=""
 if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
    PRIVATE_KEY_FILE_NAME=$(basename $VM_PRIVATE_KEY_FILE)
-   REMOTE_VM_KEY=$VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME
+   REMOTE_VM_KEY="-i $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME"
 fi
 
 #
@@ -233,11 +233,13 @@ function installProduct
          exit 1
       fi
 
-      echo "$PRODUCT installation"
-
       local __PRODUCT_DIST_FILE_NAME=$(basename $PRODUCT_PATH)
       local __PRODUCT_PARENT_PATH="$(dirname "$VM_PRODUCT_HOME")"
       local __PRODUCT_COMMAND="if [ -f "/tmp/$__PRODUCT_DIST_FILE_NAME" ]; then echo true; else echo false; fi"
+
+      echo "$PRODUCT installation"
+      echo "    Local Source: $PRODUCT_PATH"
+      echo "   Remote Target: $VM_PRODUCT_HOME"
 
       # Determine the first VM that has product distribution file
       BASE_VM=""
@@ -264,19 +266,21 @@ function installProduct
       fi
 
       for VM_HOST in $PRODUCT_HOME_NOT_FOUND_LIST; do
+         echo "   Installing $VM_HOST..."
          if [ "$VM_HOST" != "$BASE_VM" ]; then
-            echo "   Installing $VM_HOST..."
             # Copy from the base VM
             if [ "$SIMULATE" == "true" ]; then
-               echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no -i $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
+               echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
             else
-               ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no -i $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
+               ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
 	    fi
          fi
 	 # Install
          if [ "$SIMULATE" == "true" ]; then
+            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
             echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
          else
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
             ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
 	 fi
 
