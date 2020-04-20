@@ -56,7 +56,7 @@ For our demo, we assume the `~/padogrid/products` directory contains all install
 
 ```console
 ~/padogrid/products
-├── hazelcast-addon_0.9.1-SNAPSHOT
+├── hazelcast-addon_0.9.1
 ├── hazelcast-enterprise-3.12.6
 ├── jdk1.8.0_212
 └── workspaces
@@ -65,7 +65,7 @@ For our demo, we assume the `~/padogrid/products` directory contains all install
 ## 3. Create Workspaces Environment
 
 ```console
-~/padogrid/products/padogrid_0.9.1-SNAPSHOT/bin_sh/create_root
+~/padogrid/products/padogrid_0.9.1/bin_sh/create_root
 
 Please answer the prompts that appear below. If you are not able to complete
 the prompts at this time then use the '-quiet' option to bypass the prompts.

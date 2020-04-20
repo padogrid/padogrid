@@ -72,8 +72,8 @@ Enter VM Geode home path.
 [/home/dpark/Work/linux/apache-geode-1.11.0]:
 /home/dpark/padogrid/products/apache-geode-1.11.0
 Enter VM padogrid home path.
-[/c/Users/dpark/Work/git/padogrid/tmp/padogrid_0.9.1-SNAPSHOT]:
-/home/dpark/padogrid/products/padogrid_0.9.1-SNAPSHOT
+[/c/Users/dpark/Work/git/padogrid/tmp/padogrid_0.9.1]:
+/home/dpark/padogrid/products/padogrid_0.9.1
 Enter VM workspaces path.
 [/home/dpark/Work/padogrid/workspaces/rwe-wsl]:
 /home/dpark/padogrid/workspaces/rwe
@@ -96,7 +96,7 @@ You have entered the following.
                        VM_ENABLED: true
                      VM_JAVA_HOME: /home/dpark/padogrid/products/jdk1.8.0_212
                     VM_GEODE_HOME: /home/dpark/padogrid/products/apache-geode-1.11.0
-              VM_GEODE_ADDON_HOME: /home/dpark/padogrid/products/padogrid_0.9.1-SNAPSHOT
+              VM_GEODE_ADDON_HOME: /home/dpark/padogrid/products/padogrid_0.9.1
    VM_GEODE_ADDON_WORKSPACES_HOME: /home/dpark/padogrid/workspaces/rwe
          VM_GEODE_ADDON_WORKSPACE: /home/dpark/padogrid/workspaces/rwe/ws-vm
                          VM_HOSTS: ubuntu1,ubuntu2,ubuntu3
@@ -120,7 +120,7 @@ create_workspace -quiet \
 -vm ubuntu1,ubuntu2,ubuntu3 \
 -vm-java /home/dpark/padogrid/products/jdk1.8.0_212 \
 -vm-geode /home/dpark/padogrid/products/apache-geode-1.11.0 \
--vm-addon /home/dpark/padogrid/products/padogrid_0.9.1-SNAPSHOT \
+-vm-addon /home/dpark/padogrid/products/padogrid_0.9.1 \
 -vm-workspaces /home/dpark/padogrid/workspaces/rwe \
 -vm-user dpark
 ```
@@ -167,7 +167,7 @@ Environment:
          VM_PRIVATE_KEY_FILE=
                 VM_JAVA_HOME=/home/dpark/padogrid/products/jdk1.8.0_212
            VM_GEODE_HOME=/home/dpark/padogrid/products/apache-geode-1.11.0
-     VM_GEODE_ADDON_HOME=/home/dpark/padogrid/products/padogrid_0.9.1-SNAPSHOT
+     VM_GEODE_ADDON_HOME=/home/dpark/padogrid/products/padogrid_0.9.1
 VM_GEODE_ADDON_WORKSPACE=/home/dpark/padogrid/workspaces/rwe/ws-vm
 ------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------

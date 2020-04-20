@@ -14,7 +14,7 @@ Untar the distribution on anywhere in the VM file system. For our example, we'll
 
 ```console
 mkdir -p ~/padogrid/products
-tar -C ~/padogrid/products -xzf padogrid_0.9.1-SNAPSHOT.tar.gz
+tar -C ~/padogrid/products -xzf padogrid_0.9.1.tar.gz
 tar -C ~/padogrid/products -xzf apache-geode-1.11.0.tgz
 tar -C ~/padogrid/products -xzf jdk-8u212-linux-x64.tar.gz
 ```
@@ -28,7 +28,7 @@ tree -L 2 ~/padogrid
 ├── foo-pk.pem
 └── products
     ├── apache-geode-1.11.0
-    ├── padogrid_0.9.1-SNAPSHOT
+    ├── padogrid_0.9.1
     └── jdk1.8.0_212
 ```
 
@@ -39,7 +39,7 @@ Execute the following interactive command and provide values for all prompts. Le
 :exclamation: Note the `-vm` option which enables the default cluster to run on VMs.
 
 ```console
-~/padogrid/products/padogrid_0.9.1-SNAPSHOT/bin_sh/init_geode_addon -path ~/padogrid/workspaces/myrwe -workspace ws-vm -cluster vm-cluster -vm
+~/padogrid/products/padogrid_0.9.1/bin_sh/init_geode_addon -path ~/padogrid/workspaces/myrwe -workspace ws-vm -cluster vm-cluster -vm
 ```
 
 ## Source in `initenv.sh`

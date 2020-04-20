@@ -68,15 +68,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```console
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.1-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.1.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.1-SNAPSHOT
+tree -L 1 padogrid_0.9.1
 ```
 
 **Output:**
 
 ```console
-padogrid_0.9.1-SNAPSHOT
+padogrid_0.9.1
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -94,7 +94,7 @@ padogrid_0.9.1-SNAPSHOT
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```console
-~/Padogrid/products/padogrid_0.9.1-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.1/bin_sh/create_rwe
 ```
 
 ## Data Grid Products

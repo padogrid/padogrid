@@ -8,8 +8,8 @@ To follow instructions in this article, you must first install `PADOGRID` and cr
 
 ```console
 mkdir -p ~/padogrid/workspaces/myrwe
-tar -C ~/padogrid/products/ -xzf padogrid_0.9.1-SNAPSHOT
-~/padogrid/products/padogrid_0.9.1-SNAPSHOT/bin_sh/create_workspace -workspace ~/padogrid/workspaces/myrwe/ws-gke
+tar -C ~/padogrid/products/ -xzf padogrid_0.9.1
+~/padogrid/products/padogrid_0.9.1/bin_sh/create_workspace -workspace ~/padogrid/workspaces/myrwe/ws-gke
 . ~/padogrid/workspaces/myrwe/ws-gke/initenv.sh
 ```
 
@@ -23,10 +23,10 @@ echo $PADOGRID_WORKSPACE
 :exclamation: If you have built PadoGrid from Windows and the commands fail due to the Windows line break issue, then you must convert the next line characters using the `dos2linux` command. Make sure to convert all files including the hidden files as follows:
 
 ```
-dos2unix ~/Hazelcast/padogrid_0.9.1-SNAPSHOT/hazelcast/bin_sh/*
-dos2unix ~/Hazelcast/padogrid_0.9.1-SNAPSHOT/hazelcast/bin_sh/.*sh
-dos2unix ~/Hazelcast/padogrid_0.9.1-SNAPSHOT/apps/k8s/kustom/bin_sh/*
-dos2unix ~/Hazelcast/padogrid_0.9.1-SNAPSHOT/apps/k8s/kustom/bin_sh/.*sh
+dos2unix ~/Hazelcast/padogrid_0.9.1/hazelcast/bin_sh/*
+dos2unix ~/Hazelcast/padogrid_0.9.1/hazelcast/bin_sh/.*sh
+dos2unix ~/Hazelcast/padogrid_0.9.1/apps/k8s/kustom/bin_sh/*
+dos2unix ~/Hazelcast/padogrid_0.9.1/apps/k8s/kustom/bin_sh/.*sh
 ```
 
 ## Required Software List
