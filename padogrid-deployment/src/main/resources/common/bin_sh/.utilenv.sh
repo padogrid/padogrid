@@ -1759,28 +1759,24 @@ function getWorkspaceInfoList
 
    local CLUSTER_TYPE=$(grep "CLUSTER_TYPE" $WORKSPACE_PATH/.addonenv.sh)
    CLUSTER_TYPE=$(echo "$CLUSTER_TYPE" | sed 's/^.*=//')
-   local __PRODUCT_VERSION
+   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh")
    local PRODUCT_VERSION
-
    if [ "$CLUSTER_TYPE" == "jet" ]; then
-      __PRODUCT_VERSION=$(grep "export JET_HOME=" "$WORKSPACE_PATH/setenv.sh")
-      PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*jet-enterprise-//' -e 's/"//')
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//' -e 's/"//')
       if [ "$PRODUCT_VERSION" == "" ]; then
-         PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*jet-//' -e 's/"//')
+         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-//' -e 's/"//')
       fi
    elif [ "$CLUSTER_TYPE" == "imdg" ]; then
-      __PRODUCT_VERSION=$(grep "export HAZELCAST_HOME=" "$WORKSPACE_PATH/setenv.sh")
-      PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*hazelcast-enterprise-//' -e 's/"//')
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//' -e 's/"//')
       if [ "$PRODUCT_VERSION" == "" ]; then
-         PRODUCT_VERSION=$(echo "$__PRODUCT_VERSION" | sed -e 's/^.*hazelcast-//' -e 's/"//')
+         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-//' -e 's/"//')
       fi
    else
-      PRODUCT_VERSION=$(grep "export GEODE_HOME=" "$WORKSPACE_PATH/setenv.sh")
-      if [[ "$PRODUCT_VERSION" == *"gemfire"* ]]; then
-         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
+      if [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
+         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
          CLUSTER_TYPE="gemfire"
       else
-         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/^.*apache-geode-//' -e 's/"//')
+         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*apache-geode-//' -e 's/"//')
          CLUSTER_TYPE="geode"
       fi
    fi
