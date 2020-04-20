@@ -205,7 +205,9 @@ do
    elif [ "$PREV" == "-user" ]; then
       USER=$i
    elif [ "$PREV" == "-vm" ]; then
-      VM_HOSTS_ARG=$i
+      if [[ "$i" != "-"* ]]; then
+         VM_HOSTS_ARG=$i
+      fi
    elif [ "$PREV" == "-vm-java" ]; then
       VM_JAVA_HOME_ARG=$i
    elif [ "$PREV" == "-vm-product" ]; then

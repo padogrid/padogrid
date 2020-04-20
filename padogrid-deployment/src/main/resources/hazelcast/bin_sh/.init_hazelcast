@@ -445,9 +445,7 @@ echo "PRODUCT_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
 if [ "$JAVA_HOME" != "" ]; then
    echo "JAVA_HOME_ARG=\"$JAVA_HOME_ARG\"" >> $TMP_ENV_FILE
 fi
-if [ "$VM_ENABLED" == "true" ]; then
-   echo "VM_SPECIFIED=\"$VM_SPECIFIED\"" >> $TMP_ENV_FILE
-fi
+echo "VM_SPECIFIED=\"$VM_ENABLED\"" >> $TMP_ENV_FILE
 
 # Create the default workspace.
 $SCRIPT_DIR/create_workspace -env $TMP_ENV_FILE -quiet
@@ -482,8 +480,14 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    else
       echo "   #export JAVA_HOME=" >> $WORKSPACES_HOME/setenv.sh
    fi
-   echo "   export HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export JET_HOME=\"$JET_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+      echo "   export JET_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   else
+      echo "   export HAZELCAST_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+      echo "   export JET_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+   fi
    PARENT_DIR="$(dirname "$BASE_DIR")"
    echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh

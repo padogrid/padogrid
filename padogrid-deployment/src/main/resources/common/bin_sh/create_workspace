@@ -45,7 +45,7 @@ SYNOPSIS
                [-cluster default_cluster]
                [-java local_JAVA_HOME]
                [-product local_product_home_path]
-               [-vm comma_separated_host_names]
+               [-vm [comma_separated_host_names]]
                [-vm-java vm_JAVA_HOME]
                [-vm-product vm_product_home_path]
                [-vm-padogrid vm_padogrid_path]
@@ -90,11 +90,14 @@ cat <<EOF
    -product local_product_home_path
               Local Geode, GemFire, Hazelcast, or Jet home path.
 
-   -vm comma_separated_host_names
+   -vm [comma_separated_host_names]
               A comma separated list of VM host names (or IP addresses). If the list contains
               spaces then enclosed it in quotes. Note that this option enables VMs. If it is
               not specified then all other '-vm-' options are still recorded but the workspace
-              will not be VM enabled and all clusters will be locally created instead.
+              will not be VM enabled and all clusters will be locally created instead. If this
+              option is specified alone without a list of host names, then the workspace is
+              still enabled. The VM hosts and be modified or entered in the workspace 'setenv.sh'
+              file after the workspace has been created.
    
    -vm-java vm_JAVA_HOME
               VM JAVA_HOME path. If the VMs do not have Java installed in this path, then
@@ -210,9 +213,7 @@ if [ "$QUIET" == "true" ]; then
    VM_PRODUCT_HOME="$VM_PRODUCT_HOME_ARG"
    VM_PADOGRID_HOME=$VM_PADOGRID_HOME_ARG
    VM_PADOGRID_WORKSPACES_HOME=$VM_PADOGRID_WORKSPACES_HOME_ARG
-   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
-      VM_HOSTS=$VM_HOSTS_ARG
-   fi
+   VM_HOSTS="$VM_HOSTS_ARG"
    # Remove all spaces from VM_HOSTS
    VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/ //g")
    VM_USER=$VM_USER_ARG
@@ -255,15 +256,16 @@ else
    echo ""
    __JAVA_HOME=$JAVA_HOME_ARG
    __PRODUCT_HOME=$PRODUCT_HOME_ARG
+   if [ "$__PRODUCT_HOME" == "" ]; then
+      __PRODUCT_HOME="$PRODUCT_HOME"
+   fi
    __WORKSPACE=$NAME_ARG
    VM_JAVA_HOME="$VM_JAVA_HOME_ARG"
    VM_PRODUCT_HOME="$VM_PRODUCT_HOME_ARG"
    VM_PADOGRID_HOME="$VM_PADOGRID_HOME_ARG"
    VM_PADOGRID_WORKSPACES_HOME="$VM_WORKSPACES_HOME_ARG"
    VM_PADOGRID_WORKSPACE="VM_WORKSPACE_ARG"
-   if [ "$VM_HOSTS_ARG" != "" ]; then
-      VM_HOSTS="$VM_HOSTS_ARG"
-   fi
+   VM_HOSTS="$VM_HOSTS_ARG"
    VM_USER=""
    VM_PRIVATE_KEY_FILE=""
    REDO=true
@@ -563,17 +565,14 @@ if [ "$JAVA_HOME" != "" ]; then
 else
    echo "   #export JAVA_HOME=" >> $WORKSPACE_DIR/setenv.sh
 fi
+echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 
 if [ "$PRODUCT" == "geode" ]; then
-   if [ "$GEODE_HOME" != "" ]; then
-      echo "   export GEODE_HOME=\"$GEODE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-   else
-      echo "   #export GEODE_HOME=" >> $WORKSPACE_DIR/setenv.sh
-   fi
+   echo "   export GEODE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$CLUSTER_TYPE" == "jet" ]; then
+      echo "   export JET_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       if [ "$JET_HOME" != "" ]; then
-         echo "   export JET_HOME=\"$JET_HOME\"" >> $WORKSPACE_DIR/setenv.sh
          if [ -d "$JET_HOME/hazelcast-jet-management-center" ]; then
             echo "   export HAZELCAST_MC_HOME=\"\$JET_HOME/hazelcast-jet-management-center\"" >> $WORKSPACE_DIR/setenv.sh
          else
@@ -584,8 +583,8 @@ else
          echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       fi
    else
+      echo "   export HAZELCAST_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       if [ "$HAZELCAST_HOME" != "" ]; then
-         echo "   export HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $WORKSPACE_DIR/setenv.sh
          if [ -d "$HAZELCAST_HOME/management-center" ]; then
             echo "   export HAZELCAST_MC_HOME=\"\$HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
          else
@@ -623,14 +622,24 @@ fi
 if [ "$VM_ENABLED" == "true" ]; then
    echo "# VM JDK home directory path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_JAVA_HOME=\"$VM_JAVA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM product home directory path." >> $WORKSPACE_DIR/setenv.sh
+   echo "VM_PRODUCT_HOME=\"$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    if [ "$PRODUCT" == "geode" ]; then
       echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
-      echo "VM_GEODE_HOME=\"$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_GEODE_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
-      echo "VM_HAZELCAST_HOME=\"$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         echo "VM_HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      else
+         echo "VM_HAZELCAST_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      fi
       echo "# VM Jet home directory path." >> $WORKSPACE_DIR/setenv.sh
-      echo "VM_JET_HOME=\"$VM_JET_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         echo "VM_JET_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      else
+         echo "VM_JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      fi
    fi
    echo "# VM hosts may have the padogrid home path different from the local path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_HOME=\"$VM_PADOGRID_HOME\"" >> $WORKSPACE_DIR/setenv.sh
@@ -744,7 +753,7 @@ export PADOGRID_WORKSPACE=$WORKSPACE_DIR
 export CLUSTER
 $SCRIPT_DIR/switch_workspace
 if [ "$VM_ENABLED" == "true" ]; then
-   $PARENT_DIR/$PRODUCT/bin_sh/create_cluster -vm -cluster $CLUSTER
+   $PARENT_DIR/$PRODUCT/bin_sh/create_cluster -vm $VM_HOSTS -cluster $CLUSTER
 else
    $PARENT_DIR/$PRODUCT/bin_sh/create_cluster -cluster $CLUSTER
 fi

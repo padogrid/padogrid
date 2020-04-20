@@ -42,7 +42,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name] [-pod pod_name]
-               [-vm comma_separated_hosts]
+               [-vm [comma_separated_hosts]]
                [-mc management_center_host]
                [-port first_port_number] [-?]
 
@@ -61,7 +61,7 @@ OPTIONS
              Pod name. The 'local' pod is the local machine.
              Default: local
 
-   -vm comma_separated_hosts
+   -vm [comma_separated_hosts]
              A list of VM hosts or addresses separated by comma. If the list
              contains spaces then enclosed it in quotes. If this option is not
              specified, then the host list defined by VM_HOSTS in the workspace
@@ -343,9 +343,7 @@ if [ "$VM_USER" == "" ]; then
 fi
 VM_KEY_FILE="/your/private/keyfile.pem"
 if [ "$VM_ENABLED" == "true" ]; then
-   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
-      VM_HOSTS=$VM_HOSTS_ARG
-   fi
+   VM_HOSTS="$VM_HOSTS_ARG"
    if [ "$MC" == "" ]; then
       # Extract the first host from the VM host list
       VM_MC_HOSTS=${VM_HOSTS%%,*}
