@@ -225,6 +225,7 @@ ABS_PATH="$PADOGRID_WORKSPACE"
 INITENV_COMMAND="if [ -f "$VM_PADOGRID_WORKSPACES_HOME/initenv.sh" ]; then echo true; else echo false; fi"
 ADDONENV_COMMAND="if [ -f "$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh" ]; then echo true; else echo false; fi"
 SETENV_COMMAND="if [ -f "$VM_PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then echo true; else echo false; fi"
+GEODEENV_COMMAND="if [ -f "$VM_PADOGRID_WORKSPACES_HOME/.geodeenv.sh" ]; then echo true; else echo false; fi"
 
 # Prepare workspace setenv.sh file for VMs
 sed -e 's|export JAVA_HOME=.*$|export JAVA_HOME='\"${VM_JAVA_HOME}\"'|' \
@@ -278,6 +279,7 @@ for VM_HOST in $__VM_HOSTS; do
    INITENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$INITENV_COMMAND")
    ADDONENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$ADDONENV_COMMAND")
    SETENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$SETENV_COMMAND")
+   GEODEENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$GEODEENV_COMMAND")
 
    if [[ "$INITENV_EXISTS" == *"false" ]]; then
       scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
@@ -296,6 +298,13 @@ for VM_HOST in $__VM_HOSTS; do
          echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       else
          scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
+      fi
+   fi
+   if [ "$GEODEENV_EXISTS" != "true" ] && [ -f "$PADOGRID_WORKSPACES_HOME/.geodeenv.sh" ]; then
+      if [ "$SIMULATE" == "true" ]; then
+         echo scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/.geodeenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.geodeenv.sh
+      else
+         scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/.geodeenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.geodeenv.sh
       fi
    fi
 done
