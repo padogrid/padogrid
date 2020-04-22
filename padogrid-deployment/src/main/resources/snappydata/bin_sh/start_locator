@@ -1,0 +1,486 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -simulate -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start a locator in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num locator_number] [-simulate] [-?]
+
+DESCRIPTION
+   Starts a locator in the specified cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -num locator_number
+             Locator number 1-9.
+
+   -simulate
+             If specified then it only displays the locator information
+             and does not run the locator.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $LOCATOR_NUM
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*locator*" $EXECUTABLE
+   exit
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+# Set -simulate if specified
+if [ "$SIMULATE" == "true" ]; then
+   SIMULATE_OPT="-simulate"
+else
+   SIMULATE_OPT=""
+fi
+# Set -create_script if specified
+if [ "$CREATE_SCRIPT" == "true" ]; then
+   CREATE_SCRIPT_OPT="-create-script"
+else
+   CREATE_SCRIPT_OPT=""
+fi
+
+#
+# VM cluster
+#
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_LOCATOR_HOSTS=`getClusterProperty "vm.locator.hosts"`
+      if [ "$VM_LOCATOR_HOSTS" == "" ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "    ERROR: VM locator hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
+         echo >&2 "           $ETC_DIR/cluster.properties"
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      #VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      VM_KEY=$VM_PRIVATE_KEY_FILE
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+
+      # Determine the host
+      __LOCATOR_NUMBER=0
+      __FOUND="false"
+      
+      for VM_HOST in $__VM_HOSTS; do
+         let __LOCATOR_NUMBER=__LOCATOR_NUMBER+1
+         if [ $__LOCATOR_NUMBER -eq $LOCATOR_NUM_NO_LEADING_ZERO ]; then
+            __FOUND="true"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+            break;
+         fi
+      done
+      FIRST_NUMBER=1
+      LAST_NUMBER=$__LOCATOR_NUMBER
+      if [ "$__FOUND" == "false" ]; then
+         echo >&2 "ERROR: Invalid locator number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+
+# For pod clusters. If non-pod, the following variables are ignored.
+PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+
+LOCATOR_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
+LOCATOR=`getLocatorName $LOCATOR_NUMBER`
+LOCATOR_DIR=$RUN_DIR/$LOCATOR
+
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ ! -d $LOCATOR_DIR ]; then
+   if [ "$REMOTE_SPECIFIED" == "true" ]; then
+      $SCRIPT_DIR/add_locator -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "  Locator: $LOCATOR"
+      echo "   Status: This locator has not been configured. Please run the add_locator command to configure"
+      echo "           new locators."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# If the locator is already running, then exit.
+if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
+   PID=`getLocatorPid $LOCATOR $WORKSPACE`
+   if [ -n "${PID}" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "  Locator: $LOCATOR"
+      echo "   Status: This locator is already running [Locator: $LOCATOR, PID=$PID]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# Locator port number
+LOCATOR_PROPERTIES=""
+LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
+let LOCATOR_PORT=LOCATOR_START_PORT+LOCATOR_NUMBER-1
+let LOCATOR_END_PORT=LOCATOR_START_PORT+MAX_LOCATOR_COUNT-1
+LOCATOR_TCP_LIST=""
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+
+if [ "$VM_ENABLED" == "true" ]; then
+   HOST_NAME=$REMOTE
+   BIND_ADDRESS=`getClusterProperty "vm.${HOST_NAME}.bindAddress"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${HOST_NAME}.hostnameForClients"`
+   VM_LOCATOR_HOSTS=`getClusterProperty "vm.locator.hosts"`
+   if [ "$VM_LOCATOR_HOSTS" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: VM hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
+      echo >&2 "           $ETC_DIR/cluster.properties"
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+   # Replace , with space
+   __VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+   for VM_HOST in $__VM_LOCATOR_HOSTS; do
+      if [ "$LOCATOR_TCP_LIST" == "" ]; then
+         LOCATOR_TCP_LIST="$VM_HOST:$LOCATOR_START_PORT"
+      else
+         LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$VM_HOST:$LOCATOR_START_PORT"
+      fi
+   done
+elif [ "$POD" == "local" ]; then
+   HOST_NAME=`hostname`
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+   LOCATOR_PREFIX=`getLocatorPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${LOCATOR_PREFIX}*; do
+      if [ -d "$i" ]; then
+         __LOCATOR=$i
+         __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
+	 __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
+	 let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
+         if [ "$LOCATOR_TCP_LIST" == "" ]; then
+            LOCATOR_TCP_LIST="$BIND_ADDRESS:$__LOCATOR_PORT"
+         else
+            LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$BIND_ADDRESS:$__LOCATOR_PORT"
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+else
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   LOCATOR_COUNT=`getLocatorCount`
+   NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   LOCATOR_TCP_LIST="$NODE_LOCAL:$LOCATOR_START_PORT"
+   BIND_ADDRESS=$NODE_LOCAL
+   HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+fi
+
+#LOCATOR_PROPERTIES="-Dpadogrid.group=$CLUSTER \
+#-Dpadogrid.tcp.port=$LOCATOR_PORT \
+#-Dpadogrid.tcp.locators=$LOCATOR_TCP_LIST "
+
+# Debug parameters.
+DEBUG_ENABLED=`getClusterProperty "locator.debug.enabled" $DEFAULT_LOCATOR_DEBUG_ENABLED`
+DEBUG=""
+if [ "$DEBUG_ENABLED" == "true" ]; then
+   DEBUG_START_PORT=`getClusterProperty "locator.debug.startPort" $DEFAULT_LOCATOR_DEBUG_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let DEBUG_PORT=DEBUG_LOCATOR_START_PORT+LOCATOR_NUMBER-1
+   else
+      DEBUG_PORT=$DEBUG_START_PORT
+   fi
+   DEBUG="-J-Xdebug -J-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT"
+else
+   DEBUG_PORT="Disabled"
+   DEBUG=""
+fi
+
+# JMX parameters
+LOCATOR_JMX_ENABLED=`getClusterProperty "locator.jmx.enabled" $DEFAULT_LOCATOR_JMX_ENABLED`
+JMX_PARAMETERS=""
+if [ "$LOCATOR_JMX_ENABLED" == "true" ]; then
+   LOCATOR_JMX_START_PORT=`getClusterProperty "locator.jmx.startPort" $DEFAULT_LOCATOR_JMX_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let JMX_PORT=LOCATOR_JMX_START_PORT+LOCATOR_NUMBER-1
+   else
+      JMX_PORT=$LOCATOR_JMX_START_PORT
+   fi
+   JMX_PARAMETERS="-J-Dcom.sun.management.jmxremote.port=${JMX_PORT} -J-Dcom.sun.management.jmxremote.ssl=false -J-Dcom.sun.management.jmxremote.authenticate=false"
+else
+   JMX_PORT="Disabled"
+   JMX_PARAMETERS=""
+fi
+
+# Set LOG_FILE in the log directory.
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   __LOG_DIR="$(cygpath -wp "$LOG_DIR")"
+else
+   __LOG_DIR=$LOG_DIR
+fi
+STATS_FILE_NAME=${LOCATOR}.gfs
+STATS_FILE=$STATS_DIR/${STATS_FILE_NAME}
+export LOG_FILE_NAME=${LOCATOR}.log
+export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   CONFIG_FILE="$(cygpath -wp "$CONFIG_FILE")"
+   CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
+fi
+
+# Set heap to the "heap.min/heap.max" values found in the $ETC_DIR/cluster.properties file.
+MIN_HEAP_SIZE=`getClusterProperty "locator.heap.min" $DEFAULT_LOCATOR_MIN_HEAP_SIZE`
+MAX_HEAP_SIZE=`getClusterProperty "locator.heap.max" $DEFAULT_LOCATOR_MAX_HEAP_SIZE`
+
+# Set JAVA_OPTS.
+JAVA_OPTS="$JAVA_OPTS $LOCATOR_PROPERTIES $LOG_PROPERTIES $SHUTDOWN_HOOK_PROPERTIES $JMX_PARAMETERS"
+JAVA_OPTS="$JAVA_OPTS -J-Xms${MIN_HEAP_SIZE} -J-Xmx${MAX_HEAP_SIZE}"
+JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
+
+# Set Pulse
+JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
+JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+if [ "$POD" == "local" ]; then
+   let JMX_MANAGER_HTTP_PORT=JMX_MANAGER_HTTP_START_PORT+LOCATOR_NUMBER-1
+   let JMX_MANAGER_PORT=JMX_MANAGER_START_PORT+LOCATOR_NUMBER-1
+else
+   JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
+   JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
+fi
+
+# Set PROMETHEUS paths
+LOCATOR_PROMETHEUS_ENABLED=`getClusterProperty "locator.prometheus.enabled" $DEFAULT_LOCATOR_PROMETHEUS_ENABLED`
+if [ "$LOCATOR_PROMETHEUS_ENABLED" == "true" ]; then
+   LOCATOR_PROMETHEUS_START_PORT=`getClusterProperty "locator.prometheus.startPort" $DEFAULT_LOCATOR_PROMETHEUS_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let PROMETHEUS_PORT=LOCATOR_PROMETHEUS_START_PORT+LOCATOR_NUMBER-1
+   else
+      PROMETHEUS_PORT=$LOCATOR_PROMETHEUS_START_PORT
+   fi
+   PROMETHEUS_CONFIG_FILE_PATH="$ETC_DIR/prometheus.yml"
+   PROMETHEUS_JAR_PATH=`find $BASE_DIR/lib -name jmx_prometheus_javaagent*.jar`
+
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      PROMETHEUS_JAR_PATH="$(cygpath -wp "$PROMETHEUS_JAR_PATH")"
+      PROMETHEUS_CONFIG_FILE_PATH="$(cygpath -wp "$PROMETHEUS_CONFIG_FILE_PATH")"
+      # Remove the disk drive letter from the path. A workaround to a bug in the prometheus exporter.
+      PROMETHEUS_CONFIG_FILE_PATH=${PROMETHEUS_CONFIG_FILE_PATH:2}
+   fi
+   JAVA_OPTS="$JAVA_OPTS -J-javaagent:$PROMETHEUS_JAR_PATH=$PROMETHEUS_PORT:$PROMETHEUS_CONFIG_FILE_PATH"
+else
+   PROMETHEUS_PORT="Disabled"
+fi
+
+# Set GC log
+GC_LOG_ENABLED=`getClusterProperty "gc.log.enabled" $DEFAULT_GC_LOG_ENABLED`
+GC_LOG_FILE_ENABLED=`getClusterProperty "gc.log.file.enabled" $DEFAULT_GC_LOG_FILE_ENABLED`
+if [ $GC_LOG_ENABLED == "true" ]; then
+   if [ $GC_LOG_FILE_ENABLED == "true" ]; then
+      GC_LOG_FILE=$LOG_DIR/${LOCATOR}-gc.log
+      if [[ ${OS_NAME} == CYGWIN* ]]; then
+         GC_LOG_FILE="$(cygpath -wp "$GC_LOG_FILE")"
+      fi
+      JAVA_OPTS="$JAVA_OPTS -J-Xloggc:$GC_LOG_FILE -J-XX:+PrintGCDetails -J-XX:+PrintGCDateStamps"
+   fi
+fi
+
+# Start the locator
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+   LOCATOR_DIR="$(cygpath -wp "$LOCATOR_DIR")"
+fi
+export LOG_DIR=$__LOG_DIR
+
+GEMFIRE_PROPERTIES="-J-Dgemfire.jmx-manager=true \
+   -J-Dgemfire.jmx-manager-port=$JMX_MANAGER_PORT \
+   -J-Dgemfire.jmx-manager-http-port=$JMX_MANAGER_HTTP_PORT"
+JAVA_OPTS="$JAVA_OPTS $GEMFIRE_PROPERTIES"
+
+JAVA_OPTS="-J-Dpado.vm.id=${LOCATOR} \
+   -J-Dpadogrid.workspace=$WORKSPACE"
+
+# Sparkt UI port
+SPARK_UI_PORT=`getClusterProperty "spark.ui.port" $DEFAULT_SPARK_UI_PORT`
+
+SNAPPY_OPTS="-name=${LOCATOR} \
+   -locators=$LOCATOR_TCP_LIST \
+   -dir=$LOCATOR_DIR \
+   -spark.ui.port=$SPARK_UI_PORT \
+   -peer-discovery-address=$BIND_ADDRESS \
+   -peer-discovery-port=$LOCATOR_PORT \
+   -log-file=$LOG_FILE \
+   -statistic-archive-file=$STATS_FILE"
+
+if [ "$BIND_ADDRESS" != "" ]; then
+   SNAPPY_OPTS="$SNAPPY_OPTS -bind-address=$BIND_ADDRESS"
+fi
+if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
+   SNAPPY_OPTS="$SNAPPY_OPTS -hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
+fi
+
+if [ "$LOCATOR_OPTS" != "" ]; then
+   SNAPPY_OPTS=$(removeEqualToOpts "$LOCATOR_OPTS" "$SNAPPY_OPTS")
+   SNAPPY_OPTS="$SNAPPY_OPTS $LOCATOR_OPTS"
+fi
+
+POD=`getClusterProperty "pod.name" $POD`
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   exit
+elif [ "$SIMULATE" == "true" ]; then
+   PID="Simulated"
+elif [ "$CREATE_SCRIPT" == "true" ]; then
+   PID="Script"
+else
+   # LOG_FILE might not exist if a VM bundle has been deployed.
+   if  [ ! -d "$LOG_DIR" ]; then
+      mkdir -p $LOG_DIR
+   fi
+   if  [ ! -d "$STATS_DIR" ]; then
+      mkdir -p $STATS_DIR
+   fi
+   if [ "$RUN_SCRIPT" != "" ]; then
+      $RUN_SCRIPT >> $LOG_FILE &
+   else
+
+   echo snappy locator start $SNAPPY_OPTS $JAVA_OPTS
+   snappy locator start $SNAPPY_OPTS $JAVA_OPTS
+
+   PID=`getLocatorPid $LOCATOR $WORKSPACE`
+   fi
+fi
+
+# PULSE_URL
+PULSE_URL="http://$HOSTNAME_FOR_CLIENTS:$JMX_MANAGER_HTTP_PORT/pulse"
+
+# JMX_URL
+JMX_URL="service:jmx:rmi:///jndi/rmi://padomac.local:$JMX_PORT/jmxrmi"
+
+echo "----------------------------------------------------------------"
+echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+echo "         Cluster: $CLUSTER"
+if [ "$VM_SPECIFIED" == "true" ] || [ "$VM_ENABLED" == "true" ]; then
+echo "      Deployment: VM"
+else
+echo "             Pod: $POD"
+fi
+echo "         Locator: $LOCATOR"
+echo "             PID: $PID"
+echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "     WORKING_DIR: $LOCATOR_DIR"
+echo "      CONFIG_DIR: $ETC_DIR"
+echo "     CONFIG_FILE: $CONFIG_FILE"
+echo "         LOG_DIR: $LOG_DIR"
+echo "        LOG_FILE: $LOG_FILE"
+echo "    LOCATOR_PORT: $LOCATOR_PORT"
+echo "      DEBUG_PORT: $DEBUG_PORT"
+echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
+echo "        JMX_PORT: $JMX_PORT"
+echo "       PULSE_URL: $PULSE_URL"
+echo "JMX_MANAGER_PORT: $JMX_MANAGER_PORT"
+if [ "$LOCATOR_JMX_ENABLED" == "true" ]; then
+echo "         JMX_URL: $JMX_URL"
+fi
+echo "            JAVA: $JAVA"
+if [ "$RUN_SCRIPT" != "" ]; then
+echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
+fi
+echo "     SNAPPY_OPTS: $SNAPPY_OPTS"
+echo "       JAVA_OPTS: $JAVA_OPTS"
+echo "       CLASSPATH: $CLASSPATH"
+echo "----------------------------------------------------------------"
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "SNAPPY_OPTS"
+   echo "-----------"
+   printJavaOpts "$SNAPPY_OPTS"
+   echo ""
+   echo "JAVA_OPTS"
+   echo "---------"
+   printJavaOpts "$JAVA_OPTS"
+   echo ""
+   echo "CLASSPATH"
+   echo "---------"
+   printClassPath "$CLASSPATH"
+   echo ""
+   echo "Environment Variables"
+   echo "---------------------"
+   echo "LOG_FILE=$LOG_FILE"
+   echo ""
+fi
+

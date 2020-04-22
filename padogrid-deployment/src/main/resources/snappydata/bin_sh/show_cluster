@@ -1,0 +1,912 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -long -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the status of the specified cluster in the current
+                 padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-long] [-all] [-?]
+
+DESCRIPTION
+   Displays cluster status.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -long
+             Display detailed information.
+
+   -all
+              Display all clusters
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+# Displays short status of a VM cluster.
+# @required VM_LOCATOR_HOSTS A space separated list of VM locator hosts (addresses)
+# @required VM_LEADER_HOSTS  A space separated list of VM leader hosts (addresses)
+# @required VM_HOSTS         A space separated list of VM member hosts (addresses)
+function displayVmClusterShort()
+{
+   # Locators
+   LOCATOR_COUNT=0
+   RUNNING_LOCATOR_COUNT=0
+   for VM_HOST in ${VM_LOCATOR_HOSTS}; do
+      let LOCATOR_COUNT=LOCATOR_COUNT+1
+      LOCATOR=`getVmLocatorName $VM_HOST`
+      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE`
+      if [ "$pid" != "" ]; then
+          let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
+      fi
+   done
+
+   # Leaders
+   LEADER_COUNT=0
+   RUNNING_LEADER_COUNT=0
+   for VM_HOST in ${VM_LEADER_HOSTS}; do
+      let LEADER_COUNT=LEADER_COUNT+1
+      LEADER=`getVmLeaderName $VM_HOST`
+      pid=`getVmLeaderPid $VM_HOST $LEADER $WORKSPACE`
+      if [ "$pid" != "" ]; then
+          let RUNNING_LEADER_COUNT=RUNNING_LEADER_COUNT+1
+      fi
+   done
+
+   # Members
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   for VM_HOST in ${VM_HOSTS}; do
+      let MEMBER_COUNT=MEMBER_COUNT+1
+      MEMBER=`getVmMemberName $VM_HOST`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      if [ "$pid" != "" ]; then
+          let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+      fi
+   done
+   
+   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "         CLUSTER: $CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "      Deployment: VM"
+   if [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
+   echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   else
+   echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   fi
+   if [ $RUNNING_LEADER_COUNT -eq $LEADER_COUNT ]; then
+   echo -e " Leaders Running: ${CLightGreen}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   else
+   echo -e " Leaders Running: ${CLightRed}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   fi
+   if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   echo "         Version: $PRODUCT_VERSION"
+   echo ""
+} # displayVmClusterShort
+
+# Displays long status of a VM cluster.
+function displayVmClusterLong()
+{
+   SNAPPYDATA_CONFIG_FILE=$ETC_DIR/cache.xml
+   LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
+   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
+   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+   JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
+   JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+   DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
+   JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
+   JMX_START_PORT=`getClusterProperty "jmx.startPort" $DEFAULT_JMX_START_PORT`
+   PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
+   PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
+
+   if [ "$MEMBER_HTTP_ENABLED" != "true" ]; then
+      MEMBER_HTTP_PORT="Disabled"
+      MEMBER_HTTP_URL="Disabled"
+   fi
+   if [ "$DEBUG_ENABLED" != "true" ]; then
+      DEBUG_PORT="Disabled"
+   fi
+   if [ "$JMX_ENABLED" != "true" ]; then
+      JMX_PORT="Disabled"
+      JMX_URL="Disabled"
+   fi
+   if [ "$PROMETHEUS_ENABLED" != "true" ]; then
+      PROMETHEUS_PORT="Disabled"
+   fi
+ 
+   OS_ENV=`getOsEnv $NODE`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   pushd $RUN_DIR > /dev/null 2>&1
+   MEMBER_PREFIX=`getMemberPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+
+   echo "----------------------------------------------------------------"
+   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+   if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
+      echo "         CLUSTER: $CLUSTER (default)"
+   else
+      echo "         CLUSTER: $CLUSTER"
+   fi
+   echo "            PRODUCT: $PRODUCT"
+   echo "      Deployment: VM"
+   echo ""
+
+   # Locators
+
+   LOCATOR_COUNT=0
+   RUNNING_LOCATOR_COUNT=0
+   DOWN_LOCATOR_COUNT=0
+   for VM_HOST in ${VM_LOCATOR_HOSTS}; do
+      LOCATOR=`getVmLocatorName $VM_HOST`
+      let LOCATOR_COUNT=LOCATOR_COUNT+1
+      LOCATOR_DIR=$RUN_DIR/$LOCATOR
+
+      # Increment port numbers for host OS
+      LOCATOR_HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
+      LOCATOR_PORT=$LOCATOR_START_PORT
+      if [ "$DEBUG_ENABLED" == "true" ]; then
+         DEBUG_PORT=$DEBUG_START_PORT
+      fi
+      if [ "$JMX_ENABLED" == "true" ]; then
+         JMX_PORT=$JMX_START_PORT
+         JMX_URL="service:jmx:rmi:///jndi/rmi://${LOCATOR_HOSTNAME_FOR_CLIENTS}:$JMX_PORT/jmxrmi"
+      fi
+      if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+         PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+      fi
+      JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
+      JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
+
+      PULSE_URL="http://${LOCATOR_HOSTNAME_FOR_CLIENTS}:$JMX_MANAGER_HTTP_PORT/pulse"
+
+      LOG_FILE=$LOG_DIR/${LOCATOR}.log
+      
+      if [ $LOCATOR_COUNT -lt 10 ]; then
+         NUM="0"$LOCATOR_COUNT
+      else
+         NUM=$LOCATOR_COUNT
+      fi
+      echo "$NUM        Locator: $LOCATOR"
+
+      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE`
+      if [ -z $pid ]; then
+         let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
+         echo -e "          STATE: ${CLightRed}Down${CNone}"
+         echo "             PID: N/A"
+      else
+         let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
+         echo -e "          STATE: ${CLightGreen}Running${CNone}"
+         echo "             PID: $pid"
+      fi
+
+      echo "    LOCATOR_PORT: $LOCATOR_PORT"
+#      echo "      DEBUG_PORT: $DEBUG_PORT"
+#      echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
+      echo "       PULSE_URL: $PULSE_URL"
+      echo "         JMX_URL: $JMX_URL"
+      echo "     Working Dir: $LOCATOR_DIR"
+      echo "        LOG_FILE: $LOG_FILE"
+      echo ""
+   done
+
+   # Display leaders
+   displayVmMember "Leader" "$VM_LEADER_HOSTS"
+   LEADER_COUNT=$MEMBER_COUNT
+   RUNNING_LEADER_COUNT=$RUNNING_MEMBER_COUNT
+   DOWN_LEADER_COUNT=$DOWN_MEMBER_COUNT
+
+   # Display Members
+   displayVmMember "Member" "$VM_HOSTS"
+
+   # Display Summary
+   echo "         CLUSTER: $CLUSTER"
+   if [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
+   echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   else
+   echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   fi
+   if [ $RUNNING_LEADER_COUNT -eq $LEADER_COUNT ]; then
+   echo -e " Leaders Running: ${CLightGreen}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   else
+   echo -e " Leaders Running: ${CLightRed}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   fi
+   if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   echo "         Version: $PRODUCT_VERSION"
+} # displayVmClusterLong
+
+# Displays short status of a local/pod cluster.
+function displayClusterShort()
+{
+   __HOSTNAME=`hostname`
+   OS_ENV=`getOsEnv $__HOSTNAME`
+   NODE=`getOsNodeName`
+   POD=`getClusterProperty "pod.name" "local"`
+   POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
+   __NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
+   LOCATOR_PREFIX=`getLocatorPrefix`
+   LOCATOR_COUNT=`getLocatorCount`
+   NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
+   LEADER_PREFIX=`getLeaderPrefix`
+   LEADER_COUNT=`getLeaderCount`
+   MEMBER_PREFIX=`getMemberPrefix`
+   MEMBER_COUNT=`getMemberCount`
+
+   RUNNING_LOCATOR_COUNT=-1
+   RUNNING_LEADER_COUNT=-1
+   RUNNING_MEMBER_COUNT=-1
+   if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
+      ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
+      ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
+      pushd $RUN_DIR > /dev/null 2>&1
+      RUNNING_LOCATOR_COUNT=0
+      RUNNING_LEADER_COUNT=0
+      RUNNING_MEMBER_COUNT=0
+      if [ "$OS_ENV" == "gg" ] && [ "$POD" != "local" ]; then
+         REMOTE_SPECIFIED=false
+      else
+         REMOTE_SPECIFIED=true
+      fi
+      # Locators
+      for i in ${LOCATOR_PREFIX}*; do
+         if [ -d "$i" ]; then
+            LOCATOR=$i
+            LOCATOR_NUM=${LOCATOR##$LOCATOR_PREFIX}
+            if [ "$OS_ENV" == "hh" ]; then
+               NODE_LOCAL=`getOsNodeName`
+            else
+               NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+               NODE_LOCAL="${NODE_NAME_PRIMARY}.local"
+            fi
+            pid=`getLocatorPid $LOCATOR $WORKSPACE`
+            if [ "$pid" != "" ]; then
+                let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
+            fi
+         fi
+      done
+      # Leaders
+      for i in ${LEADER_PREFIX}*; do
+         if [ -d "$i" ]; then
+            LEADER=$i
+            LEADER_NUM=${LEADER##$LEADER_PREFIX}
+            if [ "$OS_ENV" == "hh" ]; then
+               NODE_LOCAL=`getOsNodeName`
+            else
+               NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+               NODE_LOCAL="${NODE_NAME_PRIMARY}.local"
+            fi
+            pid=`getLocatorPid $LEADER $WORKSPACE`
+            if [ "$pid" != "" ]; then
+                let RUNNING_LEADER_COUNT=RUNNING_LEADER_COUNT+1
+            fi
+         fi
+      done
+      # Members
+      for i in ${MEMBER_PREFIX}*; do
+         if [ -d "$i" ]; then
+            MEMBER=$i
+            MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
+            if [ "$OS_ENV" == "hh" ]; then
+               NODE_LOCAL=`getOsNodeName`
+            else
+               NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
+               NODE_LOCAL=`getOsNodeName $NODE`
+            fi
+            pid=`getMemberPid $MEMBER $WORKSPACE`
+            if [ "$pid" != "" ]; then
+                let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+            fi
+         fi
+      done
+      popd > /dev/null 2>&1
+   fi
+   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "         CLUSTER: $CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "             POD: $POD"
+   echo "        POD_TYPE: $POD_TYPE"
+   if [ $RUNNING_LOCATOR_COUNT -lt 0 ]; then
+   echo -e "Locators Running: ${CYellow}Unknown${CNone}"
+   elif [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
+   echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   else
+   echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   fi
+   if [ $RUNNING_LEADER_COUNT -lt 0 ]; then
+   echo -e " Leaders Running: ${CYellow}Unknown${CNone}"
+   elif [ $RUNNING_LEADER_COUNT -eq $LEADER_COUNT ]; then
+   echo -e " Leaders Running: ${CLightGreen}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   else
+   echo -e " Leaders Running: ${CLightRed}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   fi
+   if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
+   echo -e " Members Running: ${CYellow}Unknown${CNone}"
+   elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   echo "         Version: $PRODUCT_VERSION"
+   echo ""
+} # dispalyClusterShort
+
+# Displays long status of a local/pod cluster.
+function displayClusterLong()
+{
+   SNAPPYDATA_CONFIG_FILE=$ETC_DIR/cache.xml
+   POD=`getClusterProperty "pod.name" "local"`
+   POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
+   __NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
+   NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
+   LOCATOR_PREFIX=`getLocatorPrefix`
+   NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
+   NODE=`getOsNodeName`
+   LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
+   MEMBER_START_PORT=`getClusterProperty "tcp.startRPort" $DEFAULT_MEMBER_START_PORT`
+   MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
+   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startRPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+   JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
+   JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+   DEBUG_ENABLED=`getClusterProperty "debug.enabled" $DEFAULT_DEBUG_ENABLED`
+   DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
+   JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
+   JMX_START_PORT=`getClusterProperty "jmx.startPort" $DEFAULT_JMX_START_PORT`
+   PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
+   PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
+   HOST_NAME=`hostname`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" $HOST_NAME`
+
+   if [ "$MEMBER_HTTP_ENABLED" != "true" ]; then
+      MEMBER_HTTP_PORT="Disabled"
+      MEMBER_HTTP_URL="Disabled"
+   fi
+   if [ "$DEBUG_ENABLED" != "true" ]; then
+      DEBUG_PORT="Disabled"
+   fi
+   if [ "$JMX_ENABLED" != "true" ]; then
+      JMX_PORT="Disabled"
+      JMX_URL="Disabled"
+   fi
+   if [ "$PROMETHEUS_ENABLED" != "true" ]; then
+      PROMETHEUS_PORT="Disabled"
+   fi
+ 
+   OS_ENV=`getOsEnv $NODE`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   LEADER_PREFIX=`getLeaderPrefix`
+   MEMBER_PREFIX=`getMemberPrefix`
+
+   echo "----------------------------------------------------------------"
+   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+   if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
+      echo "         CLUSTER: $CLUSTER (default)"
+   else
+      echo "         CLUSTER: $CLUSTER"
+   fi
+   echo "         PRODUCT: $PRODUCT"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "             POD: $POD"
+   echo "        POD_TYPE: $POD_TYPE"
+   echo ""
+
+   #
+   # Locators
+   #
+   LOCATOR_COUNT=0
+   RUNNING_LOCATOR_COUNT=0
+   DOWN_LOCATOR_COUNT=0
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${LOCATOR_PREFIX}*; do
+      if [ -d "$i" ]; then
+         let LOCATOR_COUNT=LOCATOR_COUNT+1
+         pushd $i > /dev/null 2>&1
+         LOCATOR=$i
+         LOCATOR_NUM=${LOCATOR##$LOCATOR_PREFIX}
+         LOCATOR_NUM_NO_LEADING_ZERO=$((10#$LOCATOR_NUM))
+         LOCATOR_DIR=$RUN_DIR/$LOCATOR
+         if [ "$OS_ENV" == "hh" ]; then
+            NODE=`getOsNodeName`
+         else
+            NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+            NODE="${NODE_NAME_PRIMARY}.local"
+         fi
+
+         
+         if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
+            ( [ "$OS_ENV" == "gg" ] );  then
+
+            # Same port number for guest OS
+            LOCATOR_PORT=$LOCATOR_START_PORT
+            if [ "$DEBUG_ENABLED" == "true" ]; then
+               DEBUG_PORT=$DEBUG_START_PORT
+	    fi
+            JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
+            JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
+            if [ "$JMX_ENABLED" == "true" ]; then
+               JMX_PORT=$JMX_START_PORT
+               JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+	    fi
+            if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+               PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+	    fi
+
+         else
+
+            # Increment port numbers for host OS
+            let LOCATOR_PORT=LOCATOR_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            if [ "$DEBUG_ENABLED" == "true" ]; then
+               let DEBUG_PORT=DEBUG_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            fi
+            if [ "$JMX_ENABLED" == "true" ]; then
+               let JMX_PORT=JMX_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+               JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+            fi
+            if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+               let PROMETHEUS_PORT=PROMETHEUS_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            fi
+            
+            # JMX Manager (Pulse) is always enabled
+            let JMX_MANAGER_HTTP_PORT=JMX_MANAGER_HTTP_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            let JMX_MANAGER_PORT=JMX_MANAGER_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+
+         fi
+
+#         if [ "$POD" == "local" ]; then
+            LOCATOR_HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$NODE"`
+#         else
+#            PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+#            NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+#            NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+#            LOCATOR_HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+#         fi
+
+         PULSE_URL="http://$LOCATOR_HOSTNAME_FOR_CLIENTS:$JMX_MANAGER_HTTP_PORT/pulse"
+
+         LOG_FILE=$LOG_DIR/${LOCATOR}.log
+         echo "$LOCATOR_NUM       Locator: $LOCATOR"
+         if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
+            NODE_LOCAL=$NODE
+            if [ "$OS_ENV" == "gg" ] && [ "$POD" != "local" ]; then
+               REMOTE_SPECIFIED=false
+            else
+               REMOTE_SPECIFIED=true
+            fi
+            pid=`getLocatorPid $LOCATOR $WORKSPACE`
+            if [ -z $pid ]; then
+               let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
+               echo -e "          STATE: ${CLightRed}Down${CNone}"
+               echo "             PID: N/A"
+            else
+               let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
+               echo -e "          STATE: ${CLightGreen}Running${CNone}"
+               echo "             PID: $pid"
+            fi
+         else
+            echo "           STATE: Unknown"
+            echo "             PID: Unknown"
+            RUNNING_LOCATOR_COUNT=-1
+            DOWN_LOCATOR_COUNT=-1
+         fi
+         echo "    LOCATOR_PORT: $LOCATOR_PORT"
+         echo "      DEBUG_PORT: $DEBUG_PORT"
+         echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
+         echo "       PULSE_URL: $PULSE_URL"
+         echo "         JMX_URL: $JMX_URL"
+         echo "     Working Dir: $LOCATOR_DIR"
+         echo "        LOG_FILE: $LOG_FILE"
+         echo ""
+         popd > /dev/null 2>&1
+      fi
+   done
+
+   # Display leaders
+   MEMBER_PREFIX=`getLeaderPrefix`
+   displayMember
+   LEADER_COUNT=$MEMBER_COUNT
+   RUNNING_LEADER_COUNT=$RUNNING_MEMBER_COUNT
+   DOWN_LEADER_COUNT=$DOWN_MEMBER_COUNT
+
+   # Display members
+   MEMBER_PREFIX=`getMemberPrefix`
+   displayMember
+
+   popd > /dev/null 2>&1
+
+   # Summary
+   echo "         CLUSTER: $CLUSTER"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   if [ $RUNNING_LOCATOR_COUNT -lt 0 ]; then
+   echo -e "Locators Running: ${CYellow}Unknown${CNone}"
+   elif [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
+   echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   else
+   echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   fi
+   if [ $RUNNING_LEADER_COUNT -lt 0 ]; then
+   echo -e " Leaders Running: ${CYellow}Unknown{CNone}"
+   elif [ $RUNNING_LEADER_COUNT -eq $LEADER_COUNT ]; then
+   echo -e " Leaders Running: ${CLightGreen}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   else
+   echo -e " Leaders Running: ${CLightRed}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   fi
+   if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
+   echo -e " Members Running: ${CYellow}Unknown{CNone}"
+   elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   echo "         Version: $PRODUCT_VERSION"
+   echo "----------------------------------------------------------------"
+} # displayClusterLong
+
+# Displays long status of the specified VM member type, i.e., leader, member
+# @param memberType 'Member' or 'Leader'
+# @param vmHosts    Space separated VM hosts
+function displayVmMember
+{
+   local __MEMBER_TYPE="$1"
+   local __VM_HOSTS="$2"
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   DOWN_MEMBER_COUNT=0
+   for VM_HOST in ${__VM_HOSTS}; do
+      MEMBER=`getVm${__MEMBER_TYPE}Name $VM_HOST`
+      let MEMBER_COUNT=MEMBER_COUNT+1
+      MEMBER_DIR=$RUN_DIR/$MEMBER
+
+      # Increment port numbers for host OS
+      MEMBER_PORT=$MEMBER_START_PORT
+      if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
+         MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
+         HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
+         MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+      fi
+      if [ "$DEBUG_ENABLED" == "true" ]; then
+         DEBUG_PORT=$DEBUG_START_PORT
+      fi
+      if [ "$JMX_ENABLED" == "true" ]; then
+         JMX_PORT=$JMX_START_PORT
+         JMX_URL="service:jmx:rmi:///jndi/rmi://${VM_HOST}:$JMX_PORT/jmxrmi"
+      fi
+      if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+         PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+      fi
+
+      LOG_FILE=$LOG_DIR/${MEMBER}.log
+      
+      if [ $MEMBER_COUNT -lt 10 ]; then
+         NUM="0"$MEMBER_COUNT
+      else
+         NUM=$MEMBER_COUNT
+      fi
+      echo "$NUM        Member: $MEMBER"
+
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      if [ -z $pid ]; then
+         let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
+         echo -e "           STATE: ${CLightRed}Down${CNone}"
+         echo "             PID: N/A"
+      else
+         let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+         echo -e "           STATE: ${CLightGreen}Running${CNone}"
+         echo "             PID: $pid"
+      fi
+
+      echo "     MEMBER_PORT: $MEMBER_PORT"
+      echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
+      echo "      DEBUG_PORT: $DEBUG_PORT"
+      echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
+      echo "         JMX_URL: $JMX_URL"
+      echo "     Working Dir: $MEMBER_DIR"
+      echo "        LOG_FILE: $LOG_FILE"
+      echo ""
+   done
+}
+
+# Displays long status of the specified member type, i.e., leader, member
+# @required MEMBER_PREFIX
+function displayMember
+{
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   DOWN_MEMBER_COUNT=0
+   for i in ${MEMBER_PREFIX}*; do
+      if [ -d "$i" ]; then
+         let MEMBER_COUNT=MEMBER_COUNT+1
+         pushd $i > /dev/null 2>&1
+         MEMBER=$i
+         MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
+         MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+         MEMBER_DIR=$RUN_DIR/$MEMBER
+         #if [ "$POD_TYPE" == "local" ]; then
+         if [ "$OS_ENV" == "hh" ]; then
+            NODE=`getOsNodeName`
+         else
+            NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
+            NODE=`getOsNodeName $NODE`
+         fi
+         if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
+            ( [ "$OS_ENV" == "gg" ] );  then
+
+            # Same port number for guest OS
+            MEMBER_PORT=$MEMBER_START_PORT
+            if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
+               MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
+               MEMBER_HTTP_URL="http://${NODE}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+	    fi
+            if [ "$DEBUG_ENABLED" == "true" ]; then
+               DEBUG_PORT=$DEBUG_START_PORT
+	    fi
+            if [ "$JMX_ENABLED" == "true" ]; then
+               JMX_PORT=$JMX_START_PORT
+               JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+	    fi
+            if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+               PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+	    fi
+
+         else
+
+            # Increment port numbers for host OS
+            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+            if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
+               let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+               HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$NODE"`
+               MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+            fi
+            if [ "$DEBUG_ENABLED" == "true" ]; then
+               let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+            fi
+            if [ "$JMX_ENABLED" == "true" ]; then
+               let JMX_PORT=JMX_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+               JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+            fi
+            if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+               let PROMETHEUS_PORT=PROMETHEUS_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+            fi
+
+         fi
+         LOG_FILE=$LOG_DIR/${MEMBER}.log
+         echo "$MEMBER_NUM        Member: $MEMBER"
+         if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
+            NODE_LOCAL=$NODE
+            if [ "$OS_ENV" == "gg" ] && [ "$POD" != "local" ]; then
+               REMOTE_SPECIFIED=false
+            else
+               REMOTE_SPECIFIED=true
+            fi
+            pid=`getMemberPid $MEMBER $WORKSPACE`
+            if [ -z $pid ]; then
+               let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
+               echo -e "           STATE: ${CLightRed}Down${CNone}"
+               echo "             PID: N/A"
+            else
+               let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+               echo -e "           STATE: ${CLightGreen}Running${CNone}"
+               echo "             PID: $pid"
+            fi
+         else
+            echo "           STATE: Unknown"
+            echo "             PID: Unknown"
+            RUNNING_MEMBER_COUNT=-1
+            DOWN_MEMBER_COUNT=-1
+         fi
+         echo "     MEMBER_PORT: $MEMBER_PORT"
+         echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
+         echo "      DEBUG_PORT: $DEBUG_PORT"
+         echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
+         echo "         JMX_URL: $JMX_URL"
+         echo "     Working Dir: $MEMBER_DIR"
+         echo "        LOG_FILE: $LOG_FILE"
+         echo ""
+         popd > /dev/null 2>&1
+      fi
+   done
+}
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+
+   # Display single VM cluster status
+
+   if [ ! -d $CLUSTER_DIR ]; then
+      echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+      exit 1
+   fi
+
+   VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
+   if [ "$VM_LOCATOR_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM local hosts undefined. Set 'vm.local.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_LEADER_HOSTS=$(getClusterProperty "vm.leader.hosts")
+   if [ "$VM_LEADER_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM leader hosts undefined. Set 'vm.leader.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_HOSTS=$(getClusterProperty "vm.hosts")
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM member (server) hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   # Replace , with space
+   VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+   VM_LEADER_HOSTS=$(echo "$VM_LEADER_HOSTS" | sed "s/,/ /g")
+   VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+  
+   if [ "$LONG" == "false" ]; then
+      # Short display (single)
+      displayVmClusterShort
+   else
+      # Long display (single)
+      displayVmClusterLong
+   fi
+   exit
+fi
+
+#
+# Local cluster
+#
+if [ "$ALL" == "true" ]; then
+
+   # Display all clusters
+
+   pushd $CLUSTERS_DIR > /dev/null 2>&1
+   CLUSTERS=""
+   COUNT=0
+   for i in *; do
+      if [ -d "$i" ]; then
+         let COUNT=COUNT+1
+         if [ $COUNT -eq 1 ]; then
+            CLUSTERS="$i"
+         else
+            CLUSTERS="$CLUSTERS $i"
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+
+   if [ "$CLUSTERS" == "" ]; then
+      echo "No clusters found. To create one, execute the 'create_cluster' command."
+      exit 0
+   fi
+
+   echo "----------------------------------------------------------------"
+   echo "      Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
+   echo ""
+
+   if [ "$LONG" == "false" ]; then 
+      # Short display -all
+      for CLUSTER in ${CLUSTERS}; do
+         displayClusterShort
+      done
+   else
+      # Long display -all
+      for CLUSTER in ${CLUSTERS}; do
+         displayClusterLong
+      done
+   fi
+
+   echo "----------------------------------------------------------------"
+   popd > /dev/null 2>&1
+   echo "      Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
+
+else
+
+   # Display single cluster status
+
+   if [ ! -d $CLUSTER_DIR ]; then
+      echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+      exit 1
+   fi
+
+   if [ "$LONG" == "false" ]; then
+      # Short display (single)
+      displayClusterShort
+   else
+      # Long display (single)
+      displayClusterLong
+   fi
+fi

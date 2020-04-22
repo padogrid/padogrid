@@ -318,6 +318,9 @@ else
          if [ "$GEODE_HOME" != "" ]; then
             echo "   $GEODE_HOME"
          fi
+         if [ "$SNAPPYDATA_HOME" != "" ]; then
+            echo "   $SNAPPYDATA_HOME"
+         fi
          echo "[$__PRODUCT_HOME]:"
 
          read -p "" INPUT
@@ -569,6 +572,8 @@ echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 
 if [ "$PRODUCT" == "geode" ]; then
    echo "   export GEODE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "snappydata" ]; then
+   echo "   export SNAPPYDATA_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       echo "   export JET_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
@@ -627,6 +632,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "$PRODUCT" == "geode" ]; then
       echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_GEODE_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "snappydata" ]; then
+      echo "# VM SnappData home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_SNAPPYDATA_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
       if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -657,6 +665,9 @@ else
    if [ "$PRODUCT" == "geode" ]; then
       echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_GEODE_HOME=\$GEODE_HOME" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "snappydata" ]; then
+      echo "# VM SnappyData home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_SNAPPYDATA_HOME=\$SNAPPYDATA_HOME" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_HAZELCAST_HOME=\$HAZELCAST_HOME" >> $WORKSPACE_DIR/setenv.sh
@@ -707,12 +718,9 @@ echo "#    \$PADOGRID_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
 echo "#    \$PADOGRID_HOME/plugins/v?/*" >> $WORKSPACE_DIR/setenv.sh
 echo "#    \$PADOGRID_HOME/lib/v?/*" >> $WORKSPACE_DIR/setenv.sh
 if [ "$PRODUCT" == "geode" ]; then
-   if [ "$IS_GEODE_ENTERPRISE" == "true" ]; then
-   echo "#    \$GEODE_HOME/lib/padogrid-enterprise-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
-   else
-   echo "#    \$GEODE_HOME/lib/padogrid-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
-   fi
-   echo "#    \$GEODE_HOME/user-lib/*" >> $WORKSPACE_DIR/setenv.sh
+   echo "#    \$GEODE_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "snappydata" ]; then
+   echo "#    \$SNAPPYDATA_HOME/jars/*" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
    echo "#    \$HAZELCAST_HOME/lib/hazelcast-enterprise-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
@@ -740,6 +748,8 @@ echo "export PODS_DIR=\$PADOGRID_WORKSPACE/pods" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
 if [ "$PRODUCT" == "geode" ]; then
    echo "export PRODUCT=geode" >> $WORKSPACE_DIR/.addonenv.sh
+elif [ "$PRODUCT" == "snappydata" ]; then
+   echo "export PRODUCT=snappydata" >> $WORKSPACE_DIR/.addonenv.sh
 else
    echo "export CLUSTER_TYPE=$CLUSTER_TYPE" >> $WORKSPACE_DIR/.addonenv.sh
    echo "export PRODUCT=hazelcast" >> $WORKSPACE_DIR/.addonenv.sh

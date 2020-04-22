@@ -139,21 +139,23 @@ function writeCluster()
 {
    # Copy the template gemfire.properties file
    cp $BASE_DIR/etc/template-gemfire.properties $ETC_DIR/gemfire.properties
-   # Copy the template cache.xml file
-   cp $BASE_DIR/etc/template-cache.xml $ETC_DIR/cache.xml
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
    # Copy the template prometheus config file
    cp $BASE_DIR/etc/template-prometheus.yml $ETC_DIR/prometheus.yml
-   # Copy the template hibernate config file
-   cp $BASE_DIR/etc/template-hibernate.cfg-mysql.xml $ETC_DIR/hibernate.cfg-mysql.xml
-   cp $BASE_DIR/etc/template-hibernate.cfg-postgresql.xml $ETC_DIR/hibernate.cfg-postgresql.xml
 
    # Create bin_sh/setenv.sh
    mkdir -p $CLUSTER_DIR/bin_sh
    echo "#" > $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Add cluster specific environment variables in this file." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Set additional locator, leader, and member (server) options. The duplicate options"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# set here will override the default bootstrap options set by PadoGrid."  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "LOCATOR_OPTS=\"\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "LEAD_OPTS=\"\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "MEMBER_OPTS=\"\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Set Java options, i.e., -Dproperty=xyz" >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -167,23 +169,11 @@ function writeCluster()
    echo "# if [[ \${OS_NAME} == CYGWIN* ]]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    HIBERNATE_CONFIG_FILE=\"\$(cygpath -wp \"\$HIBERNATE_CONFIG_FILE\")\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# JAVA_OPTS=\"$JAVA_OPTS --J=-Dpadogrid.hibernate.config=$HIBERNATE_CONFIG_FILE\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# To use Hibernate backed CacheWriterLoaderPkDbImpl, set the following property and" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# configure CacheWriterLoaderPkDbImpl in the \$CLUSTER_DIR/etc/cache.xml file." >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# MySQL and PostgreSQL Hibernate configuration files are provided to get" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# you started. You should copy one of them and enter your DB information." >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# You can include your JDBC driver in the ../pom.xml file and run ./build_app" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# which downloads and places it in the \$PADOGRID_WORKSPACE/lib" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# directory. CLASSPATH includes all the jar files in that directory for" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# the apps and clusters running in this workspace." >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dpadogrid.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dpadogrid.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# JAVA_OPTS=\"$JAVA_OPTS -J-Dpadogrid.hibernate.config=$HIBERNATE_CONFIG_FILE\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Set RUN_SCRIPT. Absolute path required." >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# If set, the 'start_member' command will run this script instead of 'gfsh start server'." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# If set, the 'start_member' command will run this script instead of 'snappy server start'." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Your run script will inherit the following:" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    JAVA      - Java executable."  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    JAVA_OPTS - Java options set by padogrid." >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -198,7 +188,6 @@ function writeCluster()
    echo "# Although it is not required, your script should be placed in the bin_sh directory." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#RUN_SCRIPT=\$CLUSTER_DIR/bin_sh/your-script" >> $CLUSTER_DIR/bin_sh/setenv.sh
-
    
    # Create $ETC_DIR/cluster.properties
    echo "# padogrid cluster properties." > $ETC_DIR/cluster.properties
@@ -235,11 +224,9 @@ function writeCluster()
    echo "tcp.startPort=$NEW_MEMBER_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
 
-   # Member REST API HTTP port
-   echo "# Enable/disable member REST API" >> $ETC_DIR/cluster.properties
-   echo "http.enabled=$DEFAULT_MEMBER_HTTP_ENABLED" >> $ETC_DIR/cluster.properties
-   echo "# Member REST API HTTP start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
-   echo "http.startPort=$NEW_MEMBER_HTTP_START_PORT" >> $ETC_DIR/cluster.properties
+   # Spark UI port number
+   echo "# Spark UI Port (Pulse SnappyData Monitoring) for active leader." >> $ETC_DIR/cluster.properties
+   echo "spark.ui.port=$DEFAULT_SPARK_UI_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
    
    # Debug
@@ -247,6 +234,11 @@ function writeCluster()
    echo "locator.debug.enabled=$DEFAULT_LOCATOR_DEBUG_ENABLED" >> $ETC_DIR/cluster.properties
    echo "# The first locator's debug port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
    echo "locator.debug.startPort=$NEW_LOCATOR_DEBUG_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   echo "# Enable/disable leader debugging" >> $ETC_DIR/cluster.properties
+   echo "leader.debug.enabled=$DEFAULT_LEADER_DEBUG_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# The first leader's debug port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "leader.debug.startPort=$NEW_LEADER_DEBUG_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
    echo "# Enable/disable member debugging" >> $ETC_DIR/cluster.properties
    echo "debug.enabled=$DEFAULT_DEBUG_ENABLED" >> $ETC_DIR/cluster.properties
@@ -260,6 +252,11 @@ function writeCluster()
    echo "# The first locator's JMX port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
    echo "locator.jmx.startPort=$NEW_LOCATOR_JMX_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
+   echo "# Enable/disable leader jmx" >> $ETC_DIR/cluster.properties
+   echo "leader.jmx.enabled=$DEFAULT_LEADER_JMX_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# The first leader's JMX port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "leader.jmx.startPort=$NEW_LEADER_JMX_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
    echo "# Enable/disable member jmx" >> $ETC_DIR/cluster.properties
    echo "jmx.enabled=$DEFAULT_JMX_ENABLED" >> $ETC_DIR/cluster.properties
    echo "# The first member's JMX port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
@@ -272,6 +269,11 @@ function writeCluster()
    echo "# The first locator's PROMETHEUS port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
    echo "locator.prometheus.startPort=$NEW_LOCATOR_PROMETHEUS_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
+   echo "# Enable/disable leader Prometheus" >> $ETC_DIR/cluster.properties
+   echo "leader.prometheus.enabled=$DEFAULT_LEADER_PROMETHEUS_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# The first leader's PROMETHEUS port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "leader.prometheus.startPort=$NEW_LEADER_PROMETHEUS_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
    echo "# Enable/disable member Prometheus" >> $ETC_DIR/cluster.properties
    echo "prometheus.enabled=$DEFAULT_PROMETHEUS_ENABLED" >> $ETC_DIR/cluster.properties
    echo "# The first member's PROMETHEUS port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
@@ -282,6 +284,10 @@ function writeCluster()
    echo "# Locator heap min and max values" >> $ETC_DIR/cluster.properties
    echo "locator.heap.min=$DEFAULT_LOCATOR_MIN_HEAP_SIZE" >> $ETC_DIR/cluster.properties
    echo "locator.heap.max=$DEFAULT_LOCATOR_MAX_HEAP_SIZE" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   echo "# Leader heap min and max values" >> $ETC_DIR/cluster.properties
+   echo "leader.heap.min=$DEFAULT_LEADER_MIN_HEAP_SIZE" >> $ETC_DIR/cluster.properties
+   echo "leader.heap.max=$DEFAULT_LEADER_MAX_HEAP_SIZE" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
    echo "# Member heap min and max values" >> $ETC_DIR/cluster.properties
    echo "heap.min=$DEFAULT_MIN_HEAP_SIZE" >> $ETC_DIR/cluster.properties
@@ -308,8 +314,10 @@ function writeCluster()
 
    # Replace all spaces from host lists
    VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/ //g")
+   VM_LEADER_HOSTS=$(echo "$VM_LEADER_HOSTS" | sed "s/ //g")
    VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/ //g")
    echo "vm.locator.hosts=$VM_LOCATOR_HOSTS" >> $ETC_DIR/cluster.properties
+   echo "vm.leader.hosts=$VM_LEADER_HOSTS" >> $ETC_DIR/cluster.properties
    echo "vm.hosts=$VM_HOSTS" >> $ETC_DIR/cluster.properties
    echo "# SSH user name. If not specified then defaults to the shell login session user name." >> $ETC_DIR/cluster.properties
    echo "vm.user=$VM_USER" >> $ETC_DIR/cluster.properties
@@ -348,6 +356,7 @@ if [ "$VM_ENABLED" == "true" ]; then
       VM_HOSTS="$VM_HOSTS_ARG"
    fi
 
+   # Default locator host
    if [ "$LOCATOR" == "" ]; then
       # Extract the first host from the VM host list
       VM_LOCATOR_HOSTS=${VM_HOSTS%%,*}
@@ -355,15 +364,35 @@ if [ "$VM_ENABLED" == "true" ]; then
       VM_LOCATOR_HOSTS=$LOCATOR
    fi
    if [ "$VM_LOCATOR_HOSTS" == "" ]; then
-      echo "WARNING: VM locator host\(s\) undefined. Configuring with this host."
+      echo "WARNING: VM locator hosts undefined. Configuring with this host."
       VM_LOCATOR_HOSTS=`hostname`
    fi
+
+   # Default leader host
+   # Extract the second (or first) host from the VM host list
+   VM_LEADER_HOSTS=""
+   COUNT=0
+   __VM_HOSTS="${VM_HOSTS//,/ }"
+   for i in $__VM_HOSTS; do
+      VM_LEADER_HOSTS="$i"
+      let COUNT=COUNT+1
+      if [ $COUNT -eq 2 ]; then
+         break;
+      fi
+   done
+   if [ "$VM_LEADER_HOSTS" == "" ]; then
+      echo "WARNING: VM leader hosts undefined. Configuring with this host."
+      VM_LEADER_HOSTS=`hostname`
+   fi
+
+   # Members
    if [ "$VM_HOSTS" == "" ]; then
       echo "WARNING: VM hosts undefined. Configuring with this host."
       VM_HOSTS=`hostname`
    fi
 else
    VM_LOCATOR_HOSTS=`hostname`
+   VM_LEADER_HOSTS=`hostname`
    VM_HOSTS=`hostname`
 fi
 
@@ -391,10 +420,13 @@ if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "
    NEW_MEMBER_START_PORT=$DEFAULT_MEMBER_START_PORT
    NEW_MEMBER_HTTP_START_PORT=$DEFAULT_MEMBER_HTTP_START_PORT
    NEW_LOCATOR_DEBUG_START_PORT=$DEFAULT_LOCATOR_DEBUG_START_PORT
+   NEW_LEADER_DEBUG_START_PORT=$DEFAULT_LEADER_DEBUG_START_PORT
    NEW_DEBUG_START_PORT=$DEFAULT_DEBUG_START_PORT
    NEW_LOCATOR_JMX_START_PORT=$DEFAULT_LOCATOR_JMX_START_PORT
+   NEW_LEADER_JMX_START_PORT=$DEFAULT_LEADER_JMX_START_PORT
    NEW_JMX_START_PORT=$DEFAULT_JMX_START_PORT
    NEW_LOCATOR_PROMETHEUS_START_PORT=$DEFAULT_LOCATOR_PROMETHEUS_START_PORT
+   NEW_LEADER_PROMETHEUS_START_PORT=$DEFAULT_LEADER_PROMETHEUS_START_PORT
    NEW_PROMETHEUS_START_PORT=$DEFAULT_PROMETHEUS_START_PORT
    NEW_JMX_MANAGER_HTTP_START_PORT=$DEFAULT_JMX_MANAGER_HTTP_START_PORT
    NEW_JMX_MANAGER_START_PORT=$DEFAULT_JMX_MANAGER_START_PORT
@@ -404,10 +436,13 @@ else
    let NEW_MEMBER_START_PORT=DEFAULT_MEMBER_START_PORT+PORT_DIFF
    let NEW_MEMBER_HTTP_START_PORT=DEFAULT_MEMBER_HTTP_START_PORT+PORT_DIFF
    let NEW_LOCATOR_DEBUG_START_PORT=DEFAULT_LOCATOR_DEBUG_START_PORT+PORT_DIFF
+   let NEW_LEADER_DEBUG_START_PORT=DEFAULT_LEADER_DEBUG_START_PORT+PORT_DIFF
    let NEW_DEBUG_START_PORT=DEFAULT_DEBUG_START_PORT+PORT_DIFF
    let NEW_LOCATOR_PROMETHEUS_START_PORT=DEFAULT_LOCATOR_PROMETHEUS_START_PORT+PORT_DIFF
+   let NEW_LEADER_PROMETHEUS_START_PORT=DEFAULT_LEADER_PROMETHEUS_START_PORT+PORT_DIFF
    let NEW_PROMETHEUS_START_PORT=DEFAULT_PROMETHEUS_START_PORT+PORT_DIFF
    let NEW_LOCATOR_JMX_START_PORT=DEFAULT_LOCATOR_JMX_START_PORT+PORT_DIFF
+   let NEW_LEADER_JMX_START_PORT=DEFAULT_LEADER_JMX_START_PORT+PORT_DIFF
    let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_HTTP_START_PORT=DEFAULT_JMX_MANAGER_HTTP_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_START_PORT=DEFAULT_JMX_MANAGER_START_PORT+PORT_DIFF
@@ -440,6 +475,9 @@ elif [ "$POD" == "local" ]; then
    LOCATOR_1=`getLocatorName 1`
    LOCATOR_1_DIR=$CLUSTER_DIR/run/$LOCATOR_1
    mkdir -p $LOCATOR_1_DIR
+   LEADER_1=`getLeaderName 1`
+   LEADER_1_DIR=$CLUSTER_DIR/run/$LEADER_1
+   mkdir -p $LEADER_1_DIR
    MEMBER_1=`getMemberName 1`
    MEMBER_2=`getMemberName 2`
    MEMBER_1_DIR=$CLUSTER_DIR/run/$MEMBER_1
@@ -459,6 +497,15 @@ else
    LOCATOR_1_DIR=$CLUSTER_DIR/run/$LOCATOR_1
    mkdir -p $LOCATOR_1_DIR
 
+   # Create leader run directories
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_COUNT=`getPodProperty "node.count" "0"`
+   for i in $(seq 1 $NODE_COUNT); do
+       LEADER=`getLeaderName $i`
+       LEADER_DIR=$CLUSTER_DIR/run/$LEADER
+       mkdir -p $LEADER_DIR
+   done
+
    # Create member run directories
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    NODE_COUNT=`getPodProperty "node.count" "0"`
@@ -467,6 +514,7 @@ else
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
        mkdir -p $MEMBER_DIR
    done
+
    POD_TYPE="vagrant"
    NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
    if [ "$NODE_NAME_PRIMARY" != "" ]; then
@@ -481,26 +529,30 @@ writeCluster
 
 # Display cluster information
 echo "----------------------------------------------------------------"
-echo "                  WORKSPACE: $PADOGRID_WORKSPACE"
-echo "            Cluster Created: $CLUSTER"
-echo "               CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "                    WORKSPACE: $PADOGRID_WORKSPACE"
+echo "              Cluster Created: $CLUSTER"
+echo "                 CLUSTER_TYPE: $CLUSTER_TYPE"
 if [ "$VM_ENABLED" == "true" ]; then
-echo "                 Deployment: VM"
+echo "                   Deployment: VM"
 else
-echo "                        POD: $POD"
+echo "                          POD: $POD"
 fi
-echo "                CLUSTER_DIR: $CLUSTER_DIR"
-echo "                 CONFIG_DIR: $ETC_DIR"
-echo "                CONFIG_FILE: $CONFIG_FILE"
-echo "                    LOG_DIR: $LOG_DIR"
-echo "         LOCATOR_START_PORT: $NEW_LOCATOR_START_PORT"
-echo "          MEMBER_START_PORT: $NEW_MEMBER_START_PORT"
-echo "     MEMBER_HTTP_START_PORT: $NEW_MEMBER_HTTP_START_PORT"
-echo "           DEBUG_START_PORT: $NEW_DEBUG_START_PORT"
-echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
-echo "JMX_MANAGER_HTTP_START_PORT: $NEW_JMX_MANAGER_HTTP_START_PORT"
-echo "     JMX_MANAGER_START_PORT: $NEW_JMX_MANAGER_START_PORT"
-echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
+echo "                  CLUSTER_DIR: $CLUSTER_DIR"
+echo "                   CONFIG_DIR: $ETC_DIR"
+echo "                  CONFIG_FILE: $CONFIG_FILE"
+echo "                      LOG_DIR: $LOG_DIR"
+echo "           LOCATOR_START_PORT: $NEW_LOCATOR_START_PORT"
+echo "     LOCATOR_DEBUG_START_PORT: $NEW_LOCATOR_DEBUG_START_PORT"
+echo "      LEADER_DEBUG_START_PORT: $NEW_LEADER_DEBUG_START_PORT"
+echo "      MEMBER_DEBUG_START_PORT: $NEW_DEBUG_START_PORT"
+echo "       LOCATOR_JMX_START_PORT: $NEW_LOCATOR_JMX_START_PORT"
+echo "        LEADER_JMX_START_PORT: $NEW_LEADER_JMX_START_PORT"
+echo "        MEMBER_JMX_START_PORT: $NEW_JMX_START_PORT"
+echo "  JMX_MANAGER_HTTP_START_PORT: $NEW_JMX_MANAGER_HTTP_START_PORT"
+echo "       JMX_MANAGER_START_PORT: $NEW_JMX_MANAGER_START_PORT"
+echo "LOCATOR_PROMETHEUS_START_PORT: $NEW_LOCATOR_PROMETHEUS_START_PORT"
+echo " LEADER_PROMETHEUS_START_PORT: $NEW_LEADER_PROMETHEUS_START_PORT"
+echo " MEMBER_PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
 echo ""
 echo "The default config.xml file has been placed in the CONFIG_DIR directory."
 echo "Modify it or replace it with the appropriate file."
@@ -512,10 +564,12 @@ if [ "$VM_ENABLED" == "true" ]; then
    echo " Working Dir: $MEMBER_1_DIR"
    echo ""
 elif [ "$POD" == "local" ]; then
-   echo "One (1) locator and two (2) members have been configured (added) to run in this cluster as follows:"
+   echo "One (1) locator, one (1) leader, and two (2) members have been configured (added) to run in this cluster as follows:"
    echo ""
    echo "     Locator: $LOCATOR_1"
    echo " Working Dir: $LOCATOR_1_DIR"
+   echo "      Leader: $LEADER_1"
+   echo " Working Dir: $LEADER_1_DIR"
    echo "      Member: $MEMBER_1"
    echo " Working Dir: $MEMBER_1_DIR"
    echo "      Member: $MEMBER_2"

@@ -1771,14 +1771,16 @@ function getWorkspaceInfoList
       if [ "$PRODUCT_VERSION" == "" ]; then
          PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-//' -e 's/"//')
       fi
-   else
-      if [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
-         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
-         CLUSTER_TYPE="gemfire"
-      else
-         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*apache-geode-//' -e 's/"//')
-         CLUSTER_TYPE="geode"
-      fi
+   elif [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
+      CLUSTER_TYPE="gemfire"
+   elif [[ "$__PRODUCT_HOME" == *"geode"* ]]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
+      CLUSTER_TYPE="geode"
+   elif [[ "$__PRODUCT_HOME" == *"snappydata"* ]]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*snappydata-//' -e 's/"//')
+      PRODUCT_VERSION=${PRODUCT_VERSION%-bin}
+      CLUSTER_TYPE="snappydata"
    fi
 
    VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
@@ -1957,13 +1959,14 @@ function getHostIPv4List
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT        geode or hazelcast
-#   CLUSTER_TYPE   This is set to imdg or jet only if PRODUCT is hazelcast.
-#   CLUSTER        Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet,
-#                  only if CLUSTER is not set.
-#   GEODE_HOME     Set to PRODUCT_HOME if PRODUCT is geode.
-#   HAZELCAST_HOME Set to PRODUCT_HOME if PRODUCT is hazelcast.
-#   JET_HOME       Set to PRODUCT_HOME if PRODUCT is hazelcast.
+#   PRODUCT         geode, hazelcast, or snappydata
+#   CLUSTER_TYPE    This is set to imdg or jet only if PRODUCT is hazelcast.
+#   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy
+#                   only if CLUSTER is not set.
+#   GEODE_HOME      Set to PRODUCT_HOME if PRODUCT is geode.
+#   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast.
+#   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast.
+#   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 # @required PRODUCT_HOME Product home path (installation path)
 #
 function determineProduct
@@ -1997,6 +2000,11 @@ function determineProduct
          fi
       fi
       GEODE_HOME="$PRODUCT_HOME"
+   elif [[ "$PRODUCT_HOME" == *"snappydata"* ]]; then
+      PRODUCT="snappydata"
+      SNAPPYDATA_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="snappydata"
+      CLUSTER=$DEFAULT_SNAPPYDATA_CLUSTER
    else
       PRODUCT=""
    fi
@@ -2018,9 +2026,9 @@ function createProductEnvFile
       WORKSPACES_HOME="$PADOGRID_WORKSPACES_HOME"
    fi
    if [ "$PRODUCT_NAME" == "geode" ]; then
-      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.geodeenv.s ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.geodeenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.geodeenv.sh
-         echo "# Enter Gedoe/GemFire product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "# Enter Geode/GemFire product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
          echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
       fi
@@ -2044,5 +2052,34 @@ function createProductEnvFile
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "MC_LICENSE_KEY=" >> $WORKSPACES_HOME/.hazelcastenv.sh
       fi
+   elif [ "$PRODUCT_NAME" == "snappydata" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.geodeenv.sh
+         echo "# Enter SnappyData product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
+      fi
    fi
+}
+
+#
+# Removes all the source duplicate options from the specified target option list.
+# and returns the new target option list. The option lists must be in the form of
+# "opt1=value1 opt2=value2 ..."
+#
+# @param sourceOpts Source options list.
+# @param targetOpts Target options list
+#
+function removeEqualToOpts
+{
+   local __SOURCE_OPTS=$1
+   local __TARGET_OPTS=$2
+   local __NEW_OPTS=""
+   for i in $__TARGET_OPTS; do
+      local __OPT=${i/=*/}
+      if [[ "$__SOURCE_OPTS" != *"$__OPT="* ]]; then
+         __NEW_OPTS="$__NEW_OPTS $i"
+      fi
+   done
+   echo "$__NEW_OPTS"
 }

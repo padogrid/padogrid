@@ -192,15 +192,15 @@ if [ "$PRODUCT" == "hazelcast" ]; then
       echo >&2 "ERROR: Unsupported bundle name. Command aborted."
       exit 1
    fi
+elif [[ "$file_name" == "geode-"* ]]; then
+   cluster_type="geode"
+elif [[ "$file_name" == "gemfire-"* ]]; then
+   cluster_type="gemfire"
+elif [[ "$file_name" == "snappydata-"* ]]; then
+   cluster_type="snappydata"
 else
-   if [[ "$file_name" == "geode-"* ]]; then
-      cluster_type="geode"
-   elif [[ "$file_name" == "gemfire-"* ]]; then
-      cluster_type="gemfire"
-   else
-      echo >&2 "ERROR: Unsupported bundle name. Command aborted."
-      exit 1
-   fi
+   echo >&2 "ERROR: Unsupported bundle name. Command aborted."
+   exit 1
 fi
 
 if [ "$PREVIEW" == "false" ] && [ "$PRODUCT" == "hazelcast" ] && [ "$CLUSTER_TYPE" != "$cluster_type" ]; then

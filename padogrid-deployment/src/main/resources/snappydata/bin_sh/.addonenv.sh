@@ -31,8 +31,8 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #
 # Required:
 # ---------
-# PADOGRID_HOME   The padogrid root directory path.
-# GEODE_HOME         Geode root directory path
+# PADOGRID_HOME          The padogrid root directory path.
+# SNAPPYDATA_HOME        SnappyData root directory path
 #
 # Optional:
 # ---------
@@ -42,8 +42,8 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        directory ($PADOGRID_HOME) is assigned.
 # JAVA_HOME              Java root directory path. If not specified then the default java executable
 #                        in your PATH will be used.
-# JAVA_OPTS              Any Java options such as standard and non-standard (--J=-XX) options,
-#                        system properties (--J=-D), etc.
+# JAVA_OPTS              Any Java options such as standard and non-standard (-J-XX) options,
+#                        system properties (-J-D), etc.
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
 # DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
@@ -70,9 +70,9 @@ if [ -z $PADOGRID_WORKSPACE ]; then
 fi
 
 # 
-# Geode/GemFire home directory
+# SnappyData home directory
 #
-#GEODE_HOME=
+#SNAPPYDATA_HOME=
 
 #
 # JAVA_HOME
@@ -98,7 +98,7 @@ DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
-DEFAULT_CLUSTER="$DEFAULT_GEODE_CLUSTER"
+DEFAULT_CLUSTER="$DEFAULT_SNAPPYDATA_CLUSTER"
 
 #
 # Default pod type. The pod type determines the node envirionment in which
@@ -217,10 +217,16 @@ DEFAULT_LOCATOR_START_PORT=10334
 DEFAULT_MEMBER_START_PORT=40404
 
 #
+# Default Spark UI port (Pulse SnappyData Monitoring).
+#
+DEFAULT_SPARK_UI_PORT=5050
+
+#
 # Enable/disable Java remote debugging
 # The port number is incremented by 1 starting from $DEBUG_START_PORT
 #
 DEFAULT_LOCATOR_DEBUG_ENABLED=false
+DEFAULT_LEADER_DEBUG_ENABLED=false
 DEFAULT_DEBUG_ENABLED=true
 
 #
@@ -248,6 +254,7 @@ DEFAULT_MEMBER_HTTP_START_PORT=7080
 # determine the member's debug port number.
 #
 DEFAULT_LOCATOR_DEBUG_START_PORT=9201
+DEFAULT_LEADER_DEBUG_START_PORT=9206
 DEFAULT_DEBUG_START_PORT=9101
 
 # 
@@ -255,12 +262,14 @@ DEFAULT_DEBUG_START_PORT=9101
 # determine the member's JMX port number.
 #
 DEFAULT_LOCATOR_JMX_START_PORT=12101
+DEFAULT_LEADER_JMX_START_PORT=12106
 DEFAULT_JMX_START_PORT=12001
 
 #
 # Default PROMETHEUS enable/disable flag.
 #
 DEFAULT_LOCATOR_PROMETHEUS_ENABLED=false
+DEFAULT_LEADER_PROMETHEUS_ENABLED=false
 DEFAULT_PROMETHEUS_ENABLED=true
 
 # 
@@ -268,6 +277,7 @@ DEFAULT_PROMETHEUS_ENABLED=true
 # determine the member's Prometheus port number.
 #
 DEFAULT_LOCATOR_PROMETHEUS_START_PORT=8191
+DEFAULT_LEADER_PROMETHEUS_START_PORT=8196
 DEFAULT_PROMETHEUS_START_PORT=8091
 
 #
@@ -278,22 +288,33 @@ DEFAULT_PROMETHEUS_START_PORT=8091
 MAX_LOCATOR_COUNT=5
 
 #
+# The max number of leaders per cluster. The port number ranges are determined by this value.
+# by this value. Defalut locator port numbers begin from DEFAULT_LEADER_START_PORT and end at 
+# DEFAULT_LEADER_START_PORT+MAX_LEADER_COUNT-1.
+#
+MAX_LEADER_COUNT=5
+
+#
 # The max number of members per cluster. The port number ranges are determined
 # by this value. All default port numbers begin from DEFAULT_*_START_PORT and end at 
 # DEFAULT_*_START_PORT+MAX_MEMBER_COUNT-1.
 #
-MAX_MEMBER_COUNT=20
+MAX_MEMBER_COUNT=99
 
 # -------------------------------------------------------------------------------
 # Source in .argenv.sh to set all default variables. This call is required.
 # IMPORTANT: Do NOT remove this call.
 # -------------------------------------------------------------------------------
 . $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_geode.sh "$@"
+. $SCRIPT_DIR/.utilenv_snappydata.sh
 
 # -----------------------------------------------------
 # IMPORTANT: Do NOT modify below this line
 # -----------------------------------------------------
+
+LOCATOR_OPTS=""
+LEAD_OPTS=""
+MEMBER_OPTS=""
 
 #
 # Source in setenv.sh that contains user configured variables
@@ -461,7 +482,7 @@ LOG4J_FILE="$ETC_DIR/log4j2.properties"
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    LOG4J_FILE="$(cygpath -wp "$LOG4J_FILE")"
 fi
-LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
+LOG_PROPERTIES="-J-Dlog4j.configurationFile=$LOG4J_FILE"
 
 #
 # PATH
@@ -469,7 +490,7 @@ LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
 if [ "$JAVA_HOME" != "" ]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$GEODE_HOME/bin:$PATH"
+export PATH="$SCRIPT_DIR:$SNAPPYDATA_HOME/bin:$SNAPPYDATA_HOME/sbin:$PATH"
 
 #
 # Java executable
@@ -481,27 +502,19 @@ else
 fi
 
 #
-# GEODE_VERSION/PRODUCT_VERSION: Determine the Geode version
+# SNAPPYDATA_VERSION/PROUDCT_VERSION: Determine the Hazelcast version
 #
-GEODE_VERSION=""
-IS_GEODE_ENTERPRISE=false
-CLUSTER_TYPE="geode"
-if [ "$GEODE_HOME" == "" ]; then
-   CLUSTER_TYPE="geode"
-else
-   GEMFIRE_CHECK=$(ls $GEODE_HOME/Pivotal* 2> /dev/null | wc -l)
-   if [ "$GEMFIRE_CHECK" -gt 0 ]; then
-      IS_GEODE_ENTERPRISE=true
-      CLUSTER_TYPE="gemfire"
-   fi
-   for file in $GEODE_HOME/lib/geode-core-*; do
-      file=${file##*geode\-core\-}
-      GEODE_VERSION=${file%.jar}
+SNAPPYDATA_VERSION=""
+IS_ENTERPRISE=false
+if [ "$SNAPPYDATA_HOME" != "" ]; then
+   for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
+      file=${file##*snappydata\-core*\-}
+      SNAPPYDATA_VERSION=${file%.jar}
    done
 fi
-GEODE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
-PRODUCT_VERSION=$GEODE_VERSION
-PRODUCT_MAJOR_VERSION=$GEODE_MAJOR_VERSION_NUMBER
+SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
+PRODUCT_VERSION=$SNAPPYDATA_VERSION
+PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
 
 #
 # PADOGRID_VERSION: Determine the padogrid version
@@ -528,7 +541,7 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-__CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/*"
+__CLASSPATH="$__CLASSPATH:$SNAPPYDATA_HOME/jars/*"
 export CLASSPATH="$__CLASSPATH"
 
 #
