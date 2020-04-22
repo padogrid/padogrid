@@ -105,18 +105,26 @@ PadoGrid currently supports the following data grid products.
 
 <p align="center" float="left">
   <a href="https://geode.apache.org/">
-  <img src="images/geode.jpg" width="200" hspace="10" alt="Apache Geode" />
+  <img src="images/geode.jpg" width="210" hspace="10" alt="Apache Geode" />
   </a>
   <a href="https://tanzu.vmware.com/gemfire">
-  <img src="images/gemfire.jpg" width="200"  hspace="10" alt="VMware GemFire" /> 
+  <img src="images/gemfire.jpg" width="210"  hspace="10" alt="VMware GemFire" /> 
   </a>
 </p>
 <p align="center">
   <a href="https://hazelcast.com/products/imdg/">
-  <img src="images/hazelcast.jpg" width="290"  hspace="10" alt="Hazelcast IMDG" />
+  <img src="images/hazelcast.jpg" width="300"  hspace="10" alt="Hazelcast IMDG" />
   </a>
   <a href="https://hazelcast.com/products/jet/">
-  <img src="images/jet.jpg" width="270" hspace="10" alt="Hazelcast Jet" />
+  <img src="images/jet.jpg" width="280" hspace="10" alt="Hazelcast Jet" />
+  </a> 
+</p>
+<p align="center">
+  <a href="https://www.tibco.com/products/tibco-computedb">
+  <img src="images/computedb.jpg" width="300"  hspace="10" alt="ComputeDB" />
+  </a>
+  <a href="https://snappydatainc.github.io/snappydata/">
+  <img src="images/snappydata.jpg" width="280" hspace="10" alt="SnappyData" />
   </a> 
 </p>
 
