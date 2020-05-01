@@ -1,0 +1,27 @@
+version: '2.4'
+
+services:
+  locator:
+    image: padogrid/snappydata:${VERSION}
+    hostname: locator
+    mem_limit: 512m
+    expose:
+     - "$CLIENT_PORT"
+     - "$LOCATOR_PORT"
+     - "$LOCATOR_JMX_PORT"
+     - "$LOCATOR_PROMETHEUS_PORT"
+    ports:
+     - "${CLIENT_PORT}:$CLIENT_PORT"
+     - "${LOCATOR_PORT}:$LOCATOR_PORT"
+     - "${HOST_LOCATOR_JMX_PORT}:$LOCATOR_JMX_PORT"
+     - "${HOST_LOCATOR_PROMETHEUS_PORT}:$LOCATOR_PROMETHEUS_PORT"
+    volumes:
+     - ./padogrid:/padogrid/
+    command:
+      - bash
+      - -c
+      - |
+        export LOG_FILE=/padogrid/log/`hostname`.log \
+        && \
+        start locator -name=`hostname` -locators=locator:$LOCATOR_PORT -peer-discovery-address=`hostname` -peer-discovery-port=$LOCATOR_PORT -hostname-for-clients=$HOSTNAME_FOR_CLIENTS -classpath=/padogrid/plugins/*:/padogrid/lib/* -log-file=/padogrid/log/`hostname`.log -member-timeout=250000 -run-netserver=true -spark.ui.port=$SPARK_UI_PORT -heap-size=$LOCATOR_HEAP_SIZE -statistic-archive-file=/padogrid/stats/`hostname`.gfs -J-Dlog4j.configurationFile=/padogrid/etc/log4j2.properties -J-Xloggc:/padogrid/log/`hostname`-gc.log -J-XX:+PrintGCDetails -J-XX:+PrintGCDateStamps -J-DgemfirePropertyFile=/padogrid/etc/gemfirexd.properties -client-port=$CLIENT_PORT
+    restart: on-failure

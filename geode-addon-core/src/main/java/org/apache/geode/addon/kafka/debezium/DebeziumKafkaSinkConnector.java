@@ -116,7 +116,6 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 		logger.info("isSmtEnabled = " + isSmtEnabled);
 		logger.info("isDeleteEnabled = " + isDeleteEnabled);
 		logger.info("====================================================================================");
-		System.out.flush();
 	}
 
 	@Override

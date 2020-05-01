@@ -346,7 +346,7 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
 else
    __LOG_DIR=$LOG_DIR
 fi
-GEMFIRE_PROPERTY_FILE="$ETC_DIR/gemfire.properties"
+GEMFIRE_PROPERTY_FILE="$ETC_DIR/gemfirexd.properties"
 STATS_FILE_NAME=${MEMBER}.gfs
 STATS_FILE=$STATS_DIR/${STATS_FILE_NAME}
 export LOG_FILE_NAME=${MEMBER}.log
@@ -415,12 +415,12 @@ SNAPPY_OPTS="-dir=$MEMBER_DIR \
       -spark.ui.port=$SPARK_UI_PORT \
       -log-file=$LOG_FILE \
       -statistic-archive-file=$STATS_FILE"
-if [ "$BIND_ADDRESS" != "" ]; then
-   SNAPPY_OPTS="$SNAPPY_OPTS -bind-address=$BIND_ADDRESS"
-fi
-if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
-   SNAPPY_OPTS="$SNAPPY_OPTS -hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
-fi
+#if [ "$BIND_ADDRESS" != "" ]; then
+#   SNAPPY_OPTS="$SNAPPY_OPTS -bind-address=$BIND_ADDRESS"
+#fi
+#if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
+#   SNAPPY_OPTS="$SNAPPY_OPTS -client-bind-address=$HOSTNAME_FOR_CLIENTS -hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
+#fi
 if [ "$MEMBER_OPTS" != "" ]; then
    SNAPPY_OPTS=$(removeEqualToOpts "$MEMBER_OPTS" "$SNAPPY_OPTS")
    SNAPPY_OPTS="$SNAPPY_OPTS $MEMBER_OPTS"
@@ -889,7 +889,7 @@ function writeBottomBody()
       if [[ $token == -J-Dlog4j.configurationFile=* ]]; then
          echo "-J-Dlog4j.configurationFile=\$ETC_DIR/log4j2.properties \\" >> $__SCRIPT_FILE
       elif [[ $token == -J-DgemfirePropertyFile=* ]]; then
-         echo "-J-DgemfirePropertyFile=$ETC_DIR/gemfire.properties \\" >> $__SCRIPT_FILE
+         echo "-J-DgemfirePropertyFile=$ETC_DIR/gemfirexd.properties \\" >> $__SCRIPT_FILE
       elif [[ $token == -J-Dgemfire.log-file=* ]]; then
          echo "-J-Dgemfire.log-file=\$LOG_DIR/\$INSTANCE_NAME.log \\" >> $__SCRIPT_FILE
       elif [[ $token == *prometheus* ]]; then
@@ -1075,7 +1075,7 @@ function writeStartScript
    cp -r $PADOGRID_WORKSPACE/lib/* $__LIB_DIR/ > /dev/null 2>&1
    cp -r $PADOGRID_WORKSPACE/plugins/* $__LIB_DIR/ > /dev/null 2>&1
    cp -r $CLUSTER_DIR/etc/cache.xml $__ETC_DIR/ > /dev/null 2>&1
-   cp -r $CLUSTER_DIR/etc/gemfire.properties $__ETC_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/etc/gemfirexd.properties $__ETC_DIR/ > /dev/null 2>&1
    cp -r $CLUSTER_DIR/etc/log4j2.properties $__ETC_DIR/ > /dev/null 2>&1
    cp -r $CLUSTER_DIR/etc/prometheus.yml $__ETC_DIR/ > /dev/null 2>&1
 
@@ -1117,7 +1117,7 @@ function writeStartScript
    echo "    │   └── start_member.sh" >> $README_FILE
    echo "    ├── etc" >> $README_FILE
    echo "    │   ├── cache.xml" >> $README_FILE
-   echo "    │   ├── gemfire.properties" >> $README_FILE
+   echo "    │   ├── gemfirexd.properties" >> $README_FILE
    echo "    │   ├── log4j2.properties" >> $README_FILE
    echo "    │   └── prometheus.yml" >> $README_FILE
    echo "    ├── lib" >> $README_FILE

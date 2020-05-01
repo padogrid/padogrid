@@ -409,15 +409,28 @@ function displayClusterLong()
    NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
    NODE=`getOsNodeName`
    LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
+   LEADERR_START_PORT=`getClusterProperty "leader.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
    MEMBER_START_PORT=`getClusterProperty "tcp.startRPort" $DEFAULT_MEMBER_START_PORT`
    MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
    MEMBER_HTTP_START_PORT=`getClusterProperty "http.startRPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
    JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+   LOCATOR_DEBUG_ENABLED=`getClusterProperty "locator.debug.enabled" $DEFAULT_LOCATOR_DEBUG_ENABLED`
+   LOCATOR_DEBUG_START_PORT=`getClusterProperty "locator.debug.startPort" $DEFAULT_LOCATOR_DEBUG_START_PORT`
+   LEADER_DEBUG_ENABLED=`getClusterProperty "leader.debug.enabled" $DEFAULT_LEADER_DEBUG_ENABLED`
+   LEADER_DEBUG_START_PORT=`getClusterProperty "leader.debug.startPort" $DEFAULT_LEADER_DEBUG_START_PORT`
    DEBUG_ENABLED=`getClusterProperty "debug.enabled" $DEFAULT_DEBUG_ENABLED`
    DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
+   LOCATOR_JMX_ENABLED=`getClusterProperty "locator.jmx.enabled" $DEFAULT_LOCATOR_JMX_ENABLED`
+   LOCATOR_JMX_START_PORT=`getClusterProperty "locator.jmx.startPort" $DEFAULT_LOCATOR_JMX_START_PORT`
+   LEADER_JMX_ENABLED=`getClusterProperty "leader.jmx.enabled" $DEFAULT_LEADER_JMX_ENABLED`
+   LEADER_JMX_START_PORT=`getClusterProperty "leader.jmx.startPort" $DEFAULT_LEADER_JMX_START_PORT`
    JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
    JMX_START_PORT=`getClusterProperty "jmx.startPort" $DEFAULT_JMX_START_PORT`
+   LOCATOR_PROMETHEUS_ENABLED=`getClusterProperty "locator.enabled" $DEFAULT_LOCATOR_PROMETHEUS_ENABLED`
+   LOCATOR_PROMETHEUS_START_PORT=`getClusterProperty "locator.startPort" $DEFAULT_LOCATOR_PROMETHEUS_START_PORT`
+   LEADER_PROMETHEUS_ENABLED=`getClusterProperty "leader.prometheus.enabled" $DEFAULT_LEADER_PROMETHEUS_ENABLED`
+   LEADER_PROMETHEUS_START_PORT=`getClusterProperty "leader.prometheus.startPort" $DEFAULT_LEADER_PROMETHEUS_START_PORT`
    PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
    PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
    HOST_NAME=`hostname`
@@ -478,38 +491,51 @@ function displayClusterLong()
             NODE="${NODE_NAME_PRIMARY}.local"
          fi
 
-         
          if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
             ( [ "$OS_ENV" == "gg" ] );  then
 
             # Same port number for guest OS
             LOCATOR_PORT=$LOCATOR_START_PORT
-            if [ "$DEBUG_ENABLED" == "true" ]; then
-               DEBUG_PORT=$DEBUG_START_PORT
+            if [ "$LOCATOR_DEBUG_ENABLED" == "true" ]; then
+               DEBUG_PORT=$LOCATOR_DEBUG_START_PORT
+            else
+               DEBUG_PORT="disabled"
 	    fi
             JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
             JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
-            if [ "$JMX_ENABLED" == "true" ]; then
-               JMX_PORT=$JMX_START_PORT
+            if [ "$LOCATOR_JMX_ENABLED" == "true" ]; then
+               JMX_PORT=$LOCATOR_JMX_START_PORT
                JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+            else
+               JMX_PORT="disabled"
+               JMX_URL="disabled"
 	    fi
-            if [ "$PROMETHEUS_ENABLED" == "true" ]; then
-               PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+            if [ "$LOCATOR_PROMETHEUS_ENABLED" == "true" ]; then
+               PROMETHEUS_PORT=$LOCATOR_PROMETHEUS_START_PORT
+            else
+               PROMETHEUS_PORT="disabled"
 	    fi
 
          else
 
             # Increment port numbers for host OS
             let LOCATOR_PORT=LOCATOR_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
-            if [ "$DEBUG_ENABLED" == "true" ]; then
-               let DEBUG_PORT=DEBUG_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            if [ "$LOCATOR_DEBUG_ENABLED" == "true" ]; then
+               let DEBUG_PORT=LOCATOR_DEBUG_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            else
+               DEBUG_PORT="disabled"
             fi
-            if [ "$JMX_ENABLED" == "true" ]; then
-               let JMX_PORT=JMX_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            if [ "$LOCATOR_JMX_ENABLED" == "true" ]; then
+               let JMX_PORT=LOCATOR_JMX_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
                JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+            else
+               JMX_PORT="disabled"
+               JMX_URL="disabled"
             fi
-            if [ "$PROMETHEUS_ENABLED" == "true" ]; then
-               let PROMETHEUS_PORT=PROMETHEUS_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            if [ "$LOCATOR_PROMETHEUS_ENABLED" == "true" ]; then
+               let PROMETHEUS_PORT=LOCATOR_PROMETHEUS_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+            else
+               PROMETHEUS_PORT="disabled"
             fi
             
             # JMX Manager (Pulse) is always enabled
@@ -568,16 +594,27 @@ function displayClusterLong()
       fi
    done
 
+   # Display members
+   MEMBER_PREFIX=`getMemberPrefix`
+   displayMember
+   __MEMBER_COUNT=$MEMBER_COUNT
+   __RUNNING_MEMBER_COUNT=$RUNNING_MEMBER_COUNT
+   
    # Display leaders
    MEMBER_PREFIX=`getLeaderPrefix`
+   DEBUG_ENABLED=$LEADER_DEBUG_ENABLED
+   DEBUG_START_PORT=$LEADER_DEBUG_START_PORT
+   JMX_ENABLED=$LEADER_JENABLED
+   JMX_START_PORT=$LEADER_JMX_START_PORT
+   PROMETHEUS_ENABLED=$LEADER_PROMETHEUS_ENABLED
+   PROMETHEUS_START_PORT=$LEADER_PROMETHEUS_START_PORT
    displayMember
    LEADER_COUNT=$MEMBER_COUNT
    RUNNING_LEADER_COUNT=$RUNNING_MEMBER_COUNT
    DOWN_LEADER_COUNT=$DOWN_MEMBER_COUNT
 
-   # Display members
-   MEMBER_PREFIX=`getMemberPrefix`
-   displayMember
+   MEMBER_COUNT=$__MEMBER_COUNT
+   RUNNING_MEMBER_COUNT=$__RUNNING_MEMBER_COUNT
 
    popd > /dev/null 2>&1
 
@@ -591,19 +628,19 @@ function displayClusterLong()
    else
    echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
    fi
-   if [ $RUNNING_LEADER_COUNT -lt 0 ]; then
-   echo -e " Leaders Running: ${CYellow}Unknown{CNone}"
-   elif [ $RUNNING_LEADER_COUNT -eq $LEADER_COUNT ]; then
-   echo -e " Leaders Running: ${CLightGreen}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
-   else
-   echo -e " Leaders Running: ${CLightRed}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
-   fi
    if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
    echo -e " Members Running: ${CYellow}Unknown{CNone}"
    elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
    echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   if [ $RUNNING_LEADER_COUNT -lt 0 ]; then
+   echo -e " Leaders Running: ${CYellow}Unknown{CNone}"
+   elif [ $RUNNING_LEADER_COUNT -eq $LEADER_COUNT ]; then
+   echo -e " Leaders Running: ${CLightGreen}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
+   else
+   echo -e " Leaders Running: ${CLightRed}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
    fi
    echo "         Version: $PRODUCT_VERSION"
    echo "----------------------------------------------------------------"
@@ -706,13 +743,20 @@ function displayMember
 	    fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                DEBUG_PORT=$DEBUG_START_PORT
+            else
+               DEBUG_PORT="disabled"
 	    fi
             if [ "$JMX_ENABLED" == "true" ]; then
                JMX_PORT=$JMX_START_PORT
                JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+            else
+               JMX_PORT="disabled"
+               JMX_URL="disabled"
 	    fi
             if [ "$PROMETHEUS_ENABLED" == "true" ]; then
                PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+            else
+               PROMETHEUS_PORT="disabled"
 	    fi
 
          else
@@ -726,13 +770,20 @@ function displayMember
             fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+            else
+               DEBUG_PORT="disabled"
             fi
             if [ "$JMX_ENABLED" == "true" ]; then
                let JMX_PORT=JMX_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
                JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
+            else
+               JMX_PORT="disabled"
+               JMX_URL="disabled"
             fi
             if [ "$PROMETHEUS_ENABLED" == "true" ]; then
                let PROMETHEUS_PORT=PROMETHEUS_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+            else
+               PROMETHEUS_PORT="disabled"
             fi
 
          fi

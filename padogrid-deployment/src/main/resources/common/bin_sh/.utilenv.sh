@@ -865,9 +865,10 @@ function getWorkspaceClusterProperty
 #
 function setProperty
 {
-   __LINE_NUM=0
+   local __LINE_NUM=0
+   local __SED_BACKUP
    if [ -f $__PROPERTIES_FILE ]; then
-      __found="false"
+      local __found="false"
       while IFS= read -r line; do
          let __LINE_NUM=__LINE_NUM+1
          line=`trimString $line`
@@ -877,6 +878,13 @@ function setProperty
          fi
       done < "$__PROPERTIES_FILE"
       if [ "$__found" == "true" ]; then
+         # SED backup prefix
+         if [[ ${OS_NAME} == DARWIN* ]]; then
+            # Mac - space required
+            __SED_BACKUP=" 0"
+         else
+            __SED_BACKUP="0"
+         fi
          sed -i${__SED_BACKUP} ''$__LINE_NUM's/'$line'/'$2'='$3'/g' "$__PROPERTIES_FILE"
       else
          echo "$2=$3" >> "$__PROPERTIES_FILE"
@@ -1021,8 +1029,8 @@ function getPrivateNetworkAddresses
 #
 # Updates the default workspaces envionment variables with the current values
 # in the .rwe/defaultenv.sh file.
-# @required PADOGRID_WORKSPACE
 # @required PRODUCT
+# @required PADOGRID_WORKSPACE
 #
 function updateDefaultEnv
 {
@@ -1032,7 +1040,32 @@ function updateDefaultEnv
       mkdir "$RWE_DIR"
    fi
    echo "export PRODUCT=\"$PRODUCT\"" > $DEFAULTENV_FILE
-   echo "export PADOGRID_WORKSPACE=\"$PADOGRID_WORKSPACE\"" > $DEFAULTENV_FILE
+   echo "export PADOGRID_WORKSPACE=\"$PADOGRID_WORKSPACE\"" >> $DEFAULTENV_FILE
+}
+
+#
+# Creates a temporary defaultenv.sh file containing the specified parameters.
+# @param product       Product name
+# @param workspacePath Workspace path
+#
+function createTmpDefaultEnv
+{
+   local __PRODUCT="$1"
+   local __WORKSPACE_PATH="$2"
+   local DEFAULTENV_FILE="/tmp/defaultenv.sh"
+   echo "export PRODUCT=\"$__PRODUCT\"" > $DEFAULTENV_FILE
+   echo "export PADOGRID_WORKSPACE=\"$__WORKSPACE_PATH\"" >> $DEFAULTENV_FILE
+}
+
+#
+# Removes the temporary defaultenv.sh file create by the 'createTmpDefaultEnv function
+# if exists.
+#
+function removeTmpDefaultEnv
+{
+   if [ -f "/tmp/defaultenv.sh" ]; then
+      rm "/tmp/defaultenv.sh"
+   fi
 }
 
 #
@@ -1775,7 +1808,7 @@ function getWorkspaceInfoList
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
       CLUSTER_TYPE="gemfire"
    elif [[ "$__PRODUCT_HOME" == *"geode"* ]]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*apache-geode-//' -e 's/"//')
       CLUSTER_TYPE="geode"
    elif [[ "$__PRODUCT_HOME" == *"snappydata"* ]]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*snappydata-//' -e 's/"//')
@@ -2082,4 +2115,27 @@ function removeEqualToOpts
       fi
    done
    echo "$__NEW_OPTS"
+}
+
+#
+# Returns the value of the specified option found in the specified option list.
+# If not found returns an empty string. The options list must be in the form of
+# "opt1=value1 opt2=value2 ...".
+#
+# @param opt        Option name without the '=' character. Include any preceeding characters
+#                   such as '-' or '--'.
+# @param sourceOpts Option list.
+#
+function getOptValue
+{
+   local __OPT_TO_FIND=$1
+   local __SOURCE_OPTS=$2
+   local __VALUE=""
+   for i in $__SOURCE_OPTS; do
+      if [[ "$i=" == "$__OPT_TO_FIND="* ]]; then
+         __VALUE=${i#$__OPT_TO_FIND=}
+         break;
+      fi
+   done
+   echo "$__VALUE"
 }

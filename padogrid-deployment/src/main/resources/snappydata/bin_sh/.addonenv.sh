@@ -211,6 +211,11 @@ CLASSPATH=""
 DEFAULT_LOCATOR_START_PORT=10334
 
 #
+# Default client TCP start port.
+#
+DEFAULT_CLIENT_PORT=1527
+
+#
 # Default member TCP start port. The value of ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's TCP port number.
 #
@@ -220,6 +225,11 @@ DEFAULT_MEMBER_START_PORT=40404
 # Default Spark UI port (Pulse SnappyData Monitoring).
 #
 DEFAULT_SPARK_UI_PORT=5050
+
+#
+# Default Spark job server port.
+#
+DEFAULT_SPARK_JOBSERVER_PORT=8090
 
 #
 # Enable/disable Java remote debugging
@@ -233,6 +243,7 @@ DEFAULT_DEBUG_ENABLED=true
 # Enable/disable JMX
 #
 DEFAULT_LOCATOR_JMX_ENABLED=false
+DEFAULT_LEADER_JMX_ENABLED=false
 DEFAULT_JMX_ENABLED=true
 
 #
@@ -473,11 +484,6 @@ CLIENT_CONFIG_FILE=$ETC_DIR/cache-client.xml
 #
 # log4j2 logging
 #
-#if [[ ${OS_NAME} == CYGWIN* ]]; then
-#   __ETC_DIR="$(cygpath -wp "$ETC_DIR")"
-#else
-#   __ETC_DIR=$ETC_DIR
-#fi
 LOG4J_FILE="$ETC_DIR/log4j2.properties"
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    LOG4J_FILE="$(cygpath -wp "$LOG4J_FILE")"
@@ -519,8 +525,8 @@ PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
 #
 # PADOGRID_VERSION: Determine the padogrid version
 #
-for file in $BASE_DIR/lib/geode-addon-core-*; do
-   file=${file#*geode\-addon\-core\-}
+for file in $BASE_DIR/lib/snappydata-addon-core-*; do
+   file=${file#*snappydata\-addon\-core\-}
    PADOGRID_VERSION=${file%.jar}
 done
 

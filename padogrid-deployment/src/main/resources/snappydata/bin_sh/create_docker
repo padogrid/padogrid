@@ -21,9 +21,6 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
 EXECUTABLE="`basename $0`"
 
-echo "$EXECUTABLE not supported for SnappyData for this release."
-exit
-
 __options()
 {
    echo "-docker -host -port -cluster -count -?"
@@ -156,8 +153,7 @@ fi
 
 if [ "$DOCKER" == "compose" ]; then
 
-   #RUN_DIR=$CLUSTER_DIR/padogrid/run
-   RUN_DIR=/run
+   RUN_DIR=$CLUSTER_DIR/padogrid/run
    ETC_DIR=$CLUSTER_DIR/padogrid/etc
    LIB_DIR=$CLUSTER_DIR/padogrid/lib
    LOG_DIR=$CLUSTER_DIR/padogrid/log
@@ -172,17 +168,12 @@ if [ "$DOCKER" == "compose" ]; then
 
    # Copy Docker doc
    cp $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
-   # Copy the template gemfire.properties file
-   cp $BASE_DIR/etc/template-gemfire.properties $ETC_DIR/gemfire.properties
-   # Copy the template cache.xml file
-   cp $BASE_DIR/etc/template-cache.xml $ETC_DIR/cache.xml
+   # Copy the template gemfirexd.properties file
+   cp $BASE_DIR/etc/template-gemfirexd.properties $ETC_DIR/gemfirexd.properties
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
    # Copy the template prometheus config file
    cp $BASE_DIR/etc/template-prometheus.yml $ETC_DIR/prometheus.yml
-   # Copy the template hibernate config file
-   cp $BASE_DIR/etc/template-hibernate.cfg-mysql.xml $ETC_DIR/hibernate.cfg-mysql.xml
-   cp $BASE_DIR/etc/template-hibernate.cfg-postgresql.xml $ETC_DIR/hibernate.cfg-postgresql.xml
 
    # Copy binary files
    cp -r $PADOGRID_HOME/lib $LIB_DIR
@@ -197,27 +188,26 @@ if [ "$DOCKER" == "compose" ]; then
    fi
    
    # Update docker-compose.yaml
+   CLIENT_PORT=$DEFAULT_CLIENT_PORT
    LOCATOR_PORT=$START_PORT
    HOST_LOCATOR_JMX_PORT=$DEFAULT_LOCATOR_JMX_START_PORT
-   HOST_JMX_MANAGER_HTTP_PORT=$DEFAULT_JMX_MANAGER_HTTP_START_PORT
-   HOST_JMX_MANAGER_PORT=$DEFAULT_JMX_MANAGER_START_PORT
+   HOST_LOCATOR_PROMETHEUS_PORT=$DEFAULT_LOCATOR_PROMETHEUS_START_PORT
    sed -e "s/\${HOSTNAME_FOR_CLIENTS}/$HOST_IP/g" \
        -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
        $BASE_DIR/docker/compose/template-env > $CLUSTER_DIR/.env
 
    # Update docker-compose.yaml
+#   SNAPPYDATA_VERSION="latest"
    sed -e "s/\${VERSION}/$SNAPPYDATA_VERSION/g" \
+       -e "s/\${CLIENT_PORT}/$CLIENT_PORT/g" \
        -e "s/\${LOCATOR_PORT}/$LOCATOR_PORT/g" \
        -e "s/\${HOST_LOCATOR_JMX_PORT}/$HOST_LOCATOR_JMX_PORT/g" \
-       -e "s/\${HOST_JMX_MANAGER_HTTP_PORT}/$HOST_JMX_MANAGER_HTTP_PORT/g" \
-       -e "s/\${HOST_JMX_MANAGER_PORT}/$HOST_JMX_MANAGER_PORT/g" \
+       -e "s/\${HOST_LOCATOR_PROMETHEUS_PORT}/$HOST_LOCATOR_PROMETHEUS_PORT/g" \
        $BASE_DIR/docker/compose/template-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
 
    # Append server services to docker-compose.yaml
-   let DIFF_PORT=LOCATOR_PORT-DEFAULT_LOCATOR_START_PORT
-   let SERVER_PORT=DEFAULT_MEMBER_START_PORT+DIFF_PORT
-   HTTP_PORT=$DEFAULT_MEMBER_HTTP_START_PORT
-   HOST_JMX_PORT=10991
+   let HOST_CLIENT_PORT=CLIENT_PORT+1
+   HOST_JMX_PORT=$DEFAULT_JMX_START_PORT
    HOST_DEBUG_PORT=$DEFAULT_DEBUG_START_PORT
    HOST_PROMETHEUS_PORT=$DEFAULT_PROMETHEUS_START_PORT
    PROMETHEUS_JAR_PATH=`find $PADOGRID_HOME/lib -name jmx_prometheus_javaagent*.jar`
@@ -226,15 +216,41 @@ if [ "$DOCKER" == "compose" ]; then
       SERVER_NAME="server$i"
       sed -e "s/\${VERSION}/$SNAPPYDATA_VERSION/g" \
           -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
-	  -e "s/\${SERVER_PORT}/$SERVER_PORT/g" \
-	  -e "s/\${HTTP_PORT}/$HTTP_PORT/g" \
+	  -e "s/\${HOST_CLIENT_PORT}/$HOST_CLIENT_PORT/g" \
 	  -e "s/\${HOST_JMX_PORT}/$HOST_JMX_PORT/g" \
           -e "s/\${HOST_DEBUG_PORT}/$HOST_DEBUG_PORT/g" \
           -e "s/\${HOST_PROMETHEUS_PORT}/$HOST_PROMETHEUS_PORT/g" \
           -e "s/\${PROMETHEUS_JAR}/$PROMETHEUS_JAR/g" \
 	  $BASE_DIR/docker/compose/template-server-docker-compose.yaml >> $CLUSTER_DIR/docker-compose.yaml
-      let SERVER_PORT=SERVER_PORT+1
-      let HTTP_PORT=HTTP_PORT+1
+      let HOST_CLIENT_PORT=HOST_CLIENT_PORT+1
+      let HOST_JMX_PORT=HOST_JMX_PORT+1
+      let HOST_DEBUG_PORT=HOST_DEBUG_PORT+1
+      let HOST_PROMETHEUS_PORT=HOST_PROMETHEUS_PORT+1
+   done
+
+   # Append leader services to docker-compose.yaml
+   let DIFF_PORT=LOCATOR_PORT-DEFAULT_LOCATOR_START_PORT
+   let HOST_CLIENT_PORT=CLIENT_PORT+1
+   HOST_SPARK_UI_PORT=$DEFAULT_SPARK_UI_PORT
+   HOST_SPARK_JOBSERVER_PORT=$DEFAULT_SPARK_JOBSERVER_PORT
+   HOST_JMX_PORT=$DEFAULT_LEADER_JMX_START_PORT
+   HOST_DEBUG_PORT=$DEFAULT_LEADER_DEBUG_START_PORT
+   HOST_PROMETHEUS_PORT=$DEFAULT_LEADER_PROMETHEUS_START_PORT
+   PROMETHEUS_JAR_PATH=`find $PADOGRID_HOME/lib -name jmx_prometheus_javaagent*.jar`
+   PROMETHEUS_JAR=$(basename $PROMETHEUS_JAR_PATH)
+   LEADER_COUNT=1
+   for i in $(seq 1 $LEADER_COUNT); do   
+      LEADER_NAME="leader$i"
+      sed -e "s/\${VERSION}/$SNAPPYDATA_VERSION/g" \
+          -e "s/\${LEADER_NAME}/$LEADER_NAME/g" \
+          -e "s/\${HOST_SPARK_UI_PORT}/$HOST_SPARK_UI_PORT/g" \
+          -e "s/\${HOST_SPARK_JOBSERVER_PORT}/$HOST_SPARK_JOBSERVER_PORT/g" \
+	  -e "s/\${HOST_JMX_PORT}/$HOST_JMX_PORT/g" \
+          -e "s/\${HOST_DEBUG_PORT}/$HOST_DEBUG_PORT/g" \
+          -e "s/\${HOST_PROMETHEUS_PORT}/$HOST_PROMETHEUS_PORT/g" \
+          -e "s/\${PROMETHEUS_JAR}/$PROMETHEUS_JAR/g" \
+	  $BASE_DIR/docker/compose/template-leader-docker-compose.yaml >> $CLUSTER_DIR/docker-compose.yaml
+      let HOST_CLIENT_PORT=HOST_CLIENT_PORT+1
       let HOST_JMX_PORT=HOST_JMX_PORT+1
       let HOST_DEBUG_PORT=HOST_DEBUG_PORT+1
       let HOST_PROMETHEUS_PORT=HOST_PROMETHEUS_PORT+1

@@ -298,6 +298,7 @@ export LOG_FILE_NAME=${LOCATOR}.log
 export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   STATS_FILE="$(cygpath -wp "$STATS_FILE")"
    CONFIG_FILE="$(cygpath -wp "$CONFIG_FILE")"
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
 fi
@@ -376,21 +377,19 @@ JAVA_OPTS="-J-Dpado.vm.id=${LOCATOR} \
 # Sparkt UI port
 SPARK_UI_PORT=`getClusterProperty "spark.ui.port" $DEFAULT_SPARK_UI_PORT`
 
+#   -locators=$LOCATOR_TCP_LIST \
 SNAPPY_OPTS="-name=${LOCATOR} \
-   -locators=$LOCATOR_TCP_LIST \
    -dir=$LOCATOR_DIR \
    -spark.ui.port=$SPARK_UI_PORT \
-   -peer-discovery-address=$BIND_ADDRESS \
-   -peer-discovery-port=$LOCATOR_PORT \
    -log-file=$LOG_FILE \
    -statistic-archive-file=$STATS_FILE"
 
-if [ "$BIND_ADDRESS" != "" ]; then
-   SNAPPY_OPTS="$SNAPPY_OPTS -bind-address=$BIND_ADDRESS"
-fi
-if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
-   SNAPPY_OPTS="$SNAPPY_OPTS -hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
-fi
+#if [ "$BIND_ADDRESS" != "" ]; then
+#   SNAPPY_OPTS="$SNAPPY_OPTS -bind-address=$BIND_ADDRESS"
+#fi
+#if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
+#   SNAPPY_OPTS="$SNAPPY_OPTS -client-bind-address=$HOSTNAME_FOR_CLIENTS -hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
+#fi
 
 if [ "$LOCATOR_OPTS" != "" ]; then
    SNAPPY_OPTS=$(removeEqualToOpts "$LOCATOR_OPTS" "$SNAPPY_OPTS")
