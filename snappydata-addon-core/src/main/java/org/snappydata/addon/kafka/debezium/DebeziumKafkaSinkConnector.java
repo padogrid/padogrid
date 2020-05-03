@@ -29,7 +29,7 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 	public static final String DEFAULT_PASSWORD = "app";
 	public static final String DEFAULT_TABLE = "mytable";
 	public static final int DEFAULT_QUEUE_BATCH_SIZE = 100;
-	public static final long DEFAULT_QUEUE_BATCH_INTERVAL_IN_MSEC = 1000;
+	public static final long DEFAULT_QUEUE_BATCH_INTERVAL_IN_MSEC = 500;
 
 	public static final String CONFIG_TABLE = "table";
 	public static final String CONFIG_DEBUG_ENABLED = "debug.enabled";
