@@ -20,7 +20,7 @@ Upon completion of creating the workspace, switch into the workspace.
 switch_workspace ws-minishift
 ```
 
-We will be using the `$PADOGRID_WORKSPACE` environment variable set by `switch_workspace` throughout this article. You can check its value as follows:
+We will be using the `$PADOGRID_WORKSPACE` environment variable set by `switch_workspace` in the subsequent sections. You can check its value as follows:
 
 ```bash
 echo $PADOGRID_WORKSPACE
@@ -233,10 +233,11 @@ password: admin
 
 ### Management Center
 
-Expose the Hazelcast Management Center (for Hazelcast Enterprise only.)
+Expose the Hazecast and Management Center services. Management Center is for Hazelcast Enterprise only.
 
 ```bash
-# Expose the Hazelcast and Management Center service.
+# Expose the Hazelcast and Management Center services.
+oc expose svc/hazelcast-service
 oc expose svc/management-center-service
 
 # Get the Management Center URL.
@@ -248,8 +249,9 @@ oc get route
 Your output should look similar to the following.
 
 ```console
-NAME                        HOST/PORT                                               PATH      SERVICES                    PORT      TERMINATION   WILDCARD
-management-center-service   management-center-service-default.192.168.1.38.nip.io             management-center-service   8080                    None
+NAME                        HOST/PORT                                                 PATH      SERVICES                    PORT      TERMINATION   WILDCARD
+hazelcast-service           hazelcast-service-myproject.192.168.1.38.nip.io                     hazelcast-service           5701                    None
+management-center-service   management-center-service-myproject.192.168.1.38.nip.io             management-center-service   8080                    None
 ```
 
 Include `hazelcast-mancenter` in the URL as follows:
