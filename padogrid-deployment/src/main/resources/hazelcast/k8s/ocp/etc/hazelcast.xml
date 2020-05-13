@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<hazelcast xmlns="http://www.hazelcast.com/schema/config"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.hazelcast.com/schema/config
+	http://www.hazelcast.com/schema/config/hazelcast-config-4.0.xsd">
+
+	<properties>
+		<property name="hazelcast.phone.home.enabled">false</property>
+	</properties>
+
+	<cluster-name>dev</cluster-name>
+
+	<user-code-deployment enabled="true">
+		<class-cache-mode>ETERNAL</class-cache-mode>
+		<provider-mode>LOCAL_AND_CACHED_CLASSES</provider-mode>
+	</user-code-deployment>
+
+	<network>
+		<rest-api enabled="true">
+			<endpoint-group name="HEALTH_CHECK" enabled="true" />
+			<endpoint-group name="CLUSTER_READ" enabled="true" />
+			<endpoint-group name="CLUSTER_WRITE" enabled="true" />
+			<endpoint-group name="DATA" enabled="true" />
+			<endpoint-group name="HOT_RESTART" enabled="true" />
+			<endpoint-group name="WAN" enabled="true" />
+		</rest-api>
+		<join>
+			<multicast enabled="false"></multicast>
+			<kubernetes enabled="true"></kubernetes>
+		</join>
+		<ssl enabled="false" />
+		<socket-interceptor enabled="false" />
+	</network>
+
+	<executor-service name="hz:query">
+		<pool-size>16</pool-size>
+		<!--Queue capacity. 0 means Integer.MAX_VALUE. -->
+		<queue-capacity>0</queue-capacity>
+	</executor-service>
+
+	<!-- padogrid serialization -->
+	<serialization>
+		<portable-version>1</portable-version>
+		<portable-factories>
+			<portable-factory factory-id="10000">
+			org.hazelcast.addon.hql.impl.PortableFactoryImpl
+			</portable-factory>
+		</portable-factories>
+	</serialization>
+</hazelcast>
