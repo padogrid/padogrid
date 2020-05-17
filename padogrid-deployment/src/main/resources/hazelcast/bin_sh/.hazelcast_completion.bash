@@ -150,6 +150,10 @@ __padogrid_complete()
       type_list="padogrid $GITHUB_USERS"
       ;;
 
+   -githost)
+      type_list="github gitea"
+      ;;
+
    -log)
       type_list="data gc diag mc"
       ;;
@@ -756,6 +760,9 @@ __command_complete()
          . $HOME/.padogrid/setenv.sh
       fi
       type_list="padogrid $GITHUB_USERS"
+      ;;
+   -githost)
+      type_list="github gitea"
       ;;
    -log)
       type_list="data gc diag mc"

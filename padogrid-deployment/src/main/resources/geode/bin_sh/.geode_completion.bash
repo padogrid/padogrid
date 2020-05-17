@@ -156,6 +156,10 @@ __padogrid_complete()
       type_list="padogrid $GITHUB_USERS"
       ;;
 
+   -githost)
+      type_list="github gitea"
+      ;;
+
    -log)
       type_list="data gc locator"
       ;;
@@ -267,7 +271,7 @@ __rwe_complete()
    local len cur_word type_list
    len=${#COMP_WORDS[@]}
    cur_word="${COMP_WORDS[COMP_CWORD]}"
-      
+
    if [ $len -ge 3 ]; then
      type_list=""
    else
@@ -488,6 +492,9 @@ __command_complete()
       fi
       type_list="padogrid $GITHUB_USERS"
       ;;
+   -githost)
+      type_list="github gitea"
+      ;;
    -log)
       type_list="data gc locator"
      ;;
@@ -507,7 +514,7 @@ __command_complete()
      ;;
    esac
 
-   # Remove the help option if one or more options are already specifed
+   # Remove the help option if one or more options are already specified
    if [ $len -gt 2 ]; then
       type_list=${type_list/\-\?/}
    fi

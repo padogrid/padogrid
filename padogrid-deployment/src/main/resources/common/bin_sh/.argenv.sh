@@ -101,6 +101,7 @@ PREVIEW=false
 DOWNLOAD=false
 CONSOLE=false
 USER=
+GITHOST=github
 LIST=false
 HEADER=false
 CATALOG=false
@@ -204,6 +205,8 @@ do
       REMOTE=$i
    elif [ "$PREV" == "-user" ]; then
       USER=$i
+   elif [ "$PREV" == "-githost" ]; then
+      GITHOST=$i
    elif [ "$PREV" == "-vm" ]; then
       if [[ "$i" != "-"* ]]; then
          VM_HOSTS_ARG=$i

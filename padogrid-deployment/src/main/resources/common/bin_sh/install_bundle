@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -preview -download -quiet -?"
+   echo "-user -githost -preview -download -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -47,7 +47,7 @@ WARNING
 
 
 SYNOPSIS
-   $EXECUTABLE [-user GitHub_user_name] [-preview] [-download] [-quiet] [-?] bundle_file_path
+   $EXECUTABLE [-user git_user_name] [-githost github|gitea] [-preview] [-download] [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
    Installs the specified bundle file in the current padogrid workspace. Make
@@ -56,27 +56,30 @@ DESCRIPTION
 
 OPTIONS
    -user
-             GitHub user name. If specified, then it downloads the specified bundle
-             from this user's GitHub repos.
+             Git user name. If specified, then it downloads the specified bundle from user's
+             Git repos.
+
+   -githost
+             Git host. Supported git hosts are 'github' and 'gitea'. Default: github.
 
    -preview
-            Do not install but display the bundle contents.
+             Do not install but display the bundle contents.
 
    -download
-            Downloads and installs the specified bundle from the remote padogrid
-            bundle repo. To prevent it from installing, specify the '-preview' option.
-            If the '-preview' option is specified, then it downloads and displays the
-            contents but does not install the bundle. You can install the downloaded
-            bundle later by specifying the bundle file path.
+             Downloads and installs the specified bundle from the remote padogrid
+             bundle repo. To prevent it from installing, specify the '-preview' option.
+             If the '-preview' option is specified, then it downloads and displays the
+             contents but does not install the bundle. You can install the downloaded
+             bundle later by specifying the bundle file path.
 
    -quiet
-            Quiet mode. Supresses the interactive prompt.
+             Quiet mode. Supresses the interactive prompt.
 
    bundle_file_path
-             Bundle file path if local or bundle name if download.
+              Bundle file path if local or bundle name if download.
 
 DEFAULT
-   $EXECUTABLE
+   $EXECUTABLE -user padogrid -githost github
 
 EXAMPLES
    To list remote bundles:
@@ -145,16 +148,22 @@ if [ "$DOWNLOAD" == "true" ]; then
          rm -rf $GIT_DIR
       fi
 
-      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
-      BUNDLE_REPOS="https://github.com/$GITHUB_USER?tab=repositories"
-      RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
+      if [ "$GITHOST" == "gitea" ]; then
+         SETENV_FILE="$HOME/.padogrid/setenv.sh"
+         if [ -f "$SETENV_FILE" ]; then
+            . $SETENV_FILE
+         fi
+         GITHUB_USER_HOME="$GITEA_SSH_URL:$GITHUB_USER"
+      else
+         GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+      fi
 
       pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
       echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
       git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
       popd > /dev/null 2>&1 
       if [ ! -d "$GIT_DIR" ]; then
-         echo >&2 "ERROR: Specified bundle does not exist in the repo. Command aborted."
+         echo >&2 "ERROR: The specified bundle does not exist for the user [$GITHUB_USER]."
          exit 1
       fi
       pushd $GIT_DIR > /dev/null 2>&1 
@@ -322,8 +331,11 @@ if [ "$PREVIEW" == "true" ]; then
    else
    echo "            Bundle: $BUNDLE_FILE_PATH"
    fi
+   echo "   Preiview Pod(s):$PODS"
    echo "Preview Cluster(s):$CLUSTERS"
    echo "   Preview Apps(s):$APPS"
+   echo "    Preview Docker:$DOCKERS"
+   echo "      Preiview K8S:$K8S"
 else
    echo "           WORKSPACE: $PADOGRID_WORKSPACE"
    echo "        Cluster Type: $cluster_type"
