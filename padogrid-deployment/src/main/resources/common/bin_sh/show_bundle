@@ -161,12 +161,20 @@ fi
 if [ "$CATALOG" == "true" ]; then
    LIST="false"
    HEADER="false"
-   GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
-   BUNDLE_REPOS="$$GITHUB_USER_HOME?tab=repositories"
-   if [ "$ALL" == "true" ]; then
-      CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/blob/master/all-catalog.md"
+   if [ "$GITHOST" == "gitea" ]; then
+      GITHUB_USER_HOME="$GITEA_HTTPS_URL/$GITHUB_USER"
+      if [ "$ALL" == "true" ]; then
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/src/branch/master/all-catalog.md"
+      else
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/src/branch/master/$BUNDLE_PRODUCT-catalog.md"
+      fi
    else
-      CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/blob/master/$BUNDLE_PRODUCT-catalog.md"
+      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+      if [ "$ALL" == "true" ]; then
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/blob/master/all-catalog.md"
+      else
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/blob/master/$BUNDLE_PRODUCT-catalog.md"
+      fi
    fi
    BROWSER_URL="${CATALOG_URL}"
    if [[ ${OS_NAME} == DARWIN* ]]; then
