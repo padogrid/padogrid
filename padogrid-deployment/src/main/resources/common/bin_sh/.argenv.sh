@@ -102,6 +102,7 @@ DOWNLOAD=false
 CONSOLE=false
 USER=
 GITHOST=github
+CONNECT=https
 LIST=false
 HEADER=false
 CATALOG=false
@@ -207,6 +208,8 @@ do
       USER=$i
    elif [ "$PREV" == "-githost" ]; then
       GITHOST=$i
+   elif [ "$PREV" == "-connect" ]; then
+      CONNECT=$i
    elif [ "$PREV" == "-vm" ]; then
       if [[ "$i" != "-"* ]]; then
          VM_HOSTS_ARG=$i
@@ -343,6 +346,9 @@ if [ $MEMBER_NUM -lt 1 ]; then
 fi
 if [ $MEMBER_NUM -gt 99 ]; then
    echo "ERROR: Member number must be less than 99: $MEMBER_NUM. Command aborated." >&2; exit 1
+fi
+if [ $CONNECT != "https" ] && [ "$CONNECT" != "ssh" ]; then
+   echo "ERROR: Invalid -connect type: [$CONNECT]. Valid values are https or ssh. Command aborted." >&2; exit 1
 fi
 if [ $MEMBER_NUM -lt 10 ]; then
    MEMBER_NUM=0$MEMBER_NUM

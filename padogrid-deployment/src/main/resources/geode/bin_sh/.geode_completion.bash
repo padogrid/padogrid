@@ -160,6 +160,10 @@ __padogrid_complete()
       type_list="github gitea"
       ;;
 
+   -connect)
+      type_list="https ssh"
+      ;;
+
    -log)
       type_list="data gc locator"
       ;;
@@ -494,6 +498,9 @@ __command_complete()
       ;;
    -githost)
       type_list="github gitea"
+      ;;
+   -connect)
+      type_list="https ssh"
       ;;
    -log)
       type_list="data gc locator"

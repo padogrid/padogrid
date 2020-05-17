@@ -88,13 +88,13 @@ __padogrid_complete()
          type_list=`getApps`
       fi
       ;;
-      
+
    -port)
       if [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_docker" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
       fi
       ;;
-      
+
    -cluster)
       if [ "$second_word" == "create_k8s" ] || [ "$second_word" == "remove_k8s" ]; then
          __ENV="k8s"
@@ -105,16 +105,16 @@ __padogrid_complete()
       fi
       type_list=`getClusters $__ENV`
       ;;
-      
-   -k8s)
+
+   -k8s) 
       if [ "$second_word" == "create_k8s" ]; then
          type_list="minikube gke minishift"
       else
          type_list=`getClusters k8s`
       fi
       ;;
-      
-   -docker)
+
+   -docker) 
       if [ "$second_word" == "create_bundle" ]; then
          type_list=`getClusters docker`
       else
@@ -152,6 +152,10 @@ __padogrid_complete()
 
    -githost)
       type_list="github gitea"
+      ;;
+
+   -connect)
+      type_list="https ssh"
       ;;
 
    -log)
@@ -763,6 +767,9 @@ __command_complete()
       ;;
    -githost)
       type_list="github gitea"
+      ;;
+   -connect)
+      type_list="https ssh"
       ;;
    -log)
       type_list="data gc diag mc"

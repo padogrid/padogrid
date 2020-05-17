@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -preview -download -quiet -?"
+   echo "-user -githost -connect -preview -download -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -47,7 +47,7 @@ WARNING
 
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-githost github|gitea] [-preview] [-download] [-quiet] [-?] bundle_file_path
+   $EXECUTABLE [-user git_user_name] [-githost github|gitea] [-connect https|ssh] [-preview] [-download] [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
    Installs the specified bundle file in the current padogrid workspace. Make
@@ -59,8 +59,13 @@ OPTIONS
              Git user name. If specified, then it downloads the specified bundle from user's
              Git repos.
 
-   -githost
+   -githost github|gitea
              Git host. Supported git hosts are 'github' and 'gitea'. Default: github.
+
+   -connect https|ssh
+             Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh' is supported
+             and this option is ignored. Specify 'ssh' if the bundle repos are private. To connect to
+             private repos, you must first deploy your public key, i.e., ~/.ssh/id_rsa.pub to your repo account.
 
    -preview
              Do not install but display the bundle contents.
@@ -148,14 +153,20 @@ if [ "$DOWNLOAD" == "true" ]; then
          rm -rf $GIT_DIR
       fi
 
+      # Source in .padogrid/setenv.sh
+      SETENV_FILE="$HOME/.padogrid/setenv.sh"
+      if [ -f "$SETENV_FILE" ]; then
+         . $SETENV_FILE
+      fi
+
       if [ "$GITHOST" == "gitea" ]; then
-         SETENV_FILE="$HOME/.padogrid/setenv.sh"
-         if [ -f "$SETENV_FILE" ]; then
-            . $SETENV_FILE
-         fi
          GITHUB_USER_HOME="$GITEA_SSH_URL:$GITHUB_USER"
       else
-         GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+         if [ "$CONNECT" == "ssh" ] || [ "$GITHUB_PRIVATE_REPO_ENABLED" == "true" ]; then
+             GITHUB_USER_HOME="git@github.com:$GITHUB_USER"
+         else
+             GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+         fi
       fi
 
       pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
