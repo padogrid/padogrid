@@ -240,7 +240,7 @@ Expose the Hazecast and Management Center services. Management Center is for Haz
 oc expose svc/hazelcast-service
 oc expose svc/management-center-service
 
-# Get the Management Center URL.
+# Get the Hazelcast and Management Center host names.
 oc get route
 ```
 
@@ -296,7 +296,7 @@ cd_app perf_test; cd bin_sh
 ./test_ingestion -run
 ```
 
-You should see two
+From the Management Center, you should see two (2) maps, `eligibility` and `profile` being populated.
 
 ## Tearing Down
 
