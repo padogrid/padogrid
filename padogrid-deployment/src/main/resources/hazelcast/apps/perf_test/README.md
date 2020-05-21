@@ -106,7 +106,7 @@ Usage:
 
 ### MapStorePkDbImpl (Database Integration)
 
-`padohub` includes a generic DB addon, `org.hazelcast.addon.cluster.MapStorePkDbImpl`, that can read/write from/to a database. This primary-key-based DB addon maps your Hibernate entity objects to database tables. To use the plugin, the primary key must be part of the entity object annotated with Hibernate's `@Id`. The following is a snippet of the `Order` object included in `padohub`.
+`padogrid` includes a generic DB addon, `org.hazelcast.addon.cluster.MapStorePkDbImpl`, that can read/write from/to a database. This primary-key-based DB addon maps your Hibernate entity objects to database tables. To use the plugin, the primary key must be part of the entity object annotated with Hibernate's `@Id`. The following is a snippet of the `Order` object included in `padogrid`.
 
 ```java
 @Entity
@@ -150,7 +150,7 @@ public class Order implements VersionedPortable, Comparable<Order>
         ...
 ```
 
-To use `MapStorePkDbImpl`, you must first build the environment by executing the `build_app` script as shown below. This script runs Maven to download the dependency files into the `$PADOHUB_WORKSPACE/lib` directory, which is included in `CLASSPATH` for all the apps and clusters running in the workspace.
+To use `MapStorePkDbImpl`, you must first build the environment by executing the `build_app` script as shown below. This script runs Maven to download the dependency files into the `$PADOGRID_WORKSPACE/lib` directory, which is included in `CLASSPATH` for all the apps and clusters running in the workspace.
 
 ```console
 ./build_app
@@ -160,7 +160,7 @@ Upon successful build, you must also configure the cluster in `hazelcast.xml` fi
 
 ```console
 # Edit hazelcast.xml
-vi $PADOHUB_WORKSPACE/clusters/<your-cluster>/etc/hazelcast.xml
+vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hazelcast.xml
 ```
 
 Add the following in the `hazelcast.xml` file. Make sure to add `org.hazelcast.demo.nw.data.PortableFactoryImpl` for serialization as it is needed by `MapStorePkDbImpl` in the cluster to deserialize the `Portable` objects, `Customer` and `Order`.
@@ -212,11 +212,11 @@ The above configures the `nw/customers` and `nw/orders` maps to store and load d
 
 ```console
 # Edit hibernate.cfg.xml
-vi $PADOHUB_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-mysql.xml
-vi $PADOHUB_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-postresql.xml
+vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-mysql.xml
+vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-postresql.xml
 ```
 
-The following is the `hibernate.cfg-mysql.xml` file provided by `padohub`. Make sure to replace the database information with your database information.
+The following is the `hibernate.cfg-mysql.xml` file provided by `padogrid`. Make sure to replace the database information with your database information.
 
 ```xml
 <hibernate-configuration>
@@ -254,10 +254,10 @@ The following is the `hibernate.cfg-mysql.xml` file provided by `padohub`. Make 
 The Hibernate configuration file path must be provided before you start the cluster. Edit the cluster's `setenv.sh` file and include the path as follows:
 
 ```
-vi $PADOHUB_WORKSPACE/clusters/<your-cluster>/bin_sh/setenv.sh
+vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/bin_sh/setenv.sh
 
 # Set JAVA_OPTS in setenv.sh
-JAVA_OPTS="$JAVA_OPTS -Dpadohub.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
+JAVA_OPTS="$JAVA_OPTS -Dpadogrid.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
 ```
 
 You can now run the cluster.

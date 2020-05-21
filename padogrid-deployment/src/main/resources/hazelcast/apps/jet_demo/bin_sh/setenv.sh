@@ -20,13 +20,13 @@
 
 # Cluster level variables:
 # ------------------------
-# BASE_DIR - padohub base dir
+# BASE_DIR - padogrid base dir
 # ETC_DIR - Cluster etc dir
 # LOG_DIR - Cluster log dir
 
 # App level variables:
 # --------------------
-# APPS_DIR - <padohub>/apps dir
+# APPS_DIR - <padogrid>/apps dir
 # APP_DIR - App base dir
 # APP_ETC_DIR - App etc dir
 # APP_LOG_DIR - App log dir
