@@ -319,10 +319,15 @@ We can now upload the application library files to the NFS disk which can be acc
 # First, create a pod to which you will mount the disk
 kubectl apply -k hazelcast/storage/gke/nfs-pod
 
+# Login to the nfs-pod and create the /var/nfs/plugins/v1 directory
+kubectl exec -it nfs-pod bash
+mkdir -p /var/nfs/plugins/v1
+
 # Copy the PADOGRID jar files 
 # (Note: copy to /var/nfs/plugins/v1, NOT /data/custom/plugins/v1)
-kubectl cp $PADOGRID_HOME/lib/PADOGRID-core-0.2.0-SNAPSHOT.jar nfs-pod:/var/nfs/plugins/v1/
-kubectl cp $PADOGRID_HOME/plugins/PADOGRID-core-0.2.0-SNAPSHOT-tests.jar nfs-pod:/var/nfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/lib/hazelcast-addon-common-0.9.2-SNAPSHOT.jar nfs-pod:/var/nfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/lib/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT.jar nfs-pod:/var/nfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/plugins/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT-tests.jar nfs-pod:/var/nfs/plugins/v1/
 
 # Delete the pod
 kubectl delete -k hazelcast/storage/gke/nfs-pod
