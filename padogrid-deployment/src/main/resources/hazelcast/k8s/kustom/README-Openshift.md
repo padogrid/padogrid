@@ -573,7 +573,7 @@ kubectl delete -k hazelcast/init
 ## References
 
 1. Install Docker, [https://docs.docker.com/install/](https://docs.docker.com/install/).
-2. gcloud Quick Start, [https://cloud.google.com/sdk/docs/quickstarts](https://cloud.google.com/sdk/docs/quickstarts)
+2. Install OC, [https://www.okd.io/download.html](https://www.okd.io/download.html)
 3. Install and Set Up kubectl, [https://kubernetes.io/docs/tasks/tools/install-kubectl/](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 4. Install kustomize, [https://github.com/kubernetes-sigs/kustomize/blob/master/docs/INSTALL.md](https://github.com/kubernetes-sigs/kustomize/blob/master/docs/INSTALL.md). 
 5. Download jq, [https://stedolan.github.io/jq/download/](https://stedolan.github.io/jq/download/).
