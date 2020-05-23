@@ -277,7 +277,7 @@ kubectl apply -k hazelcast/init
 
 # Create persistent volume claim for cephfs.
 # (Make sure storageClassName is set to the OCS cephfs before running this command.)
-kubectl delete -k hazelcast/overlay-cephfs
+kubectl apply -k hazelcast/overlay-cephfs
 
 # Deploy Hazelcast Enterprise
 kubectl apply -k hazelcast/overlay-base
