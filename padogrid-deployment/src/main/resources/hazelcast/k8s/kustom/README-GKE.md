@@ -322,6 +322,7 @@ kubectl apply -k hazelcast/storage/gke/nfs-pod
 # Login to the nfs-pod and create the /var/nfs/plugins/v1 directory
 kubectl exec -it nfs-pod bash
 mkdir -p /var/nfs/plugins/v1
+exit
 
 # Copy the PADOGRID jar files 
 # (Note: copy to /var/nfs/plugins/v1, NOT /data/custom/plugins/v1)
