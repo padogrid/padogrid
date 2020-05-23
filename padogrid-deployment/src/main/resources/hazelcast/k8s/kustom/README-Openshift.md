@@ -360,7 +360,6 @@ To connect to the Hazelcast cluster in GKE, you need to configure the Kubernetes
 Get the master URI.
 
 ```console
-Get the master URI
 kubectl cluster-info
 ```
 
