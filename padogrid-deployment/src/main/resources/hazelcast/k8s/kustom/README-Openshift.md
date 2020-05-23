@@ -110,9 +110,9 @@ spec:
   volumeMode: Filesystem
 ```
 
-### Hazelcast Images
+### Hazelcast Images and License Keys
 
-The Hazelcast cluster images are by default set as follows. You can change the image versions in the respective StatefulSet files in the `overlay-base` directory.
+The Hazelcast cluster images are by default set as follows. You can change the image versions and set license keys in the respective StatefulSet files in the `overlay-base` directory.
 
 #### Hazelcast Enterprise
 
@@ -207,61 +207,6 @@ bases:
 
 patchesStrategicMerge:
 - cephfs-pvc.yaml
-```
-
-### Set License Key and Image Names
-
-We could use the default settings of Hazelcast images, but for our demo, we will use the images we uploaded to GCR previously. As mentioned earlier, the GCR image names follow the conventions shown below.
-
-```console
-[GCR_HOSTNAME]/[PROJECT_ID]/[IMAGE]:[TAG]
-```
-
-For our demo, change the image names of Hazelcast Enterprize and Management Center as follows.
-
-| Parameter      | Value                |
-| -------------- | -------------------- |
-| GCR_HOSTNAME   | gcr.io               |
-| PROJECT_ID     | hazelcast-33         |
-
-#### Hazelcast Enterprise
-
-| Parameter  | Value                |
-| ---------- | -------------------- |
-| IMAGE      | hazelcast-enterprise |
-| TAG        | 3.12.1               |
-
-Make sure to replace `gcr.io` with your `GCR_HOSTNAME` and `hazelcast-33` with your `PROJECT_ID`.
-
-```console
-cd $HAZELCAST_KUSTOM_DIR/etc
-
-# Set license key and change Hazelcast Enterprise image name
-vi hazelcast/overlay-base/statefulset.yaml
-
-# In statefulset.yaml make the following changes
-- name: HZ_LICENSE_KEY
-  value: <License key goes here -- done by overlay-base>
-image: gcr.io/hazelcast-33/hazelcast/hazelcast-enterprise:3.12.1
-```
-
-#### Management Center
-
-| Parameter  | Value                |
-| ---------- | -------------------- |
-| IMAGE      | management-center    |
-| TAG        | latest               |
-
-Make sure to replace `gcr.io` with your `GCR_HOSTNAME` and `hazelcast-33` with your `PROJECT_ID`.
-
-```console
-# Change Management Center image name
-vi hazelcast/overlay-base/mc-statefulset.yaml
-
-# In mc-statefulset.yaml make the following changes
-- name: MC_LICENSE_KEY
-  value: <License key goes here -- done by overlay-base>
-image: gcr.io/hazelcast-33/hazelcast/management-center:latest
 ```
 
 ### Hazelcast Configuration File
