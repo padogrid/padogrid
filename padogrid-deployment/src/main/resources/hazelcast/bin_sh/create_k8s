@@ -92,7 +92,7 @@ fi
 if [ "$K8S" == "" ]; then
    K8S=$DEFAULT_K8S
 fi
-if [ "$K8S" != "minikube" ] && [ "$K8S" != "gke" ] && [ "$K8S" != "minishift" ]; then
+if [ "$K8S" != "minikube" ] && [ "$K8S" != "gke" ] && [ "$K8S" != "minishift" ] && [ "$K8S" != "openshift" ]; then
    >&2 echo "ERROR: Unsupported Kubernetes cloud platform. Please use the '-?' option"
    >&2 echo "       to see the usage. Command aborted."
    exit
@@ -142,6 +142,7 @@ if [ "$K8S" == "minikube" ]; then
   cp -rf $BASE_DIR/k8s/kustom/README-Minikube.md $CLUSTER_DIR
   rm -r $CLUSTER_DIR/etc/hazelcast/storage/gke
   rm $CLUSTER_DIR/bin_sh/setenv.sh
+  chmod 755 $CLUSTER_DIR/bin_sh/*
   create_setenv_file
   echo "" >> $SETENV_FILE
   echo "#" >> $SETENV_FILE
@@ -158,6 +159,7 @@ elif [ "$K8S" == "gke" ]; then
   cp -rf $BASE_DIR/k8s/kustom/README-GKE.md $CLUSTER_DIR
   rm -r $CLUSTER_DIR/etc/hazelcast/storage/minikube
   rm $CLUSTER_DIR/bin_sh/setenv.sh
+  chmod 755 $CLUSTER_DIR/bin_sh/*
   create_setenv_file
   echo "" >> $SETENV_FILE
   echo "#" >> $SETENV_FILE
@@ -180,6 +182,23 @@ elif [ "$K8S" == "minishift" ]; then
   cp -rf $BASE_DIR/k8s/ocp/etc $CLUSTER_DIR
   cp -rf $BASE_DIR/k8s/ocp/README-Minishift.md $CLUSTER_DIR
   rm $CLUSTER_DIR/bin_sh/setenv.sh
+  chmod 755 $CLUSTER_DIR/bin_sh/*
+  create_setenv_file
+  echo "" >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "# Follow the instructions in $K8S_DOC using the following" >> $SETENV_FILE
+  echo "# environment variable." >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "export HAZELCAST_OPENSHIFT_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
+
+elif [ "$K8S" == "openshift" ]; then
+
+  K8S_DOC="README-Openshift.md"
+  mkdir $CLUSTER_DIR/bin_sh
+  cp $BASE_DIR/k8s/kustom/bin_sh/create_certs $CLUSTER_DIR/bin_sh/
+  cp -rf $BASE_DIR/k8s/kustom/etc $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/kustom/README-Openshift.md $CLUSTER_DIR
+  chmod 755 $CLUSTER_DIR/bin_sh/*
   create_setenv_file
   echo "" >> $SETENV_FILE
   echo "#" >> $SETENV_FILE

@@ -39,35 +39,46 @@ if [ "$HELP" == "true" ]; then
    exit
 fi
 
-# Download hazelcast-jet-code-samples.git
-BUILD_DIR=$APP_DIR/build
-if [ ! -d $BUILD_DIR ]; then
-   mkdir -p $BUILD_DIR
+# SED backup prefix
+if [[ ${OS_NAME} == DARWIN* ]]; then
+   # Mac - space required
+   __SED_BACKUP=" 0"
+else
+   __SED_BACKUP="0"
 fi
 
-# Checkout hazelcast-desktop
-pushd $BUILD_DIR > /dev/null
-git clone https://github.com/hazelcast/hazelcast-jet-code-samples.git
-pushd $BUILD_DIR/hazelcast-jet-code-samples > /dev/null
-git checkout 3.1-maintenance
-git pull
-# Do not build for now. We just need books from the repo.
-#mvn -DskipTests package
-popd > /dev/null
+pushd $APP_DIR > /dev/null
+# Change the addon version number in the desktop pom.xml
+sed -i${__SED_BACKUP} 's/<jet.version>.*<\/jet.version>/<jet.version>'$HAZELCAST_VERSION'<\/jet.version>/' pom.xml
 popd > /dev/null
 
-# Copy books to the 
-cp -r $BUILD_DIR/hazelcast-jet-code-samples/wordcount/src/main/resources/books $APP_DIR/
+if [ ! -d "$APP_DIR/books" ]; then
+   mkdir "$APP_DIR/books"
+fi
+
+echo "Downloading books..."
+
+BOOKS_BASE_URL=https://raw.githubusercontent.com/hazelcast/hazelcast-jet/master/examples/wordcount/src/main/resources/books/
+BOOKS="a-tale-of-two-cities.txt madame-bovary.txt adventures-of-sherlock-holmes.txt odyssey.txt anderson-fairy-tales.txt peter-pan.txt around-the-world-in-eighty-days.txt pride-and-prejudice.txt dorian-gray.txt relativity-special-and-general-theory.txt edgar-allan-poe-works-1.txt shakespeare-complete-works.txt frankenstein.txt through-the-looking-glass.txt grimm-brothers.txt time-machine.txt huckleberry-finn.txt tom-sawyer.txt land-of-oz.txt war-of-the-worlds.txt"
+
+let COUNT=0
+for BOOK in $BOOKS; do
+   if [ ! -f "$APP_DIR/books/$BOOK" ]; then
+      let COUNT=COUNT+1
+      curl -sS -o "$APP_DIR/books/$BOOK" $BOOKS_BASE_URL/$BOOK
+   fi
+done
+
+if [ $COUNT -eq 0 ]; then
+   echo "Books already downloaded."
+else
+   echo "Books downloaded."
+fi
 
 # Build jet_demo jar files
 pushd $APP_DIR > /dev/null
 mvn -DskipTests clean package
 popd > /dev/null
-
-# Remove the build files if the -clean option is specified.
-if [ "$CLEAN" == "true" ]; then
-   rm -rf $APP_DIR/build
-fi
 
 #
 # Display build information
@@ -82,8 +93,13 @@ echo ""
 echo "To submit jar files to Jet run the 'jet.sh' executable. For example,"
 echo ""
 echo "   cd $APP_DIR/lib"
-echo "   jet.sh submit WordCountJob.jar"
-echo "   jet.sh -a localhost:5701 submit WordCountJob.jar"
+if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -ge 4 ]; then
+   JET_EXECUTABLE="jet"
+else
+   JET_EXECUTABLE="jet.sh"
+fi
+echo "   $JET_EXECUTABLE submit WordCountJob.jar"
+echo "   $JET_EXECUTABLE -a localhost:5701 submit WordCountJob.jar"
 echo ""
 echo "If the job outputs can be monitored by running 'show_log'. For example,"
 echo ""

@@ -108,7 +108,7 @@ __padogrid_complete()
 
    -k8s) 
       if [ "$second_word" == "create_k8s" ]; then
-         type_list="minikube gke minishift"
+         type_list="minikube gke minishift openshift"
       else
          type_list=`getClusters k8s`
       fi
@@ -741,7 +741,7 @@ __command_complete()
       ;;
    -k8s)
       if [ "$command" != "create_workspace" ]; then
-         type_list="minikube gke minishift"
+         type_list="minikube gke minishift openshift"
       else
          type_list=`getClusters k8s`
       fi

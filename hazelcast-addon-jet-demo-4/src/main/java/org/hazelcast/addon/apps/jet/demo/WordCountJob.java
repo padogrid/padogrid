@@ -1,23 +1,8 @@
-/*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.hazelcast.addon.apps.jet.demo;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 import static java.util.Comparator.comparingLong;
 
 import java.io.BufferedReader;
@@ -85,7 +70,7 @@ public class WordCountJob {
 	private Pipeline buildPipeline(int fileNum) {
 		Pattern delimiter = Pattern.compile("\\W+");
 		Pipeline p = Pipeline.create();
-		BatchStage<String> stage = p.drawFrom(Sources.<Long, String>map(getTextMapName(fileNum)))
+		BatchStage<String> stage = p.readFrom(Sources.<Long, String>map(getTextMapName(fileNum)))
 				.flatMap(e -> traverseArray(delimiter.split(e.getValue().toLowerCase())));
 				
 		if (outputWords) {
@@ -95,7 +80,7 @@ public class WordCountJob {
 		}
 		stage.groupingKey(wholeItem())
 			.aggregate(counting())
-			.drainTo(Sinks.map(getCountMapName(fileNum)));
+			.writeTo(Sinks.map(getCountMapName(fileNum)));
 		return p;
 	}
 

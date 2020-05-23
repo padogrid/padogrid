@@ -4,20 +4,20 @@ This directory contains Kubernetes configuration files for deploying Hazelcast, 
 
 ## Initializing Workspace
 
-To follow instructions in this article, you must first install `PADOGRID` and create a workspace. For example, the following creates the `ws-gke` workspace in the `~/padogrid/workspaces/myrwe` directory. Make sure to source in the `initenv.sh` file, which sets the required environment variables that are specific to the workspace you created.
+To follow instructions in this article, you must first install `PADOGRID` and create a workspace. For example, the following creates the `ws-openshift` workspace in the `~/padogrid/workspaces/myrwe` directory. Make sure to source in the `initenv.sh` file, which sets the required environment variables that are specific to the workspace you created.
 
 ```console
 mkdir -p ~/padogrid/workspaces/myrwe
 tar -C ~/padogrid/products/ -xzf padogrid_0.9.2-SNAPSHOT
-~/padogrid/products/padogrid_0.9.2-SNAPSHOT/bin_sh/create_workspace -workspace ~/padogrid/workspaces/myrwe/ws-gke
-. ~/padogrid/workspaces/myrwe/ws-gke/initenv.sh
+~/padogrid/products/padogrid_0.9.2-SNAPSHOT/bin_sh/create_workspace -workspace ~/padogrid/workspaces/myrwe/ws-openshift
+. ~/padogrid/workspaces/myrwe/ws-openshift/initenv.sh
 ```
 
 We will be using the `$PADOGRID_WORKSPACE` environment variable set by `initenv.sh` throughout this article.
 
 ```console
 echo $PADOGRID_WORKSPACE 
-/Users/dpark/padogrid/workspaces/myrwe/ws-gke
+/Users/dpark/padogrid/workspaces/myrwe/ws-openshift
 ```
 
 :exclamation: If you have built PadoGrid from Windows and the commands fail due to the Windows line break issue, then you must convert the next line characters using the `dos2linux` command. Make sure to convert all files including the hidden files as follows:
@@ -44,14 +44,14 @@ Before you begin, you must first install the following software. See the [Refere
 In your workspace, create a Kubernetes environment in which we will setup Hazelcast deployment files as follows:
 
 ```console
-create_k8s -k8s openshift -cluster kustomize-test
+create_k8s -k8s openshift -cluster kustomize_test
 ```
 
 The above command creates the following directory with Hazelcast kustomization files. We will be working in this directory throughout this article.
 
 ```console
-kustomize-test
-├── README-GKE.md
+kustomize_test
+├── README-OpenShift.md
 ├── bin_sh
 │   ├── create_certs
 │   └── setenv.sh
@@ -77,10 +77,10 @@ It is assumed that you have access to an OpenShift cluster.
 Source in the `setenv.sh` file as follows.
 
 ```console
-. $PADOGRID_WORKSPACE/k8s/kustomize-test/bin_sh/setenv.sh
+. $PADOGRID_WORKSPACE/k8s/kustomize_test/bin_sh/setenv.sh
 ```
 
-We'll use the `$HAZELCAST_KUSTOM_DIR` environment variable set in the `setenv.sh` file in the subsequent sections.
+We'll use the `$HAZELCAST_OPENSHIFT_DIR` environment variable set in the `setenv.sh` file in the subsequent sections.
 
 ### OpenShift Container Storage
 
@@ -89,7 +89,7 @@ We need a shared storage such as NFS or OCS with `accessModes` of `ReadWriteMany
 Set `storageClassName` to the your storage class name.
 
 ```bash
-cd_k8s kustomize-test; cd etc
+cd_k8s kustomize_test; cd etc
 vi hazelcast/overlay-cephfs/cephfs-pvc.yaml
 ```
 
@@ -162,7 +162,7 @@ To use custom metrics, we need to setup TLS certificates. This is done by runnin
 
 ```console
 # IMPORTANT: First, create TLS certificates for the Prometheus custom metrics API adapter
-cd $HAZELCAST_KUSTOM_DIR/bin_sh
+cd $HAZELCAST_OPENSHIFT_DIR/bin_sh
 ./create_certs
 ```
 
@@ -219,7 +219,7 @@ The Hazelcast configuration file, `configmap.yaml` is found in the `hazelcast/ba
 
 ### Deploy Hazelcast and Custom Metrics
 
-We are now ready to deploy Hazelcast and custom metrics to the GKE cluster. Up until now, we have been installing and configuring the GKE cluster.
+We are now ready to deploy Hazelcast and custom metrics to the OpenShift cluster. Up until now, we have been installing and configuring the OpenShift cluster.
 
 ```console
 # Initialize Kubernetes cluster. This command configures a service account and RBAC.
@@ -239,7 +239,7 @@ kubectl apply -k custom-metrics/overlay-prometheus
 
 ### Monitor StatefulSet
 
-You can use the browser (Openshift Web Console) to monitor the pods and services getting started. The URI has the following form:
+You can use the browser (OpenShift Web Console) to monitor the pods and services getting started. The URI has the following form:
 
 ```
 https://console-openshift-console.apps.ocp-hazel.jojo81.online
@@ -271,7 +271,7 @@ The `hazelcast/base` directory is the base directory that contains all the confi
 The `hazelcast/overlay-base` directory contains configuration files that customize or patch the base files. Note that we also copied the `hazelcast-hpa-custom.yaml` file into this directory in [Quick Start](#Quick-Start). You can include additional custom metrics in this file to autoscale Hazelcast pods. The Prometheus custom metrics are defined in `custom-metrics/custom-metrics-api/custom-metrics-config-map.yaml`, which you can also extend to define additional custom metrics.
 
 ```console
-kustomize-test
+kustomize_test
 ├── README-Openshift.md
 ├── bin_sh
 │   ├── create_certs
@@ -359,7 +359,7 @@ http://aa4da0cb28ca94f849ceff8be9a1c07f-1310371129.us-east-2.elb.amazonaws.com:8
 
 ## Running Client Applications
 
-To connect to the Hazelcast cluster in GKE, you need to configure the Kubernetes Discovery Service in your client application.
+To connect to the Hazelcast cluster in OpenShift, you need to configure the Kubernetes Discovery Service in your client application.
 
 Get the master URI.
 
@@ -437,7 +437,7 @@ Kc7AlhwUVNEzxACkjtlOZO2NSw6DIM6xEpEw
 
 ## Testing Horizontal Pod Autoscaler (HPA)
 
-With the custom metrics installed, you can automatically scale out or in the Hazelcast cluster running on GKE. Kubernetes HPA is responsible for auto-scaling and you can monitor it by executing the following command.
+With the custom metrics installed, you can automatically scale out or in the Hazelcast cluster running on OpenShift. Kubernetes HPA is responsible for auto-scaling and you can monitor it by executing the following command.
 
 ```console
 # Monitor HPA.
@@ -499,7 +499,7 @@ StatefulSet pods:   3 current / 3 desired
 The `test_ingestion` script puts data into two maps: `eligibility` and `tx`. Both maps have been preconfigured with TTL of 120 seconds so that the ingested data will be discarded and hence freeing memory. You can monitor the maps getting emptied from the Management Center. The default setting for scaling in is 5 minutes. After 5 minutes, you should see HPA removing a pod from the Hazelcast cluster. The TTL settings are defined in the `configmap.yaml` file as follows:
 
 ```yaml
-# $HAZELCAST_KUSTOM_DIR/etc/hazelcast/overlay-base/configmap.yaml
+# $HAZELCAST_OPENSHIFT_DIR/etc/hazelcast/overlay-base/configmap.yaml
       map:
         eligibility:
           time-to-live-seconds: 120

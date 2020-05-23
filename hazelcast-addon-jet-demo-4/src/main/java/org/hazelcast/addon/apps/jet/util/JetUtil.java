@@ -2,8 +2,6 @@ package org.hazelcast.addon.apps.jet.util;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.server.JetBootstrap;
-
 /** 
  * JetUtil provides convenience methods.
  */
@@ -17,6 +15,6 @@ public class JetUtil {
 		if (nobootstrap != null && nobootstrap.equals("true")) {
 			return Jet.newJetInstance();
 		}
-		return JetBootstrap.getInstance();
+		return Jet.bootstrappedInstance();
 	}
 }
