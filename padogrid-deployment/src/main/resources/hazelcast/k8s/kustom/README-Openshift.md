@@ -143,6 +143,7 @@ kubectl apply -k hazelcast/storage/openshift/cephfs-pod
 # Login to the cephfs-pod and create the /var/cephfs/plugins/v1 directory
 kubectl exec -it cephfs-pod bash
 mkdir -p /var/cephfs/plugins/v1
+exit
 
 # Copy the PADOGRID jar files 
 # (Note: copy to /var/cephfs/plugins/v1, NOT /data/custom/plugins/v1)
