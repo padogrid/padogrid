@@ -61,6 +61,7 @@ kustomize-test
     │   ├── custom-metrics-api
     │   ├── metrics-server
     │   ├── overlay-base
+    │   ├── overlay-prometheus
     │   └── prometheus
     └── hazelcast
         ├── base
@@ -157,7 +158,7 @@ kubectl delete -k hazelcast/storage/openshift/cephfs-pod
 
 ### Create Certificates
 
-To use custom metrics, we need to setup TLS certificates. This is done by running the `bin_sh/create_certs` script which creates and inserts them into the `overlay-base/cm-adapter-serving-certs.yaml` file. Please see this script for details.
+To use custom metrics, we need to setup TLS certificates. This is done by running the `bin_sh/create_certs` script which creates and inserts them into the `custom-metrics/overlay-base/cm-adapter-serving-certs.yaml` file. Please see this script for details.
 
 ```console
 # IMPORTANT: First, create TLS certificates for the Prometheus custom metrics API adapter
@@ -176,7 +177,9 @@ The following files are in the overlay directories so that you can modify them w
 |hazelcast/base | hazelcast/overlay-base | mc-statefulset.yaml       |
 |hazelcast/base | hazelcast/overlay-base | hazelcast-hpa-custom.yaml |
 |hazelcast/base | hazelcast/overlay-base | hazelcast-hpa-custom.yaml |
-|hazelcast/storage/openshift/cephfs | hazelcast/overlay-cephfs | cephfs-pvc.yaml     |
+|hazelcast/storage/openshift/cephfs | hazelcast/overlay-cephfs | cephfs-pvc.yaml |
+|Generated      | custom-metrics/overlay-base | cm-adapter-serving-certs.yaml |
+|custom-metrics/prometheus | custom-metrics/overlay-prometheus | prometheus-pvc.yaml |
 
 Some of these overlay files will be modified in the subsequent sections. Their `kustomization.yaml` files are shown below for your reference.
 
@@ -230,7 +233,8 @@ kubectl apply -k hazelcast/overlay-cephfs
 kubectl apply -k hazelcast/overlay-base
 
 # Deploy custom metrics API and start Prometheus/HPA.
-kubectl apply -k custom-metrics/overlay
+kubectl apply -k custom-metrics/overlay-base
+kubectl apply -k custom-metrics/overlay-prometheus
 ```
 
 ### Monitor StatefulSet
