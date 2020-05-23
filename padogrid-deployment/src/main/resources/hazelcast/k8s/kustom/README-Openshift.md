@@ -140,15 +140,15 @@ We can now upload the application library files to the NFS disk which can be acc
 # First, create a pod to which you will mount the disk
 kubectl apply -k hazelcast/storage/openshift/cephfs-pod
 
-# Login to the nfs-pod and create the /var/cephfs/plugins/v1 directory
+# Login to the cephfs-pod and create the /var/cephfs/plugins/v1 directory
 kubectl exec -it cephfs-pod bash
 mkdir -p /var/cephfs/plugins/v1
 
 # Copy the PADOGRID jar files 
 # (Note: copy to /var/cephfs/plugins/v1, NOT /data/custom/plugins/v1)
-kubectl cp $PADOGRID_HOME/hazelcast/lib/hazelcast-addon-common-0.9.2-SNAPSHOT.jar nfs-pod:/var/cephfs/plugins/v1/
-kubectl cp $PADOGRID_HOME/hazelcast/lib/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT.jar nfs-pod:/var/cephfs/plugins/v1/
-kubectl cp $PADOGRID_HOME/hazelcast/plugins/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT-tests.jar nfs-pod:/var/cephfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/lib/hazelcast-addon-common-0.9.2-SNAPSHOT.jar cephfs-pod:/var/cephfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/lib/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT.jar cephfs-pod:/var/cephfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/plugins/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT-tests.jar cephfs-pod:/var/cephfs/plugins/v1/
 
 # Delete the pod
 kubectl delete -k hazelcast/storage/openshift/cephfs-pod
@@ -175,7 +175,7 @@ The following files are in the overlay directories so that you can modify them w
 |hazelcast/base | hazelcast/overlay-base | mc-statefulset.yaml       |
 |hazelcast/base | hazelcast/overlay-base | hazelcast-hpa-custom.yaml |
 |hazelcast/base | hazelcast/overlay-base | hazelcast-hpa-custom.yaml |
-|hazelcast/storage/gke/nfs | hazelcast/overlay-nfs | nfs-pv.yaml     |
+|hazelcast/storage/openshift/cephfs | hazelcast/overlay-cephfs | cephfs-pvc.yaml     |
 
 Some of these overlay files will be modified in the subsequent sections. Their `kustomization.yaml` files are shown below for your reference.
 
@@ -190,22 +190,23 @@ bases:
 
 patchesStrategicMerge:
 - configmap.yaml
+- mc-pvc.yaml
 - statefulset.yaml
 - mc-statefulset.yaml
 - hazelcast-hpa-custom.yaml
 ```
 
-#### overlay-nfs/kustomization.yaml
+#### overlay-cephfs/kustomization.yaml
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 bases:
-- ../storage/gke/nfs
+- ../storage/openshift/cephfs
 
 patchesStrategicMerge:
-- nfs-pv.yaml
+- cephfs-pvc.yaml
 ```
 
 ### Set License Key and Image Names
