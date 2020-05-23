@@ -466,14 +466,14 @@ kubectl apply -k custom-metrics/overlay-base
 You can use the browser (GKE Console) to monitor the pods and services getting started. The URI has the following form:
 
 ```
-https://console.cloud.google.com/kubernetes/list?project=$PROEJCT_ID
+https://console.cloud.google.com/kubernetes/list?project=$PROEJECT_ID
 ```
 For our example,
 
 [https://console.cloud.google.com/kubernetes/list?project=hazelcast-33](https://console.cloud.google.com/kubernetes/list?project=hazelcast-33)
 
 
-From your terminal, you can also monitor the GKE components as follows:
+From your terminal, you can also monitor the GKE objects as follows:
 
 ```console
 # default namespace
@@ -490,7 +490,7 @@ The `bin_sh` directory contains the `create_certs` script for generating the req
 
 The `etc` directory contains the entire Kubernetes configuration files. Each sub-directory contains `kustomization.yaml` that includes base directories and resource files for their respective configuration.
 
-The `storage/gke` directory contains storage configuration files that are specific to GKE. These files start an NFS server and creates a persistent volume and claim used by Hazelcast pods for loading application specific configuration and library files. 
+The `storage/gke` directory contains storage configuration files that are specific to GKE. These files start an NFS server and create a persistent volume and claim used by Hazelcast pods for loading application specific configuration and library files. 
 
 The `hazelcast/init` directory contains initialization files that must first be applied before applying `hazelcast/overlay-base` which is described below. These files create a service account and RBAC (Role-Based-Access-Control).
 
@@ -514,7 +514,7 @@ kustomize-test
         ├── overlay-base
         ├── overlay-nfs
         └── storage
-            ├── gke
+            └── gke
                 ├── init-nfs
                 └── nfs
 ```
@@ -574,7 +574,7 @@ To connect to the Hazelcast cluster in GKE, you need to configure the Kubernetes
 # Get the master URI
 kubectl cluster-info
 
-# List the screts
+# List the secrets
 kubectl get secrets
 NAME                     TYPE                                  DATA   AGE
 default-token-hd5w2      kubernetes.io/service-account-token   3      43m
