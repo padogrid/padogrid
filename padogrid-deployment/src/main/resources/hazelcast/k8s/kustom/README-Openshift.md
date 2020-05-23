@@ -83,9 +83,16 @@ We'll use the `$HAZELCAST_KUSTOM_DIR` environment variable set in the `setenv.sh
 
 ### OpenShift Container Storage
 
-We need a shared storage such as NFS or OCS with `accessModes` of `ReadWriteMany` so that we can mount a shared volume in which we can place application jar and configuration files accessible by all the Hazelcast pods.
+We need a shared storage such as NFS or OCS with `accessModes` of `ReadWriteMany` so that we can mount a shared volume in which we can place application jar and configuration files accessible by all the Hazelcast pods. The `etc/hazelcast/overlay-cephfs/cephfs-pvc.yaml` file has been configured to `cephfs` of OCS. You can change it another `ReadWriteMany` storage such as NFS as needed. 
 
-overlay-storage.yaml
+Set `storageClassName` to the your storage class name.
+
+```bash
+cd_k8s kustomize-test; cd etc
+vi hazelcast/overlay-cephfs/cephfs-pvc.yaml
+```
+
+Change the value of `storageClassName` as needed.
 
 ```yaml
 apiVersion: v1
@@ -103,8 +110,13 @@ spec:
   volumeMode: Filesystem
 ```
 
+### Hazelcast Images
+
+The Hazelcast cluster images are by default set as follows. You can change the image versions in the respective StatefulSet files in the `overlay-base` directory.
 
 #### Hazelcast Enterprise
+
+File: `hazelcast/overlay-base/statefulset.yaml`
 
 | Parameter    | Value                |
 | ------------ | -------------------- |
@@ -113,14 +125,16 @@ spec:
 
 #### Management Center
 
+File: `hazelcast/overlay-base/mc-statefulset.yaml`
+
 | Parameter    | Value                |
 | ------------ | -------------------- |
 | IMAGE        | management-center    |
 | TAG          | 3.12.9               |
 
-### Copy Application Library Files to NFS Disk
+### Copy Application Library Files to the Storage
 
-We can now upload the application library files to the NFS disk which can be accessed by all Hazelcast containers via the persistence volume claim. To do this, we create a pod that uses the persistence volume claim to access the shared NFS disk. 
+We can now upload the application library files to the NFS disk which can be accessed by all Hazelcast containers via the persistence volume claim. To do this, we create a pod that uses the persistence volume claim to access the shared storage. 
 
 ```console
 # First, create a pod to which you will mount the disk
