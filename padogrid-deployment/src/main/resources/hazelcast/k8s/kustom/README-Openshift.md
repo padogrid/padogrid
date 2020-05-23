@@ -513,7 +513,8 @@ The `test_ingestion` script puts data into two maps: `eligibility` and `tx`. Bot
 
 ```console
 # Uninstall custom metrics and Hazelcast
-kubectl delete -k custom-metrics/overlay
+kubectl delete -k custom-metrics/overlay-prometheus
+kubectl delete -k custom-metrics/overlay-base
 kubectl delete -k hazelcast/overlay-base
 kubectl delete -k hazelcast/storage/openshift/cephfs-pod
 kubectl delete -k hazelcast/overlay-cephfs
