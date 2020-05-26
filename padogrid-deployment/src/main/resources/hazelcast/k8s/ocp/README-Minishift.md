@@ -269,7 +269,8 @@ create_app
 cd_app perf_test
 ```
 
-To connect to the Hazelcast cluster from an external client, you must disable SmartRouting and directly connect to a single member. This is not ideal as it puts all of the client load on the connected member. Minishift does not support external IPs which are required in order to enable SmartRouting.
+To connect to the Hazelcast cluster from an external client, you must disable SmartRouting and directly connect to a single member. This is not ideal as it puts all of the client load on the connected member. Minishift does not support external IPs which are required in order to enable 
+Routing.
 
 Edit the `hazelcast-client.xml` configuration file.
 
@@ -284,7 +285,7 @@ Replace the `network` element with the following (service port `30000` is expose
    <network>
       <smart-routing>false</smart-routing>
       <cluster-members>
-         <address>management-center-service-default.192.168.1.38.nip.io:30000</address>
+         <address>hazelcast-service-myproject.192.168.1.38.nip.io:30000</address>
       </cluster-members>
    </network>
 ```
