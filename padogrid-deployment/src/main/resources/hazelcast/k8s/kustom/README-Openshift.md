@@ -342,7 +342,7 @@ Hazelcast Management Center can be viewed via its load balancer on port 8080.
 
 ```console
 # Get the Management Center loadbalancer service external IP
-kubectl get svc my-release-hazelcast-enterprise-mancenter -default
+kubectl get svc my-release-hazelcast-enterprise-mancenter -n default
 ```
 
 **Output:**
@@ -359,7 +359,47 @@ http://aa4da0cb28ca94f849ceff8be9a1c07f-1310371129.us-east-2.elb.amazonaws.com:8
 
 ## Running Client Applications
 
-To connect to the Hazelcast cluster in OpenShift, you need to configure the Kubernetes Discovery Service in your client application.
+Client connections to Hazelcast clusters can be achieved in two (2) ways: Dummy Routing and Smart Routing. Dummy Routing (or Dummy Client) makes a connection to a single member in the cluster whereas Smart Routing makes connections to all the members in the cluster. There are pros and cons for each method. Dummy Routing uses the connected member as a proxy to other members providing tighter control to network security at the expense of additional network hops to reach other members. Smart Routing, on the other hand, provides the best performance as the client directly communicates with each member but it does not scale well if there are a large number of members in the cluster and a large number of clients.
+
+For our example, let's create the `perf_test` client app 
+
+```bash
+create_app -app perf_test
+```
+
+### Dummy Routing
+
+To connect to the Hazelcast cluster in Kubernetes via Dummy Routing, we need to expose the IP address of one of the members. 
+
+```bash
+kubectl get svc my-service-0 -n default
+```
+
+**Output:**
+
+```console
+NAME           TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)          AGE
+my-service-0   LoadBalancer   172.30.159.249   a454ca87366c143088f53da13eb0f43f-105926602.us-east-2.elb.amazonaws.com   5701:30000/TCP   13m
+```
+
+Configure the `hazelcast-client.xml` file as follows.
+
+**File:** `$PADOGRID_WORKSPACE/apps/perf_test/etc/hazelcast-client.xml`
+
+```xml
+   <network>
+      <smart-routing>false</smart-routing>
+      <cluster-members>
+         <address>a454ca87366c143088f53da13eb0f43f-105926602.us-east-2.elb.amazonaws.com:5701</address>
+      </cluster-members>
+   </network>
+```
+
+### Smart Routing
+
+**Smart Routing is currently not supported for OpenShift (5/26/2020). This section is provided in case the support becomes available.**
+
+To connect to the Hazelcast cluster in Kubernetes via Smart Routing, you need to configure the Kubernetes Discovery Service in your client application.
 
 Get the master URI.
 
@@ -399,8 +439,9 @@ kubectl get secret enterprise-token-dwjwz  -o jsonpath={.data.ca\\.crt} | base64
 
 Enter the master URI, encoded token, and certificate in the `hazelcast-client.xml` file as shown below. Note that the service name is `my-service-lb` which is created when you applied the configuration files. In the next section, we will configure and run the `perf_test` client application with these settings to see the autoscaler in action. 
 
+**File:** `$PADOGRID_WORKSPACE/apps/perf_test/etc/hazelcast-client.xml`
+
 ```xml
-<!-- $PADOGRID_WORKSPACE/apps/perf_test/etc/hazelcast-client.xml -->
    <network>
       <smart-routing>true</smart-routing>
       <kubernetes enabled="true">
