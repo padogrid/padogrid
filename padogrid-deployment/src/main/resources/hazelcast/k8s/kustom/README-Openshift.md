@@ -6,7 +6,7 @@ This directory contains Kubernetes configuration files for deploying Hazelcast, 
 
 To follow instructions in this article, you must first install `PADOGRID` and create a workspace. For example, the following creates the `ws-openshift` workspace in the `~/padogrid/workspaces/myrwe` directory. Make sure to source in the `initenv.sh` file, which sets the required environment variables that are specific to the workspace you created.
 
-```console
+```bash
 mkdir -p ~/padogrid/workspaces/myrwe
 tar -C ~/padogrid/products/ -xzf padogrid_0.9.2-SNAPSHOT
 ~/padogrid/products/padogrid_0.9.2-SNAPSHOT/bin_sh/create_workspace -workspace ~/padogrid/workspaces/myrwe/ws-openshift
@@ -15,18 +15,9 @@ tar -C ~/padogrid/products/ -xzf padogrid_0.9.2-SNAPSHOT
 
 We will be using the `$PADOGRID_WORKSPACE` environment variable set by `initenv.sh` throughout this article.
 
-```console
+```bash
 echo $PADOGRID_WORKSPACE 
 /Users/dpark/padogrid/workspaces/myrwe/ws-openshift
-```
-
-:exclamation: If you have built PadoGrid from Windows and the commands fail due to the Windows line break issue, then you must convert the next line characters using the `dos2linux` command. Make sure to convert all files including the hidden files as follows:
-
-```
-dos2unix ~/Hazelcast/padogrid_0.9.2-SNAPSHOT/hazelcast/bin_sh/*
-dos2unix ~/Hazelcast/padogrid_0.9.2-SNAPSHOT/hazelcast/bin_sh/.*sh
-dos2unix ~/Hazelcast/padogrid_0.9.2-SNAPSHOT/apps/k8s/kustom/bin_sh/*
-dos2unix ~/Hazelcast/padogrid_0.9.2-SNAPSHOT/apps/k8s/kustom/bin_sh/.*sh
 ```
 
 ## Required Software List
@@ -43,7 +34,7 @@ Before you begin, you must first install the following software. See the [Refere
 
 In your workspace, create a Kubernetes environment in which we will setup Hazelcast deployment files as follows:
 
-```console
+```bash
 create_k8s -k8s openshift -cluster kustomize_test
 ```
 
@@ -67,16 +58,18 @@ kustomize_test
         ├── base
         ├── init
         ├── overlay-base
+        ├── overlay-cephfs
+        ├── overlay-nfs
         └── storage
 ```
 
 ## Configuring OpenShift Environment
 
-It is assumed that you have access to an OpenShift cluster.
+*It is assumed that you have access to an OpenShift cluster. The* `kubectl` *command is used throughout this article. You can replace it with the* `oc` *command, which has the same options used in this article.*
 
 Source in the `setenv.sh` file as follows.
 
-```console
+```bash
 . $PADOGRID_WORKSPACE/k8s/kustomize_test/bin_sh/setenv.sh
 ```
 
@@ -117,7 +110,7 @@ The Hazelcast cluster images are by default set as follows. You can change the i
 
 #### Hazelcast Enterprise
 
-File: `hazelcast/overlay-base/statefulset.yaml`
+**File:** `hazelcast/overlay-base/statefulset.yaml`
 
 | Parameter    | Value                |
 | ------------ | -------------------- |
@@ -126,7 +119,7 @@ File: `hazelcast/overlay-base/statefulset.yaml`
 
 #### Management Center
 
-File: `hazelcast/overlay-base/mc-statefulset.yaml`
+**File:** `hazelcast/overlay-base/mc-statefulset.yaml`
 
 | Parameter    | Value                |
 | ------------ | -------------------- |
@@ -137,22 +130,38 @@ File: `hazelcast/overlay-base/mc-statefulset.yaml`
 
 We can now upload the application library files to the NFS disk which can be accessed by all Hazelcast containers via the persistence volume claim. To do this, we create a pod that uses the persistence volume claim to access the shared storage. 
 
-```console
-# First, create a pod to which you will mount the disk
+First, create a pod to which you will mount the disk and create the directory where we'll place the application library files.
+
+```bash
 kubectl apply -k hazelcast/storage/openshift/cephfs-pod
 
 # Login to the cephfs-pod and create the /var/cephfs/plugins/v1 directory
 kubectl exec -it cephfs-pod bash
 mkdir -p /var/cephfs/plugins/v1
 exit
+```
 
-# Copy the PADOGRID jar files 
-# (Note: copy to /var/cephfs/plugins/v1, NOT /data/custom/plugins/v1)
+Copy the PadoGrid Jar files to the shared storage (copy to `/var/cephfs/plugins/v1`, NOT `/data/custom/plugins/v1`.)
+
+**Hazelcast 3.x:**
+
+```bash
 kubectl cp $PADOGRID_HOME/hazelcast/lib/hazelcast-addon-common-0.9.2-SNAPSHOT.jar cephfs-pod:/var/cephfs/plugins/v1/
 kubectl cp $PADOGRID_HOME/hazelcast/lib/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT.jar cephfs-pod:/var/cephfs/plugins/v1/
 kubectl cp $PADOGRID_HOME/hazelcast/plugins/v3/hazelcast-addon-core-3-0.9.2-SNAPSHOT-tests.jar cephfs-pod:/var/cephfs/plugins/v1/
+```
 
-# Delete the pod
+**Hazelast 4.x:**
+
+```bash
+kubectl cp $PADOGRID_HOME/hazelcast/lib/hazelcast-addon-common-0.9.2-SNAPSHOT.jar cephfs-pod:/var/cephfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/lib/v3/hazelcast-addon-core-4-0.9.2-SNAPSHOT.jar cephfs-pod:/var/cephfs/plugins/v1/
+kubectl cp $PADOGRID_HOME/hazelcast/plugins/v3/hazelcast-addon-core-4-0.9.2-SNAPSHOT-tests.jar cephfs-pod:/var/cephfs/plugins/v1/
+```
+
+Now that we have copied jar files to the shared storage, we no longer need the pod. Let's delete the pod.
+
+```bash
 kubectl delete -k hazelcast/storage/openshift/cephfs-pod
 ```
 
@@ -160,8 +169,7 @@ kubectl delete -k hazelcast/storage/openshift/cephfs-pod
 
 To use custom metrics, we need to setup TLS certificates. This is done by running the `bin_sh/create_certs` script which creates and inserts them into the `custom-metrics/overlay-base/cm-adapter-serving-certs.yaml` file. Please see this script for details.
 
-```console
-# IMPORTANT: First, create TLS certificates for the Prometheus custom metrics API adapter
+```bash
 cd $HAZELCAST_OPENSHIFT_DIR/bin_sh
 ./create_certs
 ```
@@ -215,13 +223,13 @@ patchesStrategicMerge:
 
 ### Hazelcast Configuration File
 
-The Hazelcast configuration file, `configmap.yaml` is found in the `hazelcast/base`. This distribution includes a *kustomized* version of that file in the the `hazelcast/overlay-base` directory. It has been preconfigured with `PADOGRID` domain classes and eviction policies to demonstrate the autoscaler. We have already uploaded the jar files that contain the domain classes in the [Copy Application Library Files to NFS Disk](#Copy-Application-Library-Files-to-NFS-Disk) section. You can modify this file as needed to incorporate your own applications.
+The Hazelcast configuration file, `configmap.yaml` is found in the `hazelcast/base`. This distribution includes a *kustomized* version of that file in the the `hazelcast/overlay-base` directory. It has been preconfigured with `PADOGRID` domain classes and eviction policies to demonstrate the autoscaler. We have already uploaded the jar files that contain the domain classes in the [Copy Application Library Files to the Storage](#Copy-Application-Library-Files-to-the-Storage) section. You can modify this file as needed to incorporate your own applications.
 
 ### Deploy Hazelcast and Custom Metrics
 
 We are now ready to deploy Hazelcast and custom metrics to the OpenShift cluster. Up until now, we have been installing and configuring the OpenShift cluster.
 
-```console
+```bash
 # Initialize Kubernetes cluster. This command configures a service account and RBAC.
 kubectl apply -k hazelcast/init
 
@@ -247,7 +255,7 @@ https://console-openshift-console.apps.ocp-hazel.jojo81.online
 
 From your terminal, you can also monitor the OpenShift objects as follows:
 
-```console
+```bash
 # default namespace
 watch kubectl get statefulsets
 watch kubectl get pods
@@ -322,7 +330,7 @@ http://a011498d0b3954d0785b613b998a7bdc-1452224069.us-east-2.elb.amazonaws.com:9
 
 You can monitor the HPA using the `watch` command as follows:
 
-```console
+```bash
 # Watch HPA
 watch kubectl describe hpa my-release-hazelcast 
 ```
@@ -331,7 +339,7 @@ watch kubectl describe hpa my-release-hazelcast
 
 You can also invoke the API to monitor any metrics.
 
-```console
+```bash
 # Watch the on_heap-ratio metric
 watch -d 'kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/*/on_heap_ratio" |jq'
 ```
@@ -340,7 +348,7 @@ watch -d 'kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/defa
 
 Hazelcast Management Center can be viewed via its load balancer on port 8080.
 
-```console
+```bash
 # Get the Management Center loadbalancer service external IP
 kubectl get svc my-release-hazelcast-enterprise-mancenter -n default
 ```
@@ -403,7 +411,7 @@ To connect to the Hazelcast cluster in Kubernetes via Smart Routing, you need to
 
 Get the master URI.
 
-```console
+```bash
 kubectl cluster-info
 ```
 
@@ -480,7 +488,7 @@ Kc7AlhwUVNEzxACkjtlOZO2NSw6DIM6xEpEw
 
 With the custom metrics installed, you can automatically scale out or in the Hazelcast cluster running on OpenShift. Kubernetes HPA is responsible for auto-scaling and you can monitor it by executing the following command.
 
-```console
+```bash
 # Monitor HPA.
 watch kubectl describe hpa my-release-hazelcast
 ```
@@ -521,7 +529,7 @@ When the 'current' value reaches greater than 850m, HPA will add another pod to 
 
 To test HPA, configure the `test_perf`'s `hazelcast-client.xml` as described in the [Running Client Applications](#Running-Client-Applications) section and run the `test_ingestion` script as follows:
 
-```console
+```bash
 cd $PADOGRID_WORKSPACE/apps/perf_test/bin_sh
 vi ../etc/hazelcast-client.xml
 
@@ -552,7 +560,7 @@ The `test_ingestion` script puts data into two maps: `eligibility` and `tx`. Bot
 
 ## Tearing Down
 
-```console
+```bash
 # Uninstall custom metrics and Hazelcast
 kubectl delete -k custom-metrics/overlay-prometheus
 kubectl delete -k custom-metrics/overlay-base

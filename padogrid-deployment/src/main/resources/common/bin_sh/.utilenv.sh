@@ -1688,6 +1688,8 @@ function padogrid
       SHIFT_NUM=1
    fi
 
+
+   if [ "$COMMAND" == "" ]; then
 cat <<EOF
 .______      ___       _______   ______     _______ .______       __   _______ ™
 |   _  \    /   \     |       \ /  __  \   /  _____||   _  \     |  | |       \ 
@@ -1700,7 +1702,6 @@ v$PADOGRID_VERSION
 
 EOF
 
-   if [ "$COMMAND" == "" ]; then
       RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       echo "Root Workspaces Environments (RWEs)"
       echo "-----------------------------------"
@@ -1795,14 +1796,19 @@ function getWorkspaceInfoList
    local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh")
    local PRODUCT_VERSION
    if [ "$CLUSTER_TYPE" == "jet" ]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//' -e 's/"//')
-      if [ "$PRODUCT_VERSION" == "" ]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//')
+      if [ "$PRODUCT_VERSION" == "$__PRODUCT_HOME" ]; then
          PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-//' -e 's/"//')
+      else
+         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
       fi
    elif [ "$CLUSTER_TYPE" == "imdg" ]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//' -e 's/"//')
-      if [ "$PRODUCT_VERSION" == "" ]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//')
+      if [ "$PRODUCT_VERSION" == "$__PRODUCT_HOME" ]; then
          PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-//' -e 's/"//')
+      else
+         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
       fi
    elif [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
@@ -1814,6 +1820,12 @@ function getWorkspaceInfoList
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*snappydata-//' -e 's/"//')
       PRODUCT_VERSION=${PRODUCT_VERSION%-bin}
       CLUSTER_TYPE="snappydata"
+   elif [[ "$__PRODUCT_HOME" == *"coherence"* ]]; then
+      __PRODUCT_HOME=$(echo $__PRODUCT_HOME | sed -e 's/.*=//' -e 's/"//g')
+      if [ -f "$__PRODUCT_HOME/product.xml" ]; then
+         PRODUCT_VERSION=$(grep "version value" "$__PRODUCT_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+      fi
+      CLUSTER_TYPE="coherence"
    fi
 
    VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
