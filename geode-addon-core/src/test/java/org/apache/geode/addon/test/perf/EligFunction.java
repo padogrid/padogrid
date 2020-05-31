@@ -150,7 +150,7 @@ public class EligFunction implements Function, Declarable {
 				Blob blob = (Blob) struct.get("value");
 				totalBlobSize += blob.getBlob().length;
 			}
-			Region<String, GroupSummary> summaryMap = cache.getRegion("summary");
+			Region<String, GroupSummary> summaryMap = cache.getRegion(RegionNameEnum.summary.name());
 			summary = new GroupSummary(profileKey, sr.size(), totalBlobSize, new Date());
 			summaryMap.put(groupNumber, summary);
 		}

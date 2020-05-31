@@ -8,18 +8,34 @@ EXECUTABLE="`basename $0`"
 if [ "$1" == "-?" ]; then
 cat <<EOF
 NAME
-   $EXECUTABLE - Build padogrid along with all required files such
-                 as Unix man pages
+   $EXECUTABLE - Build padogrid along with all required files such as Unix man pages
 
 SYNOPSIS
-   ./$EXECUTABLE [-skipMan] [-?]
+   ./$EXECUTABLE [-skipMan] [-coherence] [-?]
 
    Builds padogrid along with all required files such as Unix man pages.
-   Unlike build_all.sh, it does not build apps.
+   Unlike build_all.sh, it does not build apps. Note that by default it builds
+   man pages which make take a few minutes to complete. To skip building
+   man pages specify the 'skipMan' option.
+
+   By default, the Coherence module is not included due to the lack of public Maven
+   packages. You must manually install the Coherence package as described
+   in the following file before specifying the '-coherence' option to include
+   the Coherence module in the build.
+
+   coherence-addon-core/README.md
 
 OPTIONS
    -skipMan
-             If specified, then skips building man pages
+             If specified, then skips building man pages for all modules.
+
+   -coherence
+             If specified, then includes the coherence moudle in the build.
+             Note that you may need to install Coherence manually in the local 
+             Maven repository for this option to work. Please see the follwoing
+             file for details.
+
+             coherence-addon-core/README.md
 
 DEFAULT
    ./$EXECUTABLE
@@ -34,7 +50,11 @@ DEBUG="false"
 
 if [ "$DEBUG" == "false" ]; then
    # TSLv1.2 required for older version of macOS
-   mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install
+   if [ "$COHERENCE" == "true" ]; then
+      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install -f pom-include-coherence.xml
+   else
+      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install
+   fi
 fi
 
 # Get the addon version number
@@ -65,7 +85,11 @@ if [ "$SKIP_MAN" == "false" ]; then
 
    # Build man pages
    echo "Building man pages... This may take some time to complete."
-   ./create_man_files.sh
+   if [ "$COHERENCE" == "true" ]; then
+      ./create_man_files.sh -coherence
+   else
+      ./create_man_files.sh
+   fi
 
    # tar up the distribution which now includes man pages
    tar -C build -czf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz padogrid_${VERSION}

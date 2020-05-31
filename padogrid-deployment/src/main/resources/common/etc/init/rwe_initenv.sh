@@ -50,6 +50,16 @@ elif [ "$PRODUCT" == "hazelcast" ]; then
    fi
    __PATHS[__INDEX]="$PADOGRID_HOME/$PRODUCT/bin_sh/cp_sub"
    let __INDEX=__INDEX+1
+elif [ "$PRODUCT" != "snappydata" ]; then
+   __PATHS[__INDEX]="$SNAPPYDATA_HOME/bin"
+   let __INDEX=__INDEX+1
+    __PATHS[__INDEX]="$SNAPPYDATA_HOME/sbin"
+   let __INDEX=__INDEX+1
+elif [ "$PRODUCT" == "coherence" ]; then
+   if [ "$COHERENCE_HOME" != "" ]; then
+      __PATHS[$__INDEX]="$COHERENCE_HOME/bin"
+      let __INDEX=__INDEX+1
+   fi
 fi
 __PATHS[__INDEX]="$PADOGRID_HOME/$PRODUCT/bin_sh"
 let __INDEX=__INDEX+1

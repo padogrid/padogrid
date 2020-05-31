@@ -40,6 +40,7 @@ ENV_ARG=
 RWE_ARG=
 WORKSPACE_ARG=
 JAVA_HOME_ARG=
+COHERENCE_ARG=
 GEODE_ARG=
 HAZELCAST_ARG=
 PATH_ARG=
@@ -68,6 +69,7 @@ MIRROR_SPECIFIED=false
 VM_SPECIFIED=false
 VM_HOSTS_ARG=
 VM_JAVA_HOME_ARG=
+VM_COHERENCE_HOME_ARG=
 VM_GEODE_HOME_ARG=
 VM_HAZELCAST_HOME_ARG=
 VM_JET_HOME_ARG=
@@ -143,6 +145,8 @@ do
       WORKSPACE_ARG=$i
    elif [ "$PREV" == "-java" ]; then
       JAVA_HOME_ARG=$i
+   elif [ "$PREV" == "-coherence" ]; then
+      COHERENCE_ARG=$i
    elif [ "$PREV" == "-geode" ]; then
       GEODE_ARG=$i
    elif [ "$PREV" == "-hazelcast" ]; then

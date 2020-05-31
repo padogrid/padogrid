@@ -61,7 +61,7 @@ DESCRIPTION
 
 OPTIONS
    -product product_home_path
-             Geode, GemFire, Hazelcast, or Jet home path.
+             Geode, GemFire, Hazelcast, Jet, or Coherence home path.
 
    -rwe rwe_name
              A new RWE name.
@@ -105,7 +105,7 @@ EOF
    exit
 fi
 
-PRODUCTS="geode hazelcast snappydata"
+PRODUCTS="geode hazelcast snappydata coherence"
 __PRODUCT_HOME="$PRODUCT_HOME_ARG"
 
 function isValidProduct
@@ -136,6 +136,8 @@ if [ "$__PRODUCT_HOME" == "" ]; then
       fi
    elif [ "$PRODUCT" == "geode" ]; then
       __PRODUCT_HOME="$GEODE_HOME"
+   elif [ "$PRODUCT" == "coherence" ]; then
+      __PRODUCT_HOME="$COHERENCE_HOME"
    elif [ "$PRODUCT" == "snappydata" ]; then
       __PRODUCT_HOME="$SNAPPYDATA_HOME"
    else
@@ -146,7 +148,7 @@ fi
 if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
    REDO=true
    while [ "$REDO" == "true" ]; do
-      echo "Enter the product home path. The supported products are Geode, GemFire, Hazelcast IMDG, Hazelcast Jet."
+      echo "Enter the product home path. The supported products are Geode, GemFire, Hazelcast IMDG, Hazelcast Jet, Coherence."
       if [[ $OS_NAME == CYGWIN* ]]; then
           echo "Enter only Unix absoulte path. Windows path not allowed."
       fi
@@ -158,6 +160,9 @@ if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
       fi
       if [ "$GEODE_HOME" != "" ]; then
          echo "   $GEODE_HOME"
+      fi
+      if [ "$COHERENCE_HOME" != "" ]; then
+         echo "   $COHERENCE_HOME"
       fi
       if [ "$SNAPPYDATA_HOME" != "" ]; then
          echo "   $SNAPPYDATA_HOME"
@@ -182,7 +187,7 @@ if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
       echo "Product selected: $PRODUCT"
 
       if [ `isValidProduct "$PRODUCT"` == "false" ]; then
-         echo "Invalid product home path entered. Supported products are Geode, GemFire, Hazelcast IMDG, Hazelcast Jet."
+         echo "Invalid product home path entered. Supported products are Geode, GemFire, Hazelcast IMDG, Hazelcast Jet, Coherence."
          REDO=true
       else
          REDO=false

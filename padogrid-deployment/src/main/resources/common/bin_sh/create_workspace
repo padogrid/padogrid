@@ -88,7 +88,7 @@ fi
 cat <<EOF
 
    -product local_product_home_path
-              Local Geode, GemFire, Hazelcast, or Jet home path.
+              Local Geode, GemFire, Hazelcast, Jet, or Coherence home path.
 
    -vm [comma_separated_host_names]
               A comma separated list of VM host names (or IP addresses). If the list contains
@@ -105,7 +105,7 @@ cat <<EOF
               been created.
 
    -vm-product vm_product_home_path
-              VM Geode, GemFire, Hazelcast, or Jet home path. If the VMs do not have the product
+              VM Geode, GemFire, Hazelcast, Jet, or Coherence home path. If the VMs do not have the product
               installed, then you can install it by executing 'vm_install' after the workspace
               has locally been created.
 
@@ -317,6 +317,9 @@ else
          fi
          if [ "$GEODE_HOME" != "" ]; then
             echo "   $GEODE_HOME"
+         fi 
+         if [ "$COHERENCE_HOME" != "" ]; then
+            echo "   $COHERENCE_HOME"
          fi
          if [ "$SNAPPYDATA_HOME" != "" ]; then
             echo "   $SNAPPYDATA_HOME"
@@ -572,6 +575,8 @@ echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 
 if [ "$PRODUCT" == "geode" ]; then
    echo "   export GEODE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "coherence" ]; then
+   echo "   export COHERENCE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "snappydata" ]; then
    echo "   export SNAPPYDATA_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
@@ -632,6 +637,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "$PRODUCT" == "geode" ]; then
       echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_GEODE_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "coherence" ]; then
+      echo "# VM Coherence home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_COHERENCE_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    elif [ "$PRODUCT" == "snappydata" ]; then
       echo "# VM SnappData home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_SNAPPYDATA_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
@@ -665,6 +673,9 @@ else
    if [ "$PRODUCT" == "geode" ]; then
       echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_GEODE_HOME=\$GEODE_HOME" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "coherence" ]; then
+      echo "# VM Coherence home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_COHERENCE_HOME=\$COHERENCE_HOME" >> $WORKSPACE_DIR/setenv.sh
    elif [ "$PRODUCT" == "snappydata" ]; then
       echo "# VM SnappyData home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_SNAPPYDATA_HOME=\$SNAPPYDATA_HOME" >> $WORKSPACE_DIR/setenv.sh
@@ -719,6 +730,8 @@ echo "#    \$PADOGRID_HOME/plugins/v?/*" >> $WORKSPACE_DIR/setenv.sh
 echo "#    \$PADOGRID_HOME/lib/v?/*" >> $WORKSPACE_DIR/setenv.sh
 if [ "$PRODUCT" == "geode" ]; then
    echo "#    \$GEODE_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "coherence" ]; then
+   echo "#    \$COHERENCE_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "snappydata" ]; then
    echo "#    \$SNAPPYDATA_HOME/jars/*" >> $WORKSPACE_DIR/setenv.sh
 else
@@ -748,6 +761,8 @@ echo "export PODS_DIR=\$PADOGRID_WORKSPACE/pods" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
 if [ "$PRODUCT" == "geode" ]; then
    echo "export PRODUCT=geode" >> $WORKSPACE_DIR/.addonenv.sh
+elif [ "$PRODUCT" == "coherence" ]; then
+   echo "export PRODUCT=coherence" >> $WORKSPACE_DIR/.addonenv.sh
 elif [ "$PRODUCT" == "snappydata" ]; then
    echo "export PRODUCT=snappydata" >> $WORKSPACE_DIR/.addonenv.sh
 else

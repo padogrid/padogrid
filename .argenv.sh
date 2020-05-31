@@ -15,6 +15,7 @@ fi
 # Determine arguments
 #
 SKIP_MAN=false
+COHERENCE=false
 DEBUG=false
 PREV=
 
@@ -22,8 +23,10 @@ for i in "$@" -ignore
 do
    if [ "$PREV" == "-skipMan" ]; then
       SKIP_MAN="true"
+   elif [ "$PREV" == "-coherence" ]; then
+      COHERENCE="true"
    elif [ "$PREV" == "-debug" ]; then
-      DEBUG=$i
+      DEBUG="true"
 
    # The following must be the last check
    elif [ "$PREV" == "-ignore" ]; then

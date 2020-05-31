@@ -10,7 +10,6 @@ import java.sql.Types;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -24,10 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.netcrest.pado.internal.util.QueueDispatcher;
 import com.netcrest.pado.internal.util.QueueDispatcherListener;
-import com.netcrest.pado.internal.util.QueueDispatcherThreadPool;
-import com.netcrest.pado.internal.util.QueueDispatcherThreadPoolManager;
-
-import scala.concurrent.ExecutionContextExecutorService;
 
 /**
  * DebeziumKafkaSinkTask is a Kafka sink connector for receiving Debezium change

@@ -4,7 +4,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## PadoGrid Brief
 
-PadoGrid is a collection of add-on components and tools specifically designed for data grid products to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
+PadoGrid is a collection of add-on components and tools specifically designed for [data grid products](#data-Grid-Products) to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
 
 A workspace provides a sandbox environment completely isolated from other workspaces and can host a wide range of software components from a simple app to a highly complex ecosystem with many data grid clusters, apps, VMs, and Docker/Kubernetes containers. You can, for example, create a workspace that federates multiple data grid clusters serving inventory and sales data, a workspace that streams database CDC records via Kafka, a workspace that handles streamed data into the federated clusters via one or more Apache Spark or Hazelcast Jet clusters, and yet another workspace that integrates data analytics tools for performing AI/ML operations and creating reports. PadoGrid consolidates your workspaces into a single operations center.
 
@@ -31,11 +31,11 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [Hazelcast Query Language (HQL)](https://github.com/padogrid/padogrid/wiki/HQL-Query)
 - [Use Cases in Online Bundles](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 
-## Building `padogrid`
+## Building `padogrid` without Oracle Coherence
 
 You can build `padogrid` using any of the following options. For distribution, always include man pages.
 
-```console
+```bash
 # Include man pages (recommended)
 ./build_dist.sh
 
@@ -47,6 +47,28 @@ mvn install
 
 # Build all: build_dist.sh + external apps (slowest and largest build)
 ./build_all.sh
+```
+
+## Building `padogrid` with Oracle Coherence
+
+By default, Coherence is excluded in the build due to the lack of public Maven repositories. To build the Coherence module, you must manually install the Coherence package in your local Maven repository as described in the following article.
+
+[coherence-addon-core/README.md](coherence-addon-core/README.md)
+
+Once you have installed the Coherence package in your local Maven repostory, in addition to other modules, you can also include the Coherence module in the build by specifying the `-coherence` option as follows.
+
+```bash
+# Include man pages (recommended)
+./build_dist.sh -coherence
+
+# Without man pages (fast build)
+./build_dist.sh -skipMan -coherence
+
+# Maven (without man pages, fastest build)
+mvn install -f pom-include-coherence.xml
+
+# Build all: build_dist.sh + external apps (slowest and largest build)
+./build_all.sh -coherence
 ```
 
 ## Installing `padogrid`
@@ -68,25 +90,27 @@ Inflate one of the distribution files in your file system. For example,
 
 ```console
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.1.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.2-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.1
+tree -L 1 padogrid_0.9.2-SNAPSHOT
 ```
 
 **Output:**
 
 ```console
-padogrid_0.9.1
+padogrid_0.9.2-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
 ├── RELEASE_NOTES.txt
 ├── bin_sh
+├── coherence
 ├── etc
 ├── geode
 ├── hazelcast
 ├── lib
-└── pods
+├── pods
+└── snappydata
 ```
 
 ## Initializing PadoGrid
@@ -94,7 +118,7 @@ padogrid_0.9.1
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```console
-~/Padogrid/products/padogrid_0.9.1/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.2-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Data Grid Products
@@ -126,6 +150,11 @@ PadoGrid currently supports the following data grid products.
   <a href="https://snappydatainc.github.io/snappydata/">
   <img src="images/snappydata.jpg" width="280" hspace="10" alt="SnappyData" />
   </a> 
+</p>
+<p align="center">
+  <a href="https://www.oracle.com/middleware/technologies/coherence.html">
+  <img src="images/coherence.jpg" width="200"  hspace="10" alt="Oracle Coherence" />
+  </a>
 </p>
 
 ---

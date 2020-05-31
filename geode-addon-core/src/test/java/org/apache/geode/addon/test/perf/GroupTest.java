@@ -24,7 +24,7 @@ import org.apache.geode.cache.client.ClientCacheFactory;
 
 /**
  * GroupTest is a test tool for capturing the throughput and average latency of
- * multiple Geode IMap operations performed as a single operation. This is
+ * multiple Geode Region operations performed as a single operation. This is
  * achieved by allowing you to group one or more operations and invoke them as a
  * single call.
  * <p>
@@ -439,15 +439,13 @@ public class GroupTest implements Constants {
 		writeLine("   " + executableName + " [-run] [-prop <properties-file>] [-?]");
 		writeLine();
 		writeLine("   Displays or runs group test cases specified in the properties file.");
-		writeLine("   A group represents a function that executes one or more Geode IMap");
+		writeLine("   A group represents a function that executes one or more Geode Region");
 		writeLine("   operations. This program measures average latencies and throughputs");
 		writeLine("   of group (or function) executions.");
 		writeLine("   The default properties file is");
 		writeLine("      " + DEFAULT_groupPropertiesFile);
 		writeLine("");
 		writeLine("       -run              Run test cases.");
-		writeLine("       -failover         Configure failover client using the following config file:");
-		writeLine("                           ../etc/geode-client-failover.xml");
 		writeLine("       <properties-file> Optional properties file path.");
 		writeLine();
 		writeLine("   To run the the test cases, specify the '-run' option. Upon run completion, the results");

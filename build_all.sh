@@ -8,11 +8,35 @@ NAME
    $EXECUTABLE - Build all the apps by executing their 'bin_sh/build_app' command
 
 SYNOPSIS
-   ./$EXECUTABLE [-?]
+   ./$EXECUTABLE [-skipMan] [-coherence] [-?]
 
    Builds all the apps by executing their 'bin_sh/build_app' command and creates
    the 'all' distribution file that contains the apps that are fully compiled
    and ready to run.
+
+   Builds padogrid along with all required files such as Unix man pages.
+   Unlike build_all.sh, it does not build apps. Note that by default it builds
+   man pages which make take a few minutes to complete. To skip building
+   man pages specify the 'skipMan' option.
+
+   By default, the Coherence module is not included due to the lack of public Maven
+   packages. You must manually install the Coherence package as described
+   in the following file before specifying the '-coherence' option to include
+   the Coherence module in the build.
+
+   coherence-addon-core/README.md
+
+OPTIONS
+   -skipMan
+             If specified, then skips building man pages for all modules.
+
+   -coherence
+             If specified, then includes the coherence moudle in the build.
+             Note that you may need to install Coherence manually in the local 
+             Maven repository for this option to work. Please see the follwoing
+             file for details.
+
+             coherence-addon-core/README.md
 
 DEFAULT
    ./$EXECUTABLE
@@ -49,7 +73,11 @@ fi
 tar -C build/ -xzf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz
 
 # Build man pages
-./create_man_files.sh
+if [ "$COHERENCE" == "true" ]; then
+   ./create_man_files.sh -coherence
+else
+   ./create_man_files.sh
+fi
 
 # tar up the distribution which now includes man pages
 tar -C build -czf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz padogrid_${VERSION}

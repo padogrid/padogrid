@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.argenv.sh
+
 EXECUTABLE="`basename $0`"
 
 if [ "$1" == "-?" ]; then
@@ -8,10 +11,18 @@ NAME
    $EXECUTABLE - Creates Unix man files in the padogrid distribution
 
 SYNOPSIS
-   ./$EXECUTABLE [-?]
+   ./$EXECUTABLE [-coherence] [-?]
 
    Creates Unix man files in the padogrid distribution. This command
    is executed by the 'build_*.sh' commands. Do not execute it directly.
+
+   -coherence
+             If specified, then in addition to other modules it also builds
+             Coherence man pages. Note that you may need to install Coherence
+             manually in the local Maven repository for this option to work.
+             Please see the follwoing file for details.
+
+             coherence-addon-core/README.md
 
 EOF
    exit
@@ -47,7 +58,12 @@ VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 export VERSION
 
-PRODUCTS="geode hazelcast"
+PRODUCTS="geode hazelcast snappydata"
+
+if [ "$COHERENCE" == "true" ]; then
+   PRODUCTS="$PRODUCTS coherence"
+fi
+
 for PRODUCT in $PRODUCTS; do
    # Build man pages
    echo "Building man pages: $PRODUCT..."

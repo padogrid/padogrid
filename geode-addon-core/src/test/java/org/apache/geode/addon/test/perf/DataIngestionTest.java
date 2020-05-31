@@ -127,7 +127,6 @@ public class DataIngestionTest implements Constants
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
 	private static int PRINT_STATUS_INTERVAL_IN_SEC;
-	private static boolean IS_FAILOVER_CLIENT = false;
 	
 	private ClientCache clientCache;
 	
@@ -600,8 +599,6 @@ public class DataIngestionTest implements Constants
 		writeLine("      " + DEFAULT_ingestionPropertiesFile);
 		writeLine("");
 		writeLine("       -run              Run test cases.");
-		writeLine("       -failover         Configure failover client using the following config file:");
-		writeLine("                            ../etc/geode-client-failover.xml");
 		writeLine("       <properties-file> Optional properties file path.");
 		writeLine();
 		writeLine("   To run the the test cases, specify the '-run' option. Upon run completion, the results");
@@ -622,8 +619,6 @@ public class DataIngestionTest implements Constants
 				System.exit(0);
 			} else if (arg.equals("-run")) {
 				showConfig = false;
-			} else if (arg.equals("-failover")) {
-				IS_FAILOVER_CLIENT = true;
 			} else if (arg.equals("-prop")) {
 				if (i < args.length - 1) {
 					perfPropertiesFilePath = args[++i].trim();
