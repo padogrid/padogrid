@@ -57,7 +57,7 @@ By default, Coherence is excluded in the build due to the lack of public Maven r
 
 [coherence-addon-core/README.md](coherence-addon-core/README.md)
 
-Once you have installed the Coherence package in your local Maven repostory, in addition to other modules, you can also include the Coherence module in the build by specifying the `-coherence` option as shown below.
+Once you have installed the Coherence package in your local Maven repository, in addition to other modules, you can include the Coherence module in the build by specifying the `-coherence` option as shown below.
 
 ```bash
 # Exclude man pages (fast build)
