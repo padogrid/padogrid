@@ -98,26 +98,6 @@ else
    exit 1
 fi
 
-# Returns the number of active (running) locator VMs.
-# @required __VM_LOCATOR_HOSTS Space separated list of VM locator hosts (addresses)
-# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
-#                   Required by getVmMemberPid.
-# @return Returns the number of active (running) VM members 
-function getActiveVmLocatorCount()
-{
-   local LOCATOR_COUNT=0
-   local LOCATOR_RUNNING_COUNT=0
-   for VM_LOCATOR_HOST in ${__VM_LOCATOR_HOSTS}; do
-      let MEMBER_COUNT=LOCATOR_COUNT+1
-      LOCATOR=`getVmLocatorName $VM_LOCATOR_HOST`
-      pid=`getVmLocatorPid $VM_LOCATOR_HOST $LOCATOR $WORKSPACE`
-      if [ "$pid" != "" ]; then
-          let LOCATOR_RUNNING_COUNT=LOCATOR_RUNNING_COUNT+1
-      fi
-  done
-  echo $LOCATOR_RUNNING_COUNT
-}
-
 # Returns the number of active (running) member VMs.
 # @required __VM_HOSTS Space separated list of VM hosts (addresses)
 # @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
@@ -142,13 +122,10 @@ function getActiveVmMemberCount()
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
 # See if any members in the custer are still running. If so, abort.
-LOCATOR_RUNNING_COUNT=0
 MEMBER_RUNNING_COUNT=0
 if [ "$VM_ENABLED" == "true" ]; then
-   VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
    VM_HOSTS=$(getClusterProperty "vm.hosts")
    # Replace , with space
-   __VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    DEFAULT_USER=$(whoami)
    VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
@@ -156,35 +133,8 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
    fi
-   LOCATOR_RUNNING_COUNT=$(getActiveVmLocatorCount)
    MEMBER_RUNNING_COUNT=$(getActiveVmMemberCount)
 else
-   # Locators
-   LOCATOR_COUNT=0
-   LOCATOR_PREFIX=`getLocatorPrefix`
-   pushd $RUN_DIR > /dev/null 2>&1
-   for i in ${LOCATOR_PREFIX}*; do
-      if [ -d "$i" ]; then
-         pushd $i > /dev/null 2>&1
-         let LOCATOR_COUNT=LOCATOR_COUNT+1
-         LOCATOR=$i
-         LOCATOR_DIR=$RUN_DIR/$LOCATOR
-         LOG_FILE=$LOG_DIR/${LOCATOR}.log
-         echo "----------------------------------------------------------------"
-         echo "  WORKSPACE: $PADOGRID_WORKSPACE"
-         echo "    Locator: $LOCATOR"
-         pid=`getLocatorPid $LOCATOR $WORKSPACE`
-         if [ -z $pid ]; then
-            echo "       *PID: N/A (Down)"
-         else
-            echo "        PID: $pid"
-            let LOCATOR_RUNNING_COUNT=LOCATOR_RUNNING_COUNT+1
-         fi
-         echo "Working Dir: $LOCATOR_DIR"
-         popd > /dev/null 2>&1
-      fi
-   done
-
    # Members
    MEMBER_COUNT=0
    MEMBER_PREFIX=`getMemberPrefix`
@@ -216,14 +166,6 @@ if [ $MEMBER_RUNNING_COUNT -gt 0 ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
    echo >&2 "    ERROR: ${MEMBER_RUNNING_COUNT} member(s) are still running in the cluster. Please stop them first."
-   echo >&2 "           Command aborted."
-   echo >&2 "----------------------------------------------------------------"
-   exit 1
-fi
-if [ $LOCATOR_RUNNING_COUNT -gt 0 ]; then
-   echo >&2 "----------------------------------------------------------------"
-   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "    ERROR: ${LOCATOR_RUNNING_COUNT} locator(s) are still running in the cluster. Please stop them first."
    echo >&2 "           Command aborted."
    echo >&2 "----------------------------------------------------------------"
    exit 1

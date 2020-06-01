@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-workspace -all -quiet -?"
+   echo "-workspace -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -44,27 +44,23 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Stop all running Coherence clusters including members and locators 
-           in the specified workspace
+   $EXECUTABLE - Stop all running Coherence clusters including members in the specified workspace
 
 WARNING
    This command does not wait for migration operations to complete before
    terminating members. For graceful shutdown, use 'shutdown_workspace' instead.
 
 SYNOPSIS
-   $EXECUTABLE [-workspace workspace_name | -all] [-?]
+   $EXECUTABLE [-workspace workspace_name] [-?]
 
 DESCRIPTION
-   Stops all running Coherence clusters by executing 'stop_cluster -all' on each cluster
-   in the workspace. Note that it kills both members and locators of all clusters.
+   Stops all running Coherence clusters by executing 'stop_cluster' on each cluster
+   in the workspace. Note that it kills members of all clusters.
 
 OPTIONS
    -workspace workspace_name
              Workspace name. If not specified, then stops the current workspace.
 
-   -all
-             Stops all workspaces. The '-all' option overrides the '-workspace' option.
-             
    -quiet
              Quiet mode. Supresses the interactive prompt.
 
@@ -127,7 +123,7 @@ for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
       CLUSTER="`basename $j`"
       echo ""
       echo -e "${CLightRed}Stopping cluster $CLUSTER...${CNone}"
-      stop_cluster -cluster $CLUSTER -all
+      stop_cluster -cluster $CLUSTER
    done
 done
 if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then

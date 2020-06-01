@@ -99,8 +99,6 @@ fi
 POD=`getClusterProperty "pod.name" $POD`
 NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
-LOCATOR_PREFIX=`getLocatorPrefix`
-LOCATOR_PREFIX_LEN=${#LOCATOR_PREFIX}
 MEMBER_PREFIX=`getMemberPrefix`
 MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
 MEMBER_NUMBER=1 
@@ -116,46 +114,6 @@ if  [ ! -d $CLUSTER_DIR ]; then
 fi
 
 pushd $RUN_DIR > /dev/null 2>&1 
-for i in ${LOCATOR_PREFIX}*; do
-   if [ -d "$i" ]; then
-      LOCATOR=$i
-      LOCATOR_NUMBER=${LOCATOR:$LOCATOR_PREFIX_LEN}
-
-      NODE_LOCAL=${NODE_NAME_PREFIX}-${LOCATOR_NUMBER}.local
-      LOCATOR_DIR=$RUN_DIR/$LOCATOR
-      PID=`getLocatorPid $LOCATOR $WORKSPACE`
-      if [ -z "$PID" ]; then
-         rm -f $LOG_DIR/${LOCATOR}*.log > /dev/null 2>&1
-         rm -f $STATS_DIR/${LOCATOR}*.gfs > /dev/null 2>&1
-         if [ "$ALL" == "true" ]; then
-            rm -rf $RUN_DIR/${LOCATOR}/* > /dev/null 2>&1
-         fi
-         echo "----------------------------------------------------------------"
-         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
-         echo "      Locator: $LOCATOR"
-         echo -e "          PID: ${CLightRed}Down${CNone}"
-         echo "  Working Dir: $LOCATOR_DIR"
-         echo "      Log Dir: $LOG_DIR"
-         echo "    Stats Dir: $STATS_DIR"
-         echo "      Run Dir: $RUN_DIR"
-         echo "  Log Removed: $LOG_DIR/${LOCATOR}*.log"
-         echo "Stats Removed: $STATS_DIR/${LOCATOR}*.gfs"
-         if [ "$ALL" == "true" ]; then
-         echo "  Run Removed: $RUN_DIR/${LOCATOR}/*"
-	 fi
-         echo "----------------------------------------------------------------"
-      else
-         echo "----------------------------------------------------------------"
-         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
-         echo "      Locator: $LOCATOR"
-         echo -e "          PID: ${CLightGreen}$PID${CNone}"
-         echo "  Working Dir: $LOCATOR_DIR"
-         echo "      Log Dir: $LOG_DIR"
-         echo "       Status: This locator is running. Unable to remove generated files. Command aborted."
-         echo "----------------------------------------------------------------"
-      fi
-   fi
-done
 for i in ${MEMBER_PREFIX}*; do
    if [ -d "$i" ]; then
       MEMBER=$i

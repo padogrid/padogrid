@@ -165,7 +165,7 @@ __padogrid_complete()
       ;;
 
    -log)
-      type_list="data gc locator"
+      type_list="data gc"
       ;;
    -num)
       #   type_list="1 2 3 4 5 6 7 8 9"
@@ -503,7 +503,7 @@ __command_complete()
       type_list="https ssh"
       ;;
    -log)
-      type_list="data gc locator"
+      type_list="data gc"
      ;;
    -num)
       type_list="1 2 3 4 5 6 7 8 9"

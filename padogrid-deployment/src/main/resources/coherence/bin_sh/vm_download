@@ -52,18 +52,16 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Download all the log and statistics files from the VMs to the local file system
+   $EXECUTABLE - Download all the log files from the VMs to the local file system
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-?]
 
 DESCRIPTION
-   Downloads the log and statistics files from the VMs to the local cluster's
-   'log' and 'stats' directories.
+   Downloads the log files from the VMs to the local cluster's 'log' directories.
 
-   If the '-vm' option is not specified, then it downloads the log and statistics files
-   from the hosts defined by the 'vm.locator.hosts' and 'vm.hosts' properties in the
-   'etc/cluster.properties' file.
+   If the '-vm' option is not specified, then it downloads the log files from the hosts defined
+   by the 'vm.hosts' properties in the 'etc/cluster.properties' file.
 
 OPTIONS
    -cluster cluster_name
@@ -86,8 +84,6 @@ FILES
    $LOG_DIR
              The current cluster log directory.
 
-   $STATS_DIR
-             The current cluster stats directory.
 EOF
 fi
 cat <<EOF
@@ -163,13 +159,9 @@ WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
 echo "VM_PADOGRID_WORKSPACES_HOME/=$VM_PADOGRID_WORKSPACES_HOME/"
 FROM_LOG_DIR=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/$CLUSTER/log
-FROM_STATS_DIR=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/$CLUSTER/stats
 
 if [ ! -d "$LOG_DIR" ]; then
    mkdir -p $LOG_DIR
-fi
-if [ ! -d "$STATS_DIR" ]; then
-   mkdir -p $STATS_DIR
 fi
 
 for VM_HOST in $__VM_HOSTS; do
@@ -186,13 +178,11 @@ for VM_HOST in $__VM_HOSTS; do
 
    echo "   Downloading $VM_HOST..."
    scp -q -r -o stricthostkeychecking=no $VM_KEY $VM_USER@$VM_HOST:$FROM_LOG_DIR/*.log $LOG_DIR/ 
-   scp -q -r -o stricthostkeychecking=no $VM_KEY $VM_USER@$VM_HOST:$FROM_STATS_DIR/*.gfs $STATS_DIR/
 
 done
 
 echo ""
 echo "Downloaded directories:"
 echo "   $LOG_DIR"
-echo "   $STATS_DIR"
 echo ""
 echo "Download complete."

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -all -?"
+   echo "-cluster -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Kill all running members in the specified padogrid cluster
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-?]
 
 DESCRIPTION
    Kills all running Coherence members by executing 'kill_member' which kills
@@ -49,14 +49,9 @@ DESCRIPTION
    but may cause data corruption if the members have persistence enabled. To
    gracefully stop the cluster, use the 'stop_cluster' or 'shutdown_cluster'.
 
-   To kill both members and locators, specify the '-all' option.
-
 OPTIONS
    -cluster cluster_name
              Cluster name.
-
-   -all
-             If specified, then it kills both members and locators.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -78,14 +73,6 @@ fi
 #
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$VM_ENABLED" == "true" ]; then
-   VM_LOCATOR_HOSTS=`getClusterProperty "vm.locator.hosts"`
-   if [ "$VM_LOCATOR_HOSTS" == "" ]; then
-      echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo "    ERROR: VM locator hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
-      echo "           $ETC_DIR/cluster.properties"
-      echo "           Command aborted."
-      exit 1
-   fi
    VM_HOSTS=`getClusterProperty "vm.hosts"`
    if [ "$VM_HOSTS" == "" ]; then
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -108,14 +95,6 @@ if [ "$VM_ENABLED" == "true" ]; then
    for VM_HOST in $__VM_HOSTS; do
       ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
    done
-
-   if [ "$ALL" == "true" ]; then
-      # Locators
-      __LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
-      for VM_HOST in $__LOCATOR_HOSTS; do
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_locator -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
-      done
-   fi
    exit
 fi
 
@@ -144,20 +123,4 @@ for i in ${MEMBER_PREFIX}*; do
       popd > /dev/null 2>&1
    fi
 done
-
-# Kill locators
-if [ "$ALL" == "true" ]; then
-   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
-   NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
-   LOCATOR_PREFIX=`getLocatorPrefix`
-   LOCATOR_PREFIX_LEN=${#LOCATOR_PREFIX}
-   for i in ${LOCATOR_PREFIX}*; do
-      if [ -d "$i" ]; then
-         pushd $i > /dev/null 2>&1
-         LOCATOR_NUMBER=${i:$LOCATOR_PREFIX_LEN}
-         kill_locator -cluster $CLUSTER -num $LOCATOR_NUMBER
-         popd > /dev/null 2>&1
-      fi
-   done
-fi
 popd > /dev/null 2>&1

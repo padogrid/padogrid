@@ -42,7 +42,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster <cluster-name>] [-num <member-number>]
-               [-full] [-log [data|gc|locator]] [-?]
+               [-full] [-log [data|gc]] [-?]
 
 DESCRIPTION
    Displays the specified member's log file. By default, follows the tail
@@ -62,8 +62,8 @@ DESCRIPTION
    -full
               Display the entire log file using 'less'
 
-   -log [data|gc|locator]
-              Display data, GC, or locator log file. Default: data
+   -log [data|gc]
+              Display data or GC log file. Default: data
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -94,19 +94,10 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
    fi
-   if [ "$LOG" == "locator" ]; then
-      VM_HOSTS=`getClusterProperty "vm.locator.hosts"`
-   else
-      VM_HOSTS=`getClusterProperty "vm.hosts"`
-   fi
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
    if [ "$VM_HOSTS" == "" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      if [ "$LOG" == "locator" ]; then
-      echo "    ERROR: VM locator hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
-      else
-      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
-      fi
       echo "           $ETC_DIR/cluster.properties"
       echo "           Command aborted."
       echo "----------------------------------------------------------------"
@@ -142,24 +133,9 @@ fi
 POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
-
-case "$LOG" in 
-locator)
-   # For pod clusters. If non-pod, the following variables are ignored.
-   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
-   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
-   MEMBER_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
-   LOCATOR=`getLocatorName $MEMBER_NUMBER`
-   MEMBER_DIR=$RUN_DIR/$LOCATOR
-   ;;
-
-*)
-   MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
-   MEMBER=`getMemberName $MEMBER_NUMBER`
-   MEMBER_DIR=$RUN_DIR/$MEMBER
-   ;;
-
-esac
+MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+MEMBER=`getMemberName $MEMBER_NUMBER`
+MEMBER_DIR=$RUN_DIR/$MEMBER
 
 if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
@@ -175,24 +151,11 @@ if [ ! -d $MEMBER_DIR ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
    echo "  Cluster: $CLUSTER"
-   if [ "$LOG" == "locator" ]; then
-   echo "  Locator: $MEMBER"
-   echo "   Status: This locator has not been configured. Please run the add_locator command to configure"
-   echo "           new locators."
-   else
-   echo "   Member: $MEMBER"
-   echo "   Status: This member has not been configured. Please run the add_member command to configure"
-   echo "           new members."
-   fi
    echo "----------------------------------------------------------------"
    exit 1
 fi
 
 case "$LOG" in 
-locator)
-   LOG_FILE=$LOG_DIR/${LOCATOR}.log
-   ;;
-
 gc)
    LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
    ;;
