@@ -31,7 +31,7 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [Hazelcast Query Language (HQL)](https://github.com/padogrid/padogrid/wiki/HQL-Query)
 - [Use Cases in Online Bundles](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 
-## Buildiing `padogrid`
+## Building `padogrid`
 
 ### Building `padogrid` without Oracle Coherence
 
