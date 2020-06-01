@@ -15,8 +15,8 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 - [Quick Start](https://github.com/padogrid/padogrid/wiki/Quick-Start)
-- [Building PadoGrid](#Building-padogrid)
-- [Installing PadoGrid](#Insalling-padogrid)
+- [Building PadoGrid](#building-padogrid)
+- [Installing PadoGrid](#installing-padogrid)
 
 ## PadoGrid Features
 
@@ -31,7 +31,9 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [Hazelcast Query Language (HQL)](https://github.com/padogrid/padogrid/wiki/HQL-Query)
 - [Use Cases in Online Bundles](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 
-## Building `padogrid` without Oracle Coherence
+## Building `padogrid`
+
+### Building `padogrid` without Oracle Coherence
 
 You can build `padogrid` using any of the following options (See the usage by running `./build_dist.sh -?`.) For distribution, always include man pages.
 
@@ -49,13 +51,13 @@ mvn install
 ./build_all.sh -man
 ```
 
-## Building `padogrid` with Oracle Coherence
+### Building `padogrid` with Oracle Coherence
 
 By default, Coherence is excluded in the build due to the lack of public Maven repositories. To build the Coherence module, you must manually install the Coherence package in your local Maven repository as described in the following article.
 
 [coherence-addon-core/README.md](coherence-addon-core/README.md)
 
-Once you have installed the Coherence package in your local Maven repostory, in addition to other modules, you can also include the Coherence module in the build by specifying the `-coherence` option as shown below.
+Once you have installed the Coherence package in your local Maven repository, in addition to other modules, you can include the Coherence module in the build by specifying the `-coherence` option as shown below.
 
 ```bash
 # Exclude man pages (fast build)
