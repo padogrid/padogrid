@@ -14,17 +14,17 @@ fi
 #
 # Determine arguments
 #
-SKIP_MAN=false
-COHERENCE=false
+MAN_SPECIFIED=false
+COHERENCE_SPECIFIED=false
 DEBUG=false
 PREV=
 
 for i in "$@" -ignore
 do
-   if [ "$PREV" == "-skipMan" ]; then
-      SKIP_MAN="true"
+   if [ "$PREV" == "-man" ]; then
+      MAN_SPECIFIED="true"
    elif [ "$PREV" == "-coherence" ]; then
-      COHERENCE="true"
+      COHERENCE_SPECIFIED="true"
    elif [ "$PREV" == "-debug" ]; then
       DEBUG="true"
 

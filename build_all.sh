@@ -14,10 +14,8 @@ SYNOPSIS
    the 'all' distribution file that contains the apps that are fully compiled
    and ready to run.
 
-   Builds padogrid along with all required files such as Unix man pages.
-   Unlike build_all.sh, it does not build apps. Note that by default it builds
-   man pages which make take a few minutes to complete. To skip building
-   man pages specify the 'skipMan' option.
+   To include man pages specify the '-man' option. Note that generating man pages 
+   may take a few minutes to complete. 
 
    By default, the Coherence module is not included due to the lack of public Maven
    packages. You must manually install the Coherence package as described
@@ -27,8 +25,8 @@ SYNOPSIS
    coherence-addon-core/README.md
 
 OPTIONS
-   -skipMan
-             If specified, then skips building man pages for all modules.
+   -man
+             If specified, then generate man pages for all modules.
 
    -coherence
              If specified, then includes the coherence moudle in the build.
@@ -59,6 +57,7 @@ VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 export VERSION
 
+
 # Untar the distribution file in the build directory.
 if [ ! -d build ]; then
    mkdir -p build
@@ -73,17 +72,19 @@ fi
 tar -C build/ -xzf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz
 
 # Build man pages
-if [ "$COHERENCE" == "true" ]; then
-   ./create_man_files.sh -coherence
-else
-   ./create_man_files.sh
-fi
+if [ "$MAN_SPECIFIED" == "true" ]; then
+   if [ "$COHERENCE_SPECIFIED" == "true" ]; then
+      ./create_man_files.sh -coherence
+   else
+      ./create_man_files.sh
+   fi
 
-# tar up the distribution which now includes man pages
-tar -C build -czf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz padogrid_${VERSION}
-pushd build > /dev/null 2>&1
-zip -q -r ../padogrid-deployment/target/assembly/padogrid_${VERSION}.zip padogrid_${VERSION}
-popd > /dev/null 2>&1
+   # tar up the distribution which now includes man pages
+   tar -C build -czf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz padogrid_${VERSION}
+   pushd build > /dev/null 2>&1
+   zip -q -r ../padogrid-deployment/target/assembly/padogrid_${VERSION}.zip padogrid_${VERSION}
+   popd > /dev/null 2>&1
+fi
 
 # Find all build_app scripts and build them
 

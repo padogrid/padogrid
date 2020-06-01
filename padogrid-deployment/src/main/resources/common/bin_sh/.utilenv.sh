@@ -2050,6 +2050,11 @@ function determineProduct
       SNAPPYDATA_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="snappydata"
       CLUSTER=$DEFAULT_SNAPPYDATA_CLUSTER
+   elif [[ "$PRODUCT_HOME" == *"coherence"* ]]; then
+      PRODUCT="coherence"
+      COHERENCE_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="coherence"
+      CLUSTER=$DEFAULT_COHERENCE_CLUSTER
    else
       PRODUCT=""
    fi

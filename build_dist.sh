@@ -11,12 +11,16 @@ NAME
    $EXECUTABLE - Build padogrid along with all required files such as Unix man pages
 
 SYNOPSIS
-   ./$EXECUTABLE [-skipMan] [-coherence] [-?]
+   ./$EXECUTABLE [-man] [-coherence] [-?]
 
-   Builds padogrid along with all required files such as Unix man pages.
+   Builds padogrid without man pages and Coherence by default.
+    
    Unlike build_all.sh, it does not build apps. Note that by default it builds
    man pages which make take a few minutes to complete. To skip building
    man pages specify the 'skipMan' option.
+
+   To include man pages specify the '-man' option. Note that generating man pages 
+   may take a few minutes to complete. 
 
    By default, the Coherence module is not included due to the lack of public Maven
    packages. You must manually install the Coherence package as described
@@ -26,8 +30,8 @@ SYNOPSIS
    coherence-addon-core/README.md
 
 OPTIONS
-   -skipMan
-             If specified, then skips building man pages for all modules.
+   -man
+             If specified, then generate man pages for all modules.
 
    -coherence
              If specified, then includes the coherence moudle in the build.
@@ -50,7 +54,7 @@ DEBUG="false"
 
 if [ "$DEBUG" == "false" ]; then
    # TSLv1.2 required for older version of macOS
-   if [ "$COHERENCE" == "true" ]; then
+   if [ "$COHERENCE_SPECIFIED" == "true" ]; then
       mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install -f pom-include-coherence.xml
    else
       mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install
@@ -67,7 +71,7 @@ done
 VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 
-if [ "$SKIP_MAN" == "false" ]; then
+if [ "$MAN_SPECIFIED" == "true" ]; then
    # Untar the distribution file in the build directory.
    if [ ! -d build ]; then
       mkdir -p build
@@ -85,7 +89,7 @@ if [ "$SKIP_MAN" == "false" ]; then
 
    # Build man pages
    echo "Building man pages... This may take some time to complete."
-   if [ "$COHERENCE" == "true" ]; then
+   if [ "$COHERENCE_SPECIFIED" == "true" ]; then
       ./create_man_files.sh -coherence
    else
       ./create_man_files.sh

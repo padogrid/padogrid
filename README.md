@@ -33,20 +33,20 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 
 ## Building `padogrid` without Oracle Coherence
 
-You can build `padogrid` using any of the following options. For distribution, always include man pages.
+You can build `padogrid` using any of the following options (See the usage by running `./build_dist.sh -?`.) For distribution, always include man pages.
 
 ```bash
-# Include man pages (recommended)
+# Exclude man pages and Coherence (fast build)
 ./build_dist.sh
 
-# Without man pages (fast build)
-./build_dist.sh -skipMan
+# Include man pages but exclude Coherence
+./build_dist.sh -man
 
-# Maven (without man pages, fastest build)
+# Maven (without man pages and Coherence, fastest build)
 mvn install
 
-# Build all: build_dist.sh + external apps (slowest and largest build)
-./build_all.sh
+# Build all: 'build_dist.sh -man' + external apps (slowest and largest build)
+./build_all.sh -man
 ```
 
 ## Building `padogrid` with Oracle Coherence
@@ -55,20 +55,20 @@ By default, Coherence is excluded in the build due to the lack of public Maven r
 
 [coherence-addon-core/README.md](coherence-addon-core/README.md)
 
-Once you have installed the Coherence package in your local Maven repostory, in addition to other modules, you can also include the Coherence module in the build by specifying the `-coherence` option as follows.
+Once you have installed the Coherence package in your local Maven repostory, in addition to other modules, you can also include the Coherence module in the build by specifying the `-coherence` option as shown below.
 
 ```bash
-# Include man pages (recommended)
+# Exclude man pages (fast build)
 ./build_dist.sh -coherence
 
-# Without man pages (fast build)
-./build_dist.sh -skipMan -coherence
+# Include man pages (for distribution)
+./build_dist.sh -coherence -man
 
 # Maven (without man pages, fastest build)
 mvn install -f pom-include-coherence.xml
 
-# Build all: build_dist.sh + external apps (slowest and largest build)
-./build_all.sh -coherence
+# Build all: all modules + external apps (slowest and largest build)
+./build_all.sh -coherence -man
 ```
 
 ## Installing `padogrid`

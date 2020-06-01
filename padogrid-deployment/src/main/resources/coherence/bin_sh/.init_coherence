@@ -80,7 +80,7 @@ cat <<EOF
 
    -cluster default_cluster
              Default cluster name.
-             Default: $DEFAULT_COHERENCE_CLUSTER for Coherence, $DEFAULT_GEMFIRE_CLUSTER for GemFire
+             Default: $DEFAULT_COHERENCE_CLUSTER for Coherence
 
    -vm
              Specify '-vm' to enable VM cluster.
@@ -89,7 +89,7 @@ cat <<EOF
              Quiet mode. Supresses the interactive prompt.
 
 DEFAULT
-   $EXECUTABLE
+   $EXECUTABLE -cluster $DEFAULT_COHERENCE_CLUSTER
 
 EOF
    exit
@@ -166,17 +166,7 @@ if [ $CLUSTER_SPECIFIED == "false" ]; then
    CLUSTER=""
    determineProduct
    if [ "$PRODUCT" == "coherence" ]; then
-      if [ "$CLUSTER_TYPE" == "coherence" ]; then
-         CLUSTER="$DEFAULT_COHERENCE_CLUSTER"
-      else
-         CLUSTER="$DEFAULT_GEMFIRE_CLUSTER"
-      fi
-   else
-      if [ "$CLUSTER_TYPE" == "imdg" ]; then
-         CLUSTER="$DEFAULT_HAZELCAST_CLUSTER"
-      else
-         CLUSTER="$DEFAULT_JET_CLUSTER"
-      fi
+      CLUSTER="$DEFAULT_COHERENCE_CLUSTER"
    fi
 fi
 
