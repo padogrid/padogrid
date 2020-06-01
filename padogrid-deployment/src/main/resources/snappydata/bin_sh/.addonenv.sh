@@ -512,7 +512,10 @@ fi
 #
 SNAPPYDATA_VERSION=""
 IS_ENTERPRISE=false
-if [ "$SNAPPYDATA_HOME" != "" ]; then
+CLUSTER_TYPE="snappydata"
+if [ "$SNAPPYDATA_HOME" == "" ]; then
+   CLUSTER_TYPE="snappydata"
+else
    for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
       file=${file##*snappydata\-core*\-}
       SNAPPYDATA_VERSION=${file%.jar}
