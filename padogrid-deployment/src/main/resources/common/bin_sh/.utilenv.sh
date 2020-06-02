@@ -1949,19 +1949,29 @@ function printSeeAlsoList
 
 #
 # Displays a tree view of the specified list
-# @param list   Space separated list
+# @param list          Space separated list
+# @param highlightItem Optional. If sepedified, then the matching item is highlighted in green.
 #
 function showTree
 {
    local LIST=($1)
+   local HIGHLIGHT_ITEM="$2"
    local len=${#LIST[@]}
    local last_index
    let last_index=len-1
    for ((i = 0; i < $len; i++)); do
       if [ $i -lt $last_index ]; then
-         echo "├── ${LIST[$i]}"
+         if [ "${LIST[$i]}" == "$HIGHLIGHT_ITEM" ]; then
+            echo -e "├── ${CLightGreen}${LIST[$i]}${CNone}"
+         else
+            echo "├── ${LIST[$i]}"
+         fi
       else
-         echo "└── ${LIST[$i]}"
+         if [ "${LIST[$i]}" == "$HIGHLIGHT_ITEM" ]; then
+            echo -e "└── ${CLightGreen}${LIST[$i]}${CNone}"
+         else
+            echo "└── ${LIST[$i]}"
+         fi
       fi
    done
 }
