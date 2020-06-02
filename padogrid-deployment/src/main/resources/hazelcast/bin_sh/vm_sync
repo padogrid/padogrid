@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-vm -?"
+   echo "-cluster -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -91,6 +91,12 @@ SEE ALSO
 EOF
    printSeeAlsoList "vm_*" $EXECUTABLE
    exit
+fi
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "In simulation mode [$EXECUTABLE]..."
+   echo ""
 fi
 
 # Available only on VM workspaces
@@ -177,10 +183,19 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
+# Set common variables to handle "jet" and "imdg"
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   __VM_PRODUCT_HOME="$VM_JET_HOME"
+   __PRODUCT_NAME="Jet"   
+else
+   __VM_PRODUCT_HOME="$VM_HAZELCAST_HOME"
+   __PRODUCT_NAME="Hazelcast"   
+fi
+__PRODUCT_DIR_NAME=$(basename $__VM_PRODUCT_HOME)
+
 # Check if we need to deploy padogrid to any of the VMs
 ADDON_COMMAND="if [ -d "$VM_PADOGRID_HOME" ]; then echo true; else echo false; fi"
 JAVA_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
-HAZELCAST_COMMAND="if [ -d "$VM_HAZELCAST_HOME" ]; then echo true; else echo false; fi"
 INSTALL_ADDON_HOST_LIST=""
 for VM_HOST in $__VM_HOSTS; do
    # padogrid
@@ -211,8 +226,6 @@ if [ "$INSTALL_ADDON_HOST_LIST" != "" ]; then
       fi
    done
 fi
-
-echo ""
 
 # Find all existing and new hosts
 EXISTING_HOSTS=
@@ -316,49 +329,60 @@ rm /tmp/setenv.sh  > /dev/null 2>&1
 rm /tmp/.addonenv.sh  > /dev/null 2>&1
 rm /tmp/workspaces_setenv.sh  > /dev/null 2>&1
 
+# Set common variables to handle "jet" and "imdg"
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   __VM_PRODUCT_HOME="$VM_JET_HOME"
+   __PRODUCT_NAME="Jet"   
+else
+   __VM_PRODUCT_HOME="$VM_HAZELCAST_HOME"
+   __PRODUCT_NAME="Hazelcast"   
+fi
+__PRODUCT_DIR_NAME=$(basename $__VM_PRODUCT_HOME)
+
 # Determine and display all VMs that do not have Java and Hazelcast installed.
 JAVA_HOME_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
-HAZELCAST_HOME_COMMAND="if [ -d "$VM_HAZELCAST_HOME" ]; then echo true; else echo false; fi"
+PRODUCT_HOME_COMMAND="if [ -d "$__VM_PRODUCT_HOME" ]; then echo true; else echo false; fi"
 JAVA_HOME_NOT_FOUND_LIST=""
-HAZELCAST_HOME_NOT_FOUND_LIST=""
+PRODUCT_HOME_NOT_FOUND_LIST=""
 for VM_HOST in $__VM_HOSTS; do
    JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$JAVA_HOME_COMMAND")
-   HAZELCAST_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$HAZELCAST_HOME_COMMAND")
+   PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$PRODUCT_HOME_COMMAND")
    if [ "$JAVA_HOME_EXISTS" == "false" ]; then
       JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
-   if [ "$HAZELCAST_HOME_EXISTS" == "false" ]; then
-      HAZELCAST_HOME_NOT_FOUND_LIST="$HAZELCAST_HOME_NOT_FOUND_LIST $VM_HOST"
+   if [ "$PRODUCT_HOME_EXISTS" == "false" ]; then
+      PRODUCT_HOME_NOT_FOUND_LIST="$PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
 done
 
 if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
    JAVA_DIR_NAME=$(basename $VM_JAVA_HOME)
    echo "------------------------------------------------------------------------------------------"
-   echo -e "${CLightRed}WARNING:${CNone}"
+   echo -e "${CYellow}WARNING:${CNone}"
    echo "$VM_JAVA_HOME"
    echo "   JDK not installed on the following VMs. The workspace will not be operational"
    echo "   until you install JDK on these VMs."
-   echo "      $JAVA_HOME_NOT_FOUND_LIST"
+   echo -e "      ${CLightRed}$JAVA_HOME_NOT_FOUND_LIST${CNone}"
    echo "VM Java Home Path:"
    echo "      $VM_JAVA_HOME"
+   echo ""
    echo "To install Java on the above VMs, download the correct version of JDK and execute 'vm_install'."
    echo "Example:"
    echo "   vm_install -java $JAVA_DIR_NAME.tar.gz"
    echo "------------------------------------------------------------------------------------------"
 fi
-if [ "$HAZELCAST_HOME_NOT_FOUND_LIST" != "" ]; then
-   HAZELCAST_DIR_NAME=$(basename $VM_HAZELCAST_HOME)
+if [ "$PRODUCT_HOME_NOT_FOUND_LIST" != "" ]; then
    echo "------------------------------------------------------------------------------------------"
-   echo -e "${CLightRed}WARNING:${CNone}"
-   echo "   Hazelcast is not installed on the following VMs. The workspace will not be operational"
-   echo "   until you install Hazelcast on these VMs."
-   echo "      $HAZELCAST_HOME_NOT_FOUND_LIST"
-   echo "VM Hazelcast Path:"
-   echo "    $VM_HAZELCAST_HOME"
-   echo "To install Hazelcast on the above VMs, download the correct version of JDK and execute 'vm_install'."
+   echo -e "${CYellow}WARNING:${CNone}"
+   echo "   $__PRODUCT_NAME is not installed on the following VMs. The workspace will not be operational"
+   echo "   until you install $__PRODUCT_NAME on these VMs."
+   echo -e "      ${CLightRed}$PRODUCT_HOME_NOT_FOUND_LIST${CNone}"
+   echo "VM $__PRODUCT_NAME Path:"
+   echo "    $__VM_PRODUCT_HOME"
+   echo ""
+   echo "To install $__PRODUCT_NAME on the above VMs, download the correct version of $__PRODUCT_NAME and execute 'vm_install'."
    echo "Example:"
-   echo "   vm_install -product $HAZELCAST_DIR_NAME.tar.gz"
+   echo "   vm_install -product $__PRODUCT_DIR_NAME.tar.gz"
    echo "------------------------------------------------------------------------------------------"
 fi
 

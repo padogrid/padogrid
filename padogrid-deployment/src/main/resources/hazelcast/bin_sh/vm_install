@@ -189,19 +189,29 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
+# Set common variables to handle "jet" and "imdg"
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   __VM_PRODUCT_HOME="$VM_JET_HOME"
+   __PRODUCT_NAME="Jet"   
+else
+   __VM_PRODUCT_HOME="$VM_HAZELCAST_HOME"
+   __PRODUCT_NAME="Hazelcast"   
+fi
+__PRODUCT_DIR_NAME=$(basename $__VM_PRODUCT_HOME)
+
 # Determine all VMs that do not have Java and Hazelcast installed.
 JAVA_HOME_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
-HAZELCAST_HOME_COMMAND="if [ -d "$VM_HAZELCAST_HOME" ]; then echo true; else echo false; fi"
+PRODUCT_HOME_COMMAND="if [ -d "$__VM_PRODUCT_HOME" ]; then echo true; else echo false; fi"
 JAVA_HOME_NOT_FOUND_LIST=""
-HAZELCAST_HOME_NOT_FOUND_LIST=""
+PRODUCT_HOME_NOT_FOUND_LIST=""
 for VM_HOST in $__VM_HOSTS; do
    JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$JAVA_HOME_COMMAND")
-   HAZELCAST_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$HAZELCAST_HOME_COMMAND")
+   PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$PRODUCT_HOME_COMMAND")
    if [ "$JAVA_HOME_EXISTS" == "false" ]; then
       JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
-   if [ "$HAZELCAST_HOME_EXISTS" == "false" ]; then
-      HAZELCAST_HOME_NOT_FOUND_LIST="$HAZELCAST_HOME_NOT_FOUND_LIST $VM_HOST"
+   if [ "$PRODUCT_HOME_EXISTS" == "false" ]; then
+      PRODUCT_HOME_NOT_FOUND_LIST="$PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
 done
 
@@ -308,10 +318,9 @@ fi
 # Install Hazelcast
 if [ "$PRODUCT_ARG" != "" ]; then
    # Arguments to installProduct function
-   PRODUCT="Hazelcast"
-   PRODUCT_HOME_NOT_FOUND_LIST=$HAZELCAST_HOME_NOT_FOUND_LIST
+   PRODUCT="$__PRODUCT_NAME"
    PRODUCT_PATH=$PRODUCT_ARG
-   VM_PRODUCT_HOME=$VM_HAZELCAST_HOME
+   VM_PRODUCT_HOME=$__VM_PRODUCT_HOME
    
    installProduct
 fi
