@@ -1828,8 +1828,7 @@ function getWorkspaceInfoList
       CLUSTER_TYPE="coherence"
    fi
 
-   VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
-   VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
+   local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
    if [ "$VM_ENABLED" == "true" ]; then
       VM_WORKSPACE="vm, "
    else
@@ -1838,6 +1837,34 @@ function getWorkspaceInfoList
    PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/^.*padogrid_//' -e 's/"//')
    echo "${VM_WORKSPACE}${CLUSTER_TYPE}_${PRODUCT_VERSION}, padogrid_$PADOGRID_VERSION"
+}
+
+#
+# Returns "true" if the specified workspace name is VM enabled in the sepcified RWE.
+#
+# @param workspaceName Workspace name in the current RWE.
+# @param rwePath       RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assumed.
+#
+function isWorkspaceVmEnabled
+{
+   local WORKSPACE="$1"
+   local RWE_PATH="$2"
+   local VM_ENABLED
+   if [ "$WORKSPACE" == "" ]; then
+      VM_ENABLED="false"
+   else
+      if [ "$RWE_PATH" == "" ]; then
+         RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+      fi
+      local WORKSPACE_PATH="$RWE_PATH/$WORKSPACE"
+      if [ ! -d "$WORKSPACE_PATH" ]; then
+         VM_ENABLED="false"
+      else
+         local VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
+         VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
+      fi
+   fi
+   echo $VM_ENABLED
 }
 
 #
