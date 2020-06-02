@@ -119,10 +119,6 @@ function displayVmClusterLong()
    PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
    PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
 
-   if [ "$MEMBER_HTTP_ENABLED" != "true" ]; then
-      MEMBER_HTTP_PORT="Disabled"
-      MEMBER_HTTP_URL="Disabled"
-   fi
    if [ "$DEBUG_ENABLED" != "true" ]; then
       DEBUG_PORT="Disabled"
    fi
@@ -164,11 +160,6 @@ function displayVmClusterLong()
 
       # Increment port numbers for host OS
       MEMBER_PORT=$MEMBER_START_PORT
-      if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
-         MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
-         HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
-         MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
-      fi
       if [ "$DEBUG_ENABLED" == "true" ]; then
          DEBUG_PORT=$DEBUG_START_PORT
       fi
@@ -202,7 +193,6 @@ function displayVmClusterLong()
 
       #MANAGEMENT_URL="http://localhost:30000/management/coherence/cluster"
       echo "     MEMBER_PORT: $MEMBER_PORT"
-      echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
       #echo "  Management URL: $MANAGEMENT_URL"
       echo "      DEBUG_PORT: $DEBUG_PORT"
       echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
@@ -307,10 +297,6 @@ function displayClusterLong()
    HOST_NAME=`hostname`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" $HOST_NAME`
 
-   if [ "$MEMBER_HTTP_ENABLED" != "true" ]; then
-      MEMBER_HTTP_PORT="Disabled"
-      MEMBER_HTTP_URL="Disabled"
-   fi
    if [ "$DEBUG_ENABLED" != "true" ]; then
       DEBUG_PORT="Disabled"
    fi
@@ -366,10 +352,6 @@ function displayClusterLong()
 
             # Same port number for guest OS
             MEMBER_PORT=$MEMBER_START_PORT
-            if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
-               MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
-               MEMBER_HTTP_URL="http://${NODE}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
-	    fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                DEBUG_PORT=$DEBUG_START_PORT
 	    fi
@@ -385,11 +367,6 @@ function displayClusterLong()
 
             # Increment port numbers for host OS
             let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-            if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
-               let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-               HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$NODE"`
-               MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
-            fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
             fi
@@ -430,7 +407,6 @@ function displayClusterLong()
             DOWN_MEMBER_COUNT=-1
          fi
          echo "     MEMBER_PORT: $MEMBER_PORT"
-#         echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
          echo "         JMX_URL: $JMX_URL"
