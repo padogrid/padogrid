@@ -147,8 +147,6 @@ function displayVmClusterLong()
    SNAPPYDATA_CONFIG_FILE=$ETC_DIR/cache.xml
    LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
    MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
-   MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
-   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    SPARK_UI_PORT=`getClusterProperty "spark.ui.port" $DEFAULT_SPARK_UI_PORT`
    DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
    JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
@@ -156,10 +154,6 @@ function displayVmClusterLong()
    PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
    PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
 
-   if [ "$MEMBER_HTTP_ENABLED" != "true" ]; then
-      MEMBER_HTTP_PORT="Disabled"
-      MEMBER_HTTP_URL="Disabled"
-   fi
    if [ "$DEBUG_ENABLED" != "true" ]; then
       DEBUG_PORT="Disabled"
    fi
@@ -184,7 +178,7 @@ function displayVmClusterLong()
    else
       echo "         CLUSTER: $CLUSTER"
    fi
-   echo "            PRODUCT: $PRODUCT"
+   echo "         PRODUCT: $PRODUCT"
    echo "      Deployment: VM"
    echo ""
 
@@ -212,8 +206,6 @@ function displayVmClusterLong()
          PROMETHEUS_PORT=$PROMETHEUS_START_PORT
       fi
 
-      PULSE_URL="http://${LOCATOR_HOSTNAME_FOR_CLIENTS}:$SPARK_UI_PORT/pulse"
-
       LOG_FILE=$LOG_DIR/${LOCATOR}.log
       
       if [ $LOCATOR_COUNT -lt 10 ]; then
@@ -237,7 +229,6 @@ function displayVmClusterLong()
       echo "    LOCATOR_PORT: $LOCATOR_PORT"
 #      echo "      DEBUG_PORT: $DEBUG_PORT"
 #      echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-      echo "       PULSE_URL: $PULSE_URL"
       echo "         JMX_URL: $JMX_URL"
       echo "     Working Dir: $LOCATOR_DIR"
       echo "        LOG_FILE: $LOG_FILE"
@@ -407,8 +398,6 @@ function displayClusterLong()
    LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
    LEADERR_START_PORT=`getClusterProperty "leader.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
    MEMBER_START_PORT=`getClusterProperty "tcp.startRPort" $DEFAULT_MEMBER_START_PORT`
-   MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
-   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startRPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    SPARK_UI_PORT=`getClusterProperty "spark.ui.port" $DEFAULT_SPARK_UI_PORT`
    LOCATOR_DEBUG_ENABLED=`getClusterProperty "locator.debug.enabled" $DEFAULT_LOCATOR_DEBUG_ENABLED`
    LOCATOR_DEBUG_START_PORT=`getClusterProperty "locator.debug.startPort" $DEFAULT_LOCATOR_DEBUG_START_PORT`
@@ -431,10 +420,6 @@ function displayClusterLong()
    HOST_NAME=`hostname`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" $HOST_NAME`
 
-   if [ "$MEMBER_HTTP_ENABLED" != "true" ]; then
-      MEMBER_HTTP_PORT="Disabled"
-      MEMBER_HTTP_URL="Disabled"
-   fi
    if [ "$DEBUG_ENABLED" != "true" ]; then
       DEBUG_PORT="Disabled"
    fi
@@ -542,8 +527,6 @@ function displayClusterLong()
 #            LOCATOR_HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
 #         fi
 
-         PULSE_URL="http://$LOCATOR_HOSTNAME_FOR_CLIENTS:$SPARK_UI_PORT/pulse"
-
          LOG_FILE=$LOG_DIR/${LOCATOR}.log
          echo "$LOCATOR_NUM       Locator: $LOCATOR"
          if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
@@ -574,7 +557,6 @@ function displayClusterLong()
          echo "    LOCATOR_PORT: $LOCATOR_PORT"
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-         echo "       PULSE_URL: $PULSE_URL"
          echo "         JMX_URL: $JMX_URL"
          echo "     Working Dir: $LOCATOR_DIR"
          echo "        LOG_FILE: $LOG_FILE"
@@ -650,19 +632,16 @@ function displayVmMember
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER_DIR=$RUN_DIR/$MEMBER
 
+      HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
+
       # Increment port numbers for host OS
       MEMBER_PORT=$MEMBER_START_PORT
-      if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
-         MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
-         HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
-         MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
-      fi
       if [ "$DEBUG_ENABLED" == "true" ]; then
          DEBUG_PORT=$DEBUG_START_PORT
       fi
       if [ "$JMX_ENABLED" == "true" ]; then
          JMX_PORT=$JMX_START_PORT
-         JMX_URL="service:jmx:rmi:///jndi/rmi://${VM_HOST}:$JMX_PORT/jmxrmi"
+         JMX_URL="service:jmx:rmi:///jndi/rmi://${HOSTNAME_FOR_CLIENTS}:$JMX_PORT/jmxrmi"
       fi
       if [ "$PROMETHEUS_ENABLED" == "true" ]; then
          PROMETHEUS_PORT=$PROMETHEUS_START_PORT
@@ -688,8 +667,12 @@ function displayVmMember
          echo "             PID: $pid"
       fi
 
+
       echo "     MEMBER_PORT: $MEMBER_PORT"
-      echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
+      if [ "$__MEMBER_TYPE" == "Leader" ] ; then
+         PULSE_URL="http://${HOSTNAME_FOR_CLIENTS}:$SPARK_UI_PORT/dashboard"
+         echo -e "       Dashboard: ${CLightBlue}$PULSE_URL${CNone}"
+      fi
       echo "      DEBUG_PORT: $DEBUG_PORT"
       echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
       echo "         JMX_URL: $JMX_URL"
@@ -726,10 +709,6 @@ function displayMember
 
             # Same port number for guest OS
             MEMBER_PORT=$MEMBER_START_PORT
-            if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
-               MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
-               MEMBER_HTTP_URL="http://${NODE}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
-	    fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                DEBUG_PORT=$DEBUG_START_PORT
             else
@@ -752,11 +731,6 @@ function displayMember
 
             # Increment port numbers for host OS
             let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-            if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
-               let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-               HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$NODE"`
-               MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
-            fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
             else
@@ -804,7 +778,6 @@ function displayMember
             DOWN_MEMBER_COUNT=-1
          fi
          echo "     MEMBER_PORT: $MEMBER_PORT"
-         echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
          echo "         JMX_URL: $JMX_URL"
