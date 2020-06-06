@@ -97,9 +97,13 @@ if [ "$MAN_SPECIFIED" == "true" ]; then
 
    # tar up the distribution which now includes man pages
    tar -C build -czf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz padogrid_${VERSION}
-   pushd build > /dev/null 2>&1
-   zip -q -r ../padogrid-deployment/target/assembly/padogrid_${VERSION}.zip padogrid_${VERSION}
-   popd > /dev/null 2>&1
+   if [ "$(which zip)" == "" ]; then
+      echo "Unable to create a zip file due to missing 'zip' command."
+   else
+      pushd build > /dev/null 2>&1
+      zip -q -r ../padogrid-deployment/target/assembly/padogrid_${VERSION}.zip padogrid_${VERSION}
+      popd > /dev/null 2>&1
+   fi
 fi
 
 echo ""
@@ -108,5 +112,7 @@ echo ""
 echo "Cluster Distribution (Light): Some apps need to be built by executing 'bin_sh/build_app'"
 echo ""
 echo "   padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz"
-echo "   padogrid-deployment/target/assembly/padogrid_${VERSION}.zip"
+if [ "$(which zip)" != "" ]; then
+   echo "   padogrid-deployment/target/assembly/padogrid_${VERSION}.zip"
+fi
 echo ""

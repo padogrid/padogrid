@@ -105,9 +105,13 @@ done
 
 mv -f build/padogrid_${VERSION}  build/padogrid-all_${VERSION}
 tar -C build -czf padogrid-deployment/target/assembly/padogrid-all_${VERSION}.tar.gz padogrid-all_${VERSION}
-pushd build > /dev/null 2>&1
-zip -q -r ../padogrid-deployment/target/assembly/padogrid-all_${VERSION}.zip padogrid-all_${VERSION}
-popd > /dev/null 2>&1
+if [ "$(which zip)" == "" ]; then
+   echo "Unable to create a zip file due to missing 'zip' command."
+else
+   pushd build > /dev/null 2>&1
+   zip -q -r ../padogrid-deployment/target/assembly/padogrid-all_${VERSION}.zip padogrid-all_${VERSION}
+   popd > /dev/null 2>&1
+fi
 
 echo ""
 echo "The following distrubution files have been generated."
@@ -115,10 +119,14 @@ echo ""
 echo "1. Cluster Distribution (Light): Some apps need to be built by executing 'bin_sh/build_app'"
 echo ""
 echo "   padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz"
-echo "   padogrid-deployment/target/assembly/padogrid_${VERSION}.zip"
+if [ "$(which zip)" != "" ]; then
+   echo "   padogrid-deployment/target/assembly/padogrid_${VERSION}.zip"
+fi
 echo ""
 echo "2. Full Distribution (Heavy): Includes full-blown apps."
 echo ""
 echo "   padogrid-deployment/target/assembly/padogrid-all_${VERSION}.tar.gz"
-echo "   padogrid-deployment/target/assembly/padogrid-all_${VERSION}.zip"
+if [ "$(which zip)" != "" ]; then
+   echo "   padogrid-deployment/target/assembly/padogrid-all_${VERSION}.zip"
+fi
 echo ""
