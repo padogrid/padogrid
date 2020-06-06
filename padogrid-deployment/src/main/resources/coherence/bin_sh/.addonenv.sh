@@ -443,10 +443,10 @@ LOG_PROPERTIES="-Dlog4j.configurationFile=$LOG4J_FILE"
 #
 # PATH
 #
-if [ "$JAVA_HOME" != "" ]; then
+if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$COHERENCE_HOME/bin:$PATH"
+export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$COHERENCE_HOME/bin:$PATH"
 
 #
 # Java executable

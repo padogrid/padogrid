@@ -223,13 +223,6 @@ function writeCluster()
    echo "tcp.startPort=$NEW_MEMBER_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
 
-   # Member REST API HTTP port
-   echo "# Enable/disable member REST API" >> $ETC_DIR/cluster.properties
-   echo "http.enabled=$DEFAULT_MEMBER_HTTP_ENABLED" >> $ETC_DIR/cluster.properties
-   echo "# Member REST API HTTP start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
-   echo "http.startPort=$NEW_MEMBER_HTTP_START_PORT" >> $ETC_DIR/cluster.properties
-   echo "" >> $ETC_DIR/cluster.properties
-   
    # Debug
    echo "# Enable/disable member debugging" >> $ETC_DIR/cluster.properties
    echo "debug.enabled=$DEFAULT_DEBUG_ENABLED" >> $ETC_DIR/cluster.properties
@@ -337,7 +330,6 @@ popd > /dev/null 2>&1
 # we can ignore the port number conflicts.
 if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "$VM_ENABLED" == "true" ]; then
    NEW_MEMBER_START_PORT=$DEFAULT_MEMBER_START_PORT
-   NEW_MEMBER_HTTP_START_PORT=$DEFAULT_MEMBER_HTTP_START_PORT
    NEW_DEBUG_START_PORT=$DEFAULT_DEBUG_START_PORT
    NEW_JMX_START_PORT=$DEFAULT_JMX_START_PORT
    NEW_PROMETHEUS_START_PORT=$DEFAULT_PROMETHEUS_START_PORT
@@ -345,7 +337,6 @@ else
    let PORT_DIFF=$NEW_MEMBER_START_PORT-DEFAULT_MEMBER_START_PORT
    echo PORT_DIFF=$PORT_DIFF
    let NEW_MEMBER_START_PORT=DEFAULT_MEMBER_START_PORT+PORT_DIFF
-   let NEW_MEMBER_HTTP_START_PORT=DEFAULT_MEMBER_HTTP_START_PORT+PORT_DIFF
    let NEW_DEBUG_START_PORT=DEFAULT_DEBUG_START_PORT+PORT_DIFF
    let NEW_PROMETHEUS_START_PORT=DEFAULT_PROMETHEUS_START_PORT+PORT_DIFF
    let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
@@ -422,7 +413,6 @@ echo "                 CONFIG_DIR: $ETC_DIR"
 echo "                CONFIG_FILE: $CONFIG_FILE"
 echo "                    LOG_DIR: $LOG_DIR"
 echo "          MEMBER_START_PORT: $NEW_MEMBER_START_PORT"
-echo "     MEMBER_HTTP_START_PORT: $NEW_MEMBER_HTTP_START_PORT"
 echo "           DEBUG_START_PORT: $NEW_DEBUG_START_PORT"
 echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
 echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"

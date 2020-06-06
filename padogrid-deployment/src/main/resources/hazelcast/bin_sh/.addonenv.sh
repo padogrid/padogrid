@@ -86,13 +86,7 @@ fi
 #JAVA_OPTS=
 
 #
-# Hazelcast IMDG Management Center home directory. This is required only if you want to run
-# the IMDG management center, i.e., start-mc.sh 
-#HAZELCAST_MC_HOME=$HAZELCAST_HOME/management-center
-#HAZELCAST_MC_HOME=$JET_HOME/hazelcast-jet-management-center
-
-#
-# Default workspace used when initializing workspaces by running init_hazelcast.
+# Default workspace used when initializing workspaces by running create_workspace.
 #
 DEFAULT_WORKSPACE=myws
 
@@ -100,11 +94,13 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
-DEFAULT_CLUSTER="myhz"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
+DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
+DEFAULT_COHERENCE_CLUSTER="mycoherence"
+DEFAULT_CLUSTER="$DEFAULT_HAZELCAST_CLUSTER"
 
 #
 # Default pod type. The pod type determines the node envirionment in which
@@ -209,7 +205,7 @@ DEFAULT_GC_LOG_FILE_ENABLED="true"
 CLASSPATH=""
 
 #
-# Default member TCP start port. he ($MEMBER_NUM-1) is added to the start port number to
+# Default member TCP start port. The value of ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's TCP port number.
 #
 if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -507,10 +503,10 @@ fi
 #
 # PATH
 #
-if [ "$JAVA_HOME" != "" ]; then
+if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$HAZELCAST_HOME/bin:$PATH"
+export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
 
 #
 # Java executable

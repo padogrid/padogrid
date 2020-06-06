@@ -98,6 +98,7 @@ DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
+DEFAULT_COHERENCE_CLUSTER="mycoherence"
 DEFAULT_CLUSTER="$DEFAULT_SNAPPYDATA_CLUSTER"
 
 #
@@ -493,10 +494,10 @@ LOG_PROPERTIES="-J-Dlog4j.configurationFile=$LOG4J_FILE"
 #
 # PATH
 #
-if [ "$JAVA_HOME" != "" ]; then
+if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$SNAPPYDATA_HOME/bin:$SNAPPYDATA_HOME/sbin:$PATH"
+export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$SNAPPYDATA_HOME/bin:$SNAPPYDATA_HOME/sbin:$PATH"
 
 #
 # Java executable
