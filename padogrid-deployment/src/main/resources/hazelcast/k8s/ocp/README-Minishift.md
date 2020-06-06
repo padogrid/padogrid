@@ -1,6 +1,6 @@
 # Hazelcast on Minishift/CDK
 
-This directory contains Kubernetes configuration files for deploying Hazelcast on **Minishift**.
+This directory contains Kubernetes configuration files for deploying Hazelcast on **Minishift/CDK**.
 
 ## WSL Users
 
