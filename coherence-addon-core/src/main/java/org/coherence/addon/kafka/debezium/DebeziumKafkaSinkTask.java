@@ -1,15 +1,12 @@
 package org.coherence.addon.kafka.debezium;
 
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Types;
+import java.lang.reflect.InvocationTargetException;
+import java.text.ParseException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -23,6 +20,8 @@ import org.slf4j.LoggerFactory;
 
 import com.netcrest.pado.internal.util.QueueDispatcher;
 import com.netcrest.pado.internal.util.QueueDispatcherListener;
+import com.tangosol.net.NamedCache;
+import com.tangosol.net.Session;
 
 /**
  * DebeziumKafkaSinkTask is a Kafka sink connector for receiving Debezium change
@@ -32,8 +31,8 @@ import com.netcrest.pado.internal.util.QueueDispatcherListener;
  * <p>
  * The {@link SinkRecord} argument of the {@link #put(Collection)} method
  * includes only the key record and does not include delete event information
- * needed to properly delete the entries in SnappyData. Without the "before"
- * Struct data, we are left to construct the SnappyData key object solely based
+ * needed to properly delete the entries in Coherence. Without the "before"
+ * Struct data, we are left to construct the Coherence key object solely based
  * on the key record. For tables with the primary key, this should be sufficient
  * since the key record holds the the primary key. For those tables without the
  * primary key, however, the "before" Struct data is needed in order to
@@ -44,31 +43,32 @@ import com.netcrest.pado.internal.util.QueueDispatcherListener;
  * @author dpark
  *
  */
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherListener {
 
 	private static final Logger logger = LoggerFactory.getLogger(DebeziumKafkaSinkTask.class);
 
+	private Session session;
 	private boolean isDebugEnabled = false;
 
-	private String connectionUrl;
-	private String connectionDriverClassName;
-	private String userName;
-	private String pwd;
-	private String tableName;
+	private String coherenceClientFile;
+	private String cacheName;
+	private NamedCache cache;
 	private boolean isSmtEnabled = true;
 	private boolean isDeleteEnabled = true;
-	private String targetNamesStr;
-	private String[] sourceColumnNames;
-	private String[] targetColumnNames;
-	private int[] targetColumnTypes;
-	private String[] targetColumnTypeNames;
+	private String keyClassName;
+	private String valueClassName;
+	private String[] keyColumnNames;
+	private String[] keyFieldNames;
+	private String[] valueColumnNames;
+	private String[] valueFieldNames;
+	private ObjectConverter objConverter;
+	private boolean isDelete = true;
 	private int queueBatchSize = DebeziumKafkaSinkConnector.DEFAULT_QUEUE_BATCH_SIZE;
 	private long queueBatchIntervalInMsec = DebeziumKafkaSinkConnector.DEFAULT_QUEUE_BATCH_INTERVAL_IN_MSEC;
 
+	
 	private QueueDispatcher queueDispatcher;
-
-	private Connection conn;
-	private Statement stmt;
 
 	@Override
 	public String version() {
@@ -77,25 +77,13 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 
 	@Override
 	public void start(Map<String, String> props) {
-		connectionUrl = props.get(DebeziumKafkaSinkConnector.CONFIG_CONNECTION_URL);
-		if (connectionUrl == null) {
-			connectionUrl = DebeziumKafkaSinkConnector.DEFAULT_CONNECTION_URL;
+		coherenceClientFile = props.get(DebeziumKafkaSinkConnector.CONFIG_COHERENCE_CLIENT_CONFIG_FILE);
+		if (coherenceClientFile == null) {
+			coherenceClientFile = "/coherence-addon/etc/client-config.xml";
 		}
-		connectionDriverClassName = props.get(DebeziumKafkaSinkConnector.CONFIG_CONNECTION_DRIVER_CLASS);
-		if (connectionDriverClassName == null) {
-			connectionDriverClassName = DebeziumKafkaSinkConnector.DEFAULT_CONNECTION_DRIVER_CLASS;
-		}
-		userName = props.get(DebeziumKafkaSinkConnector.CONFIG_CONNECTION_USER);
-		if (userName == null) {
-			userName = DebeziumKafkaSinkConnector.DEFAULT_USER;
-		}
-		pwd = props.get(DebeziumKafkaSinkConnector.CONFIG_CONNECTION_PASSWORD);
-		if (pwd == null) {
-			pwd = DebeziumKafkaSinkConnector.DEFAULT_PASSWORD;
-		}
-		tableName = props.get(DebeziumKafkaSinkConnector.CONFIG_TABLE);
-		if (tableName == null) {
-			tableName = "mytable";
+		cacheName = props.get(DebeziumKafkaSinkConnector.CONFIG_CACHE);
+		if (cacheName == null) {
+			cacheName = "mycache";
 		}
 		String isDebugStr = props.get(DebeziumKafkaSinkConnector.CONFIG_DEBUG_ENABLED);
 		isDebugEnabled = isDebugStr != null && isDebugStr.equalsIgnoreCase("true") ? true : isDebugEnabled;
@@ -103,101 +91,99 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 		isSmtEnabled = isSmtStr != null && isSmtStr.equalsIgnoreCase("false") ? false : isSmtEnabled;
 		String isDeleteStr = props.get(DebeziumKafkaSinkConnector.CONFIG_DELETE_ENABLED);
 		isDeleteEnabled = isDeleteStr != null && isDeleteStr.equalsIgnoreCase("false") ? false : isDeleteEnabled;
+		keyClassName = props.get(DebeziumKafkaSinkConnector.CONFIG_KEY_CLASS_NAME);
+		valueClassName = props.get(DebeziumKafkaSinkConnector.CONFIG_VALUE_CLASS_NAME);
 
-		// Columns
-		String scNames = props.get(DebeziumKafkaSinkConnector.CONFIG_SOURCE_COLUMN_NAMES);
-		targetNamesStr = props.get(DebeziumKafkaSinkConnector.CONFIG_TARGET_COLUMN_NAMES);
-		String[] tokens;
-		if (scNames != null) {
-			tokens = scNames.split(",");
-			sourceColumnNames = new String[tokens.length];
+		// Key
+		String cnames = props.get(DebeziumKafkaSinkConnector.CONFIG_KEY_COLUMN_NAMES);
+		String fnames = props.get(DebeziumKafkaSinkConnector.CONFIG_KEY_FIELD_NAMES);
+		String tokens[];
+
+		if (cnames != null) {
+			tokens = cnames.split(",");
+			keyColumnNames = new String[tokens.length];
 			for (int j = 0; j < tokens.length; j++) {
-				sourceColumnNames[j] = tokens[j].trim();
+				keyColumnNames[j] = tokens[j].trim();
 			}
 		}
-		if (targetNamesStr != null) {
-			tokens = targetNamesStr.split(",");
-			targetColumnNames = new String[tokens.length];
+		if (fnames != null) {
+			tokens = fnames.split(",");
+			keyFieldNames = new String[tokens.length];
 			for (int j = 0; j < tokens.length; j++) {
-				targetColumnNames[j] = tokens[j].trim();
-			}
-		}
-		String intVal = props.get(DebeziumKafkaSinkConnector.CONFIG_QUEUE_BATCH_SIZE);
-		if (intVal != null) {
-			try {
-				queueBatchSize = Integer.parseInt(intVal);
-			} catch (Exception ex) {
-				// ignore. use the default value.
-			}
-		}
-		String longVal = props.get(DebeziumKafkaSinkConnector.CONFIG_QUEUE_BATCH_INTERVAL_IN_MSEC);
-		if (longVal != null) {
-			try {
-				queueBatchIntervalInMsec = Long.parseLong(longVal);
-			} catch (Exception ex) {
-				// ignore. use the default value.
+				keyFieldNames[j] = tokens[j].trim();
 			}
 		}
 
+		// Value
+		cnames = props.get(DebeziumKafkaSinkConnector.CONFIG_VALUE_COLUMN_NAMES);
+		fnames = props.get(DebeziumKafkaSinkConnector.CONFIG_VALUE_FIELD_NAMES);
+		if (cnames != null) {
+			tokens = cnames.split(",");
+			valueColumnNames = new String[tokens.length];
+			for (int j = 0; j < tokens.length; j++) {
+				valueColumnNames[j] = tokens[j].trim();
+			}
+		}
+		if (fnames != null) {
+			tokens = fnames.split(",");
+			valueFieldNames = new String[tokens.length];
+			for (int j = 0; j < tokens.length; j++) {
+				valueFieldNames[j] = tokens[j].trim();
+			}
+		}
+
+		String classpathStr = System.getProperty("java.class.path");
+		logger.info("CLASSPATH=" + classpathStr);
+		
 		if (isDebugEnabled) {
 			logger.info("====================================================================================");
 			logger.info(props.toString());
-			logger.info("table = " + tableName);
+			logger.info("coherenceClientFile = " + coherenceClientFile);
+			logger.info("cache = " + cacheName);
 			logger.info("smtEnabled = " + isSmtEnabled);
 			logger.info("deleteEnabled = " + isDeleteEnabled);
-			logger.info("sourceColumnNames");
-			for (int i = 0; i < sourceColumnNames.length; i++) {
-				logger.info("   [" + i + "] " + sourceColumnNames[i]);
+			logger.info("keyClassName = " + keyClassName);
+			logger.info("keyColumnNames");
+			for (int i = 0; i < keyColumnNames.length; i++) {
+				logger.info("   [" + i + "] " + keyColumnNames[i]);
 			}
-			logger.info("targetColumnNames");
-			for (int i = 0; i < targetColumnNames.length; i++) {
-				logger.info("   [" + i + "] " + targetColumnNames[i]);
+			logger.info("keyFieldNames");
+			for (int i = 0; i < keyFieldNames.length; i++) {
+				logger.info("   [" + i + "] " + keyFieldNames[i]);
+			}
+			logger.info("valueClassName = " + valueClassName);
+			logger.info("valueColumnNames");
+			for (int i = 0; i < valueColumnNames.length; i++) {
+				logger.info("   [" + i + "] " + valueColumnNames[i]);
+			}
+			logger.info("valueFieldNames");
+			for (int i = 0; i < valueFieldNames.length; i++) {
+				logger.info("   [" + i + "] " + valueFieldNames[i]);
 			}
 			logger.info("queueBatchSize = " + queueBatchSize);
 			logger.info("queueBatchIntervalInMsec = " + queueBatchIntervalInMsec);
 			logger.info("====================================================================================");
 		}
-
 		try {
-			Class.forName(connectionDriverClassName);
-			conn = DriverManager.getConnection(connectionUrl, userName, pwd);
-			stmt = conn.createStatement();
-			initSnappy();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
+			objConverter = new ObjectConverter(keyClassName, keyFieldNames, valueClassName, valueFieldNames);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
+
+		System.setProperty(DebeziumKafkaSinkConnector.CONFIG_COHERENCE_CLIENT_CONFIG_FILE, coherenceClientFile);
+		initCoherence();
+		
 		queueDispatcher = new QueueDispatcher(queueBatchSize, queueBatchIntervalInMsec);
 		queueDispatcher.setQueueDispatcherListener(this);
 		queueDispatcher.start();
 	}
-
-	private void initSnappy() {
-		targetColumnTypes = new int[targetColumnNames.length];
-		targetColumnTypeNames = new String[targetColumnNames.length];
-		DatabaseMetaData dbMetaData;
-		try {
-			dbMetaData = conn.getMetaData();
-			ResultSet columns = dbMetaData.getColumns(null, "inventory", "customers", null);
-			while (columns.next()) {
-				String columnName = columns.getString("COLUMN_NAME");
-				int dataType = columns.getInt("DATA_TYPE");
-				String typeName = columns.getString("TYPE_NAME");
-				System.out.println(columnName + ": " + dataType + ", " + typeName);
-				for (int i = 0; i < targetColumnNames.length; i++) {
-					if (columnName.equals(targetColumnNames[i])) {
-						targetColumnTypes[i] = dataType;
-						targetColumnTypeNames[i] = typeName;
-						break;
-					}
-				}
-			}
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+	
+	private void initCoherence()
+	{
+		session = Session.create();
+		cache = session.getCache(cacheName);
 	}
-
+	
 	@Override
 	public void put(Collection<SinkRecord> records) {
 //		final Serde<String> serde = DebeziumSerdes.payloadJson(String.class);
@@ -207,9 +193,10 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public void objectDispatched(Object obj) {
 		Collection<SinkRecord> records = (Collection<SinkRecord>) obj;
+		HashMap keyValueMap = new HashMap();
+		int count = 0;
 		for (SinkRecord sinkRecord : records) {
 			Schema keySchema = sinkRecord.keySchema();
 			Schema valueSchema = sinkRecord.valueSchema();
@@ -247,62 +234,75 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 			}
 
 			/*
-			 * Columns
+			 * Key
+			 */
+			Object key;
+
+			// Determine the key column names.
+			if (keyColumnNames == null) {
+				keyColumnNames = getColumnNames(keyStruct);
+			}
+
+			// If the key column names are not defined or cannot be determined then
+			// assign UUID for the key value
+			if (keyColumnNames == null) {
+				key = UUID.randomUUID().toString();
+			} else {
+				Object keyFieldValues[] = new Object[keyColumnNames.length];
+				for (int j = 0; j < keyColumnNames.length; j++) {
+					keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+				}
+				try {
+					key = objConverter.createKeyObject(keyFieldValues);
+				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+						| InvocationTargetException | ParseException e) {
+					throw new RuntimeException(e);
+				}
+			}
+			if (isDebugEnabled) {
+				logger.info("key = " + key);
+			}
+			if (isDeleteEnabled && isDelete) {
+				cache.remove(key);
+				continue;
+			}
+
+			/*
+			 * Value
 			 */
 			Object value;
 
 			// Determine the value column names.
-			if (sourceColumnNames == null) {
-				sourceColumnNames = getColumnNames(valueStruct);
+			if (valueColumnNames == null) {
+				valueColumnNames = getColumnNames(valueStruct);
 			}
-
-			Object values[] = new Object[sourceColumnNames.length];
-			for (int j = 0; j < sourceColumnNames.length; j++) {
-				values[j] = afterStruct.get(sourceColumnNames[j]);
-			}
-			if (isDebugEnabled) {
-				for (int j = 0; j < sourceColumnNames.length; j++) {
-					logger.info("valueColumnNames[" + j + "] = " + sourceColumnNames[j] + ": " + values[j]);
-				}
-			}
-
-			StringBuffer buffer = new StringBuffer(100);
-			buffer.append("put into ");
-			buffer.append(tableName);
-			buffer.append(" (");
-			buffer.append(targetNamesStr);
-			buffer.append(") values (");
-			for (int i = 0; i < values.length; i++) {
-				if (i > 0) {
-					buffer.append(",");
-				}
-				// STRING comes in as CLOB
-				switch (targetColumnTypes[i]) {
-				case Types.VARCHAR:
-				case Types.CLOB:
-				case Types.DATE:
-				case Types.TIMESTAMP:
-				case Types.BINARY:
-				case Types.VARBINARY:
-					buffer.append("'");
-					buffer.append(values[i]);
-					buffer.append("'");
-					break;
-				default:
-					buffer.append(values[i]);
-					break;
-				}
-			}
-			buffer.append(")");
-			String sql = buffer.toString();
-			if (isDebugEnabled) {
-				logger.info(sql);
+			Object valueFieldValues[] = new Object[valueColumnNames.length];
+			for (int j = 0; j < valueColumnNames.length; j++) {
+				valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
 			}
 			try {
-				stmt.execute(sql);
-			} catch (SQLException e) {
+				value = objConverter.createValueObject(valueFieldValues);
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | ParseException e) {
 				throw new RuntimeException(e);
 			}
+			if (isDebugEnabled) {
+				for (int j = 0; j < valueColumnNames.length; j++) {
+					logger.info("valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
+				}
+				logger.info("value = " + value);
+			}
+
+			keyValueMap.put(key, value);
+			count++;
+			if (count % 100 == 0) {
+				cache.putAll(keyValueMap);
+				keyValueMap.clear();
+			}
+		}
+		if (count % 100 > 0) {
+			cache.putAll(keyValueMap);
+			keyValueMap.clear();
 		}
 	}
 
@@ -321,20 +321,17 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 
 	@Override
 	public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
-		queueDispatcher.flush();
+		// Ignore
 	}
 
 	@Override
 	public void stop() {
-		try {
-			if (conn != null && conn.isClosed() == false) {
-				conn.close();
+		if (session != null) {
+			try {
+				session.close();
+			} catch (Exception e) {
+				// ignore
 			}
-			queueDispatcher.stop();
-		} catch (SQLException e) {
-			// ignore
 		}
-		
-		logger.info("DebeziumKafkaSinkTask stopped.");
 	}
 }
