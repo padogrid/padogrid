@@ -529,11 +529,14 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
             file=${file##*hazelcast\-jet\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
             IS_HAZELCAST_ENTERPRISE=true
+	    break;
          done
       else
          for file in $JET_HOME/lib/hazelcast-jet-*; do
             file=${file##*hazelcast\-jet\-}
-            HAZELCAST_VERSION=${file%.jar}
+	    file=${file##*-}
+            HAZELCAST_VERSION=${file%%.jar}
+	    break;
          done
       fi
    fi
