@@ -1,8 +1,8 @@
 package org.hazelcast.addon.apps.jet.demo;
 
-import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.function.Functions.wholeItem;
 import static java.util.Comparator.comparingLong;
 
 import java.io.BufferedReader;
