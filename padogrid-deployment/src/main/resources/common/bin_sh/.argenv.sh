@@ -38,6 +38,7 @@ OS_NAME=`echo "$OS_NAME"|awk '{print toupper($0)}'`
 PRODUCT_ARG=
 ENV_ARG=
 RWE_ARG=
+RWE_SPECIFIED=false
 WORKSPACE_ARG=
 JAVA_HOME_ARG=
 COHERENCE_ARG=
@@ -316,6 +317,8 @@ do
       LONG=true
    elif [ "$i" == "-vm" ]; then
       VM_SPECIFIED=true
+   elif [ "$i" == "-rwe" ]; then
+      RWE_SPECIFIED=true
    elif [ "$i" == "-mirror" ]; then
       MIRROR_SPECIFIED=true
    elif [ "$i" == "-remote" ]; then

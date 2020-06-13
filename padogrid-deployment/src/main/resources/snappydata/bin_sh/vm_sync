@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -vm -simulate -?"
+   echo "-cluster -vm -rwe -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -49,7 +49,7 @@ NAME
    $EXECUTABLE - Synchronize the rmote VMs with the local workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-simulate] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-rwe] [-simulate] [-?]
 
 DESCRIPTION
    Synchronizes all the VMs defined by VM_HOSTS environment variable in the workspace
@@ -70,6 +70,12 @@ OPTIONS
    -vm comma_separated_hosts
              A comma separated list of VM hosts or addresses. If the list contains spaces
              then enclosed it in quotes.
+
+   -rwe
+             By default, vm_sync deploys the RWE metadata files only to the VMs that do not have them.
+             If this option is specified the then it synchronizes VMs with the RWE metadata files in
+             the local machine. For example, this option deploys the product hidden file, i.e., .<product>env.sh,
+             that contains license keys to VMs.
 
    -simulate
              Print the remote commands but do not execute.
@@ -305,14 +311,14 @@ for VM_HOST in $__VM_HOSTS; do
          scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
       fi
    fi
-   if [[ "$SETENV_EXISTS" == "false" ]]; then
+   if [ "$RWE_SPECIFIED" == "true" ] || [[ "$SETENV_EXISTS" == "false" ]]; then
       if [ "$SIMULATE" == "true" ]; then
          echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       else
          scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       fi
    fi
-   if [ "$SNAPPYDATAENV_EXISTS" != "true" ] && [ -f "$PADOGRID_WORKSPACES_HOME/.snappydataenv.sh" ]; then
+   if [ "$RWE_SPECIFIED" == "true" ] || [ "$SNAPPYDATAENV_EXISTS" != "true" ] && [ -f "$PADOGRID_WORKSPACES_HOME/.snappydataenv.sh" ]; then
       if [ "$SIMULATE" == "true" ]; then
          echo scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/.snappydataenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.snappydataenv.sh
       else
