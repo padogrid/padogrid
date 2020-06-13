@@ -621,7 +621,11 @@ echo "# VM user name." >> $WORKSPACE_DIR/setenv.sh
 echo "VM_USER=\"$VM_USER\"" >> $WORKSPACE_DIR/setenv.sh
 echo "# VM private key file path. If not set, then it defaults to the first .pem file" >> $WORKSPACE_DIR/setenv.sh
 echo "# found in the workspace directory." >> $WORKSPACE_DIR/setenv.sh
-
+if [ "$__VM_PRIVATE_KEY_FILE" != "" ]; then
+echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
+else
+echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
 if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
    cp $VM_PRIVATE_KEY_FILE $WORKSPACE_DIR/
    __VM_PRIVATE_KEY_FILE="$(basename $VM_PRIVATE_KEY_FILE)"
@@ -629,6 +633,9 @@ if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
 else
    __VM_PRIVATE_KEY_FILE=""
 fi
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "# VM hosts may have installation paths dfferent from the local paths." >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
 if [ "$VM_ENABLED" == "true" ]; then
    echo "# VM JDK home directory path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_JAVA_HOME=\"$VM_JAVA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
@@ -649,24 +656,24 @@ if [ "$VM_ENABLED" == "true" ]; then
          echo "VM_HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       else
          echo "VM_HAZELCAST_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "# VM Management Center home directory path." >> $WORKSPACE_DIR/setenv.sh
+         echo "VM_HAZELCAST_MC_HOME=\"\$VM_HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
       fi
       echo "# VM Jet home directory path." >> $WORKSPACE_DIR/setenv.sh
       if [ "$CLUSTER_TYPE" == "jet" ]; then
          echo "VM_JET_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "# VM Management Center home directory path." >> $WORKSPACE_DIR/setenv.sh
+         echo "VM_HAZELCAST_MC_HOME=\"\$VM_JET_HOME/hazelcast-jet-management-center\"" >> $WORKSPACE_DIR/setenv.sh
       else
          echo "VM_JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       fi
    fi
-   echo "# VM hosts may have the padogrid home path different from the local path." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM PadoGrid home path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_HOME=\"$VM_PADOGRID_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-   echo "# VM hosts may have the workspaces and workspace paths from the local paths." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM RWE path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACES_HOME=\"$VM_PADOGRID_WORKSPACES_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM Workspace path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACE=\"\$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $WORKSPACE_DIR/setenv.sh
-   if [ "$__VM_PRIVATE_KEY_FILE" != "" ]; then
-      echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
-   else
-      echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
-   fi
 else
    echo "# VM JDK home directory path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_JAVA_HOME=\$VM_JAVA_HOME" >> $WORKSPACE_DIR/setenv.sh
@@ -685,12 +692,12 @@ else
       echo "# VM Jet home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_JET_HOME=\$JET_HOME" >> $WORKSPACE_DIR/setenv.sh
    fi
-   echo "# VM hosts may have the padogrid home path different from the local path." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM PadoGrid home path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_HOME=\$PADOGRID_HOME" >> $WORKSPACE_DIR/setenv.sh
-   echo "# VM hosts may have the workspaces and workspace paths different from the local paths." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM RWE path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACES_HOME=\$PADOGRID_WORKSPACES_HOME" >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM Workspace path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACE=\$PADOGRID_WORKSPACE" >> $WORKSPACE_DIR/setenv.sh
-   echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
 fi
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
