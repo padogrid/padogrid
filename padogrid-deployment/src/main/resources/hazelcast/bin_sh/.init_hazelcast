@@ -89,7 +89,7 @@ cat <<EOF
              Quiet mode. Supresses the interactive prompt.
 
 DEFAULT
-   $EXECUTABLE
+   $EXECUTABLE -cluster $DEFAULT_CLUSTER
 
 EOF
    exit
@@ -461,12 +461,12 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "# There are multiple setenv.sh files sourced in in the order shown below," >> $WORKSPACES_HOME/setenv.sh
-   echo "# each overriding the varirables set in the previous one(s)." >> $WORKSPACES_HOME/setenv.sh
+   echo "# each overriding the variables set in the previous one(s)." >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
-   echo "#    $PADOGRID_HOME/bin_sh/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "#    \$PADOGRID_HOME/bin_sh/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "#    setenv.sh (this file)" >> $WORKSPACES_HOME/setenv.sh
-   echo "#    $PADOGRID_WORKSPACE/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
-   echo "#    $PADOGRID_WORKSPACE/clusters/<cluster>/bin_sh/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "#    \$PADOGRID_WORKSPACE/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "#    \$PADOGRID_WORKSPACE/clusters/<cluster>/bin_sh/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
@@ -496,6 +496,8 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "# Set the default product." >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "PRODUCT=$PRODUCT" >> $WORKSPACES_HOME/setenv.sh
+
+   # .geodeenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "# Source in Geode/GemFire specific environment variables. Set your Geode/GemFire specifics" >> $WORKSPACES_HOME/setenv.sh
@@ -505,6 +507,8 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "if [ -f \$SCRIPT_DIR/.geodeenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
    echo "   . \$SCRIPT_DIR/.geodeenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   # .hazelcastenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "# Source in Hazelcast (IMDG and Jet) specific environment variables. Set your IMDG/Jet specifics" >> $WORKSPACES_HOME/setenv.sh
@@ -514,6 +518,29 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "if [ -f \$SCRIPT_DIR/.hazelcastenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
    echo "   . \$SCRIPT_DIR/.hazelcastenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   # .snappydataenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in SnappyData/ComputeDB specific environment variables. Set your SnappyData/ComputeDB specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .snappydateenv.sh. The environment variables set in .snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.snappydataenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   # .coherenceenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in Coherence specific environment variables. Set your Coherence specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .coherenceenv.sh. The environment variables set in .coherenceenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.coherencenve.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.coherencenve.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
    echo "" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "# Add your workspaces-wide environment variables below. The environment" >> $WORKSPACES_HOME/setenv.sh
@@ -542,7 +569,7 @@ if [ ! -f $WORKSPACES_HOME/.addonenv.sh ]; then
    echo "" >> $WORKSPACES_HOME/.addonenv.sh
    echo "export PADOGRID_VERSION=$PADOGRID_VERSION" >> $WORKSPACES_HOME/.addonenv.sh
    echo "export PADOGRID_WORKSPACES_HOME_CREATION_DATE=\"`date "+%m/%d/%y %H:%M:%S %Z"`\"" >> $WORKSPACES_HOME/.addonenv.sh
-   echo "export PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $WORKSPACES_HOME/.addonenv.sh
+   echo "export PADOGRID_WORKSPACES_HOME=\"\$SCRIPT_DIR\"" >> $WORKSPACES_HOME/.addonenv.sh
 fi
 
 #

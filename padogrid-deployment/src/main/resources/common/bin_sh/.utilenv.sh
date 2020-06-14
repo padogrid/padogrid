@@ -1039,8 +1039,9 @@ function updateDefaultEnv
    if [ ! -d "$RWE_DIR" ]; then
       mkdir "$RWE_DIR"
    fi
+   local WORKSPACE=${PADOGRID_WORKSPACE##*/}
    echo "export PRODUCT=\"$PRODUCT\"" > $DEFAULTENV_FILE
-   echo "export PADOGRID_WORKSPACE=\"$PADOGRID_WORKSPACE\"" >> $DEFAULTENV_FILE
+   echo "export PADOGRID_WORKSPACE=\"\$PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $DEFAULTENV_FILE
 }
 
 #
@@ -1053,8 +1054,9 @@ function createTmpDefaultEnv
    local __PRODUCT="$1"
    local __WORKSPACE_PATH="$2"
    local DEFAULTENV_FILE="/tmp/defaultenv.sh"
+   local WORKSPACE=${PADOGRID_WORKSPACE##*/}
    echo "export PRODUCT=\"$__PRODUCT\"" > $DEFAULTENV_FILE
-   echo "export PADOGRID_WORKSPACE=\"$__WORKSPACE_PATH\"" >> $DEFAULTENV_FILE
+   echo "export PADOGRID_WORKSPACE=\"\$PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $DEFAULTENV_FILE
 }
 
 #
