@@ -15,9 +15,6 @@ if [ -f "$DEFAULTENV_FILE" ]; then
    . "$DEFAULTENV_FILE"
 fi
 
-# JAVA_DIR used for comparison
-JAVA_DIR=$(dirname "$(which java)")
-
 #
 # Remove the previous paths from PATH to prevent duplicates
 #
@@ -26,18 +23,18 @@ __IFS=$IFS
 IFS=":"
 PATH_ARRAY=($PATH)
 for i in "${PATH_ARRAY[@]}"; do
-   if [[ "$i" == "$JAVA_DIR"** ]] && [ "$JAVA_HOME" != "" ]; then
+   if [ "$i" == "$JAVA_HOME" ]; then
       continue;
    elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
       continue;
    elif [[ "$i" == "$PRODUCT_HOME"** ]]; then
       continue;
    fi
-      if [ "$CLEANED_PATH" == "" ]; then
-          CLEANED_PATH="$i"
-      else
-         CLEANED_PATH="$CLEANED_PATH:$i" 
-      fi
+   if [ "$CLEANED_PATH" == "" ]; then
+      CLEANED_PATH="$i"
+   else
+      CLEANED_PATH="$CLEANED_PATH:$i"
+   fi
 done
 IFS=$__IFS
 
