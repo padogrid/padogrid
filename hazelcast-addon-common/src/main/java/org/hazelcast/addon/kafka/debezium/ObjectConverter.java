@@ -1,6 +1,8 @@
 package org.hazelcast.addon.kafka.debezium;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.text.ParseException;
 
 import org.hazelcast.addon.internal.util.ObjectUtil;
@@ -20,6 +22,7 @@ public class ObjectConverter extends ObjectUtil {
 	private Class<?> valueClass;
 	private Object[] valueClassSetters;
 	private String[] valueFieldNames;
+	private Class<?>[] valueFieldTypes;
 
 	public ObjectConverter(String keyClassName, String[] keyFieldNames, String valueClassName, String[] valueFieldNames) throws ClassNotFoundException {
 		keyClass = Class.forName(keyClassName);
@@ -39,6 +42,19 @@ public class ObjectConverter extends ObjectUtil {
 
 		keyClassSetters = getFieldMethodList(valueClass, keyFieldNames, "set", 1);
 		valueClassSetters = getFieldMethodList(valueClass, valueFieldNames, "set", 1);
+		valueFieldTypes = new Class<?>[valueClassSetters.length];
+		for (int i = 0; i < valueClassSetters.length; i++) {
+			Method method = (Method)valueClassSetters[i];
+			if (method != null) {
+				Parameter param = method.getParameters()[0];
+				valueFieldTypes[i] = param.getType();
+			}
+		}
+	}
+	
+	public Class<?>[] getValueFielTypes()
+	{
+		return valueFieldTypes;
 	}
 
 	public Object createKeyObject(Object[] keyFieldValues) throws InstantiationException, IllegalAccessException,

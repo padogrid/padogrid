@@ -3,6 +3,8 @@ package org.hazelcast.addon.test.perf;
 import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -10,14 +12,24 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
+import javax.persistence.criteria.CriteriaBuilder.In;
+
+import org.hazelcast.addon.cluster.util.HibernatePool;
 import org.hazelcast.addon.test.perf.data.Blob;
 import org.hazelcast.addon.test.perf.data.DataObjectFactory;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.core.HazelcastInstance;
@@ -98,10 +110,11 @@ public class GroupTest implements Constants {
 		Operation[] operations;
 		String operationsStr;
 		String comment;
-		GroupTestThread[] threads;
+		AbstractThread[] threads;
 	}
 
 	static class Operation {
+		String name;
 		String ref;
 		String mapName;
 		IMap imap;
@@ -117,6 +130,7 @@ public class GroupTest implements Constants {
 		@Override
 		public Object clone() {
 			Operation op = new Operation();
+			op.name = name;
 			op.ref = ref;
 			op.mapName = mapName;
 			op.imap = imap;
@@ -132,15 +146,17 @@ public class GroupTest implements Constants {
 		}
 	}
 
-	public GroupTest() throws Exception {
-		init();
+	public GroupTest(boolean runDb) throws Exception {
+		init(runDb);
 	}
 
-	private void init() throws Exception {
-		if (IS_FAILOVER_CLIENT) {
-			hazelcastInstance = HazelcastClient.newHazelcastFailoverClient();
-		} else {
-			hazelcastInstance = HazelcastClient.newHazelcastClient();
+	private void init(boolean runDb) throws Exception {
+		if (runDb == false) {
+			if (IS_FAILOVER_CLIENT) {
+				hazelcastInstance = HazelcastClient.newHazelcastFailoverClient();
+			} else {
+				hazelcastInstance = HazelcastClient.newHazelcastClient();
+			}
 		}
 	}
 
@@ -149,7 +165,7 @@ public class GroupTest implements Constants {
 		for (Group group : groups) {
 			totalInvocationCount = 0;
 			if (group.threads != null) {
-				for (GroupTestThread thread : group.threads) {
+				for (AbstractThread thread : group.threads) {
 					if (thread != null) {
 						totalInvocationCount += thread.operationCount;
 					}
@@ -160,7 +176,7 @@ public class GroupTest implements Constants {
 		}
 	}
 
-	private void runTest(String concurrentGroupNames, Group group) throws Exception {
+	private void runTest(String concurrentGroupNames, Group group, boolean runDb) throws Exception {
 		SimpleDateFormat format = new SimpleDateFormat("yyMMdd-HHmmss");
 		String resultsDirStr = System.getProperty("results.dir", "results");
 		File resultsDir = new File(resultsDirStr);
@@ -176,8 +192,12 @@ public class GroupTest implements Constants {
 
 		PrintWriter writer = new PrintWriter(file);
 
+		String dbHeader = "";
+		if (runDb) {
+			dbHeader = " (Dababase)";
+		}
 		writer.println("******************************************");
-		writer.println("Group Test");
+		writer.println("Group Test" + dbHeader);
 		writer.println("******************************************");
 		writer.println();
 		writer.println("                         Group: " + group.name);
@@ -192,11 +212,15 @@ public class GroupTest implements Constants {
 		writer.println();
 
 		int threadStartIndex = 1;
-		GroupTestThread workerThreads[] = null;
+		AbstractThread workerThreads[] = null;
 
-		workerThreads = new GroupTestThread[group.threadCount];
+		workerThreads = new AbstractThread[group.threadCount];
 		for (int i = 0; i < workerThreads.length; i++) {
-			workerThreads[i] = new GroupTestThread(i + 1, threadStartIndex, countPerThread, group);
+			if (runDb) {
+				workerThreads[i] = new GroupDbTestThread(i + 1, threadStartIndex, countPerThread, group);
+			} else {
+				workerThreads[i] = new GroupTestThread(i + 1, threadStartIndex, countPerThread, group);
+			}
 			threadStartIndex += countPerThread;
 		}
 
@@ -434,6 +458,171 @@ public class GroupTest implements Constants {
 		}
 	}
 
+	/**
+	 * GroupDbTestThread applies group tasks to the DB configured by Hibernate.
+	 * @author dpark
+	 *
+	 */
+	class GroupDbTestThread extends AbstractThread {
+		public GroupDbTestThread(int threadNum, int threadStartIndex, int entryCountPerThread, Group group) {
+			super(threadNum, threadStartIndex, entryCountPerThread, group);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public void __run() {
+			int threadStopIndex = threadStartIndex + invocationCountPerThread - 1;
+			int keyIndexes[] = new int[group.operations.length];
+			for (int i = 0; i < keyIndexes.length; i++) {
+				Operation operation = group.operations[i];
+				int entryCount = operation.totalEntryCount / group.threadCount;
+				keyIndexes[i] = (threadNum - 1) * entryCount;
+			}
+
+			final Session session;
+			try {
+				session = HibernatePool.getHibernatePool().takeSession();
+			} catch (Exception e) {
+				throw new RuntimeException("HibernatePool interrupted. GroupDbTestThread Aborted.", e);
+			}
+			if (session == null) {
+				throw new RuntimeException("Unable to get a HibernatePool session. GroupDbTestThread Aborted.");
+			}
+
+			long startTime = System.currentTimeMillis();
+			for (int i = threadStartIndex; i <= threadStopIndex; i++) {
+
+				for (int j = 0; j < group.operations.length; j++) {
+					Operation operation = group.operations[j];
+					switch (operation.testCase) {
+					case set:
+					case put: {
+						int idNum = operation.startNum + i - 1;
+						DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+						Transaction transaction = session.beginTransaction();
+						session.saveOrUpdate(entry.value);
+						transaction.commit();
+					}
+						break;
+
+					case get: {
+						int val = operation.random.nextInt(operation.totalEntryCount);
+						int idNum = operation.startNum + val;
+						Class<?> entityClass = operation.dataObjectFactory.getDataObjectClass();
+						Object key = operation.dataObjectFactory.getKey(idNum);
+						Object value = session.find(entityClass, key);
+						if (value == null) {
+							System.out.println(threadNum + ". [" + group.name + "." + operation.mapName + "."
+									+ operation.testCase + "] key=" + key + " value=null");
+						}
+					}
+						break;
+
+					case getall: {
+						HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
+
+						for (int k = 0; k < operation.batchSize; k++) {
+							int keyIndex = operation.random.nextInt(operation.totalEntryCount);
+							Object key = operation.dataObjectFactory.getKey(keyIndex);
+							keys.add(key);
+						}
+						Class<?> entityClass = operation.dataObjectFactory.getDataObjectClass();
+						CriteriaBuilder cb = session.getCriteriaBuilder();
+						CriteriaQuery<?> cr = cb.createQuery(entityClass);
+						Root root = cr.from(entityClass);
+						String pk = root.getModel().getId(String.class).getName();
+						String getterMethodName = getGetter(pk);
+						Method method = null;
+						try {
+							method = entityClass.getMethod(getterMethodName);
+						} catch (NoSuchMethodException | SecurityException e1) {
+							throw new RuntimeException("Getter method retrieval failed. GroupDbTestThread Aborted.",
+									e1);
+						}
+						if (method == null) {
+							throw new RuntimeException(
+									"Unable to retrieve the primary key getter method. GroupDbTestThread Aborted.");
+						}
+
+						// Query the DB with a batch of primary keys at a time to
+						// reduce the client query time
+						Iterator<?> iterator = keys.iterator();
+						int size = keys.size();
+						int k = 1;
+						Map<Object, Object> map = new HashMap();
+						while (k <= size) {
+							In<String> inClause = cb.in(root.get(pk));
+							while (iterator.hasNext() && k % operation.batchSize > 0) {
+								Object key = iterator.next();
+								inClause.value(key.toString());
+								cr.select(root).where(inClause);
+								k++;
+							}
+							if (iterator.hasNext()) {
+								Object key = iterator.next();
+								inClause.value(key.toString());
+								cr.select(root).where(inClause);
+								k++;
+							}
+							Query<?> query = session.createQuery(cr);
+							List<?> valueList = query.getResultList();
+							try {
+								for (Object value : valueList) {
+									Object key = method.invoke(value);
+									map.put(key, value);
+								}
+							} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+								throw new RuntimeException(
+										"Getter method invokation failed. GroupDbTestThread Aborted.", e);
+							}
+						}
+						if (map.size() < keys.size()) {
+							System.out.println(threadNum + ". [" + group.name + "." + operation.mapName + "."
+									+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+						}
+					}
+						break;
+
+					case putall:
+					default: {
+						int entryCount = operation.totalEntryCount / group.threadCount;
+						HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
+						int keyIndex = keyIndexes[j];
+						for (int k = 0; k < operation.batchSize; k++) {
+							int idNum = operation.startNum + keyIndex;
+							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+							keyIndex++;
+							map.put(entry.key, entry.value);
+							if (keyIndex >= threadNum * entryCount) {
+								keyIndex = (threadNum - 1) * entryCount;
+							}
+						}
+						Transaction transaction = session.beginTransaction();
+						map.forEach((id, value) -> session.saveOrUpdate(value));
+						transaction.commit();
+						keyIndexes[j] = keyIndex;
+					}
+						break;
+					}
+				}
+				operationCount++;
+			}
+			long stopTime = System.currentTimeMillis();
+
+			elapsedTimeInMsec = stopTime - startTime;
+
+			HibernatePool.getHibernatePool().offerSession(session);
+		}
+
+		private String getGetter(String fieldName) {
+			char c = fieldName.charAt(0);
+			if (Character.isAlphabetic(c)) {
+				fieldName = Character.toUpperCase(c) + fieldName.substring(1);
+			}
+			return "get" + fieldName;
+		}
+	}
+
 	public void close() {
 		HazelcastClient.shutdownAll();
 	}
@@ -467,6 +656,10 @@ public class GroupTest implements Constants {
 		writeLine("      " + DEFAULT_groupPropertiesFile);
 		writeLine("");
 		writeLine("       -run              Run test cases.");
+		writeLine("       -db               Run test cases on database instead of Hazelcast. To use this");
+		writeLine("                         option, each test case must supply a data object factory class");
+		writeLine("                         by specifying the 'factory.class' property and Hibernate must");
+		writeLine("                         be configured by running the 'build_app' command.");
 		writeLine("       -failover         Configure failover client using the following config file:");
 		writeLine("                           ../etc/hazelcast-client-failover.xml");
 		writeLine("       <properties-file> Optional properties file path.");
@@ -508,6 +701,7 @@ public class GroupTest implements Constants {
 					Operation operation = operationMap.get(operationName);
 					if (operation == null) {
 						operation = new Operation();
+						operation.name = operationName;
 						operationMap.put(operationName, operation);
 						operation.ref = System.getProperty(operationName + ".ref");
 						operation.mapName = System.getProperty(operationName + ".map");
@@ -613,15 +807,15 @@ public class GroupTest implements Constants {
 			}
 		}
 	}
-	
+
 	/**
 	 * Returns all properties with the prefix operationName + ".factory"
+	 * 
 	 * @param operationName Operation name
 	 */
-	private static Properties getFactoryProps(String operationName)
-	{
+	private static Properties getFactoryProps(String operationName) {
 		Properties props = new Properties();
-		Set<Map.Entry<Object, Object>> entrySet = (Set<Map.Entry<Object, Object>>)System.getProperties().entrySet();
+		Set<Map.Entry<Object, Object>> entrySet = (Set<Map.Entry<Object, Object>>) System.getProperties().entrySet();
 		String keyPrefix = operationName + ".key.";
 		String prefix = operationName + ".factory.";
 		String replaceStr = operationName + ".";
@@ -648,6 +842,7 @@ public class GroupTest implements Constants {
 
 	public static void main(String args[]) throws Exception {
 		boolean showConfig = true;
+		boolean runDb = false;
 		String perfPropertiesFilePath = null;
 		String arg;
 		for (int i = 0; i < args.length; i++) {
@@ -657,6 +852,8 @@ public class GroupTest implements Constants {
 				System.exit(0);
 			} else if (arg.equals("-run")) {
 				showConfig = false;
+			} else if (arg.equals("-db")) {
+				runDb = true;
 			} else if (arg.equals("-failover")) {
 				IS_FAILOVER_CLIENT = true;
 			} else if (arg.equals("-prop")) {
@@ -689,12 +886,28 @@ public class GroupTest implements Constants {
 
 		parseConfig();
 
+		String dbHeader = "";
+		if (runDb) {
+			dbHeader=" (Database)";
+			for (Group[] groups : concurrentGroupList) {
+				for (Group group : groups) {
+					for (Operation operation : group.operations) {
+						if (operation.dataObjectFactory == null) {
+							System.err.println("ERROR: data object factory not set for group " + group.name + ", operation " + operation.name + ".");
+							System.err.println("       Set '" + operation.name + ".factory.class' in the propertie file," + perfPropertiesFilePath  + ".");
+							System.err.println("       Command aborted.");
+							System.exit(1);
+						}
+					}
+				}
+			}
+		}
 		System.out.println();
 		System.out.println("***************************************");
 		if (showConfig) {
-			System.out.println("Group Test Configuration");
+			System.out.println("Group Test Configuration" + dbHeader);
 		} else {
-			System.out.println("Group Test");
+			System.out.println("Group Test" + dbHeader);
 		}
 		System.out.println("***************************************");
 		System.out.println();
@@ -738,7 +951,8 @@ public class GroupTest implements Constants {
 				+ PRINT_STATUS_INTERVAL_IN_SEC + " sec.");
 		System.out.println("Results:");
 
-		final GroupTest groupTest = new GroupTest();
+		final GroupTest groupTest = new GroupTest(runDb);
+		final boolean __runDb = runDb;
 
 		for (Group[] groups : concurrentGroupList) {
 			String groupNames = getGroupNames(groups);
@@ -754,7 +968,7 @@ public class GroupTest implements Constants {
 				new Thread(new Runnable() {
 					public void run() {
 						try {
-							groupTest.runTest(groupNames, group);
+							groupTest.runTest(groupNames, group, __runDb);
 							threadsComplete[index] = true;
 						} catch (Exception e) {
 							e.printStackTrace();

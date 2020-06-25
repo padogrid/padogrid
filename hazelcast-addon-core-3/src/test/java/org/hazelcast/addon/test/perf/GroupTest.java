@@ -482,7 +482,7 @@ public class GroupTest implements Constants {
 			final Session session;
 			try {
 				session = HibernatePool.getHibernatePool().takeSession();
-			} catch (InterruptedException e) {
+			} catch (Exception e) {
 				throw new RuntimeException("HibernatePool interrupted. GroupDbTestThread Aborted.", e);
 			}
 			if (session == null) {
