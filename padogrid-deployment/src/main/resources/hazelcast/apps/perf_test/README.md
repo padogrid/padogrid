@@ -49,10 +49,10 @@ Usage:
    The default properties file is
       ../etc/ingestion.properties
 
-       -run               Run test cases.
-       -failover      Configure failover client using the following config file:
-                         ../etc/hazelcast-client-failover.xml
-       <properties-file>  Optional properties file path.
+       -run              Run test cases.
+       -failover         Configure failover client using the following config file:
+                            ../etc/hazelcast-client-failover.xml
+       <properties-file> Optional properties file path.
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
@@ -62,8 +62,6 @@ Usage:
 ### test_tx
 
 ```console
-./test_tx -?
-
 Usage:
    test_tx [-run] [-failover] [-prop <properties-file>] [-?]
 
@@ -71,10 +69,10 @@ Usage:
    The default properties file is
       ../etc/tx.properties
 
-       -run           Run test cases.
-       -failover      Configure failover client using the following config file:
-                         ../etc/hazelcast-client-failover.xml
-       <config_file>  Optional properties file path.
+       -run              Run test cases.
+       -failover         Configure failover client using the following config file:
+                            ../etc/hazelcast-client-failover.xml
+       <properties-file> Optional properties file path.
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
@@ -94,10 +92,14 @@ Usage:
    The default properties file is
       ../etc/group.properties
 
-       -run           Run test cases.
-       -failover      Configure failover client using the following config file:
-                         ../etc/hazelcast-client-failover.xml
-       <config_file>  Optional properties file path.
+       -run              Run test cases.
+       -db               Run test cases on database instead of Hazelcast. To use this
+                         option, each test case must supply a data object factory class
+                         by specifying the 'factory.class' property and Hibernate must
+                         be configured by running the 'build_app' command.
+       -failover         Configure failover client using the following config file:
+                           ../etc/hazelcast-client-failover.xml
+       <properties-file> Optional properties file path.
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
@@ -333,4 +335,28 @@ Time unit: msec
    The actual volume is higher.
 
 Stop Time: Sun Jun 30 15:16:18 EDT 2019
+```
+
+## Inserting and Updating Database Tables
+
+The `group_test -db` command directly loads mock data into database tables without connecting to Hazelcast. You can use this command to pre-populate the database before testing database synchronization tests in Hazelcast. This command is also useful for testing the CDC use case in which database changes are automacally ingested into Hazelcast via a CDC product such as Debezium ansd Striim.
+
+```console
+# Edit setenv.sh to set the correct hibernate configuration file.
+vi setenv.sh
+```
+
+By default, `setenv.sh` is configured with `hibernate.cfg-mysql.xml`. Change it to another if you are using a different database. Please see the `etc` directory for all the available database configuration files. If your database is not listed, then you can create one by copying one of the `hibernate-*` files and specifying that file name in the `setenv.sh` file.
+
+Make sure to set the correct database user name and password in the Hibernate configuration file.
+
+```bash
+# Hibernate
+JAVA_OPTS="$JAVA_OPTS -Dhazelcast-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
+```
+
+Run `test_group -db`.
+
+```
+./test_group -db -run -prop ../etc/group-factory.properties
 ```
