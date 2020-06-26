@@ -34,8 +34,6 @@ public class CacheRead {
 	}
 
 	public static void main(String[] args) {
-		HazelcastInstance instance = HazelcastClient.newHazelcastClient();
-
 		if (args.length == 0) {
 			System.err.println("IMap name not specified. Command aborted.");
 			System.exit(1);
@@ -46,6 +44,8 @@ public class CacheRead {
 			usage();
 			System.exit(0);
 		}
+		
+		HazelcastInstance instance = HazelcastClient.newHazelcastClient();
 		instance.getMap(mapName).values().forEach(c -> System.out.println("\t" + c));
 		instance.shutdown();
 	}
