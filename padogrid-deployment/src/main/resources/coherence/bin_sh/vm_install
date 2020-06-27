@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-java -product -vm -simulate -?"
+   echo "-java -product -cluster -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -50,15 +50,19 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-vm comma_separated_hosts]
+               [-cluster cluster_name]
                [-java jdk_distribution_file]
                [-product coherence_or_gemfire_distribution_file]
                [-simulate] [-?]
 
 DESCRIPTION
-   Installs the specified Coherence and/or Java remotely on all the VMs defined by
-   the VM_HOSTS environment variable in the workspace 'setenv.sh' file. To install 
-   only on the cluster VMs, specify the cluster with the '-cluster' option. To
-   install on a select list of VMs, specify the VM list with the '-vm' option.
+   Installs the local versions of Coherence and Java remotely on all the VMs defined by the
+   VM_HOSTS environment variable in the workspace 'setenv.sh' file. To install different versions,
+   specify their distribution file paths using the '-java' and '-product' options.
+   
+   To install only on the cluster VMs, specify the cluster with the '-cluster' option.
+   
+   To install on a select list of VMs, specify the VM list with the '-vm' option.
 
    Note that this command and all other commands that begin with the "vm_" prefix are
    available only on VM workspaces.
@@ -68,17 +72,28 @@ DESCRIPTION
 
 OPTIONS
    -cluster cluster_name
-             Cluster name.
+             Cluster name. If specified, then installations are done on the cluster's VMs
+             defined by the property 'vm.hosts' in the cluster 'etc/cluster.properties' file.
 
    -vm comma_separated_hosts
               A comma separated list of VM hosts or addresses. If the list contains spaces
-             then enclosed it in quotes.
+              then enclosed it in quotes.
 
    -java java_distribution_file
               JDK distribution file, e.g. jdk-8u212-linux-x64.tar.gz.
 
    -product coherence_distribution_file
-              Coherence distribution file, e.g., apache-padogrid-1.11.0.tgz or pivotal-gemfire-9.9.1.tgz.
+              Coherence distribution file path. If this option is not specified then 'vm_install'
+              automatically deploys the locally installed Coherence to the VMs. To use this
+              option, you will need to manually create a distribution file from the already
+              installed Coherence base. Coherence does not provide a distribution file. The tarball
+              should include 'coherence' as the top directory. For example, give the coherence
+              installation directory of ~/products/Oracle/Middleware/Oracle_Home/coherence, the
+              following creates a distribution tarball that excludes documents and examples.
+              
+              export BASE_NAME=coherence
+              export PARENT_DIR=~/products/Oracle/Middleware/Oracle_Home
+              tar --exclude $BASE_NAME/doc --exclude $BASE_NAME/examples -C $PARENT_DIR -czf $BASE_NAME.tar.gz $BASE_NAME            
 
    -simulate
              Print the remote commands but do not execute.
@@ -100,11 +115,6 @@ SEE ALSO
 EOF
    printSeeAlsoList "vm_*" $EXECUTABLE
    exit
-fi
-
-if [ "$JAVA_HOME_ARG" == "" ] && [ "$PRODUCT_ARG" == "" ]; then
-   echo >&2 "ERROR: Must specify -java or -product. Command aborted."
-   exit 1
 fi
 
 # Available only on VM workspaces
@@ -214,12 +224,37 @@ if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
 fi
 
 #
+# Returns the VM that has the product distribution file.
+# @required VM_PRODUCT_HOME
+# @param    productDistFilePath Product distribution file path in VMs.
+#
+function findVmWithProductDist
+{
+   local __PRODUCT_DIST_FILE_NAME=$(basename "$1")
+   local __PRODUCT_PARENT_PATH="$(dirname "$VM_PRODUCT_HOME")"
+   local __PRODUCT_COMMAND="if [ -f "/tmp/$__PRODUCT_DIST_FILE_NAME" ]; then echo true; else echo false; fi"
+
+   # Determine the first VM that has product distribution file
+   BASE_VM=""
+   for VM_HOST in $__VM_HOSTS; do
+      __PRODUCT_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$__PRODUCT_COMMAND")
+      if [ "$__PRODUCT_EXISTS" == "true" ]; then
+         BASE_VM=$VM_HOST
+         break
+      fi
+   done
+   echo "$BASE_VM"
+}
+
+#
 # Installs the product defined by the following variables
 #
 # @required PRODUCT
 # @required PRODUCT_HOME_NOT_FOUND_LIST
 # @required PRODUCT_PATH
 # @required VM_PRODUCT_HOME
+# @param    baseVM The VM that has the product distribution file. If unspecified or an empty string,
+#                  then PRODUCT_PATH must be specified.
 #
 function installProduct
 {
@@ -227,7 +262,8 @@ function installProduct
       echo "$PRODUCT already installed on all VMs."
    else
 
-      if [ ! -f "$PRODUCT_PATH" ]; then
+      local BASE_VM="$1"
+      if [ "$BASE_VM" == "" ] && [ ! -f "$PRODUCT_PATH" ]; then
          echo >&2 "ERROR: Invalid path [$PRODUCT_PATH]."
          echo >&2 "       Command aborted."
          exit 1
@@ -241,28 +277,18 @@ function installProduct
       echo "    Local Source: $PRODUCT_PATH"
       echo "   Remote Target: $VM_PRODUCT_HOME"
 
-      # Determine the first VM that has product distribution file
-      BASE_VM=""
-      for VM_HOST in $__VM_HOSTS; do
-         __PRODUCT_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$__PRODUCT_COMMAND")
-         if [ "$__PRODUCT_EXISTS" == "true" ]; then
-            BASE_VM=$VM_HOST
-	    break
-         fi
-      done
-
       if [ "$BASE_VM" == "" ]; then
          for VM_HOST in $PRODUCT_HOME_NOT_FOUND_LIST; do
-            echo "   Uploading $VM_HOST..."
+            echo "   Uploading $VM_HOST [$PRODUCT_PATH]..."
             BASE_VM=$VM_HOST
             break
          done
-	 # Upload to the base VM
+         # Upload to the base VM
          if [ "$SIMULATE" == "true" ]; then
             echo scp -q -r -o stricthostkeychecking=no $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
          else
             scp -q -r -o stricthostkeychecking=no $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
-	 fi
+         fi
       fi
 
       for VM_HOST in $PRODUCT_HOME_NOT_FOUND_LIST; do
@@ -273,18 +299,18 @@ function installProduct
                echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
             else
                ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
-	    fi
+            fi
          fi
-	 # Install
+    # Install
          if [ "$SIMULATE" == "true" ]; then
             echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
             echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
          else
             ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
             ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
-	 fi
+         fi
 
-	 # Remove
+    # Remove
          #ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "rm /tmp/$__PRODUCT_DIST_FILE_NAME"
       done
 
@@ -292,6 +318,40 @@ function installProduct
    fi
    echo ""
 }
+
+if [ "$JAVA_HOME_ARG" == "" ] && [ "$PRODUCT_ARG" == "" ]; then
+   CREATE_AND_INSTALL="true"
+else
+   CREATE_AND_INSTALL="false"
+fi
+
+JAVA_BASE_VM=""
+PRODUCT_BASE_VM=""
+if [ "$CREATE_AND_INSTALL" == "true" ]; then
+   if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
+      if [[ ${OS_NAME} == CYGWIN* ]]; then
+         echo "Java deployment from Cygwin is not supported. Please use the -java option"
+         echo "to specify the Java distribution file path."
+      else
+         PARENT_DIR=$(dirname "$JAVA_HOME")
+         BASE_NAME=$(basename "$JAVA_HOME")
+         JAVA_HOME_ARG="/tmp/$BASE_NAME.tar.gz"
+         JAVA_BASE_VM=$(findVmWithProductDist "$JAVA_HOME_ARG")
+         if [ "$JAVA_BASE_VM" == "" ]; then
+            tar --exclude "$BASE_NAME/*src*" --exclude "$BASE_NAME/doc*" -C $PARENT_DIR -czf "/tmp/$BASE_NAME.tar.gz" "$BASE_NAME"
+         fi
+      fi
+   fi
+   if [ "$COHERENCE_HOME_NOT_FOUND_LIST" != "" ]; then
+      PARENT_DIR=$(dirname "$COHERENCE_HOME")
+      BASE_NAME=$(basename "$COHERENCE_HOME")
+      PRODUCT_ARG="/tmp/$BASE_NAME.tar.gz"
+      PRODUCT_BASE_VM=$(findVmWithProductDist "$PRODUCT_ARG")
+      if [ "$PRODUCT_BASE_VM" == "" ]; then
+         tar --exclude "$BASE_NAME/doc" --exclude "$BASE_NAME/examples" -C $PARENT_DIR -czf "/tmp/$BASE_NAME.tar.gz" "$BASE_NAME"
+      fi
+   fi
+fi
 
 # Install Java
 if [ "$JAVA_HOME_ARG" != "" ]; then
@@ -302,7 +362,13 @@ if [ "$JAVA_HOME_ARG" != "" ]; then
    PRODUCT_PATH=$JAVA_HOME_ARG
    VM_PRODUCT_HOME=$VM_JAVA_HOME
    
-   installProduct
+   installProduct "$JAVA_BASE_VM"
+
+   if [ "$CREATE_AND_INSTALL" == "true" ]; then
+      if [ -f "$PRODUCT_ARG" ]; then
+         rm "$PRODUCT_ARG"
+      fi
+   fi
 fi
 
 # Install Coherence
@@ -313,9 +379,16 @@ if [ "$PRODUCT_ARG" != "" ]; then
    PRODUCT_PATH=$PRODUCT_ARG
    VM_PRODUCT_HOME=$VM_COHERENCE_HOME
    
-   installProduct
+   installProduct "$PRODUCT_BASE_VM"
+
+   if [ "$CREATE_AND_INSTALL" == "true" ]; then
+      if [ -f "$PRODUCT_ARG" ]; then
+         rm "$PRODUCT_ARG"
+      fi
+   fi
 fi
 
+echo "VM installation complete."
 echo "Run 'vm_test' to check installation and configuration status."
 echo ""
 if [ "$SIMULATE" == "true" ]; then
