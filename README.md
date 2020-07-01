@@ -33,6 +33,11 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 
 ## Building `padogrid`
 
+### Required Software
+
+- Maven 3.x
+- JDK 1.8+
+
 ### Building `padogrid` without Oracle Coherence
 
 You can build `padogrid` using any of the following options (See the usage by running `./build_dist.sh -?`.) For distribution, always include man pages.
