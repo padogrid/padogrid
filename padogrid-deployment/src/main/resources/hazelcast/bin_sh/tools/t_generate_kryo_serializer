@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-package -jar -id -dir -classpath -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$CLASSPATH_ARG" != "" ]; then
+   CLASSPATH="$CLASSPATH_ARG/*:$CLASSPATH"
+fi
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+#"$JAVA" -Dexecutable.name=$EXECUTABLE org.hazelcast.addon.tools.KryoGenerator $@ 2> /dev/null
+"$JAVA" -Dexecutable.name=$EXECUTABLE org.hazelcast.addon.tools.KryoGenerator $@

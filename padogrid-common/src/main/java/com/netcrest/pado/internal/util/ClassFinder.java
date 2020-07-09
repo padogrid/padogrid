@@ -48,7 +48,7 @@ public class ClassFinder {
 	 *                                file
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static Class[] getClasses(String packageName) throws ClassNotFoundException, IOException {
+	public static Class[] getClasses(String packageName, boolean isRecursive) throws ClassNotFoundException, IOException {
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 		// assert classLoader != null;
 		String path = packageName.replace('.', '/');
@@ -61,7 +61,7 @@ public class ClassFinder {
 		ArrayList classes = new ArrayList();
 		for (Iterator iterator = dirs.iterator(); iterator.hasNext();) {
 			File directory = (File) iterator.next();
-			classes.addAll(findClasses(directory, packageName));
+			classes.addAll(findClasses(directory, packageName, isRecursive));
 		}
 		return (Class[]) classes.toArray(new Class[classes.size()]);
 	}
@@ -76,7 +76,7 @@ public class ClassFinder {
 	 * @throws ClassNotFoundException Thrown if unable to load a class
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static List findClasses(File directory, String packageName) throws ClassNotFoundException {
+	public static List findClasses(File directory, String packageName, boolean isRecursive) throws ClassNotFoundException {
 		List classes = new ArrayList();
 		if (!directory.exists()) {
 			return classes;
@@ -84,9 +84,8 @@ public class ClassFinder {
 		File[] files = directory.listFiles();
 		for (int i = 0; i < files.length; i++) {
 			File file = files[i];
-			if (file.isDirectory()) {
-				// assert !file.getName().contains(".");
-				classes.addAll(findClasses(file, packageName + "." + file.getName()));
+			if (file.isDirectory() && isRecursive) {
+				classes.addAll(findClasses(file, packageName + "." + file.getName(), isRecursive));
 			} else if (file.getName().endsWith(".class")) {
 				classes.add(
 						Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6)));
@@ -106,8 +105,8 @@ public class ClassFinder {
 	 *                                file
 	 */
 	@SuppressWarnings("rawtypes")
-	public static Class[] getClasses(String jarPath, String packageName) throws ClassNotFoundException, IOException {
-		String[] classNames = getClassNames(jarPath, packageName);
+	public static Class[] getClasses(String jarPath, String packageName, boolean isRecursive) throws ClassNotFoundException, IOException {
+		String[] classNames = getClassNames(jarPath, packageName, isRecursive);
 		Class classes[] = new Class[classNames.length];
 		for (int i = 0; i < classNames.length; i++) {
 			String className = (String) classNames[i];
@@ -127,7 +126,7 @@ public class ClassFinder {
 	 * @throws IOException Thrown if error occurs while reading the jar file
 	 */
 	@SuppressWarnings({ "resource", "unchecked", "rawtypes" })
-	public static String[] getClassNames(String jarPath, String packageName) throws IOException {
+	public static String[] getClassNames(String jarPath, String packageName, boolean isRecursive) throws IOException {
 		if (jarPath == null) {
 			return new String[0];
 		}
@@ -143,7 +142,7 @@ public class ClassFinder {
 		}
 
 		ArrayList arrayList = new ArrayList();
-		packageName = packageName.replaceAll("\\.", "/");
+		packageName = packageName.replaceAll("\\.", "/") + "/";
 		JarInputStream jarFile = new JarInputStream(new FileInputStream(file));
 		JarEntry jarEntry;
 		while (true) {
@@ -153,6 +152,9 @@ public class ClassFinder {
 			}
 			String name = jarEntry.getName();
 			if (name.startsWith(packageName) && (name.endsWith(".class"))) {
+				if (isRecursive == false && name.replaceFirst(packageName, "").contains("/")) {
+					continue;
+				}
 				int endIndex = name.length() - 6;
 				name = name.replaceAll("/", "\\.");
 				name = name.substring(0, endIndex);

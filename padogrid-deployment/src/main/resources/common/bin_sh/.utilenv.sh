@@ -1676,7 +1676,7 @@ function padogrid
       return
    fi
 
-   if [ "$1" == "cp_sub" ]; then
+   if [ "$1" == "cp_sub" ] || [ "$1" == "tools" ]; then
       COMMAND=$2
       SHIFT_NUM=2
    elif [ "$1" == "-version" ]; then

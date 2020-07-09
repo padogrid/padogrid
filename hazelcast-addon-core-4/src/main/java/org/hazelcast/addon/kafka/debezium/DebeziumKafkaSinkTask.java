@@ -64,7 +64,6 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 	private String[] valueColumnNames;
 	private String[] valueFieldNames;
 	private ObjectConverter objConverter;
-	private boolean isDelete = true;
 
 	@Override
 	public String version() {

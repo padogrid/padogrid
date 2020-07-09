@@ -197,11 +197,11 @@ __padogrid_complete()
    -path | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
      ;;
    *)
-      if [ "$second_word" == "cp_sub" ]; then
+      if [ "$second_word" == "cp_sub" ] || [ "$second_word" == "tools" ]; then
          if [ $len -gt 3 ]; then
             type_list=`$third_word -options`
          else
-            type_list=`ls $PADOGRID_HOME/$PRODUCT/$second_word`
+            type_list=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$second_word`
          fi
       elif [ "$second_word" == "switch_rwe" ] || [ "$second_word" == "cd_rwe" ]; then
             if [ $len -lt 4 ]; then
@@ -810,7 +810,7 @@ __command_complete()
 commands=`ls $SCRIPT_DIR`
 for i in $commands; do
    if [ "$i" != "setenv.sh" ]; then
-      if [ "$i" == "cp_sub" ]; then
+      if [ "$i" == "cp_sub" ] || [ "$i" == "tools" ]; then
          sub_commands=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$i`
          for j in $sub_commands; do
             complete -F __command_complete -o bashdefault -o default $j

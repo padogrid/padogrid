@@ -45,6 +45,7 @@ COHERENCE_ARG=
 GEODE_ARG=
 HAZELCAST_ARG=
 PATH_ARG=
+CLASSPATH_ARG=
 DATAGRID_ARG=
 JET_ARG=
 NAME_ARG=
@@ -110,6 +111,7 @@ LIST=false
 HEADER=false
 CATALOG=false
 TREE=false
+OVERWRITE=false
 ALL=false
 PID=
 PIDONLY=
@@ -154,6 +156,8 @@ do
       HAZELCAST_ARG=$i
    elif [ "$PREV" == "-path" ]; then
       PATH_ARG=$i
+   elif [ "$PREV" == "-classpath" ]; then
+      CLASSPATH_ARG=$i
    elif [ "$PREV" == "-datagrid" ]; then
       DATAGRID_ARG=$i
    elif [ "$PREV" == "-jet" ]; then
@@ -325,6 +329,8 @@ do
       REMOTE_SPECIFIED=true
    elif [ "$i" == "-tree" ]; then
       TREE=true
+   elif [ "$i" == "-overwrite" ]; then
+      OVERWRITE=true
    # this must be the last check
    elif [ "$PREV" == "-gateway" ]; then
       GATEWAY_XML_FILE=$i
