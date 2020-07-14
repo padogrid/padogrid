@@ -106,6 +106,7 @@ DOWNLOAD=false
 CONSOLE=false
 USER=
 GITHOST=github
+BRANCH=
 CONNECT=https
 LIST=false
 HEADER=false
@@ -217,6 +218,8 @@ do
       USER=$i
    elif [ "$PREV" == "-githost" ]; then
       GITHOST=$i
+   elif [ "$PREV" == "-branch" ]; then
+      BRANCH=$i
    elif [ "$PREV" == "-connect" ]; then
       CONNECT=$i
    elif [ "$PREV" == "-vm" ]; then

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -connect -preview -download -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -47,7 +47,7 @@ WARNING
 
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-githost github|gitea] [-connect https|ssh] [-preview] [-download] [-quiet] [-?] bundle_file_path
+   $EXECUTABLE [-user git_user_name] [-githost github|gitea]  [-branch git_branch] [-connect https|ssh] [-preview] [-download] [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
    Installs the specified bundle file in the current padogrid workspace. Make
@@ -61,6 +61,10 @@ OPTIONS
 
    -githost github|gitea
              Git host. Supported git hosts are 'github' and 'gitea'. Default: github.
+
+   -branch git_branch
+            Git branch to download. If not specified then the default branch is downloaded.
+
 
    -connect https|ssh
              Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh' is supported
@@ -178,6 +182,15 @@ if [ "$DOWNLOAD" == "true" ]; then
          exit 1
       fi
       pushd $GIT_DIR > /dev/null 2>&1 
+      if [ "$BRANCH" != "" ]; then
+         BRANCH_IN_REMOTE=$(git ls-remote --heads origin ${BRANCH})
+	 if [[ -z ${BRANCH_IN_REMOTE} ]]; then
+            echo >&2 "ERROR: The specified branch does not exist: [$BRANCH]. Command aborted."
+	    exit 1
+	 fi
+         git checkout $BRANCH
+      fi
+      git pull
       mvn package
       popd > /dev/null 2>&1 
       mv $GIT_DIR/target/assembly/$TARBALL $PADOGRID_WORKSPACE/bundles
