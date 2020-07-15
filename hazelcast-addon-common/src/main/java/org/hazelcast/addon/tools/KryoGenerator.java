@@ -74,7 +74,7 @@ public class KryoGenerator {
 		// If KryoSerializer already exists then determine the new (non-registered) classes
 		// and append them at the end of the existing class list. The new KryoSerializer
 		// we generate will keep the order of the previous classes and append the new ones.
-		ArrayList<Class<?>> newClassList = new ArrayList<Class<?>>(domainClassList);
+		ArrayList<Class<?>> newClassList = new ArrayList<Class<?>>(domainClassList.size());
 		List<Class<?>> classList = null;
 		if (ksClass != null) {
 			Method method = ksClass.getMethod("getClassList");
