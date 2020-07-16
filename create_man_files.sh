@@ -76,13 +76,18 @@ for PRODUCT in $PRODUCTS; do
    fi
    COMMANDS=""
    for i in bin_sh/*; do
-      if [ "$i" == "bin_sh/cp_sub" ] || [ "$i" == "bin_sh/setenv.sh" ]; then
+      if [ "$i" == "bin_sh/cp_sub" ] || [ "$i" == "bin_sh/tools" ] || [ "$i" == "bin_sh/setenv.sh" ]; then
          continue;
       fi
       COMMANDS="$COMMANDS $i"
    done
    if [ -d "bin_sh/cp_sub" ]; then
       for i in bin_sh/cp_sub/*; do
+         COMMANDS="$COMMANDS $i"
+      done
+   fi
+   if [ -d "bin_sh/tools" ]; then
+      for i in bin_sh/tools/*; do
          COMMANDS="$COMMANDS $i"
       done
    fi
