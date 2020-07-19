@@ -114,7 +114,7 @@ public class KryoGenerator {
 		}
 		
 		// Update the base string
-		InputStream is = this.getClass().getClassLoader().getResourceAsStream("KryoSerializerTemplate.txt");
+		InputStream is = this.getClass().getClassLoader().getResourceAsStream("HazelcastKryoSerializerTemplate.txt");
 		String kryoSerializerStr = readFile(is);
 		is.close();
 
