@@ -5,20 +5,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
-import org.apache.hc.client5.http.ClientProtocolException;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ClassicHttpResponse;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.HttpStatus;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.HttpClientResponseHandler;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -39,15 +32,13 @@ public class DebeziumAvroSchemaGenerator {
 	File artifactsFile = new File(DEFAULT_ARTIFACTS_FILE);
 	File resourcesDirFile = new File(DEFAULT_RESOURCES_DIR);
 
-	String schemaRegistryArtifactsUrl = DEFAULT_REGISTRY_ARTIFACTS_URL;
+	String schemaRegistryArtifactsUrl;
 
 	public DebeziumAvroSchemaGenerator() {
 	}
 
 	public DebeziumAvroSchemaGenerator(String registryUrl, String artifactsFilePath, String resourcesDir) {
-		if (registryUrl != null) {
-			this.schemaRegistryArtifactsUrl = registryUrl;
-		}
+		this.schemaRegistryArtifactsUrl = registryUrl;
 		if (artifactsFilePath != null) {
 			this.artifactsFile = new File(artifactsFilePath);
 		}
@@ -96,11 +87,14 @@ public class DebeziumAvroSchemaGenerator {
 	}
 
 	public void generateAvroSchemaFiles(JSONObject schemaJo) throws Exception {
-		String url = null;
-		if (schemaJo.isNull("registry")) {
-			url = schemaRegistryArtifactsUrl;
-		} else {
-			url = schemaJo.getString("registry");
+		String url = schemaRegistryArtifactsUrl;
+		if (url == null) {
+			if (schemaJo.isNull("registry") == false) {
+				url = schemaJo.getString("registry");
+			}
+		}
+		if (url == null) {
+			url = DEFAULT_REGISTRY_ARTIFACTS_URL;
 		}
 
 		if (url.endsWith("/") == false) {
@@ -173,79 +167,77 @@ public class DebeziumAvroSchemaGenerator {
 		return file;
 	}
 
-	private JSONObject getHttp(String url, String artifactId, String packageName, String simpleName,
+	private JSONObject getHttp(String urlStr, String artifactId, String packageName, String simpleName,
 			JSONObject fieldMap) throws Exception {
 
 		JSONObject value = null;
-		String requestUrl = url + artifactId;
-		try (final CloseableHttpClient httpclient = HttpClients.createDefault()) {
-			final HttpGet httpget = new HttpGet(requestUrl);
-			// Create a custom response handler
-			final HttpClientResponseHandler<JSONObject> responseHandler = new HttpClientResponseHandler<JSONObject>() {
+		String requestUrl = urlStr + artifactId;
 
-				@Override
-				public JSONObject handleResponse(final ClassicHttpResponse response) throws IOException {
-					JSONObject value = null;
-					final int status = response.getCode();
-					if (status >= HttpStatus.SC_SUCCESS && status < HttpStatus.SC_REDIRECTION) {
-						try {
-							final HttpEntity entity = response.getEntity();
-							if (entity != null) {
-								// return it as a String
-								String result = EntityUtils.toString(entity);
-								JSONObject jo = new JSONObject(result);
-								JSONArray fields = jo.getJSONArray("fields");
-								for (int i = 0; i < fields.length(); i++) {
-									JSONObject jo2 = fields.getJSONObject(i);
-									String name = jo2.getString("name");
-									if (name != null && name.equals("before")) {
-										JSONArray type = jo2.getJSONArray("type");
-										for (int j = 0; j < type.length(); j++) {
-											Object obj = type.get(j);
-											if (obj instanceof JSONObject) {
-												JSONObject record = ((JSONObject) obj);
-												String name2 = record.getString("name");
-												if (name2 != null && name2.equals("Value")) {
-													value = new JSONObject();
-													JSONArray fields2 = record.getJSONArray("fields");
-													if (fieldMap != null) {
-														fields2.forEach(item -> {
-															JSONObject jo3 = (JSONObject) item;
-															String name3 = jo3.getString("name");
-															if (fieldMap.isNull(name3) == false) {
-																jo3.put("name", fieldMap.getString(name3));
-															}
-														});
-													}
-													value.put("fields", record.get("fields"));
-													break;
-												}
-											}
+		URL url = new URL(requestUrl);
+		HttpURLConnection con = (HttpURLConnection) url.openConnection();
+		con.setRequestMethod("GET");
+
+		int responseCode = con.getResponseCode();
+		if (responseCode == HttpURLConnection.HTTP_OK) { // success
+			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+			String inputLine;
+			StringBuffer response = new StringBuffer();
+
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+			in.close();
+			JSONObject jo = new JSONObject(response.toString());
+			JSONArray fields = jo.getJSONArray("fields");
+			for (int i = 0; i < fields.length(); i++) {
+				JSONObject jo2 = fields.getJSONObject(i);
+				String name = jo2.getString("name");
+				if (name != null && name.equals("before")) {
+					JSONArray type = jo2.getJSONArray("type");
+					for (int j = 0; j < type.length(); j++) {
+						Object obj = type.get(j);
+						if (obj instanceof JSONObject) {
+							JSONObject record = ((JSONObject) obj);
+							String name2 = record.getString("name");
+							if (name2 != null && name2.equals("Value")) {
+								value = new JSONObject();
+								JSONArray fields2 = record.getJSONArray("fields");
+								if (fieldMap != null) {
+									fields2.forEach(item -> {
+										JSONObject jo3 = (JSONObject) item;
+										String name3 = jo3.getString("name");
+										if (fieldMap.isNull(name3) == false) {
+											jo3.put("name", fieldMap.getString(name3));
 										}
-										if (value != null) {
-											break;
-										}
-									}
+									});
 								}
-								if (value != null) {
-									value.put("namespace", packageName);
-									value.put("type", "record");
-									value.put("name", simpleName);
-								}
+								value.put("fields", record.get("fields"));
+								break;
 							}
-
-							return value;
-						} catch (final ParseException ex) {
-							throw new ClientProtocolException(ex);
 						}
-					} else {
-						throw new ClientProtocolException("Unexpected response status: " + status);
+					}
+					if (value != null) {
+						break;
 					}
 				}
-			};
-			value = httpclient.execute(httpget, responseHandler);
-		}
+			}
+			if (value != null) {
+				value.put("namespace", packageName);
+				value.put("type", "record");
+				value.put("name", simpleName);
+			}
 
+		} else {
+			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+			String inputLine;
+			StringBuffer response = new StringBuffer();
+
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+			in.close();
+			writeLine("ERROR: REST call failed [responseCode]. " + response.toString());
+		}
 		return value;
 	}
 
@@ -292,22 +284,14 @@ public class DebeziumAvroSchemaGenerator {
 		writeLine("   {\n" + "	\"registry\": \"http://localhost:8080\",\n"
 				+ "	\"package\": \"org.hazelcast.demo.nw.data.avro.generated\",\n" + "	\"artifacts\": [ \n"
 				+ "		{\n" + "		\"id\": \"dbserver1.public.customers-value\",\n"
-				+ "		 \"name\": \"__Customer\",\n" 
-				+ "		 \"fieldMap\": \n" + 
-				"		 	{ \n" + 
-				"		 		\"customerid\" : \"customerId\",\n" + 
-				"		 		\"address\" : \"address\",\n" + 
-				"		 		\"city\" : \"city\",\n" + 
-				"		 		\"companyname\" : \"companyName\",\n" + 
-				"		 		\"contactname\" : \"contactName\",\n" + 
-				"		 		\"contacttitle\" : \"contactTitle\",\n" + 
-				"		 		\"country\" : \"country\",\n" + 
-				"		 		\"fax\" : \"fax\",\n" + 
-				"		 		\"phone\" : \"phone\",\n" + 
-				"		 		\"postalcode\" : \"postalCode\",\n" + 
-				"		 		\"region\" : \"region\"\n" + 
-				"		 	}\n"
-				+ "		},\n" + "		{\n"
+				+ "		 \"name\": \"__Customer\",\n" + "		 \"fieldMap\": \n" + "		 	{ \n"
+				+ "		 		\"customerid\" : \"customerId\",\n" + "		 		\"address\" : \"address\",\n"
+				+ "		 		\"city\" : \"city\",\n" + "		 		\"companyname\" : \"companyName\",\n"
+				+ "		 		\"contactname\" : \"contactName\",\n"
+				+ "		 		\"contacttitle\" : \"contactTitle\",\n" + "		 		\"country\" : \"country\",\n"
+				+ "		 		\"fax\" : \"fax\",\n" + "		 		\"phone\" : \"phone\",\n"
+				+ "		 		\"postalcode\" : \"postalCode\",\n" + "		 		\"region\" : \"region\"\n"
+				+ "		 	}\n" + "		},\n" + "		{\n"
 				+ "		\"id\": \"dbserver1.public.orders-value\",\n" + "		 \"name\": \"__Order\"\n" + "		}\n"
 				+ "	]\n" + "   }");
 		writeLine();
@@ -334,7 +318,8 @@ public class DebeziumAvroSchemaGenerator {
 		writeLine("             and removes 's' from the end to make it singular.");
 		writeLine();
 		writeLine("   \"fieldMap\"");
-		writeLine("             [Optional] defines a map for converting table column names to object field names. Keys");
+		writeLine(
+				"             [Optional] defines a map for converting table column names to object field names. Keys");
 		writeLine("             represent column names and values represent matching object field names.");
 		writeLine();
 		writeLine("OPTIONS");
@@ -362,7 +347,7 @@ public class DebeziumAvroSchemaGenerator {
 
 	public static void main(String... args) throws Exception {
 		String arg;
-		String registryUrl = DEFAULT_REGISTRY_ARTIFACTS_URL;
+		String registryUrl = null;
 		String artifactsFilePath = DEFAULT_ARTIFACTS_FILE;
 		String srcDir = DEFAULT_RESOURCES_DIR;
 		for (int i = 0; i < args.length; i++) {
@@ -393,6 +378,10 @@ public class DebeziumAvroSchemaGenerator {
 
 		DebeziumAvroSchemaGenerator generator = new DebeziumAvroSchemaGenerator(registryUrl, artifactsFilePath, srcDir);
 		JSONObject schemaJo = readJsonFile(artifactsFilePath);
-		generator.generateAvroSchemaFiles(schemaJo);
+		try {
+			generator.generateAvroSchemaFiles(schemaJo);
+		} catch (Exception ex) {
+			System.err.println("ERROR: " + ex);
+		}
 	}
 }
