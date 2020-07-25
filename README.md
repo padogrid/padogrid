@@ -6,7 +6,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 Binary downloads are available from the *Releases* page:
 
-[Releases/Downloads] (https://github.com/padogrid/padogrid/releases)
+[Releases/Downloads](https://github.com/padogrid/padogrid/releases)
 
 
 ## PadoGrid Brief
@@ -20,7 +20,7 @@ A workspace provides a sandbox environment completely isolated from other worksp
 A workspace snapshot can be taken at any time in the form of a bundle that can be quickly deployed and run on another workspace created by another user on another platform. Because of their portability, bundles provide the means to shrink-wrap fully operational use cases. PadoGrid includes bundle catalogs from which you can search your use cases.
 
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
-- [Releases/Downloads] (https://github.com/padogrid/padogrid/releases)
+- [Releases/Downloads](https://github.com/padogrid/padogrid/releases)
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 - [Quick Start](https://github.com/padogrid/padogrid/wiki/Quick-Start)
 - [Building PadoGrid](#building-padogrid)
