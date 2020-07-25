@@ -9,61 +9,28 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 #
 # Remove the previous paths from PATH to prevent duplicates
 #
-if [ "$PADOGRID_PATH" == "" ]; then
-   CLEANED_PATH=$PATH
-else
-   CLEANED_PATH=${PATH//$PADOGRID_PATH:/}
-fi
-
-#
-# Set PATH by removing old paths first to prevent duplicates
-#
-unset __PATHS
-declare -a __PATHS
-let __INDEX=0
-if [ "$JAVA_HOME" != "" ]; then
-   __PATHS[__INDEX]="$JAVA_HOME/bin"
-   let __INDEX=__INDEX+1
-fi
-if [ "$PRODUCT" == "geode" ]; then
-   if [ "$GEODE_HOME" != "" ]; then
-      __PATHS[$__INDEX]="$GEODE_HOME/bin"
-      let __INDEX=__INDEX+1
-   fi
-elif [ "$PRODUCT" == "hazelcast" ]; then
-   if [ "$JET_HOME" != "" ]; then
-      __PATHS[$__INDEX]=$JET_HOME/bin
-      let __INDEX=__INDEX+1
-   fi
-   if [ "$HAZELCAST_HOME" != "" ]; then
-      __PATHS[$__INDEX]="$HAZELCAST_HOME/bin"
-      let __INDEX=__INDEX+1
-   fi
-   __PATHS[__INDEX]="$PADOGRID_HOME/$PRODUCT/bin_sh/cp_sub"
-   let __INDEX=__INDEX+1
-fi
-__PATHS[__INDEX]="$PADOGRID_HOME/$PRODUCT/bin_sh"
-let __INDEX=__INDEX+1
-__PATHS[__INDEX]="$PADOGRID_HOME/bin_sh"
-
-for ((i = 0; i < ${#__PATHS[@]}; i++)); do
-   __TOKEN="${__PATHS[$i]}"
-   CLEANED_PATH=${CLEANED_PATH//$__TOKEN:/}
-   CLEANED_PATH=${CLEANED_PATH//$__TOKEN/}
-   CLEANED_PATH=${CLEANED_PATH//::/:}
-done
-PADOGRID_PATH=""
-for ((i = 0; i < ${#__PATHS[@]}; i++)); do
-   __TOKEN="${__PATHS[$i]}"
-   if [ "$CLUSTER_TYPE" == "jet" ] && [ "${HAZELCAST_HOME}" != "" ] && [[ $__TOKEN == ${HAZELCAST_HOME}** ]]; then
+CLEANED_PATH=""
+__IFS=$IFS
+IFS=":"
+PATH_ARRAY=($PATH)
+for i in "${PATH_ARRAY[@]}"; do
+   if [ "$i" == "$JAVA_HOME" ]; then
       continue;
-   elif [ "$CLUSTER_TYPE" == "imdg" ] && [ "${JET_HOME}" != "" ] && [[ $__TOKEN == ${JET_HOME}** ]]; then
+   elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
+      continue;
+   elif [[ "$i" == "$PRODUCT_HOME"** ]]; then
       continue;
    fi
-   PADOGRID_PATH=$__TOKEN:"$PADOGRID_PATH"
+   if [ "$CLEANED_PATH" == "" ]; then
+      CLEANED_PATH="$i"
+   else
+      CLEANED_PATH="$CLEANED_PATH:$i"
+   fi
 done
-export PADOGRID_PATH=$(echo $PADOGRID_PATH | sed 's/.$//')
-export PATH=$PADOGRID_PATH:$CLEANED_PATH
+IFS=$__IFS
+
+# Export cleaned PATH
+export PATH="$CLEANED_PATH"
 
 #
 # Initialize auto completion

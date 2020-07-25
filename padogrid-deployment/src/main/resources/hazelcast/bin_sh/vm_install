@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-java -product -vm -simulate -?"
+   echo "-java -product -mc -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -52,6 +52,7 @@ SYNOPSIS
    $EXECUTABLE [-vm comma_separated_hosts]
                [-java jdk_distribution_file]
                [-product imdg_or_jet_distribution_file]
+               [-mc management_center_distribution_file]
                [-simulate] [-?]
 
 DESCRIPTION
@@ -78,7 +79,10 @@ OPTIONS
               JDK distribution file, e.g. jdk-8u212-linux-x64.tar.gz.
 
    -product imdg_or_jet_distribution_file
-              Hazelcast distribution file, e.g. hazelcast-enterprise-3.12.6.tar.gz or hazelcast-jet-enterprise-3.2.2.
+              Hazelcast distribution file, e.g. hazelcast-enterprise-4.0.1.tar.gz or hazelcast-jet-enterprise-4.1.tar.gz.
+
+   -mc management_center_distribution_file
+              Management Center distribution file, e.g. hazelcast-management-center-4.0.3.tar.gz or hazelcast-jet-management-center-4.1.tar.gz.
 
    -simulate
              Print the remote commands but do not execute.
@@ -102,8 +106,8 @@ EOF
    exit
 fi
 
-if [ "$JAVA_HOME_ARG" == "" ] && [ "$PRODUCT_ARG" == "" ]; then
-   echo >&2 "ERROR: Must specify -java or -product. Command aborted."
+if [ "$JAVA_HOME_ARG" == "" ] && [ "$PRODUCT_ARG" == "" ] && [ "$MC" == "" ]; then
+   echo >&2 "ERROR: Must specify -java, -product, or -mc. Command aborted."
    exit 1
 fi
 
@@ -189,19 +193,36 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
+# Set common variables to handle "jet" and "imdg"
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   __VM_PRODUCT_HOME="$VM_JET_HOME"
+   __PRODUCT_NAME="Jet"   
+else
+   __VM_PRODUCT_HOME="$VM_HAZELCAST_HOME"
+   __PRODUCT_NAME="Hazelcast"   
+fi
+__PRODUCT_DIR_NAME=$(basename $__VM_PRODUCT_HOME)
+__VM_MC_HOME="$VM_HAZELCAST_MC_HOME"
+
 # Determine all VMs that do not have Java and Hazelcast installed.
 JAVA_HOME_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
-HAZELCAST_HOME_COMMAND="if [ -d "$VM_HAZELCAST_HOME" ]; then echo true; else echo false; fi"
+PRODUCT_HOME_COMMAND="if [ -d "$__VM_PRODUCT_HOME" ]; then echo true; else echo false; fi"
+MC_HOME_COMMAND="if [ -d "$__VM_MC_HOME" ]; then echo true; else echo false; fi"
 JAVA_HOME_NOT_FOUND_LIST=""
-HAZELCAST_HOME_NOT_FOUND_LIST=""
+PRODUCT_HOME_NOT_FOUND_LIST=""
+MC_HOME_NOT_FOUND_LIST=""
 for VM_HOST in $__VM_HOSTS; do
    JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$JAVA_HOME_COMMAND")
-   HAZELCAST_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$HAZELCAST_HOME_COMMAND")
+   PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$PRODUCT_HOME_COMMAND")
+   MC_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$MC_HOME_COMMAND")
    if [ "$JAVA_HOME_EXISTS" == "false" ]; then
       JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
-   if [ "$HAZELCAST_HOME_EXISTS" == "false" ]; then
-      HAZELCAST_HOME_NOT_FOUND_LIST="$HAZELCAST_HOME_NOT_FOUND_LIST $VM_HOST"
+   if [ "$PRODUCT_HOME_EXISTS" == "false" ]; then
+      PRODUCT_HOME_NOT_FOUND_LIST="$PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
+   fi
+   if [ "$MC_HOME_EXISTS" == "false" ]; then
+      MC_HOME_NOT_FOUND_LIST="$MC_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
 done
 
@@ -253,7 +274,7 @@ function installProduct
 
       if [ "$BASE_VM" == "" ]; then
          for VM_HOST in $PRODUCT_HOME_NOT_FOUND_LIST; do
-            echo "   Installing $VM_HOST..."
+            echo "   Uploading $VM_HOST..."
             BASE_VM=$VM_HOST
             break
          done
@@ -308,10 +329,20 @@ fi
 # Install Hazelcast
 if [ "$PRODUCT_ARG" != "" ]; then
    # Arguments to installProduct function
-   PRODUCT="Hazelcast"
-   PRODUCT_HOME_NOT_FOUND_LIST=$HAZELCAST_HOME_NOT_FOUND_LIST
+   PRODUCT="$__PRODUCT_NAME"
    PRODUCT_PATH=$PRODUCT_ARG
-   VM_PRODUCT_HOME=$VM_HAZELCAST_HOME
+   VM_PRODUCT_HOME=$__VM_PRODUCT_HOME
+   
+   installProduct
+fi
+
+# Install Management Center
+if [ "$MC" != "" ]; then
+   # Arguments to installProduct function
+   PRODUCT="Management Center"
+   PRODUCT_HOME_NOT_FOUND_LIST=$MC_HOME_NOT_FOUND_LIST
+   PRODUCT_PATH=$MC
+   VM_PRODUCT_HOME=$__VM_MC_HOME
    
    installProduct
 fi

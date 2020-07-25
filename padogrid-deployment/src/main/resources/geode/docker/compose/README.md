@@ -10,10 +10,10 @@ This article describes how to create a Docker environment and launch a Geode clu
 create_docker -cluster mydocker
 ```
 
-By default, the create_docker command adds two (2) Geode servers (members) in the cluster. You can change the number of servers using the `-count` option. For example, the following command adds four (4) servers.
+By default, the create_docker command adds one (1) locator and two (2) Geode servers (members) in the cluster. You can change the number of servers using the `-count` option. For example, the following command adds four (4) servers.
 
 ```console
-# Create Hazelcast cluster with 4 members
+# Create Geode cluster with 4 members
 create_docker -cluster mydocker -count 4
 ```
 
@@ -111,7 +111,7 @@ URL: http://localhost:7070/pulse
 
 ## Run Swagger UI
 
-URL: http://localhost:7080/geode/swagger-ui.html
+**URL:** [http://localhost:7080/geode/swagger-ui.html](http://localhost:7080/geode/swagger-ui.html)
 
 ## Run `perf_test`
 

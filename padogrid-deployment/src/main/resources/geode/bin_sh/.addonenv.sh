@@ -46,7 +46,7 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        system properties (--J=-D), etc.
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
-# DEFAULT_CLUSTER        The default IMDG cluster name. The default cluster can be managed without
+# DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: mygeode
 # DEFAULT_LOCATOR_MIN_HEAP_SIZE  Default locator minimum heap size. Used initially when the cluster
 #                        is created.
@@ -85,7 +85,7 @@ fi
 #JAVA_OPTS=
 
 #
-# Default workspace used when initializing workspaces by running init_geode.
+# Default workspace used when initializing workspaces by running create_workspace.
 #
 DEFAULT_WORKSPACE=myws
 
@@ -93,11 +93,13 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
-DEFAULT_CLUSTER="mygeode"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
+DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
+DEFAULT_COHERENCE_CLUSTER="mycoherence"
+DEFAULT_CLUSTER="$DEFAULT_GEODE_CLUSTER"
 
 #
 # Default pod type. The pod type determines the node envirionment in which
@@ -366,7 +368,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
@@ -465,10 +467,10 @@ LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
 #
 # PATH
 #
-if [ "$JAVA_HOME" != "" ]; then
+if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$GEODE_HOME/bin:$PATH"
+export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
 
 #
 # Java executable

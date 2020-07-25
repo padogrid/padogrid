@@ -8,13 +8,15 @@ import java.util.HashSet;
  *
  */
 public enum RegionNameEnum {
-	eligibility, profile;
+eligibility, profile, summary;
 	
 	static RegionNameEnum getMapNameEnum(String mapName) {
 		if (eligibility.name().equalsIgnoreCase(mapName)) {
 			return eligibility;
 		} else if (profile.name().equalsIgnoreCase(mapName)) {
 			return profile;
+		} else if (summary.name().equalsIgnoreCase(mapName)) {
+			return summary;
 		} else {
 			return null;
 		}

@@ -99,6 +99,12 @@ public class HibernatePool {
 				poolSize = Integer
 						.valueOf(sessionFactory.getProperties().getOrDefault("connection.pool_size", "1").toString());
 			} catch (Exception e) {
+				
+				// Flush the error. The logger has no fluch capability.
+				System.err.println("Hibernate initialization error.");
+				e.printStackTrace(System.err);
+				System.err.flush();
+				
 				logger.severe("Hibernate initialization error.", e);
 				if (registry != null) {
 					StandardServiceRegistryBuilder.destroy(registry);

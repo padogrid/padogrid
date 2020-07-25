@@ -1,0 +1,130 @@
+#!/usr/bin/env bash 
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-app -name -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+    $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a new app by installing the specified app that is part of the
+                 padogrid distribution
+
+SYNOPSIS
+   $EXECUTABLE [-app <app-name>] [-name <new-app-name>] [-?]
+
+DESCRIPTION
+   Creates a new app by installing the specified app that is part of the
+   padogrid distribution. This command creates a new app directory in 
+   the workspace 'apps' directory.
+
+   You are encouraged to create as many apps as you need and configure them
+   to work with a specific Coherence cluster. By doing so, you minimize
+   reconfiguration efforts and your apps and the cluster can be bundled
+   together for easier deployment.
+
+OPTIONS
+   -app app_name
+             Name of the app to create. Use <tab><tab> to see available
+             apps. If not specified, then it defaults to 'perf_test'.
+
+   -name new_app_name
+             New name of the app. If not specified, then it defaults
+             to app_name.
+
+DEFAULT
+EOF
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+cat <<EOF
+   $EXECUTABLE -app jet_demo -name jet_demo
+EOF
+else
+cat <<EOF
+   $EXECUTABLE -app perf_test -name perf_test
+EOF
+fi
+cat <<EOF
+
+FILES
+   $PADOGRID_WORKSPACE/apps
+             The current workspace apps directory where all the apps are stored.
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*app*" $EXECUTABLE
+   exit
+fi
+
+if [ "$APP_SPECIFIED" == "false" ]; then
+   APP="perf_test"
+fi
+if [ "$NAME_ARG" == "" ]; then
+   NAME_ARG=$APP
+fi
+
+if [ ! -d "$PADOGRID_HOME/$PRODUCT/apps/$APP" ]; then
+   >&2 echo "ERROR: The specified app name does not exist. Command aborted."
+   exit 1
+fi
+
+# Create apps dir if it does not exist
+if [ ! -d "$APPS_DIR" ]; then
+   mkdir $APPS_DIR
+fi
+
+# Abort if the app dir already exists
+APP_DIR="$APPS_DIR/$NAME_ARG"
+if [ -d "$APP_DIR" ]; then
+   >&2 echo "ERROR: The specified new app name already exists. Command aborted."
+   exit 1
+fi
+
+# Copy all to the new app dir
+cp -r $PADOGRID_HOME/$PRODUCT/apps/$APP $APP_DIR
+
+# Copy versioned config files to the etc/ dir
+if [ -d "$APP_DIR/etc/v${COHERENCE_MAJOR_VERSION_NUMBER}" ]; then
+   cp $APP_DIR/etc/v${COHERENCE_MAJOR_VERSION_NUMBER}/* $APP_DIR/etc/
+fi
+
+# Make bin_sh scripts executables
+if [ -d "$APP_DIR/bin_sh" ]; then
+   chmod 755 $APP_DIR/bin_sh/*
+fi
+
+echo ""
+echo "App created in the following directory:"
+echo ""
+echo -e "   ${CLightGreen}$APP_DIR${CNone}"
+echo ""

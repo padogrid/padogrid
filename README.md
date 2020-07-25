@@ -4,7 +4,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## PadoGrid Brief
 
-PadoGrid is a collection of add-on components and tools specifically designed for data grid products to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
+PadoGrid is a collection of add-on components and tools specifically designed for [data grid products](#data-Grid-Products) to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
 
 A workspace provides a sandbox environment completely isolated from other workspaces and can host a wide range of software components from a simple app to a highly complex ecosystem with many data grid clusters, apps, VMs, and Docker/Kubernetes containers. You can, for example, create a workspace that federates multiple data grid clusters serving inventory and sales data, a workspace that streams database CDC records via Kafka, a workspace that handles streamed data into the federated clusters via one or more Apache Spark or Hazelcast Jet clusters, and yet another workspace that integrates data analytics tools for performing AI/ML operations and creating reports. PadoGrid consolidates your workspaces into a single operations center.
 
@@ -15,8 +15,8 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 - [Quick Start](https://github.com/padogrid/padogrid/wiki/Quick-Start)
-- [Building PadoGrid](#Building-padogrid)
-- [Installing PadoGrid](#Insalling-padogrid)
+- [Building PadoGrid](#building-padogrid)
+- [Installing PadoGrid](#installing-padogrid)
 
 ## PadoGrid Features
 
@@ -33,20 +33,49 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 
 ## Building `padogrid`
 
-You can build `padogrid` using any of the following options. For distribution, always include man pages.
+### Required Software
 
-```console
-# Include man pages (recommended)
+- Maven 3.x
+- JDK 1.8+
+
+### Building `padogrid` without Oracle Coherence
+
+You can build `padogrid` using any of the following options (See the usage by running `./build_dist.sh -?`.) For distribution, always include man pages.
+
+```bash
+# Exclude man pages and Coherence (fast build)
 ./build_dist.sh
 
-# Without man pages (fast build)
-./build_dist.sh -skipMan
+# Include man pages but exclude Coherence
+./build_dist.sh -man
 
-# Maven (without man pages, fastest build)
+# Maven (without man pages and Coherence, fastest build)
 mvn install
 
-# Build all: build_dist.sh + external apps (slowest and largest build)
-./build_all.sh
+# Build all: 'build_dist.sh -man' + external apps (slowest and largest build)
+./build_all.sh -man
+```
+
+### Building `padogrid` with Oracle Coherence
+
+By default, Coherence is excluded in the build due to the lack of public Maven repositories. To build the Coherence module, you must manually install the Coherence package in your local Maven repository as described in the following article.
+
+[coherence-addon-core/README.md](coherence-addon-core/README.md)
+
+Once you have installed the Coherence package in your local Maven repository, in addition to other modules, you can include the Coherence module in the build by specifying the `-coherence` option as shown below.
+
+```bash
+# Exclude man pages (fast build)
+./build_dist.sh -coherence
+
+# Include man pages (for distribution)
+./build_dist.sh -coherence -man
+
+# Maven (without man pages, fastest build)
+mvn install -f pom-include-coherence.xml
+
+# Build all: all modules + external apps (slowest and largest build)
+./build_all.sh -coherence -man
 ```
 
 ## Installing `padogrid`
@@ -68,25 +97,27 @@ Inflate one of the distribution files in your file system. For example,
 
 ```console
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.1.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.2-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.1
+tree -L 1 padogrid_0.9.2-SNAPSHOT
 ```
 
 **Output:**
 
 ```console
-padogrid_0.9.1
+padogrid_0.9.2-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
 ├── RELEASE_NOTES.txt
 ├── bin_sh
+├── coherence
 ├── etc
 ├── geode
 ├── hazelcast
 ├── lib
-└── pods
+├── pods
+└── snappydata
 ```
 
 ## Initializing PadoGrid
@@ -94,7 +125,7 @@ padogrid_0.9.1
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```console
-~/Padogrid/products/padogrid_0.9.1/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.2-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Data Grid Products
@@ -105,19 +136,32 @@ PadoGrid currently supports the following data grid products.
 
 <p align="center" float="left">
   <a href="https://geode.apache.org/">
-  <img src="images/geode.jpg" width="200" hspace="10" alt="Apache Geode" />
+  <img src="images/geode.jpg" width="210" hspace="10" alt="Apache Geode" />
   </a>
   <a href="https://tanzu.vmware.com/gemfire">
-  <img src="images/gemfire.jpg" width="200"  hspace="10" alt="VMware GemFire" /> 
+  <img src="images/gemfire.jpg" width="210"  hspace="10" alt="VMware GemFire" /> 
   </a>
 </p>
 <p align="center">
   <a href="https://hazelcast.com/products/imdg/">
-  <img src="images/hazelcast.jpg" width="290"  hspace="10" alt="Hazelcast IMDG" />
+  <img src="images/hazelcast.jpg" width="300"  hspace="10" alt="Hazelcast IMDG" />
   </a>
   <a href="https://hazelcast.com/products/jet/">
-  <img src="images/jet.jpg" width="270" hspace="10" alt="Hazelcast Jet" />
+  <img src="images/jet.jpg" width="280" hspace="10" alt="Hazelcast Jet" />
   </a> 
+</p>
+<p align="center">
+  <a href="https://www.tibco.com/products/tibco-computedb">
+  <img src="images/computedb.jpg" width="300"  hspace="10" alt="ComputeDB" />
+  </a>
+  <a href="https://snappydatainc.github.io/snappydata/">
+  <img src="images/snappydata.jpg" width="280" hspace="10" alt="SnappyData" />
+  </a> 
+</p>
+<p align="center">
+  <a href="https://www.oracle.com/middleware/technologies/coherence.html">
+  <img src="images/coherence.jpg" width="200"  hspace="10" alt="Oracle Coherence" />
+  </a>
 </p>
 
 ---
@@ -130,8 +174,8 @@ The PadoGrid Manual describes product concepts and provides complete instruction
 
 [PadoGrid Manual](https://github.com/padogrid/padogrid/wiki)
 
-### Bundle Catalogs
+### Bundle (Use Case) Catalogs
 
 PadoGrid has been built with use cases in mind. It aims to deliver out-of-the-box turnkey solutions on top of data grid products. The bundle catalogs provide compiled lists of readily available solutions. Just install and run.
 
-[Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+[Bundle (Use Case) Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)

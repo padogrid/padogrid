@@ -2,7 +2,7 @@
 
 The `perf_test` app provides scripts to ingest and transact mock data for testing Geode throughputs and latencies. It provides a quick way to run your performance tests by configuring a few properties such as the payload size, the number of objects (entries), and the number of worker threads. Out of the box, these properties have already been pre-configured in `etc/ingestion.properties` and `etc/tx.properties`, which you can modify as needed to meet your test criteria.
 
-The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of `Region` operations and execute them in parallel. A group is analogous to a function that makes multiple `Region` method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files that have been preconfigured to invoke 22 put calls and 22 get calls on 22 different maps. You can configure the Near Cache in `etc/geode-client.xml` to measure the throughput.
+The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of `Region` operations and execute them in parallel. A group is analogous to a function that makes multiple `Region` method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files that have been preconfigured to invoke 22 put calls and 22 get calls on 22 different regions. You can configure the Near Cache in `etc/geode-client.xml` to measure the throughput.
 
 You can also ingest `Customer` and `Order` domain objects with mock data. These objects have been annotated with Hibernate such that you can synchronize Geode with a database of your choice. See the [CacheWriterLoaderPkDbImpl (Database Integration)](#cachewriterloaderpkdbimpl-database-ntegration) section for configuration instructions.
 
@@ -19,11 +19,11 @@ All the test cases are performed on three (3) partitioned regions with a simple 
 ## Configuration Files
 
 There are two configuration files with preconfigured properties as follows:
-- `etc/ingestion.properties` - This file defines properties for ingesting data into the `eligibility` and `profile` maps.
+- `etc/ingestion.properties` - This file defines properties for ingesting data into the `eligibility` and `profile` regions.
 - `etc/tx.properties` - This file defines properties for performing transactions.
 - `etc/group.properties` - This file defines properties for performing groups of `Region` method calls.
-- `etc/group-put.properties` - This file defines properties for making 22 put calls on 22 different maps in a single group.
-- `etc/group-get.properties` - This file defines properties for making 22 get calls on 22 different maps in a single group. Note that group-put must be invoked first to ingest data. 
+- `etc/group-put.properties` - This file defines properties for making 22 put calls on 22 different regions in a single group.
+- `etc/group-get.properties` - This file defines properties for making 22 get calls on 22 different regions in a single group. Note that group-put must be invoked first to ingest data. 
 
 You can introduce your own test criteria by modifying the properties the above files or supply another properties file by specifying the `-prop` option of the scripts described below.
 
@@ -33,7 +33,7 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 
 | Script | Description |
 | ------ | ----------- |
-| `test_ingestion` | Displays or runs data ingestion test cases (`putall` or `put`) specified in the `etc/ingestion.properties` file. It ingests mock data into the `eligibility` and `profile` maps. |
+| `test_ingestion` | Displays or runs data ingestion test cases (`putall` or `put`) specified in the `etc/ingestion.properties` file. It ingests mock data into the `eligibility` and `profile` regions. |
 | `test_tx` | Displays or runs transaction and query test cases specified in the `etc/tx.properties` file. It runs `get`, `getall`, `tx` test cases specified in the `perf.properties` file. |
 | `test_group` | Displays or runs group test cases (`put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Geode Region operations. |
 
@@ -102,7 +102,7 @@ Usage:
 
 ### CacheWriterLoaderPkDbImpl (Database Integration)
 
-`geode-addon` includes a generic DB addon, `org.geode.addon.cluster.CacheWriterLoaderPkDbImpl`, that can read/write from/to a database. This primary-key-based DB addon maps your Hibernate entity objects to database tables. To use the plugin, the primary key must be part of the entity object annotated with Hibernate's `@Id`. The following is a snippet of the `Order` object included in `geode-addon`.
+`geode-addon` includes a generic DB addon, `org.geode.addon.cluster.CacheWriterLoaderPkDbImpl`, that can read/write from/to a database. This primary-key-based DB addon regions your Hibernate entity objects to database tables. To use the plugin, the primary key must be part of the entity object annotated with Hibernate's `@Id`. The following is a snippet of the `Order` object included in `geode-addon`.
 
 ```java
 @Entity
@@ -146,7 +146,7 @@ public class Order implements PdxSerializable, Comparable<Order>
         ...
 ```
 
-To use `CacheWriterLoaderPkDbImpl `, you must first build the environment by executing the `build_app` script as shown below. This script runs Maven to download the dependency files into the `$GEODE_ADDON_WORKSPACE/lib` directory, which is included in `CLASSPATH` for all the apps and clusters running in the workspace.
+To use `CacheWriterLoaderPkDbImpl `, you must first build the environment by executing the `build_app` script as shown below. This script runs Maven to download the dependency files into the `$PADOGRID_WORKSPACE/lib` directory, which is included in `CLASSPATH` for all the apps and clusters running in the workspace.
 
 ```console
 ./build_app
@@ -156,7 +156,7 @@ Upon successful build, you must also configure the cluster in `cache.xml` file a
 
 ```console
 # Edit cache.xml
-vi $GEODE_ADDON_WORKSPACE/clusters/$CLUSTER/etc/cache.xml
+vi $PADOGRID_WORKSPACE/clusters/$CLUSTER/etc/cache.xml
 ```
 
 Add the following in the `cache.xml` file.
@@ -218,12 +218,12 @@ Add the following in the `cache.xml` file.
     </region>
 ```
 
-The above configures the `/nw/customers` and `/nw/orders` maps to store and load data to/from the database. The database can be configured in the cluster's `hibernate.cfg.xml` file as follows:
+The above configures the `/nw/customers` and `/nw/orders` regions to store and load data to/from the database. The database can be configured in the cluster's `hibernate.cfg.xml` file as follows:
 
 ```console
 # Edit hibernate.cfg.xml
-vi $GEODE_ADDON_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-mysql.xml
-vi $GEODE_ADDON_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-postresql.xml
+vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-mysql.xml
+vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-postresql.xml
 ```
 
 The following is the `hibernate.cfg-mysql.xml` file provided by `geode-addon`. Make sure to replace the database information with your database information such as *password*.
@@ -264,9 +264,9 @@ The following is the `hibernate.cfg-mysql.xml` file provided by `geode-addon`. M
 The Hibernate configuration file path must be provided before you start the cluster. Edit the cluster's `setenv.sh` file and include the path as follows:
 
 ```
-vi $GEODE_ADDON_WORKSPACE/clusters/$CLUSTER/bin_sh/setenv.sh
+vi $PADOGRID_WORKSPACE/clusters/$CLUSTER/bin_sh/setenv.sh
 
-# Set JAVA_OPTS in setenv.sh. Remember, geode-addon uses gfsh to start/stop
+# Set JAVA_OPTS in setenv.sh. Remember that geode-addon uses gfsh to start/stop
 # locators and members. For Java options, you must prepend '--J='.
 HIBERNATE_CONFIG_FILE="$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
 if [[ ${OS_NAME} == CYGWIN* ]]; then

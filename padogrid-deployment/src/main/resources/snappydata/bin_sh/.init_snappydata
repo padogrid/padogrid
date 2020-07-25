@@ -1,0 +1,661 @@
+#!/usr/bin/env bash 
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-path -rwe -product -workspace -cluster -java -vm -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+PadoGrid Initialization
+
+NAME
+   $EXECUTABLE - Initialize a PadoGrid workspaces environment
+
+SYNOPSIS
+   $EXECUTABLE [-path rwe_home_path]
+               [-rwe rwe_name]
+               [-product product_home_path]
+               [-java JAVA_HOME_path]
+               [-workspace default_workspace]
+               [-cluster default_cluster]
+               [-vm]
+               [-quiet] [-?]
+
+DESCRIPTION
+   Initializes a PadoGrid workspaces environment by setting the
+   default paths to the required software installation directories.
+
+OPTIONS
+   -path rwe_home_path
+             RWE home path where RWEs will be store. If not specified, then 
+             then it defaults to the current RWE home path if exists.
+
+   -rwe rwe_name
+             A new RWE name.
+
+   -product product_home_path
+             SnappyData installation directory path.
+
+   -java JAVA_HOME_path
+             JDK home path.
+EOF
+if [ "$MAN_SPECIFIED" == "false" ] && [ "$JAVA_HOME" != "" ]; then
+cat <<EOF
+             Default: $JAVA_HOME
+EOF
+fi
+cat <<EOF
+
+   -workspace default_workspace
+             Default workspace to be created.
+             Default: $DEFAULT_WORKSPACE
+
+   -cluster default_cluster
+             Default cluster name.
+             Default: $DEFAULT_HAZELCAST_CLUSTER for IMDG, $DEFAULT_JET_CLUSTER for Jet
+
+   -vm
+             Specify '-vm' to enable VM cluster.
+ 
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+DEFAULT
+   $EXECUTABLE -cluster $DEFAULT_CLUSTER
+
+EOF
+   exit
+fi
+
+# Set PADOGRID_HOME
+PADOGRID_HOME="$(dirname "$BASE_DIR")"
+
+RWE_HOME="$PATH_ARG"
+if [ "$RWE_HOME" == "" ]; then
+   RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+fi
+RWE_NAME="$RWE_ARG"
+
+if [ "$WORKSPACE_ARG" == "" ]; then
+   WORKSPACE="$DEFAULT_WORKSPACE"
+else
+   WORKSPACE="$WORKSPACE_ARG"
+fi
+
+# Remove trailing slashes ('/')
+RWE_HOME="$(echo "$RWE_HOME" | sed 's:/*$::')"
+if [ "$RWE_HOME" != "" ]; then
+   WORKSPACES_HOME="$RWE_HOME/$RWE_NAME"
+else
+   WORKSPACES_HOME=""
+fi
+WORKSPACES_HOME="$(echo "$WORKSPACES_HOME" | sed 's:/*$::')"
+
+if [ "$QUIET" == "true" ]; then
+   if [ "$RWE_NAME" == "" ]; then
+      echo >&2 "-------------------------------------------------------------------------"
+      echo >&2 "ERROR: RWE name not specifed. Use '-rwe' to specify the new RWE name."
+      echo >&2 "       Command aborted."
+      echo >&2 "-------------------------------------------------------------------------"
+      exit 1
+   fi
+   if [ "$RWE_HOME" == "" ]; then
+      echo >&2 "-------------------------------------------------------------------------"
+      echo >&2 "ERROR: RWE home path not specifed. Use '-path' to specify the RWE home path."
+      echo >&2 "       Command aborted."
+      echo >&2 "-------------------------------------------------------------------------"
+      exit 1
+   fi
+   if [ -d "$WORKSPACES_HOME" ]; then
+      echo >&2 "-------------------------------------------------------------------------"
+      echo >&2 "ERROR: The specified RWE directory already exists. A new RWE name required."
+      echo >&2 "          $WORKSPACES_HOME"
+      echo >&2 "       Command aborted."
+      echo >&2 "-------------------------------------------------------------------------"
+      exit 1
+   fi
+fi
+if [ -f "$WORKSPACES_HOME" ]; then
+   if [ "$QUIET" == "true" ]; then
+      echo >&2 "--------------------------------------------------------------------"
+      echo >&2 "ERROR: The specified directory is an existing file."
+      echo >&2 "          $WORKSPACES_HOME"
+      echo >&2 "       Command aborted."
+      echo >&2 "--------------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# Set default values
+if [ "$JAVA_HOME_ARG" == "" ]; then
+   JAVA_HOME_ARG="$JAVA_HOME"
+fi
+if [ "$PRODUCT_ARG" == "" ]; then
+   PRODUCT_ARG="$HAZELCAST_HOME"
+fi
+if [ "$PRODUCT_ARG" == "" ]; then
+   PRODUCT_ARG="$JET_HOME"
+else
+   PRODUCT_HOME="$PRODUCT_ARG"
+fi
+
+# Default cluster
+if [ $CLUSTER_SPECIFIED == "false" ]; then
+   CLUSTER="$DEFAULT_CLUSTER"
+fi
+
+# VM
+VM_ENABLED="$VM_SPECIFIED"
+
+if [ "$QUIET" == "true" ]; then
+   if [ "$WORKSPACES_HOME" == "" ]; then 
+       echo "ERROR: Workspaces directory path not specified. The '-quiet' option"
+       echo "       requires the '-path' option to specified the directory path."
+       echo "       Command aborted."
+       exit 1
+   fi
+   if [ -d "$WORKSPACES_HOME" ] || [ -f "WORKSPACES_HOME" ]; then
+       echo "Directory already exists. A new directory required."
+       echo "ERROR: Workspaces directory path already exists. A new directory required."
+       echo "       Command aborted."
+       exit 1
+   fi
+   if [ "$JAVA_HOME_ARG" != "" ]; then
+      JAVA_HOME="$JAVA_HOME_ARG"
+   fi
+   if [ "$WORKSPACE_ARG" != "" ]; then
+      WORKSPACE="$WORKSPACE_ARG"
+   fi
+else
+   echo ""
+   echo "Please answer the prompts that appear below. If you are not able to complete"
+   echo "the prompts at this time then use the '-quiet' option to bypass the prompts."
+   echo "You can complete the requested values later in the generated 'setenv.sh' file"
+   echo "You can abort this command at any time by entering 'Ctrl-C'."
+   echo ""
+   __WORKSPACES_HOME="$WORKSPACES_HOME"
+   __RWE_HOME="$RWE_HOME"
+   __RWE_NAME="$RWE_NAME"
+   __JAVA_HOME="$JAVA_HOME_ARG"
+   __PRODUCT_HOME="$PRODUCT_ARG"
+   __WORKSPACE="$WORKSPACE"
+   RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+   REDO=true
+   while [ "$REDO" == "true" ]; do
+
+      # RWE_HOME
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         echo "Enter an RWE home path where your RWEs will be stored."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$__RWE_HOME]:"
+
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __RWE_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __RWE_HOME="$(cygpath -au "$__RWE_HOME")"
+         fi
+         __RWE_HOME="$(trimString "$__RWE_HOME")"
+         if [ "$__RWE_HOME" == "" ]; then
+            __REDO=true
+         elif [[ ! $__RWE_HOME == /* ]]; then
+            echo "Absolute path required."
+            __RWE_HOME="$RWE_HOME"
+            __REDO=true
+         elif [ ! -d "$__RWE_HOME" ] && [ -f "$__RWE_HOME" ]; then
+            __REDO=true
+            __RWE_HOME=""
+            echo "The specified path is not a directory. Please enter a directory path."
+         else
+            __REDO=false
+         fi
+      done
+      RWE_HOME="$__RWE_HOME"
+
+      # RWE_NAME
+      __REDO=true
+      __RWE_NAME=$RWE_NAME
+      RWE_LIST="$(getRweList "$RWE_HOME")"
+      if [ "$RWE_LIST" != "" ]; then
+         echo "The following RWEs already exists in the specified RWE home path."
+         for i in $RWE_LIST; do
+            echo "   $i"
+         done
+      fi
+      while [ "$__REDO" == "true" ]; do
+         read -p "Enter a new RWE name [$__RWE_NAME]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __RWE_NAME="$INPUT"
+         fi
+         __RWE_NAME="$(trimString "$__RWE_NAME")"
+         if [ "$__RWE_NAME" == "" ]; then
+            __REDO=true
+         elif [ -d "$__RWE_HOME/$__RWE_NAME" ] || [ -f "$__RWE_HOME/$__RWE_NAME" ]; then
+            __REDO=true
+            __RWE_NAME=""
+            echo "The specified RWE already exists. Please enter a RWE name."
+         else
+            __REDO=false
+         fi
+      done
+      RWE_NAME="$__RWE_NAME"
+      WORKSPACES_HOME="$__RWE_HOME/$__RWE_NAME"
+
+      # JAVA_HOME
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+
+         echo "Enter Java home path."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$__JAVA_HOME]:"
+
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __JAVA_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
+         fi
+         __JAVA_HOME="$(trimString "$__JAVA_HOME")"
+
+         if [[ ! -d "$__JAVA_HOME" ]]; then
+            echo "Directory does not exist or not a directory."
+            __JAVA_HOME="$JAVA_HOME_ARG"
+            __REDO=true
+         elif [ "$__JAVA_HOME" == "" ]; then
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      JAVA_HOME="$__JAVA_HOME"
+     
+      # PRODUCT_HOME
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+
+         echo "Enter Hazelcast IMDG or Jet home directory path."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+       echo "Enter only Unix absoulte path. Windows path not allowed."
+         fi
+         echo "[$__PRODUCT_HOME]:"
+
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __PRODUCT_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __PRODUCT_HOME="$(cygpath -au $__PRODUCT_HOME)"
+         fi
+         if [[ ! -d "$__PRODUCT_HOME" ]]; then
+            echo "Directory does not exist or not a directory. Do you want to skip?"
+            __REDO=true
+            INNER_LOOP=true
+            while [ "$INNER_LOOP" == "true" ]; do
+               read -p "Enter 'c' to skip this question and continue, 'r' to re-enter, 'q' to quit: " INPUT
+               case $INPUT in
+                  [Cc]* ) __REDO=false; INNER_LOOP=false; __PRODUCT_HOME="";;
+                  [Rr]* ) __REDO=true; INNER_LOOP=false; __PRODUCT_HOME="$PRODUCT_ARG";;
+                  [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+               esac
+            done
+         else
+            __REDO=false
+         fi
+      done
+      PRODUCT_HOME="$__PRODUCT_HOME"
+
+      # Default workspace
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         read -p "Enter default workspace name [$__WORKSPACE]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __WORKSPACE="$INPUT"
+         fi
+         __WORKSPACE="$(trimString "$__WORKSPACE")"
+         if [ "$__WORKSPACE" == "" ]; then
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      WORKSPACE="$__WORKSPACE"
+
+      # CLUSTER
+       read -p "Enter default cluster name [$CLUSTER]: " INPUT
+      # trim string
+      INPUT=`echo "$INPUT" | xargs`
+      if [ "$INPUT" != "" ]; then
+         CLUSTER="$INPUT"
+      fi
+
+      # VM
+      INNER_LOOP=true
+      while [ "$INNER_LOOP" == "true" ]; do
+         read -p "Enable VM? Enter 'true' or 'false' [$VM_ENABLED]: " INPUT 
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" == "" ]; then
+            INPUT="$VM_ENABLED"
+         fi
+         if [ "$INPUT" == "true" ] || [ "$INPUT" == "false" ]; then
+            VM_ENABLED="$INPUT"
+            REDO=false;
+            INNER_LOOP=false;
+         fi
+      done
+
+      echo ""
+      echo "Creating an RWE as follows..."
+      echo "            RWE Home: $RWE_HOME"
+      echo "            RWE Name: $RWE_NAME"
+      echo "           JAVA_HOME: $JAVA_HOME"
+      echo "        Product Home: $PRODUCT_HOME"
+      echo "   Default Workspace: $WORKSPACE"
+      echo "     Default Cluster: $CLUSTER"
+      echo "          VM Enabled: $VM_ENABLED"
+
+      REDO=true
+      INNER_LOOP=true
+      while [ "$INNER_LOOP" == "true" ]; do
+         read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
+         case $INPUT in
+            [Cc]* ) REDO=false; INNER_LOOP=false;;
+            [Rr]* ) REDO=true; INNER_LOOP=false;;
+            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+         esac
+      done
+   done
+fi
+
+#
+# Create the workspaces dir and the default workspace.
+#
+mkdir -p $WORKSPACES_HOME
+pushd $WORKSPACES_HOME > /dev/null 2>&1
+export PADOGRID_WORKSPACES_HOME="$(pwd)"
+popd > /dev/null 2>&1
+
+# Create env file for 'create_workspace' to source in.
+TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
+echo "CLUSTER_SPECIFIED=\"$CLUSTER_SPECIFIED\"" > $TMP_ENV_FILE
+echo "CLUSTER=\"$CLUSTER\"" >> $TMP_ENV_FILE
+if [ "$WORKSPACE" != "" ]; then
+   echo "NAME_ARG=\"$WORKSPACE\"" >> $TMP_ENV_FILE
+   PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME"/"$WORKSPACE"
+fi
+determineProduct
+echo "PRODUCT_HOME_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
+echo "PRODUCT_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
+if [ "$JAVA_HOME" != "" ]; then
+   echo "JAVA_HOME_ARG=\"$JAVA_HOME_ARG\"" >> $TMP_ENV_FILE
+fi
+echo "VM_SPECIFIED=\"$VM_ENABLED\"" >> $TMP_ENV_FILE
+
+# Create the default workspace.
+$SCRIPT_DIR/create_workspace -env $TMP_ENV_FILE -quiet
+rm $TMP_ENV_FILE
+
+#
+# Create setenv.sh
+#
+if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
+   echo "#!/usr/bin/env bash" > $WORKSPACES_HOME/setenv.sh
+   echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\${BASH_SOURCE[0]}\")\" && pwd -P)\"" >> $WORKSPACES_HOME/setenv.sh
+   echo ". \$SCRIPT_DIR/.addonenv.sh \$@" >> $WORKSPACES_HOME/setenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# There are multiple setenv.sh files sourced in in the order shown below," >> $WORKSPACES_HOME/setenv.sh
+   echo "# each overriding the variables set in the previous one(s)." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "#    \$PADOGRID_HOME/bin_sh/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "#    setenv.sh (this file)" >> $WORKSPACES_HOME/setenv.sh
+   echo "#    \$PADOGRID_WORKSPACE/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "#    \$PADOGRID_WORKSPACE/clusters/<cluster>/bin_sh/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# The following environment variables are set to the default values. You can override them" >> $WORKSPACES_HOME/setenv.sh
+   echo "# when you create workspaces. Note that for non-local pods, they are set separately" >> $WORKSPACES_HOME/setenv.sh
+   echo "# in the node initialization file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ \"\$POD\" == \"\" ] || [ \"\$POD\" == \"local\" ]; then" >> $WORKSPACES_HOME/setenv.sh
+   if [ "$JAVA_HOME" != "" ]; then
+      echo "   export JAVA_HOME=\"$JAVA_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   else
+      echo "   #export JAVA_HOME=" >> $WORKSPACES_HOME/setenv.sh
+   fi
+   echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export SNAPPYDATA_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   PARENT_DIR="$(dirname "$BASE_DIR")"
+   echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Set the default product." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "PRODUCT=$PRODUCT" >> $WORKSPACES_HOME/setenv.sh
+
+   # .geodeenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in Geode/GemFire specific environment variables. Set your Geode/GemFire specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .geodeenv.sh. The environment variables set in .geodeenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.geodeenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.geodeenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   # .hazelcastenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in Hazelcast (IMDG and Jet) specific environment variables. Set your IMDG/Jet specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .hazelcastenv.sh. The environment variables set in .hazelcastenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.hazelcastenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.hazelcastenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   # .snappydataenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in SnappyData/ComputeDB specific environment variables. Set your SnappyData/ComputeDB specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .snappydateenv.sh. The environment variables set in .snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.snappydataenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   # .coherenceenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in Coherence specific environment variables. Set your Coherence specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .coherenceenv.sh. The environment variables set in .coherenceenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.coherencenve.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.coherencenve.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Add your workspaces-wide environment variables below. The environment" >> $WORKSPACES_HOME/setenv.sh
+   echo "# variables set in this file are used for all workspaces running under this" >> $WORKSPACES_HOME/setenv.sh
+   echo "# directory. Workspace specifics should be added in <workspace>/setenv.sh." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+fi
+
+# Create .snappydataenv.sh
+createProductEnvFile "snappydata" "$WORKSPACES_HOME"
+
+#
+# Copy initenv.sh
+#
+if [ ! -f $WORKSPACES_HOME/initenv.sh ]; then
+   cp $PADOGRID_HOME/etc/init/rwe_initenv.sh $WORKSPACES_HOME/initenv.sh
+fi
+
+#
+# Create .addonenv.sh
+#
+if [ ! -f $WORKSPACES_HOME/.addonenv.sh ]; then
+   echo "#!/usr/bin/env bash" > $WORKSPACES_HOME/.addonenv.sh
+   echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\${BASH_SOURCE[0]}\")\" && pwd -P)\"" >> $WORKSPACES_HOME/.addonenv.sh
+   echo "" >> $WORKSPACES_HOME/.addonenv.sh
+   echo "export PADOGRID_VERSION=$PADOGRID_VERSION" >> $WORKSPACES_HOME/.addonenv.sh
+   echo "export PADOGRID_WORKSPACES_HOME_CREATION_DATE=\"`date "+%m/%d/%y %H:%M:%S %Z"`\"" >> $WORKSPACES_HOME/.addonenv.sh
+   echo "export PADOGRID_WORKSPACES_HOME=\"\$SCRIPT_DIR\"" >> $WORKSPACES_HOME/.addonenv.sh
+fi
+
+#
+# Create ~/.padogrid/setenv.sh if it does not exist
+#
+HOME_PADOGRID_DIR="$HOME/.padogrid"
+
+if [ ! -d "$HOME_PADOGRID_DIR" ]; then
+   mkdir "$HOME_PADOGRID_DIR"
+fi
+if [ ! -f "$HOME_PADOGRID_DIR/setenv.sh" ]; then
+   echo "#!/usr/bin/env bash" > "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# Enter a space separated list of GitHub user names. These users' repos" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# will be searched by the bundle commands." >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "GITHUB_USERS=\"\"" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# Enter "true" to use ssh to clone GitHub repos, "false" to use https." >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "GITHUB_PRIVATE_REPO_ENABLED=\"false\"" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# Enter Gitea URL. Example: https://foo.com" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "GITEA_HTTPS_URL=\"\"" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# Enter Gitea ssh URL. Example: git@foo.com" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "GITEA_SSH_URL=\"\"" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# Enter a space separated list of users of the alternate Gitea URL. In addition" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# to the GitHub repos, these users' repos will be searched by the bundle commands." >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "GITEA_USERS=\"\"" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "# Enter Gitea repo access token. For private repos, the repo access token is required." >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "#" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+   echo "GITEA_ACCESS_TOKEN=\"\"" >>  "$HOME_PADOGRID_DIR/setenv.sh"
+fi
+
+#
+# Report Workspaces Summary
+#
+echo "PadoGrid workspaces initialized:"
+echo "   $WORKSPACES_HOME"
+echo ""
+echo "The workspaces directory contains the following files."
+echo ""
+echo "   setenv.sh -  Sets workspaces default environment variables. This file must be"
+echo "                sourced in from your shell."
+echo ""
+echo "   .addonenv.sh - A hidden file containing the workspaces metadata information."
+echo ""
+if [ "$JAVA_HOME" == "" ] || [ "$SNAPPYDATA_HOME" == "" ]; then
+   echo ""
+   echo "The following environment variable(s) are not set. Although they are not"
+   echo "required, you should set them in the 'setenv.sh' file so that you don't"
+   echo "need to manually enter them when you create workspaces."
+   echo ""
+   if [ "$JAVA_HOME" == "" ]; then
+      echo "   JAVA_HOME"
+   fi
+   if  [ "$SNAPPYDATA_HOME" == "" ]; then
+      echo "   SNAPPYDATA_HOME"
+   fi
+fi
+
+# Display workspace and cluster info.
+echo ""
+echo "Summary:"
+echo "--------"
+echo "       Workspaces: $WORKSPACES_HOME"
+echo "Default Workspace: $WORKSPACE"
+echo "  Default Cluster: $CLUSTER"
+echo "       VM Cluster: $VM_ENABLED"
+echo ""
+echo "PADOGRID_WORKSPACES_HOME=$PADOGRID_WORKSPACES_HOME"
+echo "      PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE"
+echo "    Default Cluster Dir: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+echo ""
+if [ "$IS_SNAPPYDATA_ENTERPRISE" == "true" ]; then
+   echo "License Keys:"
+   echo "-------------"
+   echo "Make sure to set your enterprise license keys in the following file:"
+   echo -e "   ${CLightRed}$PADOGRID_WORKSPACES_HOME/.snappydataenv.sh${CNone}"
+   echo ""
+fi
+
+echo "IMPORTANT:"
+echo "----------"
+echo "To use this workspaces environment, if you haven't done so already with another"
+echo "workspace environment, you must first source in the initenv.sh file as shown below."
+echo "It is recommended that you add this line in your ~/.bashrc (~/.bash_profile, etc)"
+echo "file. If you are adding it in ~/.bashrc, then make sure to include the '-quiet'"
+echo "option, otherwise, VM commands may not work properly."
+echo -e "   ${CLightGreen}. $WORKSPACES_HOME/initenv.sh -quiet${CNone}"
+echo ""
+echo "To switch to the new workspace you just created, run the following:"
+echo -e "   ${CLightGreen}switch_workspace ${WORKSPACE}${CNone}"
+echo ""

@@ -5,3 +5,4 @@ PadoGrid supports the `kustomize` command to deploy Hazelcast Enterprise and cus
 ## [README-GKE.md](README-GKE.md)
 ## [README-Minikube.md](README-Minikube.md)
 ## [Minikube-on-WSL.md](Hazelcast-Minikube-on-WSL.md)
+## [README-OpenShift.md](README-Openshift.md)

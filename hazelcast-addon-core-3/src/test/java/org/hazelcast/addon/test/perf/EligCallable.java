@@ -15,9 +15,9 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.PartitionAware;
-import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.PartitionPredicate;
 import com.hazelcast.query.Predicate;
+import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.PredicateBuilder;
 
 /**

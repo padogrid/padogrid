@@ -1,7 +1,6 @@
-<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
-	
+
 	<id>padogrid-assembly</id>
 	<formats>
 		<format>zip</format>
@@ -16,11 +15,46 @@
 			<includes>
 				<include>io.prometheus.jmx:**</include>
 				<include>org.apache.logging.log4j:**</include>
+				<include>com.esotericsoftware:kryo</include>
+				<include>org.json:json</include>
 			</includes>
 		</dependencySet>
 	</dependencySets>
 
 	<moduleSets>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:padogrid-common</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>lib</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:padogrid-tools</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>lib</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:coherence-addon-core</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>coherence/lib</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
 		<moduleSet>
 			<useAllReactorProjects>true</useAllReactorProjects>
 			<includes>
@@ -65,6 +99,39 @@
 				<unpack>false</unpack>
 			</binaries>
 		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:hazelcast-addon-jet-demo-3</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>hazelcast/lib/v3</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:hazelcast-addon-jet-demo-4</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>hazelcast/lib/v4</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:snappydata-addon-core</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>snappydata/lib</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
 	</moduleSets>
 
 	<fileSets>
@@ -87,8 +154,19 @@
 			<includes>
 				<include>**</include>
 			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
 			<fileMode>0755</fileMode>
 			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/bin_sh</directory>
+			<outputDirectory>hazelcast/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
 		</fileSet>
 
 		<!-- etc -->
@@ -108,37 +186,7 @@
 				<include>**</include>
 			</includes>
 		</fileSet>
-		
-		<!-- pods: pods files except for README.md go to etc/ -->
-		<fileSet>
-			<directory>src/main/resources/hazelcast/pods</directory>
-			<outputDirectory>hazelcast/etc/</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<excludes>
-				<exclude>README.md</exclude>
-			</excludes>
-		</fileSet>
-		<fileSet>
-			<directory>src/main/resources/hazelcast/pods/bin_sh</directory>
-			<outputDirectory>hazelcast/etc/bin_sh</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<fileMode>0755</fileMode>
-			<directoryMode>0755</directoryMode>
-		</fileSet>
-		
-		<!-- pods: place READEME.md to pods/ -->
-		<fileSet>
-			<directory>src/main/resources/hazelcast/pods</directory>
-			<outputDirectory>hazelcast/pods/</outputDirectory>
-			<includes>
-				<include>README.md</include>
-			</includes>
-		</fileSet>
-		
+
 		<!-- k8s: k8s files -->
 		<fileSet>
 			<directory>src/main/resources/hazelcast/k8s</directory>
@@ -154,10 +202,21 @@
 			<includes>
 				<include>**</include>
 			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
 			<fileMode>0755</fileMode>
 			<directoryMode>0755</directoryMode>
 		</fileSet>
-		
+		<fileSet>
+			<directory>src/main/resources/hazelcast/k8s/kustom/bin_sh</directory>
+			<outputDirectory>hazelcast/k8s/kustom/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
 		<!-- docker: docker files -->
 		<fileSet>
 			<directory>src/main/resources/hazelcast/docker</directory>
@@ -165,43 +224,6 @@
 		</fileSet>
 
 		<!-- apps -->
-		<!-- Make app bin_sh files executable. -->
-		<fileSet>
-			<directory>src/main/resources/hazelcast/apps/desktop/bin_sh</directory>
-			<outputDirectory>hazelcast/apps/desktop/bin_sh</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<fileMode>0755</fileMode>
-			<directoryMode>0755</directoryMode>
-		</fileSet>
-		<fileSet>
-			<directory>src/main/resources/hazelcast/apps/grafana/bin_sh</directory>
-			<outputDirectory>hazelcast/apps/grafana/bin_sh</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<fileMode>0755</fileMode>
-			<directoryMode>0755</directoryMode>
-		</fileSet>
-		<fileSet>
-			<directory>src/main/resources/hazelcast/apps/perf_test/bin_sh</directory>
-			<outputDirectory>hazelcast/apps/perf_test/bin_sh</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<fileMode>0755</fileMode>
-			<directoryMode>0755</directoryMode>
-		</fileSet>
-		<fileSet>
-			<directory>src/main/resources/hazelcast/apps/jet_demo/bin_sh</directory>
-			<outputDirectory>hazelcast/apps/jet_demo/bin_sh</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<fileMode>0755</fileMode>
-			<directoryMode>0755</directoryMode>
-		</fileSet>
 		<!-- Include the entire apps dir -->
 		<fileSet>
 			<directory>src/main/resources/hazelcast/apps</directory>
@@ -210,16 +232,98 @@
 				<include>**</include>
 			</includes>
 		</fileSet>
+		<!-- Make app bin_sh files executable. -->
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/desktop/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/desktop/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/desktop/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/desktop/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/grafana/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/grafana/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/grafana/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/grafana/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/perf_test/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/perf_test/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/jet_demo/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hazelcast/apps/jet_demo/bin_sh</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
 		<!-- Include jet_demo source code -->
 		<fileSet>
-			<directory>../hazelcast-addon-jet-demo/src</directory>
-			<outputDirectory>hazelcast/apps/jet_demo/src</outputDirectory>
-		<!-- 	<includes>
-				<include>**/**</include>
-			</includes> -->
+			<directory>../hazelcast-addon-jet-demo-3/src</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/src-3</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>../hazelcast-addon-jet-demo-4/src</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/src-4</outputDirectory>
 		</fileSet>
 
-		<!-- test (include test jar in the test/ dir) -->
+		<!-- plugins (include test jar in the plugins/ dir) -->
 		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
 		<fileSet>
 			<directory>../hazelcast-addon-core-3/target</directory>
@@ -235,7 +339,7 @@
 				<include>**/*tests.jar</include>
 			</includes>
 		</fileSet>
-		
+
 		<!-- ==== Geode ==== -->
 		<!-- Executable permissions -->
 		<fileSet>
@@ -253,10 +357,21 @@
 			<includes>
 				<include>**</include>
 			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
 			<fileMode>0755</fileMode>
 			<directoryMode>0755</directoryMode>
 		</fileSet>
-		
+		<fileSet>
+			<directory>src/main/resources/geode/bin_sh</directory>
+			<outputDirectory>geode/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
 		<!-- etc -->
 		<fileSet>
 			<directory>src/main/resources/geode/etc</directory>
@@ -265,7 +380,7 @@
 				<include>**</include>
 			</includes>
 		</fileSet>
-		
+
 		<!-- k8s: k8s files -->
 		<fileSet>
 			<directory>src/main/resources/geode/k8s</directory>
@@ -277,36 +392,28 @@
 			<includes>
 				<include>**</include>
 			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
 			<fileMode>0755</fileMode>
 			<directoryMode>0755</directoryMode>
 		</fileSet>
-		
+		<fileSet>
+			<directory>src/main/resources/geode/k8s/kustom/bin_sh</directory>
+			<outputDirectory>geode/k8s/kustom/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
 		<!-- docker: docker files -->
 		<fileSet>
 			<directory>src/main/resources/geode/docker</directory>
 			<outputDirectory>geode/docker/</outputDirectory>
 		</fileSet>
-		
+
 		<!-- apps -->
-		<!-- Make app bin_sh files executable. -->
-		<fileSet>
-			<directory>src/main/resources/geode/apps/grafana/bin_sh</directory>
-			<outputDirectory>geode/apps/grafana/bin_sh</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<fileMode>0755</fileMode>
-			<directoryMode>0755</directoryMode>
-		</fileSet>
-		<fileSet>
-			<directory>src/main/resources/geode/apps/perf_test/bin_sh</directory>
-			<outputDirectory>geode/apps/perf_test/bin_sh</outputDirectory>
-			<includes>
-				<include>**</include>
-			</includes>
-			<fileMode>0755</fileMode>
-			<directoryMode>0755</directoryMode>
-		</fileSet>
 		<!-- Include the entire apps dir -->
 		<fileSet>
 			<directory>src/main/resources/geode/apps</directory>
@@ -315,8 +422,49 @@
 				<include>**</include>
 			</includes>
 		</fileSet>
+		<!-- Make app bin_sh files executable. -->
+		<fileSet>
+			<directory>src/main/resources/geode/apps/grafana/bin_sh</directory>
+			<outputDirectory>geode/apps/grafana/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/geode/apps/grafana/bin_sh</directory>
+			<outputDirectory>geode/apps/grafana/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/geode/apps/perf_test/bin_sh</directory>
+			<outputDirectory>geode/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/geode/apps/perf_test/bin_sh</directory>
+			<outputDirectory>geode/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
 
-		<!-- test (include test jar in the test/ dir) -->
+		<!-- plugins (include test jar in the plugins/ dir) -->
 		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
 		<fileSet>
 			<directory>../geode-addon-core/target</directory>
@@ -325,7 +473,161 @@
 				<include>**/*tests.jar</include>
 			</includes>
 		</fileSet>
-		
+
+		<!-- ==== SnappyData ==== -->
+		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/common/bin_sh</directory>
+			<outputDirectory>snappydata/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/snappydata/bin_sh</directory>
+			<outputDirectory>snappydata/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/snappydata/bin_sh</directory>
+			<outputDirectory>snappydata/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
+		<!-- etc -->
+		<fileSet>
+			<directory>src/main/resources/snappydata/etc</directory>
+			<outputDirectory>snappydata/etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+
+		<!-- k8s: k8s files -->
+		<!-- <fileSet> <directory>src/main/resources/snappydata/k8s</directory> <outputDirectory>snappydata/k8s/</outputDirectory> 
+			</fileSet> <fileSet> <directory>src/main/resources/snappydata/k8s/kustom/bin_sh</directory> <outputDirectory>snappydata/k8s/kustom/bin_sh</outputDirectory> 
+			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+
+		<!-- docker: docker files -->
+		<fileSet>
+			<directory>src/main/resources/snappydata/docker</directory>
+			<outputDirectory>snappydata/docker/</outputDirectory>
+		</fileSet>
+
+		<!-- apps -->
+		<!-- Include the entire apps dir -->
+		<!-- <fileSet> <directory>src/main/resources/snappydata/apps</directory> <outputDirectory>snappydata/apps/</outputDirectory> 
+			<includes> <include>**</include> </includes> </fileSet> -->
+		<!-- Make app bin_sh files executable. -->
+		<!-- <fileSet> <directory>src/main/resources/snappydata/apps/grafana/bin_sh</directory> <outputDirectory>snappydata/apps/grafana/bin_sh</outputDirectory> 
+			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> <fileSet> 
+			<directory>src/main/resources/snappydata/apps/perf_test/bin_sh</directory> <outputDirectory>snappydata/apps/perf_test/bin_sh</outputDirectory> 
+			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+
+		<!-- plugins (include test jar in the plugins/ dir) -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+		<fileSet>
+			<directory>../snappydata-addon-core/target</directory>
+			<outputDirectory>snappydata/plugins</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet>
+
+		<!-- ==== Coherence ==== -->
+		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/common/bin_sh</directory>
+			<outputDirectory>coherence/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/coherence/bin_sh</directory>
+			<outputDirectory>coherence/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/coherence/bin_sh</directory>
+			<outputDirectory>coherence/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
+		<!-- etc -->
+		<fileSet>
+			<directory>src/main/resources/coherence/etc</directory>
+			<outputDirectory>coherence/etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+
+		<!-- k8s: k8s files -->
+		<!-- <fileSet> <directory>src/main/resources/coherence/k8s</directory> <outputDirectory>coherence/k8s/</outputDirectory> 
+			</fileSet> <fileSet> <directory>src/main/resources/coherence/k8s/kustom/bin_sh</directory> <outputDirectory>coherence/k8s/kustom/bin_sh</outputDirectory> 
+			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+
+		<!-- docker: docker files -->
+		<!-- <fileSet> <directory>src/main/resources/coherence/docker</directory> <outputDirectory>coherence/docker/</outputDirectory> 
+			</fileSet> -->
+
+		<!-- apps -->
+		<!-- Include the entire apps dir -->
+		<fileSet>
+			<directory>src/main/resources/coherence/apps</directory>
+			<outputDirectory>coherence/apps/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		<!-- Make app bin_sh files executable. -->
+		<!-- <fileSet> <directory>src/main/resources/coherence/apps/grafana/bin_sh</directory> <outputDirectory>coherence/apps/grafana/bin_sh</outputDirectory> 
+			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+		<fileSet>
+			<directory>src/main/resources/coherence/apps/perf_test/bin_sh</directory>
+			<outputDirectory>coherence/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+
+		<!-- plugins (include test jar in the plugins/ dir) -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+		<fileSet>
+			<directory>../coherence-addon-core/target</directory>
+			<outputDirectory>coherence/plugins</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet>
+
 		<!-- ==== All === -->
 		<!-- common/etc -->
 		<fileSet>
@@ -353,7 +655,7 @@
 			<fileMode>0755</fileMode>
 			<directoryMode>0755</directoryMode>
 		</fileSet>
-		
+
 		<!-- Others -->
 		<fileSet>
 			<directory>..</directory>
@@ -371,8 +673,8 @@
 
 	<!-- Copy template files to clusters and apps, copy kustom overlay files -->
 	<files>
-	    <!-- Copy create_rwe to bin_sh/ -->
-	    <file>
+		<!-- Copy create_rwe to bin_sh/ -->
+		<file>
 			<source>src/main/resources/common/bin_sh/create_rwe</source>
 			<outputDirectory>bin_sh</outputDirectory>
 			<fileMode>0755</fileMode>
@@ -385,7 +687,7 @@
 			<source>src/main/resources/common/bin_sh/.utilenv.sh</source>
 			<outputDirectory>bin_sh</outputDirectory>
 		</file>
-		
+
 		<!-- Copy files that may need to be modified in the overlay directories -->
 		<file>
 			<source>src/main/resources/hazelcast/k8s/kustom/etc/hazelcast/base/statefulset.yaml</source>
@@ -403,7 +705,7 @@
 			<source>src/main/resources/hazelcast/k8s/kustom/etc/hazelcast/storage/gke/nfs/nfs-pv.yaml</source>
 			<outputDirectory>hazelcast/k8s/kustom/etc/hazelcast/overlay-nfs</outputDirectory>
 		</file>
-		
+
 	</files>
 
 </assembly>

@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -vm -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+#
+# Determeint $TAR_BALL_PATH
+#
+ROOT_DIR_NAME=$(basename $BASE_DIR)
+TOP_DIR="$(dirname "$BASE_DIR")"
+TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+TAR_BALL_GZ_PATH=$BASE_DIR/bundles/$TAR_BALL_GZ_NAME
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Download all the log and statistics files from the VMs to the local file system
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-?]
+
+DESCRIPTION
+   Downloads the log and statistics files from the VMs to the local cluster's
+   'log' and 'stats' directories.
+
+   If the '-vm' option is not specified, then it downloads the log and statistics files
+   from the hosts defined by the 'vm.locator.hosts' and 'vm.hosts' properties in the
+   'etc/cluster.properties' file.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -vm comma_separated_hosts
+             A comma separated list of VM hosts or addresses. If the list contains spaces
+             then enclosed it in quotes.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+
+   $LOG_DIR
+             The current cluster log directory.
+
+   $STATS_DIR
+             The current cluster stats directory.
+EOF
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "vm_*" $EXECUTABLE
+   exit
+fi
+
+if [ "$VM_ENABLED" != "true" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: The workspace is not a VM workspace. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1 
+fi
+
+# Make sure the cluster is VM enabled
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "false" ]; then
+   echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+   echo >&2 "       in the 'etc/cluster.properties' file."
+   exit 1
+fi
+
+# 
+# VM cluster
+#
+if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+   VM_HOSTS=$VM_HOSTS_ARG
+else
+   VM_HOSTS=$(getAllMergedVmHosts)
+fi
+if [ "$VM_HOSTS" == "" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   if [ "$VM_HOSTS" == "" ]; then
+      echo >&2 "    ERROR: You must specify the '-vm' option or set the 'vm.hosts' property"
+      echo >&2 "           in the 'etc/cluster.properties' file. Command aborted."
+      exit 1
+   fi
+   echo "----------------------------------------------------------------"
+fi
+
+# Replace , with space
+__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+DEFAULT_USER=$(whoami)
+VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+
+if [ "$KEY" == "" ]; then
+   KEY=`getClusterProperty "vm.privateKeyFile"`
+fi
+VM_KEY=""
+if [ "$KEY" != "" ]; then 
+   if [ ! -f "$KEY" ]; then
+      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+   VM_KEY="-i $KEY"
+fi
+
+# Find all existing and new hosts
+EXISTING_HOSTS=
+NEW_HOSTS=
+THIS_VM_HOSTNAME=`hostname`
+COMMAND="if [ -d "$BASE_DIR" ]; then echo true; else echo false; fi"
+EXISTING_HOST_COUNT=0
+NEW_HOST_COUNT=0
+
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+echo "VM_PADOGRID_WORKSPACES_HOME/=$VM_PADOGRID_WORKSPACES_HOME/"
+FROM_LOG_DIR=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/$CLUSTER/log
+FROM_STATS_DIR=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/$CLUSTER/stats
+
+if [ ! -d "$LOG_DIR" ]; then
+   mkdir -p $LOG_DIR
+fi
+if [ ! -d "$STATS_DIR" ]; then
+   mkdir -p $STATS_DIR
+fi
+
+for VM_HOST in $__VM_HOSTS; do
+   if [ "$VM_HOST" == "$THIS_VM_HOSTNAME" ]; then
+      continue
+   fi
+   HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+   if [ "$HOSTNAME" == "" ]; then
+      echo "Invalid host [$VM_HOST]"
+      continue
+   elif [ "$HOSTNAME" == "$THIS_VM_HOSTNAME" ]; then
+      continue
+   fi
+
+   echo "   Downloading $VM_HOST..."
+   scp -q -r -o stricthostkeychecking=no $VM_KEY $VM_USER@$VM_HOST:$FROM_LOG_DIR/*.log $LOG_DIR/ 
+   scp -q -r -o stricthostkeychecking=no $VM_KEY $VM_USER@$VM_HOST:$FROM_STATS_DIR/*.gfs $STATS_DIR/
+
+done
+
+echo ""
+echo "Downloaded directories:"
+echo "   $LOG_DIR"
+echo "   $STATS_DIR"
+echo ""
+echo "Download complete."

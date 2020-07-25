@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+REPO_NAME=geode-desktop
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-clean] [-?]"
+   echo ""
+   echo "   Builds the perf_test 'factory' environment for the workspace. It downloads"
+   echo "   the dependencies and places them in the workspace's lib directory."
+   echo "      $PADOGRID_WORKSPACE/lib"
+   echo ""
+   echo "   -clean Cleans up the build files after the build completes."
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+
+pushd $APP_DIR > /dev/null
+mvn install
+popd > /dev/null
+
+# If -all is specified then do not remove the binary files. This option is used
+# when building the padogrid-all distribution.
+if [ "$ALL" != "true" ]; then
+   cp $APP_DIR/lib/* $PADOGRID_WORKSPACE/lib/
+
+   # Remove the build files if the -clean option is specified.
+   if [ "$CLEAN" == "true" ]; then
+      rm -rf $APP_DIR/lib
+   fi
+fi
+
+#
+# Display build information
+#
+echo ""
+echo "Workspace: $PADOGRID_WORKSPACE"
+echo ""
+echo "Downloaded the required library files into the following directory."
+echo ""
+echo "   $PADOGRID_WORKSPACE/lib"
+echo ""
+echo "CLASSPATH includes the above directory for all apps and clusters running under"
+echo "this workspace."
+echo ""
+echo "See ../README.md for configuring the above add-on(s)."
+echo ""

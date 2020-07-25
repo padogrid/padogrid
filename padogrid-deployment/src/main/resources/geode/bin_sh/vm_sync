@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-vm -?"
+   echo "-cluster -vm -rwe -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -49,7 +49,7 @@ NAME
    $EXECUTABLE - Synchronize the rmote VMs with the local workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-simulate] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-rwe] [-simulate] [-?]
 
 DESCRIPTION
    Synchronizes all the VMs defined by VM_HOSTS environment variable in the workspace
@@ -71,6 +71,10 @@ OPTIONS
              A comma separated list of VM hosts or addresses. If the list contains spaces
              then enclosed it in quotes.
 
+   -rwe
+             Synchronizes RWE specific configuration files also. Specify this option if the license keys
+             are updated in the RWE's hidden file, '.<project>env.sh', for example.
+
    -simulate
              Print the remote commands but do not execute.
 
@@ -91,6 +95,12 @@ SEE ALSO
 EOF
    printSeeAlsoList "vm_*" $EXECUTABLE
    exit
+fi
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "In simulation mode [$EXECUTABLE]..."
+   echo ""
 fi
 
 # Available only on VM workspaces
@@ -234,11 +244,9 @@ sed -e 's|export JAVA_HOME=.*$|export JAVA_HOME='\"${VM_JAVA_HOME}\"'|' \
     $PADOGRID_WORKSPACE/setenv.sh > /tmp/setenv.sh
 
 # Prepare workspaces (rwe) setenv.sh file for VMs
-# (Convert Hazelcast to Geode)
+# (Convert VM to local product path)
 sed -e 's|export JAVA_HOME=.*$|export JAVA_HOME='\"${VM_JAVA_HOME}\"'|' \
     -e 's|export PRODUCT_HOME=.*$|export PRODUCT_HOME='\"${VM_PRODUCT_HOME}\"'|' \
-    -e 's|export HAZELCAST_HOME=.*$|export GEODE_HOME='\"\${PRODUCT_HOME}\"'|' \
-    -e '/export JET_HOME=.*$/d' \
     -e 's|export PADOGRID_HOME=.*$|export PADOGRID_HOME='\"${VM_PADOGRID_HOME}\"'|' \
     -e 's|export PADOGRID_WORKSPACE=.*$|export PADOGRID_WORKSPACE='\"${VM_PADOGRID_WORKSPACE}\"'|' \
     -e 's|PRODUCT=.*$|PRODUCT='\"${PRODUCT}\"'|' \
@@ -293,14 +301,14 @@ for VM_HOST in $__VM_HOSTS; do
          scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
       fi
    fi
-   if [[ "$SETENV_EXISTS" == "false" ]]; then
+   if [ "$RWE_SPECIFIED" == "true" ] || [[ "$SETENV_EXISTS" == *"false" ]]; then
       if [ "$SIMULATE" == "true" ]; then
          echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       else
          scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       fi
    fi
-   if [ "$GEODEENV_EXISTS" != "true" ] && [ -f "$PADOGRID_WORKSPACES_HOME/.geodeenv.sh" ]; then
+   if [ "$RWE_SPECIFIED" == "true" ] || [ "$GEODEENV_EXISTS" != "true" ] && [ -f "$PADOGRID_WORKSPACES_HOME/.geodeenv.sh" ]; then
       if [ "$SIMULATE" == "true" ]; then
          echo scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/.geodeenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.geodeenv.sh
       else
@@ -334,13 +342,14 @@ done
 if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
    JAVA_DIR_NAME=$(basename $VM_JAVA_HOME)
    echo "------------------------------------------------------------------------------------------"
-   echo -e "${CLightRed}WARNING:${CNone}"
-   echo "$VM_JAVA_HOME"
+   echo -e "${CBrownOrange}WARNING:${CNone}"
    echo "   JDK not installed on the following VMs. The workspace will not be operational"
    echo "   until you install JDK on these VMs."
-   echo "      $JAVA_HOME_NOT_FOUND_LIST"
+   echo -e "      ${CLightRed}$JAVA_HOME_NOT_FOUND_LIST${CNone}"
+   echo ""
    echo "VM Java Home Path:"
    echo "      $VM_JAVA_HOME"
+   echo ""
    echo "To install Java on the above VMs, download the correct version of JDK and execute 'vm_install'."
    echo "Example:"
    echo "   vm_install -java $JAVA_DIR_NAME.tar.gz"
@@ -349,15 +358,17 @@ fi
 if [ "$GEODE_HOME_NOT_FOUND_LIST" != "" ]; then
    GEODE_DIR_NAME=$(basename $VM_GEODE_HOME)
    echo "------------------------------------------------------------------------------------------"
-   echo -e "${CLightRed}WARNING:${CNone}"
+   echo -e "${CBrownOrange}WARNING:${CNone}"
    echo "   Geode is not installed on the following VMs. The workspace will not be operational"
    echo "   until you install Geode on these VMs."
-   echo "      $GEODE_HOME_NOT_FOUND_LIST"
+   echo -e "      ${CLightRed}$GEODE_HOME_NOT_FOUND_LIST${CNone}"
+   echo ""
    echo "VM Geode Path:"
    echo "    $VM_GEODE_HOME"
+   echo ""
    echo "To install Geode on the above VMs, download the correct version of JDK and execute 'vm_install'."
    echo "Example:"
-   echo "   vm_install -padogrid $GEODE_DIR_NAME.tar.gz"
+   echo "   vm_install -product $GEODE_DIR_NAME.tar.gz"
    echo "------------------------------------------------------------------------------------------"
 fi
 

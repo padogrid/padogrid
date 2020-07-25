@@ -2,10 +2,10 @@ package org.hazelcast.addon.test.perf.data;
 
 import java.io.IOException;
 
-import com.hazelcast.core.PartitionAware;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
+import com.hazelcast.core.PartitionAware;
 
 /**
  * ClientProfileKey is a composite key class containing client profile information.

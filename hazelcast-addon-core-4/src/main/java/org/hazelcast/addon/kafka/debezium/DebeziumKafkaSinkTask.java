@@ -3,6 +3,7 @@ package org.hazelcast.addon.kafka.debezium;
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,8 @@ import com.hazelcast.map.IMap;
 public class DebeziumKafkaSinkTask extends SinkTask {
 
 	private static final Logger log = LoggerFactory.getLogger(DebeziumKafkaSinkTask.class);
+	
+	private static final int MICRO_IN_MILLI = 1000;
 
 	private boolean isDebugEnabled = false;
 
@@ -61,7 +64,6 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 	private String[] valueColumnNames;
 	private String[] valueFieldNames;
 	private ObjectConverter objConverter;
-	private boolean isDelete = true;
 
 	@Override
 	public String version() {
@@ -257,8 +259,15 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				valueColumnNames = getColumnNames(valueStruct);
 			}
 			Object valueFieldValues[] = new Object[valueColumnNames.length];
+			Class<?>valueFieldTypes[] = objConverter.getValueFielTypes();
 			for (int j = 0; j < valueColumnNames.length; j++) {
 				valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
+				// TODO: This is a hack. Support other types also.
+				if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
+					if (valueFieldValues[j] instanceof Number) {
+						valueFieldValues[j] = new Date((long)valueFieldValues[j] / MICRO_IN_MILLI);
+					}
+				}
 			}
 			try {
 				value = objConverter.createValueObject(valueFieldValues);

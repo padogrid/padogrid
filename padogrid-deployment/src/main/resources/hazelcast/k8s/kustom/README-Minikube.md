@@ -113,9 +113,17 @@ scp -r etc docker@minikube:/data/custom/
 
 # Upload addon jar files to the minikube host. 
 # IMPORTANT: Upload v3/* for Hazelcast 3.x, v4/* for Hazelcast 4.x.
+
+# Hazelcast 3.x
 scp -r $PADOGRID_HOME/lib/*  \
-$PADOGRID_HOME/lib/hazelcast/v3/* \
-$PADOGRID_HOME/plugins/hazelcast/v3/* \
+$PADOGRID_HOME/hazelcast/lib/v3/* \
+$PADOGRID_HOME/hazelcast/plugins/v3/* \
+docker@minikube:/data/custom/plugins/v1/
+
+# Hazelcast 4.x:
+scp -r $PADOGRID_HOME/lib/*  \
+$PADOGRID_HOME/hazelcast/lib/v4/* \
+$PADOGRID_HOME/hazelcast/plugins/v4/* \
 docker@minikube:/data/custom/plugins/v1/
 ```
 

@@ -49,6 +49,7 @@ DESCRIPTION
  
    minikube  Minikube on your laptop or PC
    gke       Goggle Kubernetes Engine in GCP
+   minishift Minishift on your laptop or PC
 
    To use the created environment, you must have access to one of the platforms
    with all the required software installed and a valid account. Each environment
@@ -59,7 +60,10 @@ OPTIONS
              Minikube on your local machine.
 
    -k8s gke
-             Google Kubuernetes Engine.
+             Google Kubernetes Engine.
+
+   -k8s minishift
+             Minishift on your local machine.
 
    -cluster cluster_name
              Required Kubernetes cluster name. This name is used to create
@@ -88,7 +92,7 @@ fi
 if [ "$K8S" == "" ]; then
    K8S=$DEFAULT_K8S
 fi
-if [ "$K8S" != "minikube" ] && [ "$K8S" != "gke" ]; then
+if [ "$K8S" != "minikube" ] && [ "$K8S" != "gke" ] && [ "$K8S" != "minishift" ] && [ "$K8S" != "openshift" ]; then
    >&2 echo "ERROR: Unsupported Kubernetes cloud platform. Please use the '-?' option"
    >&2 echo "       to see the usage. Command aborted."
    exit
@@ -138,6 +142,7 @@ if [ "$K8S" == "minikube" ]; then
   cp -rf $BASE_DIR/k8s/kustom/README-Minikube.md $CLUSTER_DIR
   rm -r $CLUSTER_DIR/etc/hazelcast/storage/gke
   rm $CLUSTER_DIR/bin_sh/setenv.sh
+  chmod 755 $CLUSTER_DIR/bin_sh/*
   create_setenv_file
   echo "" >> $SETENV_FILE
   echo "#" >> $SETENV_FILE
@@ -154,6 +159,7 @@ elif [ "$K8S" == "gke" ]; then
   cp -rf $BASE_DIR/k8s/kustom/README-GKE.md $CLUSTER_DIR
   rm -r $CLUSTER_DIR/etc/hazelcast/storage/minikube
   rm $CLUSTER_DIR/bin_sh/setenv.sh
+  chmod 755 $CLUSTER_DIR/bin_sh/*
   create_setenv_file
   echo "" >> $SETENV_FILE
   echo "#" >> $SETENV_FILE
@@ -168,6 +174,38 @@ elif [ "$K8S" == "gke" ]; then
   echo "export REGION=us-east1" >> $SETENV_FILE
   echo "export ZONE=us-east1-b" >> $SETENV_FILE
   echo "export INSTANCE_NAME=gke-kustomize-test-default-pool-c82eb23e-bzft" >> $SETENV_FILE
+
+elif [ "$K8S" == "minishift" ]; then
+
+  K8S_DOC="README-Minishift.md"
+  cp -rf $BASE_DIR/k8s/ocp/bin_sh $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/ocp/etc $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/ocp/README-Minishift.md $CLUSTER_DIR
+  rm $CLUSTER_DIR/bin_sh/setenv.sh
+  chmod 755 $CLUSTER_DIR/bin_sh/*
+  create_setenv_file
+  echo "" >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "# Follow the instructions in $K8S_DOC using the following" >> $SETENV_FILE
+  echo "# environment variable." >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "export HAZELCAST_OPENSHIFT_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
+
+elif [ "$K8S" == "openshift" ]; then
+
+  K8S_DOC="README-Openshift.md"
+  mkdir $CLUSTER_DIR/bin_sh
+  cp $BASE_DIR/k8s/kustom/bin_sh/create_certs $CLUSTER_DIR/bin_sh/
+  cp -rf $BASE_DIR/k8s/kustom/etc $CLUSTER_DIR
+  cp -rf $BASE_DIR/k8s/kustom/README-Openshift.md $CLUSTER_DIR
+  chmod 755 $CLUSTER_DIR/bin_sh/*
+  create_setenv_file
+  echo "" >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "# Follow the instructions in $K8S_DOC using the following" >> $SETENV_FILE
+  echo "# environment variable." >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "export HAZELCAST_OPENSHIFT_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
 
 fi
 

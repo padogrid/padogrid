@@ -865,9 +865,10 @@ function getWorkspaceClusterProperty
 #
 function setProperty
 {
-   __LINE_NUM=0
+   local __LINE_NUM=0
+   local __SED_BACKUP
    if [ -f $__PROPERTIES_FILE ]; then
-      __found="false"
+      local __found="false"
       while IFS= read -r line; do
          let __LINE_NUM=__LINE_NUM+1
          line=`trimString $line`
@@ -877,6 +878,13 @@ function setProperty
          fi
       done < "$__PROPERTIES_FILE"
       if [ "$__found" == "true" ]; then
+         # SED backup prefix
+         if [[ ${OS_NAME} == DARWIN* ]]; then
+            # Mac - space required
+            __SED_BACKUP=" 0"
+         else
+            __SED_BACKUP="0"
+         fi
          sed -i${__SED_BACKUP} ''$__LINE_NUM's/'$line'/'$2'='$3'/g' "$__PROPERTIES_FILE"
       else
          echo "$2=$3" >> "$__PROPERTIES_FILE"
@@ -1021,8 +1029,8 @@ function getPrivateNetworkAddresses
 #
 # Updates the default workspaces envionment variables with the current values
 # in the .rwe/defaultenv.sh file.
-# @required PADOGRID_WORKSPACE
 # @required PRODUCT
+# @required PADOGRID_WORKSPACE
 #
 function updateDefaultEnv
 {
@@ -1031,8 +1039,35 @@ function updateDefaultEnv
    if [ ! -d "$RWE_DIR" ]; then
       mkdir "$RWE_DIR"
    fi
+   local WORKSPACE=${PADOGRID_WORKSPACE##*/}
    echo "export PRODUCT=\"$PRODUCT\"" > $DEFAULTENV_FILE
-   echo "export PADOGRID_WORKSPACE=\"$PADOGRID_WORKSPACE\"" > $DEFAULTENV_FILE
+   echo "export PADOGRID_WORKSPACE=\"\$PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $DEFAULTENV_FILE
+}
+
+#
+# Creates a temporary defaultenv.sh file containing the specified parameters.
+# @param product       Product name
+# @param workspacePath Workspace path
+#
+function createTmpDefaultEnv
+{
+   local __PRODUCT="$1"
+   local __WORKSPACE_PATH="$2"
+   local DEFAULTENV_FILE="/tmp/defaultenv.sh"
+   local WORKSPACE=${PADOGRID_WORKSPACE##*/}
+   echo "export PRODUCT=\"$__PRODUCT\"" > $DEFAULTENV_FILE
+   echo "export PADOGRID_WORKSPACE=\"\$PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $DEFAULTENV_FILE
+}
+
+#
+# Removes the temporary defaultenv.sh file create by the 'createTmpDefaultEnv function
+# if exists.
+#
+function removeTmpDefaultEnv
+{
+   if [ -f "/tmp/defaultenv.sh" ]; then
+      rm "/tmp/defaultenv.sh"
+   fi
 }
 
 #
@@ -1641,7 +1676,7 @@ function padogrid
       return
    fi
 
-   if [ "$1" == "cp_sub" ]; then
+   if [ "$1" == "cp_sub" ] || [ "$1" == "tools" ]; then
       COMMAND=$2
       SHIFT_NUM=2
    elif [ "$1" == "-version" ]; then
@@ -1655,6 +1690,8 @@ function padogrid
       SHIFT_NUM=1
    fi
 
+
+   if [ "$COMMAND" == "" ]; then
 cat <<EOF
 .______      ___       _______   ______     _______ .______       __   _______ ™
 |   _  \    /   \     |       \ /  __  \   /  _____||   _  \     |  | |       \ 
@@ -1667,7 +1704,6 @@ v$PADOGRID_VERSION
 
 EOF
 
-   if [ "$COMMAND" == "" ]; then
       RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       echo "Root Workspaces Environments (RWEs)"
       echo "-----------------------------------"
@@ -1762,27 +1798,39 @@ function getWorkspaceInfoList
    local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh")
    local PRODUCT_VERSION
    if [ "$CLUSTER_TYPE" == "jet" ]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//' -e 's/"//')
-      if [ "$PRODUCT_VERSION" == "" ]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//')
+      if [ "$PRODUCT_VERSION" == "$__PRODUCT_HOME" ]; then
          PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-//' -e 's/"//')
+      else
+         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
       fi
    elif [ "$CLUSTER_TYPE" == "imdg" ]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//' -e 's/"//')
-      if [ "$PRODUCT_VERSION" == "" ]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//')
+      if [ "$PRODUCT_VERSION" == "$__PRODUCT_HOME" ]; then
          PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-//' -e 's/"//')
-      fi
-   else
-      if [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
-         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
-         CLUSTER_TYPE="gemfire"
       else
-         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*apache-geode-//' -e 's/"//')
-         CLUSTER_TYPE="geode"
+         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
       fi
+   elif [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
+      CLUSTER_TYPE="gemfire"
+   elif [[ "$__PRODUCT_HOME" == *"geode"* ]]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*apache-geode-//' -e 's/"//')
+      CLUSTER_TYPE="geode"
+   elif [[ "$__PRODUCT_HOME" == *"snappydata"* ]]; then
+      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*snappydata-//' -e 's/"//')
+      PRODUCT_VERSION=${PRODUCT_VERSION%-bin}
+      CLUSTER_TYPE="snappydata"
+   elif [[ "$__PRODUCT_HOME" == *"coherence"* ]]; then
+      __PRODUCT_HOME=$(echo $__PRODUCT_HOME | sed -e 's/.*=//' -e 's/"//g')
+      if [ -f "$__PRODUCT_HOME/product.xml" ]; then
+         PRODUCT_VERSION=$(grep "version value" "$__PRODUCT_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+      fi
+      CLUSTER_TYPE="coherence"
    fi
 
-   VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
-   VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
+   local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
    if [ "$VM_ENABLED" == "true" ]; then
       VM_WORKSPACE="vm, "
    else
@@ -1791,6 +1839,34 @@ function getWorkspaceInfoList
    PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/^.*padogrid_//' -e 's/"//')
    echo "${VM_WORKSPACE}${CLUSTER_TYPE}_${PRODUCT_VERSION}, padogrid_$PADOGRID_VERSION"
+}
+
+#
+# Returns "true" if the specified workspace name is VM enabled in the sepcified RWE.
+#
+# @param workspaceName Workspace name in the current RWE.
+# @param rwePath       RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assumed.
+#
+function isWorkspaceVmEnabled
+{
+   local WORKSPACE="$1"
+   local RWE_PATH="$2"
+   local VM_ENABLED
+   if [ "$WORKSPACE" == "" ]; then
+      VM_ENABLED="false"
+   else
+      if [ "$RWE_PATH" == "" ]; then
+         RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+      fi
+      local WORKSPACE_PATH="$RWE_PATH/$WORKSPACE"
+      if [ ! -d "$WORKSPACE_PATH" ]; then
+         VM_ENABLED="false"
+      else
+         local VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
+         VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
+      fi
+   fi
+   echo $VM_ENABLED
 }
 
 #
@@ -1902,19 +1978,29 @@ function printSeeAlsoList
 
 #
 # Displays a tree view of the specified list
-# @param list   Space separated list
+# @param list          Space separated list
+# @param highlightItem Optional. If sepedified, then the matching item is highlighted in green.
 #
 function showTree
 {
    local LIST=($1)
+   local HIGHLIGHT_ITEM="$2"
    local len=${#LIST[@]}
    local last_index
    let last_index=len-1
    for ((i = 0; i < $len; i++)); do
       if [ $i -lt $last_index ]; then
-         echo "├── ${LIST[$i]}"
+         if [ "${LIST[$i]}" == "$HIGHLIGHT_ITEM" ]; then
+            echo -e "├── ${CLightGreen}${LIST[$i]}${CNone}"
+         else
+            echo "├── ${LIST[$i]}"
+         fi
       else
-         echo "└── ${LIST[$i]}"
+         if [ "${LIST[$i]}" == "$HIGHLIGHT_ITEM" ]; then
+            echo -e "└── ${CLightGreen}${LIST[$i]}${CNone}"
+         else
+            echo "└── ${LIST[$i]}"
+         fi
       fi
    done
 }
@@ -1957,13 +2043,14 @@ function getHostIPv4List
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT        geode or hazelcast
-#   CLUSTER_TYPE   This is set to imdg or jet only if PRODUCT is hazelcast.
-#   CLUSTER        Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet,
-#                  only if CLUSTER is not set.
-#   GEODE_HOME     Set to PRODUCT_HOME if PRODUCT is geode.
-#   HAZELCAST_HOME Set to PRODUCT_HOME if PRODUCT is hazelcast.
-#   JET_HOME       Set to PRODUCT_HOME if PRODUCT is hazelcast.
+#   PRODUCT         geode, hazelcast, or snappydata
+#   CLUSTER_TYPE    This is set to imdg or jet only if PRODUCT is hazelcast.
+#   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy
+#                   only if CLUSTER is not set.
+#   GEODE_HOME      Set to PRODUCT_HOME if PRODUCT is geode.
+#   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast.
+#   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast.
+#   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 # @required PRODUCT_HOME Product home path (installation path)
 #
 function determineProduct
@@ -1997,6 +2084,16 @@ function determineProduct
          fi
       fi
       GEODE_HOME="$PRODUCT_HOME"
+   elif [[ "$PRODUCT_HOME" == *"snappydata"* ]]; then
+      PRODUCT="snappydata"
+      SNAPPYDATA_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="snappydata"
+      CLUSTER=$DEFAULT_SNAPPYDATA_CLUSTER
+   elif [[ "$PRODUCT_HOME" == *"coherence"* ]]; then
+      PRODUCT="coherence"
+      COHERENCE_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="coherence"
+      CLUSTER=$DEFAULT_COHERENCE_CLUSTER
    else
       PRODUCT=""
    fi
@@ -2018,9 +2115,9 @@ function createProductEnvFile
       WORKSPACES_HOME="$PADOGRID_WORKSPACES_HOME"
    fi
    if [ "$PRODUCT_NAME" == "geode" ]; then
-      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.geodeenv.s ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.geodeenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.geodeenv.sh
-         echo "# Enter Gedoe/GemFire product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "# Enter Geode/GemFire product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
          echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
       fi
@@ -2044,5 +2141,57 @@ function createProductEnvFile
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "MC_LICENSE_KEY=" >> $WORKSPACES_HOME/.hazelcastenv.sh
       fi
+   elif [ "$PRODUCT_NAME" == "snappydata" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.geodeenv.sh
+         echo "# Enter SnappyData product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
+      fi
    fi
+}
+
+#
+# Removes all the source duplicate options from the specified target option list.
+# and returns the new target option list. The option lists must be in the form of
+# "opt1=value1 opt2=value2 ..."
+#
+# @param sourceOpts Source options list.
+# @param targetOpts Target options list
+#
+function removeEqualToOpts
+{
+   local __SOURCE_OPTS=$1
+   local __TARGET_OPTS=$2
+   local __NEW_OPTS=""
+   for i in $__TARGET_OPTS; do
+      local __OPT=${i/=*/}
+      if [[ "$__SOURCE_OPTS" != *"$__OPT="* ]]; then
+         __NEW_OPTS="$__NEW_OPTS $i"
+      fi
+   done
+   echo "$__NEW_OPTS"
+}
+
+#
+# Returns the value of the specified option found in the specified option list.
+# If not found returns an empty string. The options list must be in the form of
+# "opt1=value1 opt2=value2 ...".
+#
+# @param opt        Option name without the '=' character. Include any preceeding characters
+#                   such as '-' or '--'.
+# @param sourceOpts Option list.
+#
+function getOptValue
+{
+   local __OPT_TO_FIND=$1
+   local __SOURCE_OPTS=$2
+   local __VALUE=""
+   for i in $__SOURCE_OPTS; do
+      if [[ "$i=" == "$__OPT_TO_FIND="* ]]; then
+         __VALUE=${i#$__OPT_TO_FIND=}
+         break;
+      fi
+   done
+   echo "$__VALUE"
 }

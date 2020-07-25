@@ -13,16 +13,18 @@ cd bin_sh
 
 ## Running jet_demo
 
-Upon successful build, you can submit any of the jar files in the `lib` directory to Jet using the `jet.sh` executable. You must have a Jet cluster running before you can run `jet.sh`. For `padohub`, you can simply create a Jet workspace and start a cluster from there as described in the [Jet Workspace](padohub#jet-workspace) section.
+Upon successful build, you can submit any of the jar files in the `lib` directory to Jet using the `jet.sh` executable. You must have a Jet cluster running before you can run `jet.sh`. For `padogrid`, you can simply create a Jet workspace and start a cluster from there as described in the [Jet Workspace](padogrid#jet-workspace) section.
+
+:exclamation: Note that the default ports for Jet clusters in PadoGrid starts from 6701.
 
 ```console
 cd_app jet_demo
 
-# Submit WordCountJob to localhost:5701
-jet.sh submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
-
 # Submit WordCountJob to localhost:6701
 jet.sh -a localhost:6701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+
+# Submit WordCountJob to localhost:5701
+jet.sh submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 ```
 
 ## Monitoring Jobs

@@ -38,11 +38,14 @@ OS_NAME=`echo "$OS_NAME"|awk '{print toupper($0)}'`
 PRODUCT_ARG=
 ENV_ARG=
 RWE_ARG=
+RWE_SPECIFIED=false
 WORKSPACE_ARG=
 JAVA_HOME_ARG=
+COHERENCE_ARG=
 GEODE_ARG=
 HAZELCAST_ARG=
 PATH_ARG=
+CLASSPATH_ARG=
 DATAGRID_ARG=
 JET_ARG=
 NAME_ARG=
@@ -68,6 +71,7 @@ MIRROR_SPECIFIED=false
 VM_SPECIFIED=false
 VM_HOSTS_ARG=
 VM_JAVA_HOME_ARG=
+VM_COHERENCE_HOME_ARG=
 VM_GEODE_HOME_ARG=
 VM_HAZELCAST_HOME_ARG=
 VM_JET_HOME_ARG=
@@ -101,10 +105,14 @@ PREVIEW=false
 DOWNLOAD=false
 CONSOLE=false
 USER=
+GITHOST=github
+BRANCH=
+CONNECT=https
 LIST=false
 HEADER=false
 CATALOG=false
 TREE=false
+OVERWRITE=false
 ALL=false
 PID=
 PIDONLY=
@@ -141,12 +149,16 @@ do
       WORKSPACE_ARG=$i
    elif [ "$PREV" == "-java" ]; then
       JAVA_HOME_ARG=$i
+   elif [ "$PREV" == "-coherence" ]; then
+      COHERENCE_ARG=$i
    elif [ "$PREV" == "-geode" ]; then
       GEODE_ARG=$i
    elif [ "$PREV" == "-hazelcast" ]; then
       HAZELCAST_ARG=$i
    elif [ "$PREV" == "-path" ]; then
       PATH_ARG=$i
+   elif [ "$PREV" == "-classpath" ]; then
+      CLASSPATH_ARG=$i
    elif [ "$PREV" == "-datagrid" ]; then
       DATAGRID_ARG=$i
    elif [ "$PREV" == "-jet" ]; then
@@ -204,6 +216,12 @@ do
       REMOTE=$i
    elif [ "$PREV" == "-user" ]; then
       USER=$i
+   elif [ "$PREV" == "-githost" ]; then
+      GITHOST=$i
+   elif [ "$PREV" == "-branch" ]; then
+      BRANCH=$i
+   elif [ "$PREV" == "-connect" ]; then
+      CONNECT=$i
    elif [ "$PREV" == "-vm" ]; then
       if [[ "$i" != "-"* ]]; then
          VM_HOSTS_ARG=$i
@@ -306,12 +324,16 @@ do
       LONG=true
    elif [ "$i" == "-vm" ]; then
       VM_SPECIFIED=true
+   elif [ "$i" == "-rwe" ]; then
+      RWE_SPECIFIED=true
    elif [ "$i" == "-mirror" ]; then
       MIRROR_SPECIFIED=true
    elif [ "$i" == "-remote" ]; then
       REMOTE_SPECIFIED=true
    elif [ "$i" == "-tree" ]; then
       TREE=true
+   elif [ "$i" == "-overwrite" ]; then
+      OVERWRITE=true
    # this must be the last check
    elif [ "$PREV" == "-gateway" ]; then
       GATEWAY_XML_FILE=$i
@@ -340,6 +362,9 @@ if [ $MEMBER_NUM -lt 1 ]; then
 fi
 if [ $MEMBER_NUM -gt 99 ]; then
    echo "ERROR: Member number must be less than 99: $MEMBER_NUM. Command aborated." >&2; exit 1
+fi
+if [ $CONNECT != "https" ] && [ "$CONNECT" != "ssh" ]; then
+   echo "ERROR: Invalid -connect type: [$CONNECT]. Valid values are https or ssh. Command aborted." >&2; exit 1
 fi
 if [ $MEMBER_NUM -lt 10 ]; then
    MEMBER_NUM=0$MEMBER_NUM

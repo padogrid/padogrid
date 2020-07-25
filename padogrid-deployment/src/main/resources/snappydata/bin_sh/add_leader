@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Add a new SnappyData leader to the specified cluster in the current
+                 padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num leader_number] [-all] [-?]
+
+DESCRIPTION
+   Adds a new SnappyData leader to the specified cluster. If leaders already exist,
+   then it adds a leader with the next available leader number.
+
+   If the cluster is a VM cluster, then only one (1) leader is allowed per VM.
+   Please note that this is a padogrid restriction, not a SnappyData
+   product limitation.
+ 
+   For VM clusters, the locator number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties" file.
+   (Run 'show_cluster -long' to see the VM locator numbers that map to hosts.)
+
+OPTIONS
+   -cluster cluster_name
+             If the -cluster option is present, it starts the leader in the specified
+             cluster; otherwise, it starts the leader in the default cluster.
+
+   -num leader_number
+             Member number starting from 1.
+
+   -all      
+             This option applies to VM clusters only. If specified, it adds a leader
+             to all VMs in the cluster. leader_number is ignored.
+
+NOTES
+   For Vagrant, the leader number is assigned to the node (VM) number. This
+   means you can create multiple clusters, each with their own set of nodes
+   identified by the leader numbers.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*leader*" $EXECUTABLE
+   exit
+fi
+
+#
+# VM cluster
+#
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         echo "ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+         echo "       $ETC_DIR/cluster.properties"
+         echo "       Command aborted."
+         exit 1
+      fi
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+      if [ "$ALL" == "true" ]; then
+         for VM_HOST in $__VM_HOSTS; do
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/add_leader -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+         done
+      else
+         # Determine the host
+         __MEMBER_NUMBER=0
+         __FOUND="false"
+         
+         for VM_HOST in $__VM_HOSTS; do
+            let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+            if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+               __FOUND="true"
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/add_leader -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+               break;
+            fi
+         done
+         FIRST_NUMBER=1
+         LAST_NUMBER=$__MEMBER_NUMBER
+         if [ "$__FOUND" == "false" ]; then
+            echo "ERROR: Invalid leader number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+         fi
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" $POD`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_PREFIX=`getLeaderPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+RUN_DIR=$CLUSTER_DIR/run
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "    ERROR: This cluster has not been created. Please run the create_cluster command"
+   echo "           to create the cluster before running this command. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+
+if [ "$REMOTE_SPECIFIED" == "true" ]; then
+   NEW_MEMBER_NUMBER=1
+else
+   pushd $RUN_DIR > /dev/null 2>&1
+   PREV_MEMBER_NUMBER=0
+   for i in ${MEMBER_PREFIX}*; do
+      if [ -d "$i" ]; then
+        MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+        MEMBER_NUMBER=$(trimLeadingZero $MEMBER_NUMBER)
+        let __NUM=PREV_MEMBER_NUMBER+1
+        if [ $MEMBER_NUMBER -gt $__NUM ]; then
+           MEMBER_NUMBER=$PREV_MEMBER_NUMBER
+           break;
+        else
+           PREV_MEMBER_NUMBER=$MEMBER_NUMBER
+        fi
+      fi
+   done
+   popd > /dev/null 2>&1
+   if [ "$MEMBER_NUM_SPECIFIED" == "true" ]; then
+      let NEW_MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+   else
+      let NEW_MEMBER_NUMBER=MEMBER_NUMBER+1
+   fi
+fi
+NEW_MEMBER=`getLeaderName $NEW_MEMBER_NUMBER`
+NEW_MEMBER_DIR=$RUN_DIR/$NEW_MEMBER
+
+MEMBER_EXISTS="false"
+if [ -d $NEW_MEMBER_DIR ]; then
+   MEMBER_EXISTS="true"
+else
+   mkdir -p $NEW_MEMBER_DIR
+fi
+
+echo "----------------------------------------------------------------"
+echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+echo "      Cluster: $CLUSTER"
+if [ "$MEMBER_EXISTS" == "true" ]; then
+echo "Member Exists: $NEW_MEMBER"
+else
+echo " Member Added: $NEW_MEMBER"
+fi
+echo "  Working Dir: $NEW_MEMBER_DIR"
+echo "----------------------------------------------------------------"

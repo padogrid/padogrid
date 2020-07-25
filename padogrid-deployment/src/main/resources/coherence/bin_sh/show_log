@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -full -log -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the log file of the specified member in the specified padogrid cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster <cluster-name>] [-num <member-number>]
+               [-full] [-log [data|gc]] [-?]
+
+DESCRIPTION
+   Displays the specified member's log file. By default, follows the tail
+   part of the log, equivalent to 'tail -f'. To view the full log, specify
+   the '-full' option, which is equivalent to 'less'.
+
+   For VM clusters, the member number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
+   (Run 'show_cluster -long' to see the VM member numbers that map to hosts.)
+
+   -cluster cluster_name
+             Cluster name.
+
+   -num member_number
+              Member number 1-99
+
+   -full
+              Display the entire log file using 'less'
+
+   -log [data|gc]
+              Display data or GC log file. Default: data
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MEMBER_NUM -log data
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+   $LOG_DIR
+             The current cluster log directory. 
+
+EOF
+fi
+   exit
+fi
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   __MEMBER_NUMBER=0
+   VM_HOST=""
+   for __VM_HOST in $__VM_HOSTS; do
+      let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+      if [ $__MEMBER_NUMBER -eq $MEMBER_NUM ]; then
+         VM_HOST=$__VM_HOST
+         break;
+      fi
+   done
+   if [ "$VM_HOST" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "ERROR: Invalid member number [$MEMBER_NUM]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_log -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $* -num 1"
+   exit
+fi
+
+#
+# Local cluster
+#
+
+POD=`getClusterProperty "pod.name" "local"`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+MEMBER=`getMemberName $MEMBER_NUMBER`
+MEMBER_DIR=$RUN_DIR/$MEMBER
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ ! -d $MEMBER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+case "$LOG" in 
+gc)
+   LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
+   ;;
+
+*)
+   LOG_FILE=$LOG_DIR/${MEMBER}.log
+   ;;
+
+esac
+
+echo ""
+echo -e "Showing log: ${CLightGreen}$LOG_FILE${CNone}"
+echo ""
+if [ "$LOG_FILE" != "" ] && [ -f "$LOG_FILE" ]; then
+   if [ "$FULL" == "true" ]; then 
+      less $LOG_FILE
+   else
+      tail -f $LOG_FILE
+   fi
+else
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: Log file does not exist. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi

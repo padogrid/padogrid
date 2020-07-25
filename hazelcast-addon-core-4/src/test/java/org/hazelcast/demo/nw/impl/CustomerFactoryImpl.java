@@ -32,7 +32,16 @@ public class CustomerFactoryImpl extends AbstractDataObjectFactory {
 	}
 	
 	/**
-	 * Returns an entry with the specified idNum as part of the primary key
+	 * @return the data object class
+	 */
+	@Override
+	public Class<?> getDataObjectClass()
+	{
+		return Customer.class;
+	}
+	
+	/**
+	 * @return an entry with the specified idNum as part of the primary key
 	 */
 	@Override
 	public DataObjectFactory.Entry createEntry(int idNum) {

@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-num -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Kill the specified leader in the current padogrid cluster
+
+SYNOPSIS
+   $EXECUTABLE -num leader_number [-?]
+
+DESCRIPTION
+   Kills the specified cluster leader.
+
+   For VM clusters, the leader number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
+   (Run 'show_cluster -long' to see the VM leader numbers that map to hosts.)
+
+EOF
+if [ "$MAN_SPECIFIED" == "true" ]; then
+cat <<EOF
+   etc/cluster.properties
+EOF
+else
+cat <<EOF
+   $CLUSTER_DIR/etc/cluster.properties
+EOF
+fi
+cat <<EOF
+
+OPTIONS
+   -num leader_number
+             Leader number 1-$LAST_MEMBER_NUM
+
+DEFAULT
+   $EXECUTABLE -num leader_number
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*leader*" $EXECUTABLE
+   exit
+fi
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: Leader number not specified. Run 'kill_leader -?' to see usage. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+#
+# VM cluster
+#
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         echo "ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+         echo "       $ETC_DIR/cluster.properties"
+         echo "       Command aborted."
+         exit 1
+      fi
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+
+      # Determine the host
+      __MEMBER_NUMBER=0
+      __FOUND="false"
+      
+      for VM_HOST in $__VM_HOSTS; do
+         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+            __FOUND="true"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_leader -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+            break;
+         fi
+      done
+      FIRST_NUMBER=1
+      LAST_NUMBER=$__MEMBER_NUMBER
+      if [ "$__FOUND" == "false" ]; then
+         echo "ERROR: Invalid leader number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "cd $REMOTE_BASE_DIR/$PRODUCT/bin_sh; $COMMAND_PREFIX ./kill_leader -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*;"
+   exit
+fi
+
+MEMBER_NUMBER=$MEMBER_NUM
+MEMBER_PREFIX=`getLeaderPrefix`
+MEMBER=${MEMBER_PREFIX}$MEMBER_NUMBER
+MEMBER_DIR=$RUN_DIR/$MEMBER
+
+PID=`getLeaderPid $MEMBER $WORKSPACE`
+if [ -z $PID ]; then
+   echo "Leader not running [$MEMBER]. Command aborted."
+   exit
+else
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      taskkill /f /pid "${PID}"
+   else
+      kill -9 "${PID}"
+   fi
+   echo "----------------------------------------------------------------"
+   echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "Leader Killed: $MEMBER"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "         Type: VM"
+   else
+   echo "          Pod: $POD"
+   fi
+   echo "          PID: $PID"
+   echo "  Working Dir: $MEMBER_DIR"
+   echo "----------------------------------------------------------------"
+fi

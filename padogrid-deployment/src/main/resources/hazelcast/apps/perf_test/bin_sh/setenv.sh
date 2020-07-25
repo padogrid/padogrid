@@ -53,4 +53,7 @@ JAVA_OPTS="$JAVA_OPTS -Dpadogrid.blue=$BLUE_FILE \
 JAVA_OPTS="$JAVA_OPTS -Dhazelcast.client.config=$HAZELCAST_CLIENT_CONFIG_FILE \
 -Dhazelcast.client.failover.config=$HAZELCAST_CLIENT_FAILOVER_CONFIG_FILE"
 
+# Hibernate
+JAVA_OPTS="$JAVA_OPTS -Dhazelcast-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
+
 # CLASSPATH="$CLASSPATH"

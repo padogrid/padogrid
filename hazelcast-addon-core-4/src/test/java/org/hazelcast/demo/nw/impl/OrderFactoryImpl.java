@@ -37,6 +37,15 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 	}
 	
 	/**
+	 * @return the data object class
+	 */
+	@Override
+	public Class<?> getDataObjectClass()
+	{
+		return Order.class;
+	}
+	
+	/**
 	 * Returns an entry with the specified idNum as part of the primary key
 	 */
 	@Override

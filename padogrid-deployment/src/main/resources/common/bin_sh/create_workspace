@@ -88,7 +88,7 @@ fi
 cat <<EOF
 
    -product local_product_home_path
-              Local Geode, GemFire, Hazelcast, or Jet home path.
+              Local Geode, GemFire, Hazelcast, Jet, or Coherence home path.
 
    -vm [comma_separated_host_names]
               A comma separated list of VM host names (or IP addresses). If the list contains
@@ -105,7 +105,7 @@ cat <<EOF
               been created.
 
    -vm-product vm_product_home_path
-              VM Geode, GemFire, Hazelcast, or Jet home path. If the VMs do not have the product
+              VM Geode, GemFire, Hazelcast, Jet, or Coherence home path. If the VMs do not have the product
               installed, then you can install it by executing 'vm_install' after the workspace
               has locally been created.
 
@@ -202,6 +202,9 @@ if [ "$QUIET" == "true" ]; then
          exit
       fi
    fi
+
+   # Set PADOGRID_HOME - required when create_rwe is executed.
+   PADOGRID_HOME="$(dirname "$BASE_DIR")"
 
    JAVA_HOME="$JAVA_HOME_ARG"
    PRODUCT_HOME="$PRODUCT_HOME_ARG"
@@ -317,6 +320,12 @@ else
          fi
          if [ "$GEODE_HOME" != "" ]; then
             echo "   $GEODE_HOME"
+         fi 
+         if [ "$COHERENCE_HOME" != "" ]; then
+            echo "   $COHERENCE_HOME"
+         fi
+         if [ "$SNAPPYDATA_HOME" != "" ]; then
+            echo "   $SNAPPYDATA_HOME"
          fi
          echo "[$__PRODUCT_HOME]:"
 
@@ -569,6 +578,10 @@ echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 
 if [ "$PRODUCT" == "geode" ]; then
    echo "   export GEODE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "coherence" ]; then
+   echo "   export COHERENCE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "snappydata" ]; then
+   echo "   export SNAPPYDATA_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       echo "   export JET_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
@@ -611,7 +624,11 @@ echo "# VM user name." >> $WORKSPACE_DIR/setenv.sh
 echo "VM_USER=\"$VM_USER\"" >> $WORKSPACE_DIR/setenv.sh
 echo "# VM private key file path. If not set, then it defaults to the first .pem file" >> $WORKSPACE_DIR/setenv.sh
 echo "# found in the workspace directory." >> $WORKSPACE_DIR/setenv.sh
-
+if [ "$__VM_PRIVATE_KEY_FILE" != "" ]; then
+echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
+else
+echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
 if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
    cp $VM_PRIVATE_KEY_FILE $WORKSPACE_DIR/
    __VM_PRIVATE_KEY_FILE="$(basename $VM_PRIVATE_KEY_FILE)"
@@ -619,6 +636,9 @@ if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
 else
    __VM_PRIVATE_KEY_FILE=""
 fi
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "# VM hosts may have installation paths dfferent from the local paths." >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
 if [ "$VM_ENABLED" == "true" ]; then
    echo "# VM JDK home directory path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_JAVA_HOME=\"$VM_JAVA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
@@ -627,48 +647,60 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "$PRODUCT" == "geode" ]; then
       echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_GEODE_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "coherence" ]; then
+      echo "# VM Coherence home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_COHERENCE_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "snappydata" ]; then
+      echo "# VM SnappData home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_SNAPPYDATA_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
       if [ "$CLUSTER_TYPE" == "jet" ]; then
          echo "VM_HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       else
          echo "VM_HAZELCAST_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "# VM Management Center home directory path." >> $WORKSPACE_DIR/setenv.sh
+         echo "VM_HAZELCAST_MC_HOME=\"\$VM_HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
       fi
       echo "# VM Jet home directory path." >> $WORKSPACE_DIR/setenv.sh
       if [ "$CLUSTER_TYPE" == "jet" ]; then
          echo "VM_JET_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "# VM Management Center home directory path." >> $WORKSPACE_DIR/setenv.sh
+         echo "VM_HAZELCAST_MC_HOME=\"\$VM_JET_HOME/hazelcast-jet-management-center\"" >> $WORKSPACE_DIR/setenv.sh
       else
          echo "VM_JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       fi
    fi
-   echo "# VM hosts may have the padogrid home path different from the local path." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM PadoGrid home path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_HOME=\"$VM_PADOGRID_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-   echo "# VM hosts may have the workspaces and workspace paths from the local paths." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM RWE path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACES_HOME=\"$VM_PADOGRID_WORKSPACES_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM Workspace path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACE=\"\$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $WORKSPACE_DIR/setenv.sh
-   if [ "$__VM_PRIVATE_KEY_FILE" != "" ]; then
-      echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
-   else
-      echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
-   fi
 else
    echo "# VM JDK home directory path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_JAVA_HOME=\$VM_JAVA_HOME" >> $WORKSPACE_DIR/setenv.sh
    if [ "$PRODUCT" == "geode" ]; then
       echo "# VM Geode home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_GEODE_HOME=\$GEODE_HOME" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "coherence" ]; then
+      echo "# VM Coherence home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_COHERENCE_HOME=\$COHERENCE_HOME" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "snappydata" ]; then
+      echo "# VM SnappyData home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_SNAPPYDATA_HOME=\$SNAPPYDATA_HOME" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_HAZELCAST_HOME=\$HAZELCAST_HOME" >> $WORKSPACE_DIR/setenv.sh
       echo "# VM Jet home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_JET_HOME=\$JET_HOME" >> $WORKSPACE_DIR/setenv.sh
    fi
-   echo "# VM hosts may have the padogrid home path different from the local path." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM PadoGrid home path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_HOME=\$PADOGRID_HOME" >> $WORKSPACE_DIR/setenv.sh
-   echo "# VM hosts may have the workspaces and workspace paths different from the local paths." >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM RWE path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACES_HOME=\$PADOGRID_WORKSPACES_HOME" >> $WORKSPACE_DIR/setenv.sh
+   echo "# VM Workspace path." >> $WORKSPACE_DIR/setenv.sh
    echo "VM_PADOGRID_WORKSPACE=\$PADOGRID_WORKSPACE" >> $WORKSPACE_DIR/setenv.sh
-   echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
 fi
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
@@ -707,12 +739,11 @@ echo "#    \$PADOGRID_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
 echo "#    \$PADOGRID_HOME/plugins/v?/*" >> $WORKSPACE_DIR/setenv.sh
 echo "#    \$PADOGRID_HOME/lib/v?/*" >> $WORKSPACE_DIR/setenv.sh
 if [ "$PRODUCT" == "geode" ]; then
-   if [ "$IS_GEODE_ENTERPRISE" == "true" ]; then
-   echo "#    \$GEODE_HOME/lib/padogrid-enterprise-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
-   else
-   echo "#    \$GEODE_HOME/lib/padogrid-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
-   fi
-   echo "#    \$GEODE_HOME/user-lib/*" >> $WORKSPACE_DIR/setenv.sh
+   echo "#    \$GEODE_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "coherence" ]; then
+   echo "#    \$COHERENCE_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "snappydata" ]; then
+   echo "#    \$SNAPPYDATA_HOME/jars/*" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
    echo "#    \$HAZELCAST_HOME/lib/hazelcast-enterprise-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
@@ -726,7 +757,7 @@ echo "#CLASSPATH=" >> $WORKSPACE_DIR/setenv.sh
 #
 # Copy initenv.sh
 #
-cp $BASE_DIR/etc/init/initenv.sh $WORKSPACE_DIR
+cp $PADOGRID_HOME/etc/init/initenv.sh $WORKSPACE_DIR
 
 #
 # Create .addonenv.sh
@@ -740,6 +771,10 @@ echo "export PODS_DIR=\$PADOGRID_WORKSPACE/pods" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
 if [ "$PRODUCT" == "geode" ]; then
    echo "export PRODUCT=geode" >> $WORKSPACE_DIR/.addonenv.sh
+elif [ "$PRODUCT" == "coherence" ]; then
+   echo "export PRODUCT=coherence" >> $WORKSPACE_DIR/.addonenv.sh
+elif [ "$PRODUCT" == "snappydata" ]; then
+   echo "export PRODUCT=snappydata" >> $WORKSPACE_DIR/.addonenv.sh
 else
    echo "export CLUSTER_TYPE=$CLUSTER_TYPE" >> $WORKSPACE_DIR/.addonenv.sh
    echo "export PRODUCT=hazelcast" >> $WORKSPACE_DIR/.addonenv.sh

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -product -console -all -list -header -catalog -?"
+   echo "-user -githost -product -console -all -list -header -catalog -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - List online bundles or display bundle descriptions
 
 SYNOPSIS
-   $EXECUTABLE [-user GitHub_user_name] [-all | [-product bundle_product_name] | [-list|-header|-catalog] ] [-console] [bundle_file_name]
+   $EXECUTABLE [-user git_user_name] [-githost github|gitea] [-all | [-product bundle_product_name] | [-list|-header|-catalog] ] [-console] [bundle_file_name]
 
 DESCRIPTION
    Lists online bundles or displays the specified bundle's README.md file in the browser. If
@@ -53,8 +53,11 @@ DESCRIPTION
 
 OPTIONS
    -user
-             GitHub user name. If specified, then the specified user's GitHub repos are searched
+             Git user name. If specified, then the specified user's repos are searched
              for bundles. 
+
+   -githost
+             Git host. Supported git hosts are 'github' and 'gitea'. Default: github.
             
    -all
              Includes all product bundles available in the remote bundle repo.
@@ -87,7 +90,7 @@ OPTIONS
              Bundle name or bundle file path
 
 DEFAULT
-   $EXECUTABLE -user padogrid -list
+   $EXECUTABLE -user padogrid -githost github -list
 
 EXAMPLES
    To list remote bundles for the current workspace product:
@@ -127,17 +130,23 @@ fi
 if [ "$1" == "" ]; then
    LIST="true"
 fi
+
+# Source in user defined repo information
+SETENV_FILE="$HOME/.padogrid/setenv.sh"
+if [ -f "$SETENV_FILE" ]; then
+  . $SETENV_FILE
+fi
+
+GITHUB_BASE_URL="https://github.com"
 GITHUB_USER="padogrid"
 if [ "$USER" != "" ]; then
    GITHUB_USER="$USER"
    GITHUB_USERS="$GITHUB_USER"
 else
-   SETENV_FILE="$HOME/.padogrid/setenv.sh"
-   if [ -f "$SETENV_FILE" ]; then
-      . $SETENV_FILE
-   fi
    GITHUB_USERS="padogrid $GITHUB_USERS"
 fi
+
+
 if [ "$ALL" == "true" ]; then
    BUNDLE_PRODUCTS="$BUNDLE_PRODUCT_LIST"
    BUNDLE_PRODUCT="$PRODUCT"
@@ -145,16 +154,35 @@ elif [ "$PRODUCT_ARG" != "" ]; then
    BUNDLE_PRODUCTS="$PRODUCT_ARG"
    BUNDLE_PRODUCT="$PRODUCT_ARG"
 else
-   BUNDLE_PRODUCTS="$PRODUCT"
-   BUNDLE_PRODUCT="$PRODUCT"
+   if [ "$PRODUCT" == "hazelcast" ]; then
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         BUNDLE_PRODUCTS="jet"
+      else
+         BUNDLE_PRODUCTS="$PRODUCT"
+      fi
+   else
+      BUNDLE_PRODUCT="$PRODUCT"
+   fi
 fi
 
 if [ "$CATALOG" == "true" ]; then
    LIST="false"
    HEADER="false"
-   GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
-   BUNDLE_REPOS="$$GITHUB_USER_HOME?tab=repositories"
-   CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/blob/master/$BUNDLE_PRODUCT-catalog.md"
+   if [ "$GITHOST" == "gitea" ]; then
+      GITHUB_USER_HOME="$GITEA_HTTPS_URL/$GITHUB_USER"
+      if [ "$ALL" == "true" ]; then
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/src/branch/master/all-catalog.md"
+      else
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/src/branch/master/$BUNDLE_PRODUCT-catalog.md"
+      fi
+   else
+      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+      if [ "$ALL" == "true" ]; then
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/blob/master/all-catalog.md"
+      else
+         CATALOG_URL="$GITHUB_USER_HOME/catalog-bundles/blob/master/$BUNDLE_PRODUCT-catalog.md"
+      fi
+   fi
    BROWSER_URL="${CATALOG_URL}"
    if [[ ${OS_NAME} == DARWIN* ]]; then
       open "$BROWSER_URL"
@@ -186,8 +214,10 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
    echo "Remote Bundle List"
    echo "------------------"
    echo ""
+
+   # GitHub
    for GITHUB_USER in $GITHUB_USERS; do
-      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+      GITHUB_USER_HOME="$GITHUB_BASE_URL/$GITHUB_USER"
       BUNDLE_REPOS="$GITHUB_USER_HOME?tab=repositories"
       RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
 
@@ -199,7 +229,9 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
          for i in $HREF; do
             if [[ $i == *href=* ]]; then
                BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
-               BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
+	       if [[ $BUNDLE_NAME != *\/* ]]; then 
+                  BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
+	       fi
             fi
          done
          for BUNDLE_NAME in $BUNDLE_LIST; do
@@ -209,6 +241,37 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
                RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README_HEADER.md"
                echo "    $(curl -sS $RAW_FILE_URL)"
                echo ""
+            fi
+         done
+      done
+      echo "---------------------------------------------------------------------------"
+      echo ""
+   done
+   
+   # Gitea
+   USER_REPOS_URL="$GITEA_HTTPS_URL/api/v1/user/repos"
+   REPOS_URL="$GITEA_HTTPS_URL/api/v1/repos"
+   AUTH_HEADER="Authorization: token $GITEA_ACCESS_TOKEN"
+   for GITHUB_USER in $GITEA_USERS; do
+      GITHUB_USER_HOME="$GITEA_HTTPS_URL/$GITHUB_USER"
+      RAW_BASE_URL="$GITEA_RAW_BASE_URL/$GITHUB_USER"
+      echo -e "(Repo: ${CLightGreen}$GITHUB_USER_HOME)${CNone}"
+      let BUNDLE_INDEX=0
+      for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
+	 HREF=$(curl -sS -X GET "$USER_REPOS_URL" -H "$AUTH_HEADER" | grep -o "\"$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-[^\"]*" | grep -o "bundle-${BUNDLE_PRODUCT}\-.*")
+         BUNDLE_LIST=""
+         for i in $HREF; do
+            BUNDLE_LIST="$BUNDLE_LIST $i"
+         done
+	 #https://wecode.sorint.it/dspark/bundle-hazelcast-4-k8s-minishift/raw/branch/master/README.md
+         for BUNDLE_NAME in $BUNDLE_LIST; do
+            let BUNDLE_INDEX=BUNDLE_INDEX+1
+            echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+            if [ "$HEADER" == "true" ]; then
+               HEADER_CONTENT_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_NAME}/contents/README_HEADER.md"
+	       CONTENT=$(curl -sS -X GET "$HEADER_CONTENT_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d)
+               echo "    $CONTENT"
+	       echo ""
             fi
          done
       done
@@ -240,57 +303,86 @@ else
    elif [[ "$BUNDLE_FILE_PATH" == "bundle-gemfire-"* ]]; then
       __PRODUCT="geode"
       BUNDLE_PRODUCT="gemfire"
+   elif [[ "$BUNDLE_FILE_PATH" == "bundle-coherence-"* ]]; then
+      __PRODUCT="coherence"
+      BUNDLE_PRODUCT="coherence"
    elif [[ "$BUNDLE_FILE_PATH" == "bundle-hazelcast-"* ]]; then
       __PRODUCT="hazelcast"
       BUNDLE_PRODUCT="hazelcast"
    elif [[ "$BUNDLE_FILE_PATH" == "bundle-jet-"* ]]; then
       __PRODUCT="hazelcast"
       BUNDLE_PRODUCT="jet"
+   elif [[ "$BUNDLE_FILE_PATH" == "bundle-snappydata-"* ]]; then
+      __PRODUCT="snappydata"
+      BUNDLE_PRODUCT="snappydata"
    else
       echo >&2 "ERROR: Invalid bundle name. Command aborted."
       exit 1
    fi
    
-   
-   GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
-   BUNDLE_REPOS="https://github.com/$GITHUB_USER?tab=repositories"
-   RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
-   HREF=$(curl -sS $BUNDLE_REPOS | grep "\/$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-")
-   BUNDLE_LIST=""
-   for i in $HREF; do
-      if [[ $i == *href=* ]]; then
-         BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
-         BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
-      fi
-   done
-   
-   for BUNDLE_NAME in $BUNDLE_LIST; do
-      if [ "$BUNDLE_NAME" == "$BUNDLE_FILE_PATH" ]; then
+
+   BUNDLE_FOUND="false"
+   if [ "$GITHOST" == "gitea" ]; then
+      GET_REPO_URL="$GITEA_HTTPS_URL/api/v1/repos/$GITHUB_USER/$BUNDLE_FILE_PATH"
+      AUTH_HEADER="Authorization: token $GITEA_ACCESS_TOKEN"
+      HREF=$(curl -sS -X GET "$GET_REPO_URL" -H "$AUTH_HEADER" | grep $BUNDLE_FILE_PATH)
+      if [ "$HREF" != "" ]; then
          BUNDLE_FOUND="true"
       fi
-   done
+   else
+      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+      BUNDLE_REPOS="https://github.com/$GITHUB_USER?tab=repositories"
+      RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
+      HREF=$(curl -sS $BUNDLE_REPOS | grep "\/$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-")
+      BUNDLE_LIST=""
+      for i in $HREF; do
+         if [[ $i == *href=* ]]; then
+            BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
+            BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
+         fi
+      done
+      for BUNDLE_NAME in $BUNDLE_LIST; do
+         if [ "$BUNDLE_NAME" == "$BUNDLE_FILE_PATH" ]; then
+            BUNDLE_FOUND="true"
+         fi
+      done
+   fi
    if [ "$BUNDLE_FOUND" != "true" ]; then
       echo >&2 "ERROR: Specified bundle does not exist in the repo. Command aborted."
       exit 1
    fi
    
    BUNDLE_NAME=$BUNDLE_FILE_PATH
-   BROWSER_URL="${GITHUB_USER_HOME}/${BUNDLE_NAME}"
-   RAW_FILE_URL="${RAW_BASE_URL}/${BUNDLE_NAME}/master/README.md"
+   if [ "$GITHOST" == "gitea" ]; then
+      BROWSER_URL="${GITEA_HTTPS_URL}/$GITHUB_USER/${BUNDLE_NAME}"
+   else
+      BROWSER_URL="${GITHUB_USER_HOME}/${BUNDLE_NAME}"
+   fi
    
    if [ "$CONSOLE" == "true" ]; then
-      curl $RAW_FILE_URL
-      URL=$RAW_FILE_URL
+      if [ "$GITHOST" == "gitea" ]; then
+         REPOS_URL="$GITEA_HTTPS_URL/api/v1/repos"
+         README_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_NAME}/contents/README.md"
+	 echo "README_URL=$README_URL"
+         curl -sS -X GET "$README_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d
+	 echo $CONTENT
+      else
+         curl $RAW_FILE_URL
+      fi
    else
       if [[ ${OS_NAME} == DARWIN* ]]; then
          open "$BROWSER_URL"
-         URL=$BROWSER_URL
       elif [[ ${OS_NAME} == CYGWIN* ]] || [ "$(which cmd.exe)" != "" ]; then
          cmd.exe /c start "" "$BROWSER_URL" > /dev/null 2>&1
-         URL=$BROWSER_URL
+      elif [ "$GITHOST" == "gitea" ]; then
+         REPOS_URL="$GITEA_HTTPS_URL/api/v1/repos"
+         README_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_NAME}/contents/README.md"
+	 echo "README_URL=$README_URL"
+         curl -sS -X GET "$README_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d
+	 echo $CONTENT
       else
+         RAW_FILE_URL="${RAW_BASE_URL}/${BUNDLE_NAME}/master/README.md"
          curl $RAW_FILE_URL
-         URL=$RAW_FILE_URL
       fi
    fi
    

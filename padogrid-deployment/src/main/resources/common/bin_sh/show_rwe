@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-rwe -?"
+   echo "-rwe -vm -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -47,6 +47,9 @@ OPTIONS
    -rwe rwe_name
              If specified then displays the specified RWE environment, otherwise, the current
              RWE enviroment.
+
+   -vm
+             Displays only VM workspaces.
 
 DEFAULT
    $EXECUTABLE
@@ -107,6 +110,8 @@ function isTreeEmpty
 # Displays the specified tree node
 # @param treeNode            Workspace tree node, i.e., "apps", "clusters", etc.
 # @param isLastNonEmptyNode  "true" if the tree node is the last node in the workspace tree.
+# @param isCurrentWorkspace  "true" if the parent node is the current workspace. This parameter
+#                            is used to determine the curretn cluster.
 #
 function displayTreeNode
 {
@@ -130,7 +135,7 @@ function displayTreeNode
       fi
       local CHilight=""
       for ((i = 0; i < ${#ITEMS[@]}; i++)); do
-         if [ "$TOP_NODE" == "clusters" ] && [ "${ITEMS[$i]}" == "$CLUSTER" ]; then 
+         if [ "$IS_CURRENT_WORKSPACE" == "true" ] && [ "$TOP_NODE" == "clusters" ] && [ "${ITEMS[$i]}" == "$CLUSTER" ]; then 
             CHilight="${CLightGreen}"
          else
             CHilight="${CNone}"
@@ -154,19 +159,26 @@ WORKSPACES=( $WORKSPACES )
 let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
 for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
    WORKSPACE=${WORKSPACES[$j]}
-   WORKSPACE_INFO=$(getWorkspaceInfoList $WORKSPACE)
+   if [ "$VM_SPECIFIED" == "true" ] && [ "$(isWorkspaceVmEnabled "$WORKSPACE" "$__RWE_PATH")" == "false" ]; then
+      continue;
+   fi
+   WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$__RWE_PATH")
    if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
-      if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
+      if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ] && [ "$PADOGRID_WORKSPACES_HOME" == "$__RWE_PATH" ]; then
          echo -e "├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+	 IS_CURRENT_WORKSPACE="true"
       else
          echo "├── $WORKSPACE [$WORKSPACE_INFO]"
+	 IS_CURRENT_WORKSPACE="false"
       fi
       LEADING_BAR="│"
    else
-      if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
+      if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ] && [ "$PADOGRID_WORKSPACES_HOME" == "$__RWE_PATH" ]; then
          echo -e "└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+	 IS_CURRENT_WORKSPACE="true"
       else
          echo "└── $WORKSPACE [$WORKSPACE_INFO]"
+	 IS_CURRENT_WORKSPACE="false"
       fi
       LEADING_BAR=" "
    fi
@@ -182,9 +194,9 @@ for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
    
    for NODE in $NODES; do
       if [ "$NODE" == "$LAST_NON_EMPTY_NODE" ]; then
-         displayTreeNode "$NODE" "true"
+         displayTreeNode "$NODE" "true" "$IS_CURRENT_WORKSPACE"
       else
-         displayTreeNode "$NODE" "false"
+         displayTreeNode "$NODE" "false" "$IS_CURRENT_WORKSPACE"
       fi
    done
 done

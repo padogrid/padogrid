@@ -76,7 +76,6 @@ public class TransactionTest implements Constants
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
 	private static int PRINT_STATUS_INTERVAL_IN_SEC;
-	private static boolean IS_FAILOVER_CLIENT = false;
 	
 	private ClientCache clientCache;
 	
@@ -553,15 +552,13 @@ public class TransactionTest implements Constants
 		String resultsDirStr = System.getProperty(PROPERTY_resultsDir, DEFAULT_resultsDir);
 		writeLine();
 		writeLine("Usage:");
-		writeLine("   " + executableName + " [-run] [-failover] [-prop <properties-file>] [-?]");
+		writeLine("   " + executableName + " [-run] [-prop <properties-file>] [-?]");
 		writeLine();
 		writeLine("   Displays or runs transaction and query test cases specified in the properties file.");
 		writeLine("   The default properties file is");
 		writeLine("      " + DEFAULT_txPropertiesFile);
 		writeLine("");
 		writeLine("       -run              Run test cases.");
-		writeLine("       -failover         Configure failover client using the following config file:");
-		writeLine("                            ../etc/geode-client-failover.xml");
 		writeLine("       <properties-file> Optional properties file path.");
 		writeLine();
 		writeLine("   To run the the test cases, specify the '-run' option. Upon run completion, the results");
@@ -582,8 +579,6 @@ public class TransactionTest implements Constants
 				System.exit(0);
 			} else if (arg.equals("-run")) {
 				showConfig = false;
-			} else if (arg.equals("-failover")) {
-				IS_FAILOVER_CLIENT = true;
 			} else if (arg.equals("-prop")) {
 				if (i < args.length - 1) {
 					perfPropertiesFilePath = args[++i].trim();

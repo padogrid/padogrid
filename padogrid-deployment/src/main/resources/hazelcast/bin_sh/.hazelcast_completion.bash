@@ -88,13 +88,13 @@ __padogrid_complete()
          type_list=`getApps`
       fi
       ;;
-      
+
    -port)
       if [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_docker" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
       fi
       ;;
-      
+
    -cluster)
       if [ "$second_word" == "create_k8s" ] || [ "$second_word" == "remove_k8s" ]; then
          __ENV="k8s"
@@ -105,16 +105,16 @@ __padogrid_complete()
       fi
       type_list=`getClusters $__ENV`
       ;;
-      
-   -k8s)
+
+   -k8s) 
       if [ "$second_word" == "create_k8s" ]; then
-         type_list="minikube gke"
+         type_list="minikube gke minishift openshift"
       else
          type_list=`getClusters k8s`
       fi
       ;;
-      
-   -docker)
+
+   -docker) 
       if [ "$second_word" == "create_bundle" ]; then
          type_list=`getClusters docker`
       else
@@ -148,6 +148,14 @@ __padogrid_complete()
          . $HOME/.padogrid/setenv.sh
       fi
       type_list="padogrid $GITHUB_USERS"
+      ;;
+
+   -githost)
+      type_list="github gitea"
+      ;;
+
+   -connect)
+      type_list="https ssh"
       ;;
 
    -log)
@@ -189,11 +197,11 @@ __padogrid_complete()
    -path | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
      ;;
    *)
-      if [ "$second_word" == "cp_sub" ]; then
+      if [ "$second_word" == "cp_sub" ] || [ "$second_word" == "tools" ]; then
          if [ $len -gt 3 ]; then
             type_list=`$third_word -options`
          else
-            type_list=`ls $PADOGRID_HOME/$PRODUCT/$second_word`
+            type_list=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$second_word`
          fi
       elif [ "$second_word" == "switch_rwe" ] || [ "$second_word" == "cd_rwe" ]; then
             if [ $len -lt 4 ]; then
@@ -733,7 +741,7 @@ __command_complete()
       ;;
    -k8s)
       if [ "$command" != "create_workspace" ]; then
-         type_list="minikube gke"
+         type_list="minikube gke minishift openshift"
       else
          type_list=`getClusters k8s`
       fi
@@ -756,6 +764,12 @@ __command_complete()
          . $HOME/.padogrid/setenv.sh
       fi
       type_list="padogrid $GITHUB_USERS"
+      ;;
+   -githost)
+      type_list="github gitea"
+      ;;
+   -connect)
+      type_list="https ssh"
       ;;
    -log)
       type_list="data gc diag mc"
@@ -796,7 +810,7 @@ __command_complete()
 commands=`ls $SCRIPT_DIR`
 for i in $commands; do
    if [ "$i" != "setenv.sh" ]; then
-      if [ "$i" == "cp_sub" ]; then
+      if [ "$i" == "cp_sub" ] || [ "$i" == "tools" ]; then
          sub_commands=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$i`
          for j in $sub_commands; do
             complete -F __command_complete -o bashdefault -o default $j

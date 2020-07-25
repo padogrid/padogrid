@@ -1,0 +1,315 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -simulate -local -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified workspace
+
+WARNING
+   Permanently removes the specified workspace. By default, it runs in the interactive
+   mode if the '-quiet' option is not specified. In the interactive mode, you will
+   have an oportunity to abort the command. 
+
+   If the '-simulate' option is specified, then it simulates the workspace removal steps
+   and it will not remove the workspace. You should always use this option first to
+   to verfy the removal steps before actually removing the workspace.
+
+   Use this command with caution. It removes the entire workspace directory including
+   clusters, pods, apps, docker, k8s, bundles, etc. If a VM workspace, it removes the
+   workspace from all the VMs. 
+
+SYNOPSIS
+   $EXECUTABLE -workspace workspace_name [-simulate] [-local] [-quiet] [-?]
+
+DESCRIPTION
+   Removes the specified workspace.
+
+OPTIONS
+
+   -workspace workspace_name
+             Workspace name. The workspace name is required.
+
+   -simulate
+             If specified, then it only simulates the workspace removal steps without
+             actually removing the workspace. Always use this option fist to verify
+             the removal steps before comitting the workspace removal. This option
+             sets in the quiet mode.
+
+   -local
+             If specified, then it removes the workspace from the local file system only.
+             If the workspace is a VM workspace then the workspace in the VMs will not
+             be removed. Use this option only if the VMs cannot be connected or no longer
+             available.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompts.
+
+DEFAULT
+   $EXECUTABLE -workspace workspace_name
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$WORKSPACE_ARG" == "" ]; then
+   echo >&2 ""
+   echo >&2 "ERROR: Workspace name is not specified. Command aborted." 
+   echo >&2 ""
+   exit 1
+fi
+
+# Simulation runs in the quite mode
+if [ "$SIMULATE" == "true" ]; then
+   QUIET=$SIMULATE
+fi
+
+# Prompt if the workspace exists
+WORKSPACE_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG"
+if [ -d $WORKSPACE_DIR ]; then
+   if [ "$QUIET" == "false" ]; then
+      echo ""
+      echo "The following workspace will be permanently removed."
+      echo ""
+      echo "   Workspace: $WORKSPACE_ARG"
+      echo ""
+      echo "A backup of the entire workspace will be created before removing the workspace."
+      echo "Do you want to continue?"
+      echo "(Enter 'continue' + Enter to continue the workspace removal, other keys to abort.)"
+      read INPUT
+      if [ "$INPUT" != "continue" ]; then
+         echo "Workspace removal aborted."
+         exit
+      fi
+   fi
+else
+   echo >&2 ""
+   echo >&2 "ERROR: The specified workspace does not exist: [$WORKSPACE_ARG]. Command aborted."
+   echo >&2 ""
+   exit 1
+fi
+
+# cluster list
+CLUSTERS=$(getClusters "clusters" $WORKSPACE_ARG)
+
+# pod list
+PODS=$(getClusters "pods" $WORKSPACE_ARG)
+
+# k8s list
+K8S=$(getClusters "k8s" $WORKSPACE_ARG)
+
+# docker list
+DOCKERS=$(getClusters "docker" $WORKSPACE_ARG)
+
+# Display installed components
+if [ "$CLUSTERS" != "" ] || [ "$PODS" != "" ] || [ "$K8S" != "" ] || [ "$DOCKERS" != "" ] ; then
+   echo ""
+   echo "The workspace contains the following components."
+   if [ "$CLUSTERS" != "" ]; then
+      echo ""
+      echo "Clusters:"
+      showTree "$CLUSTERS"
+   fi
+   if [ "$PODS" != "" ]; then
+      echo ""
+      echo "Pods:"
+      showTree "$PODS"
+   fi
+   if [ "$K8S" != "" ]; then
+      echo ""
+      echo "Kubernetes:"
+      showTree "$K8S"
+   fi
+   if [ "$DOCKERS" != "" ]; then
+      echo ""
+      echo "Docker:"
+      showTree "$DOCKER"
+   fi
+   if [ "$QUIET" == "false" ]; then
+      echo ""
+      echo -e "${CYellow}WARNING:${CNone} All of the components will be permanently removed. Do you want to proceed?"
+      echo "(Enter 'continue' + Enter to continue the workspace removal, other keys to abort.)"
+      read INPUT
+      # trim string
+      INPUT=`echo "$INPUT" | xargs`
+      if [ "$INPUT" != "continue" ]; then
+         echo ""
+         echo "Workspace removal aborted."
+         echo ""
+         exit
+      fi
+   fi
+fi
+
+# Check if any of the clusters is running. If so, abort.
+if [ "$CLUSTERS" != "" ]; then
+   for CLUSTER in $CLUSTERS; do
+      echo ""
+      echo "Cluster: $CLUSTER"
+      LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$WORKSPACE_ARG" "$CLUSTER")
+      MEMBER_RUNNING_COUNT=$(getActiveMemberCount "$WORKSPACE_ARG" "$CLUSTER")
+      echo "   Locators running: $LOCATORS_RUNNING_COUNT"
+      echo "    Members running: $MEMBER_RUNNING_COUNT"
+      if [ $LOCATORS_RUNNING_COUNT -gt 0 ] || [ $MEMBER_RUNNING_COUNT -gt 0 ]; then
+         echo ""
+         echo -e "${CLightRed}ERROR:${CNone} The cluster has active locators/members. Please stop the cluster before"
+	 echo "       executing this command again. No actions were taken."
+	 echo "       Command aborted."
+	 echo ""
+         exit 
+      fi
+   done
+fi
+
+# Back up workspace in the workspaces/bundles directory.
+WORKSPACE_ARCHIVE_FILE="$PADOGRID_WORKSPACES_HOME/.archive/$WORKSPACE_ARG.tar.gz"
+if [ ! -d $PADOGRID_WORKSPACES_HOME/.archive ]; then
+   mkdir $PADOGRID_WORKSPACES_HOME/.archive
+fi
+echo ""
+if [ "$SIMULATE" != "true" ]; then
+   echo "Creating a workspace backup..."
+   pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
+   echo tar -czf $WORKSPACE_ARCHIVE_FILE $WORKSPACE_ARG
+   if [ "$SIMULATE" != "true" ]; then
+      tar -czf $WORKSPACE_ARCHIVE_FILE $WORKSPACE_ARG
+      echo ""
+      echo "Workspace backup created:"
+      echo "   $WORKSPACE_ARCHIVE_FILE"
+   fi
+   popd > /dev/null 2>&1
+else
+   echo "Simulating workspace backup..."
+   echo tar -czf $WORKSPACE_ARCHIVE_FILE $WORKSPACE_ARG
+fi
+
+# Remove workspace
+echo ""
+if [ "$SIMULATE" != "true" ]; then
+   if [ "$LOCAL" == "true" ]; then
+      echo "Removing local workspace..."
+   else
+      echo "Removing workspace..."
+   fi
+else
+   echo "Simulating workspace removal..."
+fi
+if [ "$VM_ENABLED" == "true" ] && [ "$LOCAL" != "true" ]; then
+   VM_WORKSPACES_HOME=$(getVmWorkspacesHome "$WORKSPACE_ARG")
+   if [ "$VM_WORKSPACES_HOME" == "" ]; then
+      echo "ERROR: Unable to determine the VM workspaces home path. Make sure VM_PADOGRID_WORKSPACES_HOME"
+      echo "       is properly set in the following file:"
+      echo ""
+      echo "       $PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG/setenv.sh"
+      echo ""
+      echo "       Command aborted."
+      exit 1
+   fi
+   VM_WORKSPACE_DIR=$VM_WORKSPACES_HOME/$WORKSPACE_ARG
+   VM_HOSTS=$(getVmWorkspaceHosts "$WORKSPACE_ARG")
+   if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
+   fi
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   for VM_HOST in $__VM_HOSTS; do
+      HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+      if [ "$HOSTNAME" == "" ]; then
+         echo "Invalid host [$VM_HOST]"
+         continue
+      elif [ "$HOSTNAME" == "$THIS_VM_HOSTNAME" ]; then
+         continue
+      fi
+      echo "   Removing $VM_HOST..."
+      if [ "$SIMULATE" == "true" ]; then
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "rm -rf $VM_WORKSPACE_DIR"
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "rm -rf $VM_WORKSPACE_DIR"
+      fi
+   done
+fi
+echo "   Removing local workspace..."
+CURRENT_DIR=""
+if [ "$SIMULATE" == "true" ]; then
+   echo rm -rf $WORKSPACE_DIR
+else
+   CURRENT_DIR=`pwd`
+   rm -rf $WORKSPACE_DIR
+   retrieveDefaultEnv
+   DEFAULT_WORKSPACE="$(basename "$CURRENT_PADOGRID_WORKSPACE")"
+   if [ "$WORKSPACE" == "$DEFAULT_WORKSPACE" ]; then
+      __WORKSPACES=$(list_workspaces)
+      __WORKSPACE=""
+      for i in $__WORKSPACES; do
+         __WORKSPACE=$i
+         break;
+      done
+      if [ "$__WORKSPACE" != "" ]; then
+         PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
+         updateDefaultEnv
+      fi
+   fi
+fi
+
+# Display summary
+echo ""
+echo "----------------------------------------------------------------"
+if [ "$SIMULATE" != "true" ]; then
+   echo "Workspace Removed: $WORKSPACE_ARG"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "              VMs: $VM_HOSTS"
+   fi
+   echo "           Backup: $WORKSPACE_ARCHIVE_FILE"
+   echo ""
+   echo "A full backup of workspace has been made. To recover the workspace,"
+   echo "execute the following command:"
+   echo -e "   ${CLightGreen}recover_workspace $WORKSPACE_ARCHIVE_FILE${CNone}"
+else
+   echo "Workspace Simulated: $WORKSPACE_ARG"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "                VMs: $VM_HOSTS"
+   fi
+   echo "             Backup: $WORKSPACE_ARCHIVE_FILE"
+fi
+echo "----------------------------------------------------------------"
+
+if [ "$CURRENT_DIR" != "" ] && [ ! -d "$CURRENT_DIR" ]; then
+   echo "You are currently in the removed directory."
+   echo "Please change directory to a valid directory before executing any commands."
+fi

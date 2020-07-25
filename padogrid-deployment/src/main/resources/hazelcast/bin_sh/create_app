@@ -119,16 +119,27 @@ fi
 # Copy all to the new app dir
 cp -r $PADOGRID_HOME/$PRODUCT/apps/$APP $APP_DIR
 
+# Remove version number from src-?
+if [ -d "$APP_DIR/src-$HAZELCAST_MAJOR_VERSION_NUMBER" ]; then
+   mv "$APP_DIR/src-$HAZELCAST_MAJOR_VERSION_NUMBER" "$APP_DIR/src" 
+   rm -r "$APP_DIR/src-"*
+fi
+
 # Copy versioned config files to the etc/ dir
 if [ -d "$APP_DIR/etc/v${HAZELCAST_MAJOR_VERSION_NUMBER}" ]; then
    cp $APP_DIR/etc/v${HAZELCAST_MAJOR_VERSION_NUMBER}/* $APP_DIR/etc/
 fi
 
 # Copy template files
-if [ "$APP" != "desktop" ]; then
+if [ "$APP" != "desktop" ] && [ "$APP" != "jet_demo" ]; then
    cp $PADOGRID_HOME/$PRODUCT/etc/template-log4j2.properties $APP_DIR/etc/log4j2.properties
    cp $PADOGRID_HOME/$PRODUCT/etc/template-hibernate.cfg-mysql.xml $APP_DIR/etc/hibernate.cfg-mysql.xml
    cp $PADOGRID_HOME/$PRODUCT/etc/template-hibernate.cfg-postgresql.xml $APP_DIR/etc/hibernate.cfg-postgresql.xml
+fi
+
+# Make bin_sh scripts executables
+if [ -d "$APP_DIR/bin_sh" ]; then
+   chmod 755 $APP_DIR/bin_sh/*
 fi
 
 echo ""

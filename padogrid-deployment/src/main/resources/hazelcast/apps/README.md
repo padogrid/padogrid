@@ -1,6 +1,6 @@
 # Apps
 
-This folder contains Hazelcast client apps that demonstrate padohub components.
+This folder contains Hazelcast client apps that demonstrate padogrid components.
 
 ## List of Apps
 
