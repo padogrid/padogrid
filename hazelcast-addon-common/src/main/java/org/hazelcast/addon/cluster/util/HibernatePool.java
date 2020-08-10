@@ -131,7 +131,7 @@ public class HibernatePool {
 
 	/**
 	 * Takes the next available Hibernate session. This call blocks if there are no
-	 * session available.
+	 * sessions available.
 	 * 
 	 * @throws InterruptedException
 	 */
