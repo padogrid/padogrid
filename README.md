@@ -4,10 +4,13 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Downloads
 
-Binary downloads are available from the *Releases* page:
+PadoGrid binary downloads are available from the *Releases* page:
 
-[Releases/Downloads](https://github.com/padogrid/padogrid/releases)
+[PadoGrid Releases/Downloads](https://github.com/padogrid/padogrid/releases)
 
+Download links to all the supported data grids are also provided in the following page:
+
+[Data Grid Downloads](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products)
 
 ## PadoGrid Brief
 
