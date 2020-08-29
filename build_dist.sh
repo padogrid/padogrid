@@ -36,7 +36,7 @@ OPTIONS
    -coherence
              If specified, then includes the coherence moudle in the build.
              Note that you may need to install Coherence manually in the local 
-             Maven repository for this option to work. Please see the follwoing
+             Maven repository for this option to work. Please see the following
              file for details.
 
              coherence-addon-core/README.md

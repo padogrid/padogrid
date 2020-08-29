@@ -60,7 +60,7 @@ export VERSION
 
 PRODUCTS="geode hazelcast snappydata"
 
-if [ "$COHERENCE" == "true" ]; then
+if [ "$COHERENCE_SPECIFIED" == "true" ]; then
    PRODUCTS="$PRODUCTS coherence"
 fi
 

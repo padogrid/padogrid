@@ -6,7 +6,7 @@ This package contains an open source Coherence addon API that supplements the Co
 
 Oracle requires you to register at their site before you can access their Maven repository. You must configure Maven as described in [1] and [2] before you can build `coherence-addon`. If you wish to skip the Oracle Maven configuration steps then you can manually install the `coherence.jar` found in the Coherence installation directory as shown in the examples below.
 
-:exclamation: Note that Oracle uses the artifactId notation of `x.y.z-a-b` with hyphens for the build number and qualifier whereas the version number is in the format of `x.y.z.a.b` without hyphens.
+:exclamation: Note that Oracle uses the `artifactId` notation of `x.y.z-a-b` with hyphens for the build number and qualifier whereas the version number is in the format of `x.y.z.a.b` without hyphens.
 
 ### Installing Coherence Library to Local Maven Repo with the `.pom` File
 
@@ -26,7 +26,7 @@ export COHERENCE_HOME=$ORACLE_HOME/coherence
 mvn install:install-file -Dfile=$COHERENCE_HOME/lib/coherence.jar -DpomFile=$COHERENCE_HOME/plugins/maven/com/oracle/coherence/coherence/14.1.1/coherence.14.1.1.pom
 ```
 
-## Installing Coherence to Local Maven Repo without the `.pom` File
+### Installing Coherence to Local Maven Repo without the `.pom` File
 
 **Windows:**
 
