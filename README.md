@@ -10,7 +10,7 @@ PadoGrid binary downloads are available from the *Releases* page:
 
 Download links to all the supported data grids are also provided in the following page:
 
-[Data Grid Downloads](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products)
+[Supported Data Grid Downloads](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products-and-Downloads)
 
 ## PadoGrid Brief
 
