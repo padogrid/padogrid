@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -connect -preview -download -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -dev -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -81,6 +81,11 @@ OPTIONS
              contents but does not install the bundle. You can install the downloaded
              bundle later by specifying the bundle file path.
 
+   -dev
+             Developement Mode. If this option is specified then the bundle is checked out in the form
+             of workspace. By installing the bundle as a workspace, you are able to make changes to the
+             bundle and check in directly from the workspace.
+
    -quiet
              Quiet mode. Supresses the interactive prompt.
 
@@ -133,28 +138,38 @@ else
 fi
 if [ "$DOWNLOAD" == "true" ]; then
    IS_DOWNLOAD="true"
-   GIT_DIR=$PADOGRID_WORKSPACE/bundles/$BUNDLE_FILE_PATH
-   TARBALL=${BUNDLE_FILE_PATH}.tar.gz
-   TARBALL_PATH=$PADOGRID_WORKSPACE/bundles/$TARBALL
-   if [ "$QUIET" == "false" ] && [ -f "$TARBALL_PATH" ]; then
-      echo "Specified bundle exists in the bundles directory."
-      echo "   $PADOGRID_WORKSPACE/bundles/$TARBALL"
-      REDO=true
-      INNER_LOOP=true
-      while [ "$INNER_LOOP" == "true" ]; do
-         read -p "Enter 'e' to install the existing bundle, 'd' to download, 'q' to quit: " INPUT
-         case $INPUT in
-            [Ee]* ) IS_DOWNLOAD="false"; INNER_LOOP=false;;
-            [Dd]* ) IS_DOWNLOAD="true"; INNER_LOOP=false;;
-            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
-            * ) INNER_LOOP=true;;
-         esac
-      done
+   if [ "$DEV" == "true" ]; then
+      GIT_DIR="$PADOGRID_WORKSPACES_HOME/$BUNDLE_FILE_PATH"
+      if [ "$QUIET" == "false" ] && [ -d "$GIT_DIR" ]; then
+         echo >&2 "ERROR: Specified bundle workspace already exists. Command aborted."
+         exit 1
+      fi
+   else
+      GIT_DIR=$PADOGRID_WORKSPACE/bundles/$BUNDLE_FILE_PATH
+      TARBALL=${BUNDLE_FILE_PATH}.tar.gz
+      TARBALL_PATH=$PADOGRID_WORKSPACE/bundles/$TARBALL
+      if [ "$QUIET" == "false" ] && [ -f "$TARBALL_PATH" ]; then
+         echo "Specified bundle exists in the bundles directory."
+         echo "   $PADOGRID_WORKSPACE/bundles/$TARBALL"
+         REDO=true
+         INNER_LOOP=true
+         while [ "$INNER_LOOP" == "true" ]; do
+            read -p "Enter 'e' to install the existing bundle, 'd' to download, 'q' to quit: " INPUT
+            case $INPUT in
+               [Ee]* ) IS_DOWNLOAD="false"; INNER_LOOP=false;;
+               [Dd]* ) IS_DOWNLOAD="true"; INNER_LOOP=false;;
+               [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+               * ) INNER_LOOP=true;;
+            esac
+         done
+      fi
    fi
 
    if [ "$IS_DOWNLOAD" == "true" ]; then
-      if [ -d $GIT_DIR ]; then
-         rm -rf $GIT_DIR
+      if [ "$DEV" == "false" ]; then
+         if [ -d $GIT_DIR ]; then
+            rm -rf $GIT_DIR
+         fi
       fi
 
       # Source in .padogrid/setenv.sh
@@ -172,11 +187,19 @@ if [ "$DOWNLOAD" == "true" ]; then
              GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
          fi
       fi
+      
+      if [ "$DEV" == "true" ]; then
+         pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1 
+         echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
+         git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
+         popd > /dev/null 2>&1 
+      else
+         pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
+         echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
+         git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
+         popd > /dev/null 2>&1 
+      fi
 
-      pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
-      echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
-      git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
-      popd > /dev/null 2>&1 
       if [ ! -d "$GIT_DIR" ]; then
          echo >&2 "ERROR: The specified bundle does not exist for the user [$GITHUB_USER]."
          exit 1
@@ -191,16 +214,30 @@ if [ "$DOWNLOAD" == "true" ]; then
          git checkout $BRANCH
       fi
       git pull
-      mvn package
+      if [ "$DEV" == "false" ]; then
+         mvn package
+      fi
       popd > /dev/null 2>&1 
-      mv $GIT_DIR/target/assembly/$TARBALL $PADOGRID_WORKSPACE/bundles
-      rm -rf $GIT_DIR
-
-      if [ -f $TARBALL_PATH ]; then
-         BUNDLE_FILE_PATH=$TARBALL_PATH
+      if [ "$DEV" == "true" ]; then
+         # Copy the workspace files
+         create_workspace -name ws-${BUNDLE_FILE_PATH} -product $PRODUCT_HOME -quiet > /dev/null
+         cp -r $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/* $GIT_DIR/
+         cp $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
+         rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}
+         echo ""
+         echo "Bundle workspace created. Switch workspace by executinig the following command:"
+         echo -e "   ${CLightGreen}switch_workspace $BUNDLE_FILE_PATH ${CNone}"
+         echo ""
+         exit
       else
-         echo >&2 "ERROR: File not found. Command aborted."
-         exit 1
+         mv $GIT_DIR/target/assembly/$TARBALL $PADOGRID_WORKSPACE/bundles
+         rm -rf $GIT_DIR
+         if [ -f $TARBALL_PATH ]; then
+            BUNDLE_FILE_PATH=$TARBALL_PATH
+         else
+            echo >&2 "ERROR: File not found. Command aborted."
+            exit 1
+         fi
       fi
    else
       BUNDLE_FILE_PATH=$TARBALL_PATH
