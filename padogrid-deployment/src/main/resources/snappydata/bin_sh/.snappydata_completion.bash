@@ -138,7 +138,11 @@ __padogrid_complete()
       ;;
       
    -workspace)
-      type_list=`getWorkspaces`
+      if [ "$second_word" == "install_bundle" ]; then
+         type_list=`$second_word -options`
+      else
+         type_list=`getWorkspaces`
+      fi
       ;;
 
    -host)
@@ -465,7 +469,9 @@ __command_complete()
       type_list=`getRweList`
       ;;
    -workspace)
-      if [ "$command" != "create_workspace" ]; then
+      if [ "$command" == "install_bundle" ]; then
+         type_list=`$command -options`
+      else
          type_list=`getWorkspaces`
       fi
       ;;

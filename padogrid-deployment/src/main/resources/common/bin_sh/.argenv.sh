@@ -148,7 +148,6 @@ do
       ENV_ARG=$i
    elif [ "$PREV" == "-workspace" ]; then
       WORKSPACE_ARG=$i
-      WORKSPACE_SPECIFIED=true
    elif [ "$PREV" == "-java" ]; then
       JAVA_HOME_ARG=$i
    elif [ "$PREV" == "-coherence" ]; then
@@ -262,6 +261,18 @@ do
       MEMBER_SPECIFIED=true
    elif [ "$PREV" == "-log" ]; then
       LOG=$i
+   elif [ "$PREV" == "-begin" ]; then
+      BEGIN_NUM=$i
+   elif [ "$PREV" == "-end" ]; then
+      END_NUM=$i
+   elif [ "$PREV" == "-dir" ]; then
+      DIR=$i
+   elif [ "$PREV" == "-prefix" ]; then
+      PREFIX=$i
+   elif [ "$PREV" == "-folder" ]; then
+      FOLDER=$i
+   elif [ "$PREV" == "-datasource" ]; then
+      DATASOURCE=$i
 
 # options with no value
    elif [ "$i" == "-version" ]; then
@@ -276,6 +287,8 @@ do
       PREVIEW=true
    elif [ "$i" == "-download" ]; then
       DOWNLOAD=true
+   elif [ "$i" == "-workspace" ]; then
+      WORKSPACE_SPECIFIED=true
    elif [ "$i" == "-list" ]; then
       LIST=true
    elif [ "$i" == "-header" ]; then
@@ -290,18 +303,6 @@ do
       FULL=true
    elif [ "$i" == "-start" ]; then
       START=true
-   elif [ "$PREV" == "-begin" ]; then
-      BEGIN_NUM=$i
-   elif [ "$PREV" == "-end" ]; then
-      END_NUM=$i
-   elif [ "$PREV" == "-dir" ]; then
-      DIR=$i
-   elif [ "$PREV" == "-prefix" ]; then
-      PREFIX=$i
-   elif [ "$PREV" == "-folder" ]; then
-      FOLDER=$i
-   elif [ "$PREV" == "-datasource" ]; then
-      DATASOURCE=$i
    elif [ "$i" == "-?" ]; then
       HELP=true
    elif [ "$i" == "-options" ]; then
