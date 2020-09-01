@@ -40,6 +40,7 @@ ENV_ARG=
 RWE_ARG=
 RWE_SPECIFIED=false
 WORKSPACE_ARG=
+WORKSPACE_SPECIFIED=false
 JAVA_HOME_ARG=
 COHERENCE_ARG=
 GEODE_ARG=
@@ -103,7 +104,6 @@ OPTIONS=false
 SIMULATE=false
 PREVIEW=false
 DOWNLOAD=false
-DEV=false
 CONSOLE=false
 USER=
 GITHOST=github
@@ -148,6 +148,7 @@ do
       ENV_ARG=$i
    elif [ "$PREV" == "-workspace" ]; then
       WORKSPACE_ARG=$i
+      WORKSPACE_SPECIFIED=true
    elif [ "$PREV" == "-java" ]; then
       JAVA_HOME_ARG=$i
    elif [ "$PREV" == "-coherence" ]; then
@@ -275,8 +276,6 @@ do
       PREVIEW=true
    elif [ "$i" == "-download" ]; then
       DOWNLOAD=true
-   elif [ "$i" == "-dev" ]; then
-      DEV=true
    elif [ "$i" == "-list" ]; then
       LIST=true
    elif [ "$i" == "-header" ]; then
