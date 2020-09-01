@@ -103,6 +103,7 @@ OPTIONS=false
 SIMULATE=false
 PREVIEW=false
 DOWNLOAD=false
+DEV=false
 CONSOLE=false
 USER=
 GITHOST=github
@@ -274,6 +275,8 @@ do
       PREVIEW=true
    elif [ "$i" == "-download" ]; then
       DOWNLOAD=true
+   elif [ "$i" == "-dev" ]; then
+      DEV=true
    elif [ "$i" == "-list" ]; then
       LIST=true
    elif [ "$i" == "-header" ]; then

@@ -1739,15 +1739,15 @@ EOF
             local WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$RWE_HOME/$RWE")
             if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
-                  echo -e "$LEADING_BAR├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+                  echo -e "${LEADING_BAR}├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
-                  echo "$LEADING_BAR├── $WORKSPACE [$WORKSPACE_INFO]"
+                  echo "${LEADING_BAR}├── $WORKSPACE [$WORKSPACE_INFO]"
 	       fi
             else
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
-                  echo -e "$LEADING_BAR└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+                  echo -e "${LEADING_BAR}└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
-                  echo "$LEADING_BAR└── $WORKSPACE [$WORKSPACE_INFO]"
+                  echo "${LEADING_BAR}└── $WORKSPACE [$WORKSPACE_INFO]"
 	       fi
             fi
          done
