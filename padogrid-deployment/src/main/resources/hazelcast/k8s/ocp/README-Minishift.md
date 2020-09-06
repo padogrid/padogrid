@@ -4,7 +4,7 @@ This directory contains Kubernetes configuration files for deploying Hazelcast o
 
 ## WSL Users
 
-To run `minishift` and `oc` run on WSL, please follow the instructions in the [Tips](#Tips) section at the bottom of this article.
+To run `minishift` and `oc` on WSL, please follow the instructions in the [Tips](#Tips) section at the bottom of this article.
 
 ## Creating Workspace
 
@@ -32,7 +32,7 @@ echo $PADOGRID_WORKSPACE
 Before we begin, we must first install the following software. See the [References](#References) section for URLs.
 
 - VirtualBox (for Windows, VirtualBox or Hyper-V)
-- minishift (or CDK)
+- minishift or CDK
 - docker (for Windows, Docker Toolbox if VirutalBox, Docker Desktop if Hyper-V)
 - oc
 
