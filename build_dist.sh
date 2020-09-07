@@ -53,7 +53,7 @@ fi
 DEBUG="false"
 
 if [ "$DEBUG" == "false" ]; then
-   # TSLv1.2 required for older version of macOS
+   # TSLv1.2 required for older versions of macOS
    if [ "$COHERENCE_SPECIFIED" == "true" ]; then
       mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install -Pcoherence
    else

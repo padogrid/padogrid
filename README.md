@@ -83,7 +83,7 @@ Once you have installed the Coherence package in your local Maven repository, in
 ./build_dist.sh -coherence -man
 
 # Maven (without man pages, fastest build)
-mvn install -f pom-include-coherence.xml
+mvn install -Pcoherence
 
 # Build all: all modules + external apps (slowest and largest build)
 ./build_all.sh -coherence -man
