@@ -1,0 +1,147 @@
+
+<!-- Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+     Licensed under the Apache License, Version 2.0 (the "License"); you may not
+     use this file except in compliance with the License. You may obtain a copy
+     of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required
+     by applicable law or agreed to in writing, software distributed under the
+     License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS
+     OF ANY KIND, either express or implied. See the License for the specific
+     language governing permissions and limitations under the License. -->
+
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>padogrid.addon</groupId>
+		<artifactId>padogrid-all</artifactId>
+		<version>0.9.3-SNAPSHOT</version>
+	</parent>
+	<artifactId>padogrid-coherence-all</artifactId>
+	<packaging>jar</packaging>
+	<name>${project.artifactId}</name>
+	<description>Build all jar</description>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<skipTests>true</skipTests>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>${maven.jar.plugin.version}</version>
+				<configuration>
+					<archive>
+						<index>true</index>
+						<compress>true</compress>
+						<manifest>
+							<addClasspath>false</addClasspath>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>${maven.shade.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>shade-artifacts</id>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<shadedArtifactId>padogrid-coherence-all</shadedArtifactId>
+							<promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+							<createDependencyReducedPom>true</createDependencyReducedPom>
+							<minimizeJar>false</minimizeJar>
+							<createSourcesJar>true</createSourcesJar>
+							<artifactSet>
+								<includes>
+									<include>padogrid.addon:padogrid-common:*</include>
+									<include>padogrid.addon:padogrid-tools:*</include>
+									<include>padogrid.addon:coherence-addon-core:*</include>
+								</includes>
+							</artifactSet>
+							<filters>
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
+						</configuration>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>padogrid.addon</groupId>
+						<artifactId>padogrid-common</artifactId>
+						<version>${project.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>padogrid.addon</groupId>
+						<artifactId>padogrid-tools</artifactId>
+						<version>${project.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>padogrid.addon</groupId>
+						<artifactId>coherence-addon-core</artifactId>
+						<version>${project.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${maven.javadoc.plugin.version}</version>
+				<!-- <configuration combine.self="override"/> -->
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>padogrid.addon</groupId>
+			<artifactId>padogrid-common</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>padogrid.addon</groupId>
+			<artifactId>padogrid-tools</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>padogrid.addon</groupId>
+			<artifactId>coherence-addon-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
+
+</project>
