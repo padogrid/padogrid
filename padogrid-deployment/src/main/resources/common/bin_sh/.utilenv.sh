@@ -1701,6 +1701,7 @@ cat <<EOF
 | _|    /__/     \__\ |_______/ \______/   \______| | _| '._____||__| |_______/ 
 Copyright 2020 Netcrest Technologies, LLC. All rights reserved.
 v$PADOGRID_VERSION
+Manual: https://github.com/padogrid/padogrid/wiki
 
 EOF
 
