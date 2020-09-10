@@ -405,7 +405,11 @@ if [ $GC_LOG_ENABLED == "true" ]; then
       if [[ ${OS_NAME} == CYGWIN* ]]; then
          GC_LOG_FILE="$(cygpath -wp "$GC_LOG_FILE")"
       fi
-      JAVA_OPTS="$JAVA_OPTS --J=-Xloggc:$GC_LOG_FILE --J=-XX:+PrintGCDetails --J=-XX:+PrintGCDateStamps"
+      if [[ $JAVA_VERSION == 1.8* ]]; then
+         JAVA_OPTS="$JAVA_OPTS --J=-Xloggc:$GC_LOG_FILE --J=-XX:+PrintGCDetails --J=-XX:+PrintGCDateStamps"
+      else
+         JAVA_OPTS="$JAVA_OPTS --J=-Xlog:gc=info:file=$GC_LOG_FILE:time,uptime,pid:filecount=5,filesize=4096"
+      fi
    fi
 fi
 
@@ -435,12 +439,16 @@ if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
    fi
 fi
 
+if [[ $JAVA_VERSION == 1.8* ]]; then
+   JAVA_OPTS="$JAVA_OPTS \
+      --J=-XX:+UseParNewGC \
+      --J=-XX:+UseConcMarkSweepGC \
+      --J=-XX:CMSInitiatingOccupancyFraction=75"
+fi
+
 JAVA_OPTS="$JAVA_OPTS \
       --J=-Djava.awt.headless=true \
       --J=-Djava.net.preferIPv4Stack=true \
-      --J=-XX:+UseParNewGC \
-      --J=-XX:+UseConcMarkSweepGC \
-      --J=-XX:CMSInitiatingOccupancyFraction=75 \
       --J=-DgemfirePropertyFile=$GEMFIRE_PROPERTY_FILE \
       --J=-Dgemfire.log-file=$LOG_FILE \
       --J=-DDISK_STORE_DIR=$DISK_STORE_DIR \

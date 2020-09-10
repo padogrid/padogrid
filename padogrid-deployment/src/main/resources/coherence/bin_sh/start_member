@@ -380,18 +380,26 @@ if [ $GC_LOG_ENABLED == "true" ]; then
       if [[ ${OS_NAME} == CYGWIN* ]]; then
          GC_LOG_FILE="$(cygpath -wp "$GC_LOG_FILE")"
       fi
-      JAVA_OPTS="$JAVA_OPTS -Xloggc:$GC_LOG_FILE -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+      if [[ $JAVA_VERSION == 1.8* ]]; then
+         JAVA_OPTS="$JAVA_OPTS -Xloggc:$GC_LOG_FILE -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+      else
+         JAVA_OPTS="$JAVA_OPTS -Xlog:gc=info:file=$GC_LOG_FILE:time,uptime,pid:filecount=5,filesize=4096"
+      fi
    fi
 fi
 
 MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
 
+if [[ $JAVA_VERSION == 1.8* ]]; then
+   JAVA_OPTS="$JAVA_OPTS \
+      -XX:+UseParNewGC \
+      -XX:+UseConcMarkSweepGC \
+      -XX:CMSInitiatingOccupancyFraction=75"
+fi
+
 JAVA_OPTS="$JAVA_OPTS \
       -Djava.awt.headless=true \
       -Djava.net.preferIPv4Stack=true \
-      -XX:+UseParNewGC \
-      -XX:+UseConcMarkSweepGC \
-      -XX:CMSInitiatingOccupancyFraction=75 \
       -Dcoherence.log=log4j2 \
       -Dcoherence.management=all \
       -Dcoherence.management.remote=true \
