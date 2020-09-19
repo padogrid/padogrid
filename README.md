@@ -141,13 +141,13 @@ Run the `create_rwe` command to create the first RWE (Root Workspace Environment
 
 ## Running PadoGrid on Kubernetes
 
-You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in th `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
+You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
 kubectl create deployment padogid --image=docker.io/padogrid/padogrid
 ```
 
-To login to PadoGrid pod, make sure to specify the command, `bash`, as follows.
+To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
 
 ```bash
 kubectl exec -it <padogrid-pod-name> bash
