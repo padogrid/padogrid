@@ -93,7 +93,7 @@ mvn install -Pcoherence
 
 Upon successful build, the following distribution files will be generated.
 
-```console
+```bash
 # The following distributions contain all the padogrid components.
 padogrid-deployment/target/assembly/padogrid_<version>.tar.gz
 padogrid-deployment/target/assembly/padogrid_<version>.zip
@@ -106,7 +106,7 @@ padogrid-deployment/target/assembly/padogrid-all_<version>.zip
 
 Inflate one of the distribution files in your file system. For example,
 
-```console
+```bash
 mkdir ~/Padogrid/products
 tar -C ~/Padogrid/products/ -xzf padogrid_0.9.2-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
@@ -115,7 +115,7 @@ tree -L 1 padogrid_0.9.2-SNAPSHOT
 
 **Output:**
 
-```console
+```bash
 padogrid_0.9.2-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
@@ -135,8 +135,22 @@ padogrid_0.9.2-SNAPSHOT
 
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
-```console
+```bash
 ~/Padogrid/products/padogrid_0.9.2-SNAPSHOT/bin_sh/create_rwe
+```
+
+## Running PadoGrid on Kubernetes
+
+You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in th `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
+
+```bash
+kubectl create deployment padogid --image=docker.io/padogrid/padogrid
+```
+
+To login to PadoGrid pod, make sure to specify the command, `bash`, as follows.
+
+```bash
+kubectl exec -it <padogrid-pod-name> bash
 ```
 
 ## Data Grid Products
