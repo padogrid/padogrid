@@ -150,7 +150,7 @@ kubectl create deployment padogid --image=docker.io/padogrid/padogrid
 To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
 
 ```bash
-kubectl exec -it <padogrid-pod-name> bash
+kubectl exec -it <padogrid-pod-name> -- bash
 ```
 
 ## Data Grid Products
