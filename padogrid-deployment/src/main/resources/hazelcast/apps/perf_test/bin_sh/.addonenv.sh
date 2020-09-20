@@ -31,8 +31,8 @@ if [ ! -d "$APP_LOG_DIR" ]; then
 fi
 
 # k8s pod
-if [ "MY_POD_NAMESPACE" != "" ] && [ "$HAZELCAST_SERVICE" != "" ]; then
-   K8S_PROPERTIES="$JAVA_OPTS -Dk8s.hazelcast.service=$HAZELCAST_SERVICE -Dk8s.namespace=$MY_POD_NAMESPACE"
+if [ "NAMESPACE" != "" ] && [ "$HAZELCAST_SERVICE" != "" ]; then
+   K8S_PROPERTIES="$JAVA_OPTS -Dk8s.hazelcast.service=$HAZELCAST_SERVICE -Dk8s.namespace=$NAMESPACE"
    HAZELCAST_CLIENT_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client-k8s.xml
 else
    HAZELCAST_CLIENT_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client.xml
