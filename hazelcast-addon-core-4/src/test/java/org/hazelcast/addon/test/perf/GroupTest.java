@@ -354,7 +354,7 @@ public class GroupTest implements Constants {
 							Blob blob = new Blob(new byte[operation.payloadSize]);
 							operation.imap.set(key, blob);
 						} else {
-							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
 							operation.imap.set(entry.key, entry.value);
 						}
 					}
@@ -368,7 +368,7 @@ public class GroupTest implements Constants {
 							Blob blob = new Blob(new byte[operation.payloadSize]);
 							operation.imap.put(key, blob);
 						} else {
-							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
 							operation.imap.put(entry.key, entry.value);
 						}
 					}
@@ -436,7 +436,7 @@ public class GroupTest implements Constants {
 						} else {
 							for (int k = 0; k < operation.batchSize; k++) {
 								int idNum = operation.startNum + keyIndex;
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
 								keyIndex++;
 								map.put(entry.key, entry.value);
 								if (keyIndex >= threadNum * entryCount) {
@@ -460,12 +460,13 @@ public class GroupTest implements Constants {
 
 	/**
 	 * GroupDbTestThread applies group tasks to the DB configured by Hibernate.
+	 * 
 	 * @author dpark
 	 *
 	 */
 	class GroupDbTestThread extends AbstractThread {
-		public GroupDbTestThread(int threadNum, int threadStartIndex, int entryCountPerThread, Group group) {
-			super(threadNum, threadStartIndex, entryCountPerThread, group);
+		public GroupDbTestThread(int threadNum, int threadStartIndex, int invocationCountPerThread, Group group) {
+			super(threadNum, threadStartIndex, invocationCountPerThread, group);
 		}
 
 		@SuppressWarnings("unchecked")
@@ -498,10 +499,34 @@ public class GroupTest implements Constants {
 					case set:
 					case put: {
 						int idNum = operation.startNum + i - 1;
-						DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+						DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
 						Transaction transaction = session.beginTransaction();
 						session.saveOrUpdate(entry.value);
 						transaction.commit();
+
+						// Child objects
+						if (operation.dataObjectFactory.isEr()) {
+							int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
+							Operation childOperation = operationMap
+									.get(operation.dataObjectFactory.getErOperationName());
+							int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
+							int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
+							startErKeyIndex = i * maxErKeys + 1;
+							if (childOperation != null) {
+								boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
+								if (isErMaxRandom) {
+									maxErKeys = operation.random.nextInt(maxErKeys) + 1;
+								}
+								for (int k = 0; k < maxErKeys; k++) {
+									int childIdNum = startErKeyIndex + k;
+									DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory
+											.createEntry(childIdNum, entry.key);
+									Transaction childTransaction = session.beginTransaction();
+									session.saveOrUpdate(childEntry.value);
+									childTransaction.commit();
+								}
+							}
+						}
 					}
 						break;
 
@@ -590,7 +615,7 @@ public class GroupTest implements Constants {
 						int keyIndex = keyIndexes[j];
 						for (int k = 0; k < operation.batchSize; k++) {
 							int idNum = operation.startNum + keyIndex;
-							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
 							keyIndex++;
 							map.put(entry.key, entry.value);
 							if (keyIndex >= threadNum * entryCount) {
@@ -888,13 +913,15 @@ public class GroupTest implements Constants {
 
 		String dbHeader = "";
 		if (runDb) {
-			dbHeader=" (Database)";
+			dbHeader = " (Database)";
 			for (Group[] groups : concurrentGroupList) {
 				for (Group group : groups) {
 					for (Operation operation : group.operations) {
 						if (operation.dataObjectFactory == null) {
-							System.err.println("ERROR: data object factory not set for group " + group.name + ", operation " + operation.name + ".");
-							System.err.println("       Set '" + operation.name + ".factory.class' in the propertie file," + perfPropertiesFilePath  + ".");
+							System.err.println("ERROR: data object factory not set for group " + group.name
+									+ ", operation " + operation.name + ".");
+							System.err.println("       Set '" + operation.name
+									+ ".factory.class' in the propertie file," + perfPropertiesFilePath + ".");
 							System.err.println("       Command aborted.");
 							System.exit(1);
 						}

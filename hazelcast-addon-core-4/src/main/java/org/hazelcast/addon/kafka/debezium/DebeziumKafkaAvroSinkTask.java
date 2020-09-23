@@ -3,7 +3,6 @@ package org.hazelcast.addon.kafka.debezium;
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,13 +54,12 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 
 	private static final Logger logger = LoggerFactory.getLogger(DebeziumKafkaAvroSinkTask.class);
 
-	private static final int MICRO_IN_MILLI = 1000;
-
 	private boolean isDebugEnabled = false;
 
 	private HazelcastInstance hzInstance;
 	private String mapName;
-	private IMap map;
+	private Map map;
+	private boolean isReplicatedMapEnabled = false;
 	private boolean isSmtEnabled = true;
 	private boolean isDeleteEnabled = true;
 	private boolean isHazelcastEnabled = true;
@@ -74,6 +72,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 	private String[] valueFieldNames;
 	private ObjectConverter objConverter;
 	private org.apache.avro.Schema avroSchema;
+	int[] colocatedFieldIndexes = new int[0];
 
 	@Override
 	public String version() {
@@ -91,6 +90,8 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		if (mapName == null) {
 			mapName = "map";
 		}
+		String isReplicatedMapEnabledStr = props.get(DebeziumKafkaAvroSinkConnector.MAP_REPLICATED_MAP_ENABLED);
+		isReplicatedMapEnabled = isReplicatedMapEnabledStr != null && isReplicatedMapEnabledStr.equalsIgnoreCase("true") ? true : isReplicatedMapEnabled;
 		String isDebugStr = props.get(DebeziumKafkaAvroSinkConnector.DEBUG_ENABLED);
 		isDebugEnabled = isDebugStr != null && isDebugStr.equalsIgnoreCase("true") ? true : isDebugEnabled;
 		String isSmtStr = props.get(DebeziumKafkaAvroSinkConnector.SMT_ENABLED);
@@ -144,25 +145,55 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			}
 		}
 
+		// PartitionAware
+		String pwIndexesStr = props.get(DebeziumKafkaAvroSinkConnector.PARTITION_AWARE_INDEXES_CONFIG);
+		if (pwIndexesStr != null) {
+			tokens = pwIndexesStr.split(",");
+			colocatedFieldIndexes = new int[tokens.length];
+			for (int i = 0; i < tokens.length; i++) {
+				try {
+					int index = Integer.parseInt(tokens[i]);
+					if (index < 0 || index >= valueFieldNames.length) {
+						throw new RuntimeException("Invalid PartitionAware index: " + index + ". "
+								+ "It must be >=0 or less than the number of value field names. DebeziumKafkaAvroSinkConnector.PARTITION_AWARE_INDEXES_CONFIG=\"pwIndexesStr\"");
+					}
+					colocatedFieldIndexes[i] = index;
+
+				} catch (NumberFormatException ex) {
+					throw new RuntimeException(ex);
+				}
+			}
+		}
+
 		if (isDebugEnabled) {
 			logger.info("====================================================================================");
 			String classpathStr = System.getProperty("java.class.path");
 			System.out.print("classpath=" + classpathStr);
 
 			logger.info(props.toString());
-			logger.info("mapName = " + mapName);
-			logger.info("smtEnabled = " + isSmtEnabled);
-			logger.info("deleteEnabled = " + isDeleteEnabled);
-			logger.info("keyClassName = " + keyClassName);
+			logger.info("mapName=" + mapName);
+			logger.info("isReplicatedMapEnabled=" + isReplicatedMapEnabled);
+			logger.info("smtEnabled=" + isSmtEnabled);
+			logger.info("deleteEnabled=" + isDeleteEnabled);
+			logger.info("keyClassName=" + keyClassName);
 			logger.info("keyColumnNames");
-			for (int i = 0; i < keyColumnNames.length; i++) {
-				logger.info("   [" + i + "] " + keyColumnNames[i]);
+			if (keyColumnNames == null) {
+				logger.info("keyColumnNames=null");
+			} else {
+				logger.info("keyColumnNames");
+				for (int i = 0; i < keyColumnNames.length; i++) {
+					logger.info("   [" + i + "] " + keyColumnNames[i]);
+				}
 			}
-			logger.info("keyFieldNames");
-			for (int i = 0; i < keyFieldNames.length; i++) {
-				logger.info("   [" + i + "] " + keyFieldNames[i]);
+			if (keyFieldNames == null) {
+				logger.info("keyFieldNames=null");
+			} else {
+				logger.info("keyFieldNames");
+				for (int i = 0; i < keyFieldNames.length; i++) {
+					logger.info("   [" + i + "] " + keyFieldNames[i]);
+				}
 			}
-			logger.info("valueClassName = " + valueClassName);
+			logger.info("valueClassName=" + valueClassName);
 			logger.info("valueColumnNames");
 			for (int i = 0; i < valueColumnNames.length; i++) {
 				logger.info("   [" + i + "] " + valueColumnNames[i]);
@@ -171,6 +202,16 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			for (int i = 0; i < valueFieldNames.length; i++) {
 				logger.info("   [" + i + "] " + valueFieldNames[i]);
 			}
+			if (colocatedFieldIndexes.length == 0) {
+				logger.info("partitionAwareIndexes: undefined");
+			} else {
+				logger.info("partitionAwareIndexes");
+				for (int i = 0; i < colocatedFieldIndexes.length; i++) {
+					logger.info("   [" + i + "] " + colocatedFieldIndexes[i] + ": "
+							+ valueFieldNames[colocatedFieldIndexes[i]]);
+				}
+			}
+
 			logger.info("====================================================================================");
 		}
 		try {
@@ -198,7 +239,11 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		if (isHazelcastEnabled) {
 			System.setProperty("hazelcast.client.config", hazelcastConfigFile);
 			HazelcastInstance hzInstance = HazelcastClient.newHazelcastClient();
-			map = hzInstance.getMap(mapName);
+			if (isReplicatedMapEnabled) {
+				map = hzInstance.getReplicatedMap(mapName);
+			} else {
+				map = hzInstance.getMap(mapName);
+			}
 		}
 	}
 
@@ -215,7 +260,11 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 				logger.info("sinkRecord=" + sinkRecord);
 				logger.info("keySchema=" + keySchema);
 				logger.info("valueSchema=" + valueSchema);
-				logger.info("keyFields=" + keySchema.fields());
+				if (keySchema == null) {
+					logger.info("keyFields=null");
+				} else {
+					logger.info("keyFields=" + keySchema.fields());
+				}
 				if (valueSchema == null) {
 					logger.info("valueSchema=null");
 				} else {
@@ -228,17 +277,22 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			Object valueObj = sinkRecord.value();
 
 			if (isDebugEnabled) {
-				logger.info("keyObjType = " + keyObj.getClass().getName());
-				logger.info("valueObj = " + valueObj.getClass().getName());
-				logger.info("keyObjType=" + keyObj.getClass().getName());
-				logger.info(keyObj.toString());
+				if (keyObj == null) {
+					logger.info("keyObjType=null");
+				} else {
+					logger.info("keyObjType=" + keyObj.getClass().getName());
+				}				
 				logger.info("valueObj=" + valueObj.getClass().getName());
-				logger.info(valueObj.toString());
 				logger.info("keyObj=" + keyObj);
 				logger.info("valueObj=" + valueObj);
 			}
 
-			Struct keyStruct = (Struct) sinkRecord.key();
+			Struct keyStruct;
+			if (keyObj == null) {
+				keyStruct = null;
+			} else {
+				keyStruct = (Struct) keyObj;
+			}
 			Struct valueStruct = (Struct) sinkRecord.value();
 			boolean isDelete = valueStruct == null;
 			Object op = null;
@@ -246,7 +300,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 				op = valueStruct.get("op");
 				isDelete = op != null && op.toString().equals("d");
 			}
-			
+
 			/*
 			 * Key
 			 */
@@ -273,10 +327,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 					throw new RuntimeException(e);
 				}
 			}
-			if (isDebugEnabled) {
-				logger.info("key=" + key);
-			}
-			
+
 			/*
 			 * Value
 			 */
@@ -302,13 +353,10 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 				}
 
 				value = SpecificData.get().deepCopy(avroSchema, after);
-				if (isDebugEnabled) {
-					logger.info("************value=" + value);
-				}
+			
 
 			} else {
 
-				
 				Struct afterStruct = null;
 				if (isSmtEnabled) {
 					afterStruct = valueStruct;
@@ -321,7 +369,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 					logger.info("afterStruct=" + afterStruct);
 					System.out.flush();
 				}
-				
+
 				// Determine the value column names.
 				if (valueColumnNames == null) {
 					valueColumnNames = getColumnNames(valueStruct);
@@ -349,15 +397,42 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 						logger.info(
 								"valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
 					}
-					logger.info("value=" + value);
 				}
+
+				if (colocatedFieldIndexes.length > 0) {
+					String keyStr = key.toString() + "@";
+					String dot = "";
+					for (int index : colocatedFieldIndexes) {
+						if (valueFieldValues[index] == null) {
+							keyStr = keyStr + dot + "null";
+						} else {
+							keyStr = keyStr + dot + valueFieldValues[index].toString();
+						}
+						dot = ".";
+					}
+					key = keyStr;
+				}
+			}
+
+			if (isDebugEnabled) {
+				logger.info("**** key=" + key);
 			}
 
 			if (isDeleteEnabled && isDelete) {
 				if (isHazelcastEnabled) {
-					map.delete(key);
+					if (isReplicatedMapEnabled) {
+						// ReplicatedMap has no support for delete that has void return type
+						map.remove(key);
+					} else {
+						// Invoke delete() to avoid returning previous value
+						((IMap)map).delete(key);
+					}
 				}
 				continue;
+			}
+			
+			if (isDebugEnabled) {
+				logger.info("**** value=" + value);
 			}
 
 			keyValueMap.put(key, value);
@@ -379,6 +454,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 
 	/**
 	 * Spring object conversion - not used
+	 * 
 	 * @param <T>
 	 * @param record
 	 * @param object
@@ -409,7 +485,10 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 	public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
 		if (map != null) {
 			logger.trace("Flushing map for {}", logMapName());
-			map.flush();
+			// ReplicatedMap does not support flush()
+			if (isReplicatedMapEnabled == false) {
+				((IMap)map).flush();
+			}
 		}
 	}
 

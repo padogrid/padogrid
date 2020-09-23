@@ -43,8 +43,18 @@ EOF
    exit
 fi
 
-# TSLv1.2 required for older version of macOS
-mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install
+# Set DEBUG to "true" to skip mvn build if the build directory
+# has already been created.
+DEBUG="false"
+
+if [ "$DEBUG" == "false" ]; then
+   # TSLv1.2 required for older versions of macOS
+   if [ "$COHERENCE_SPECIFIED" == "true" ]; then
+      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install -Pcoherence
+   else
+      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install 
+   fi
+fi
 
 # Get the addon version number
 VERSION=`grep "<version>.*<\/version>" pom.xml` 

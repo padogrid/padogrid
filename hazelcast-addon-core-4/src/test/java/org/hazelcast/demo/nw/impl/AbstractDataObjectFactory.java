@@ -11,6 +11,9 @@ public abstract class AbstractDataObjectFactory implements DataObjectFactory {
 	protected boolean isKeyRandom;
 	protected int keyLength = 10;
 	protected boolean isKeyLeadingZeros;
+	protected int maxErKeys = 1;
+	protected String erOperationName;
+	protected boolean isErMaxRandom = true;
 
 	@Override
 	public void initialize(Properties props) {
@@ -22,6 +25,9 @@ public abstract class AbstractDataObjectFactory implements DataObjectFactory {
 		keyLength = Integer.valueOf(props.getProperty("factory.key.length", "-1"));
 		isKeyRandom = Boolean.valueOf(props.getProperty("factory.key.isRandom", "true"));
 		isKeyLeadingZeros = Boolean.valueOf(props.getProperty("factory.key.isLeadingZeros", "false"));
+		maxErKeys = Integer.valueOf(props.getProperty("factory.er.maxKeys", "1"));
+		erOperationName = props.getProperty("factory.er.operation");
+		isErMaxRandom = Boolean.valueOf(props.getProperty("factory.er.isRandom", "true"));		
 	}
 
 	public String getKeyPrefix() {
@@ -64,9 +70,42 @@ public abstract class AbstractDataObjectFactory implements DataObjectFactory {
 		this.isKeyLeadingZeros = isKeyLeadingZeros;
 	}
 
+	public boolean isEr() {
+		return erOperationName != null;
+	}
+
+	public void setMaxErKeys(int maxErKeys) {
+		this.maxErKeys = maxErKeys;
+	}
+
+	public void setErOperationName(String erChildOperationName) {
+		this.erOperationName = erChildOperationName;
+	}
+
+	public int getMaxErKeys() {
+		return maxErKeys;
+	}
+
+	public String getErOperationName()
+	{
+		return erOperationName;
+	}
+
+	public boolean isErMaxRandom() {
+		return isErMaxRandom;
+	}
+
+	public void setErMaxRandom(boolean isErMaxRandom) {
+		this.isErMaxRandom = isErMaxRandom;
+	}
+
 	@Override
 	public Object getKey(int idNum) {
 		return createKey(idNum);
+	}
+
+	public Entry[] createEntries(int[] idNums, Object[] erKeys) {
+		return null;
 	}
 
 	protected String createKey(int idNum) {

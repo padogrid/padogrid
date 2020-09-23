@@ -36,7 +36,7 @@ OPTIONS
    -coherence
              If specified, then includes the coherence moudle in the build.
              Note that you may need to install Coherence manually in the local 
-             Maven repository for this option to work. Please see the follwoing
+             Maven repository for this option to work. Please see the following
              file for details.
 
              coherence-addon-core/README.md
@@ -53,11 +53,11 @@ fi
 DEBUG="false"
 
 if [ "$DEBUG" == "false" ]; then
-   # TSLv1.2 required for older version of macOS
+   # TSLv1.2 required for older versions of macOS
    if [ "$COHERENCE_SPECIFIED" == "true" ]; then
-      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install -f pom-include-coherence.xml
+      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install -Pcoherence
    else
-      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install
+      mvn clean -Dhttps.protocols=TLSv1.2 -DskipTests install 
    fi
 fi
 

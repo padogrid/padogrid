@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.text.ParseException;
+import java.util.UUID;
 
 import org.hazelcast.addon.internal.util.ObjectUtil;
 
@@ -25,7 +26,9 @@ public class ObjectConverter extends ObjectUtil {
 	private Class<?>[] valueFieldTypes;
 
 	public ObjectConverter(String keyClassName, String[] keyFieldNames, String valueClassName, String[] valueFieldNames) throws ClassNotFoundException {
-		keyClass = Class.forName(keyClassName);
+		if (keyClassName != null) {
+			keyClass = Class.forName(keyClassName);
+		}
 		valueClass = Class.forName(valueClassName);
 		init(keyClass, keyFieldNames, valueClass, valueFieldNames);
 	}
@@ -59,7 +62,26 @@ public class ObjectConverter extends ObjectUtil {
 
 	public Object createKeyObject(Object[] keyFieldValues) throws InstantiationException, IllegalAccessException,
 			IllegalArgumentException, InvocationTargetException, ParseException {
-		return createObject(keyClass, keyClassSetters, keyFieldValues, 0);
+		if (keyClass == null) {
+			if (keyFieldValues != null && keyFieldValues.length > 0) {
+				return keyFieldValues[0];
+			} else {
+				return UUID.randomUUID().toString();
+			}
+		} if (keyClass == String.class) {
+			String key = "";
+			for (Object object : keyFieldValues) {
+				if (object != null) {
+					key += object.toString();
+				}
+			}
+			if (key.length() == 0) {
+				key = UUID.randomUUID().toString();
+			}
+			return key;
+		} else {
+			return createObject(keyClass, keyClassSetters, keyFieldValues, 0);
+		}
 	}
 
 	public Object createValueObject(Object[] valueFieldValues) throws InstantiationException, IllegalAccessException,

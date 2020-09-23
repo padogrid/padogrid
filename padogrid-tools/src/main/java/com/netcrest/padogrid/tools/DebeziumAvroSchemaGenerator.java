@@ -45,7 +45,7 @@ public class DebeziumAvroSchemaGenerator {
 		File file = new File(artifactsFilePath);
 		if (file.exists() == false) {
 			throw new RuntimeException(
-					"ERROR: The specified artifacts file path does not exist: [" + artifactsFilePath + "].");
+					"ERROR: The specified artifacts file path does not exist: [" + artifactsFilePath + "]. Command aborted.");
 		}
 		if (resourcesDir != null) {
 			this.resourcesDirFile = new File(resourcesDir);

@@ -2,6 +2,16 @@
 
 The PadoGrid project aims to deliver a data grid platform with out-of-the-box turnkey solutions to many enterprise architecture use cases. The solutions come in the form of bundles which you simply *install and run*.
 
+## Downloads
+
+PadoGrid binary downloads are available from the *Releases* page:
+
+[PadoGrid Releases/Downloads](https://github.com/padogrid/padogrid/releases)
+
+Download links to all the supported data grids are also provided in the following page:
+
+[Supported Data Grid Downloads](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products-and-Downloads)
+
 ## PadoGrid Brief
 
 PadoGrid is a collection of add-on components and tools specifically designed for [data grid products](#data-Grid-Products) to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
@@ -13,6 +23,7 @@ A workspace provides a sandbox environment completely isolated from other worksp
 A workspace snapshot can be taken at any time in the form of a bundle that can be quickly deployed and run on another workspace created by another user on another platform. Because of their portability, bundles provide the means to shrink-wrap fully operational use cases. PadoGrid includes bundle catalogs from which you can search your use cases.
 
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
+- [Releases/Downloads](https://github.com/padogrid/padogrid/releases)
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 - [Quick Start](https://github.com/padogrid/padogrid/wiki/Quick-Start)
 - [Building PadoGrid](#building-padogrid)
@@ -72,7 +83,7 @@ Once you have installed the Coherence package in your local Maven repository, in
 ./build_dist.sh -coherence -man
 
 # Maven (without man pages, fastest build)
-mvn install -f pom-include-coherence.xml
+mvn install -Pcoherence
 
 # Build all: all modules + external apps (slowest and largest build)
 ./build_all.sh -coherence -man
@@ -82,7 +93,7 @@ mvn install -f pom-include-coherence.xml
 
 Upon successful build, the following distribution files will be generated.
 
-```console
+```bash
 # The following distributions contain all the padogrid components.
 padogrid-deployment/target/assembly/padogrid_<version>.tar.gz
 padogrid-deployment/target/assembly/padogrid_<version>.zip
@@ -95,17 +106,17 @@ padogrid-deployment/target/assembly/padogrid-all_<version>.zip
 
 Inflate one of the distribution files in your file system. For example,
 
-```console
+```bash
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.2-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.3.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.2-SNAPSHOT
+tree -L 1 padogrid_0.9.3
 ```
 
 **Output:**
 
-```console
-padogrid_0.9.2-SNAPSHOT
+```bash
+padogrid_0.9.3
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -124,8 +135,22 @@ padogrid_0.9.2-SNAPSHOT
 
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
-```console
-~/Padogrid/products/padogrid_0.9.2-SNAPSHOT/bin_sh/create_rwe
+```bash
+~/Padogrid/products/padogrid_0.9.3/bin_sh/create_rwe
+```
+
+## Running PadoGrid on Kubernetes
+
+You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
+
+```bash
+kubectl create deployment padogid --image=docker.io/padogrid/padogrid
+```
+
+To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
+
+```bash
+kubectl exec -it <padogrid-pod-name> -- bash
 ```
 
 ## Data Grid Products

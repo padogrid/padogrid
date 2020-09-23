@@ -38,7 +38,7 @@ public class HibernateSetTest {
 		factory.setKeyPrefix("000000-");
 		factory.setKeyPrefixLength(11);
 		for (int i = 0; i < 100; i++) {
-			DataObjectFactory.Entry entry = factory.createEntry(i);
+			DataObjectFactory.Entry entry = factory.createEntry(i, null);
 			map.set(entry.key, entry.value);
 		}
 		for (int i = 0; i < 5000; i++) {
@@ -55,7 +55,7 @@ public class HibernateSetTest {
 		factory.setKeyPrefix("000000-");
 		factory.setKeyPrefixLength(11);
 		for (int i = 0; i < 1000; i++) {
-			DataObjectFactory.Entry entry = factory.createEntry(i);
+			DataObjectFactory.Entry entry = factory.createEntry(i, null);
 			map.set(entry.key, entry.value);
 		}
 		for (int i = 0; i < 5000; i++) {

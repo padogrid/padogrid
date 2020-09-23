@@ -47,7 +47,7 @@ import com.hazelcast.core.IMap;
 public class DebeziumKafkaSinkTask extends SinkTask {
 
 	private static final Logger log = LoggerFactory.getLogger(DebeziumKafkaSinkTask.class);
-	
+
 	private static final int MICRO_IN_MILLI = 1000;
 
 	private boolean isDebugEnabled = false;
@@ -64,7 +64,6 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 	private String[] valueColumnNames;
 	private String[] valueFieldNames;
 	private ObjectConverter objConverter;
-	private boolean isDelete = true;
 
 	@Override
 	public String version() {
@@ -171,6 +170,43 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 		map = hzInstance.getMap(mapName);
 	}
 
+	private Object[] getFieldFromMap(Map keyMap) {
+		// Determine the key column names.
+		if (keyColumnNames == null) {
+			keyColumnNames = (String[]) keyMap.keySet().toArray();
+		}
+		Object keyFieldValues[] = null;
+		if (keyColumnNames != null) {
+			keyFieldValues = new Object[keyColumnNames.length];
+			for (int j = 0; j < keyColumnNames.length; j++) {
+				keyFieldValues[j] = keyMap.get(keyColumnNames[j]);
+			}
+		}
+		return keyFieldValues;
+	}
+
+	private Object[] getValueFieldsFromMap(Map valueMap) {
+		// Determine the value column names.
+		if (valueColumnNames == null) {
+			valueColumnNames = (String[]) valueMap.keySet().toArray();
+		}
+		Object valueFieldValues[] = null;
+		if (valueColumnNames != null) {
+			valueFieldValues = new Object[valueColumnNames.length];
+			Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
+			for (int j = 0; j < valueColumnNames.length; j++) {
+				valueFieldValues[j] = valueMap.get(valueColumnNames[j]);
+				// TODO: This is a hack. Support other types also.
+				if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
+					if (valueFieldValues[j] instanceof Number) {
+						valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
+					}
+				}
+			}
+		}
+		return valueFieldValues;
+	}
+
 	@Override
 	public void put(Collection<SinkRecord> records) {
 //		final Serde<String> serde = DebeziumSerdes.payloadJson(String.class);
@@ -185,56 +221,89 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				System.out.println("sinkRecord=" + sinkRecord);
 				System.out.println("keySchema=" + keySchema);
 				System.out.println("valueSchema=" + valueSchema);
-				System.out.println("keyFields=" + keySchema.fields());
-				if (valueSchema == null) {
-					System.out.println("valueSchema=null");
-				} else {
+				if (keySchema != null) {
+					System.out.println("keyFields=" + keySchema.fields());
+				}
+				if (valueSchema != null) {
 					System.out.println("valueFields=" + valueSchema.fields());
 				}
 			}
 
 			// Struct objects expected
-			Struct keyStruct = (Struct) sinkRecord.key();
-			Struct valueStruct = (Struct) sinkRecord.value();
-			log.trace("Writing to {}: {}", logMapName(), keyStruct);
-			log.trace("Writing to {}: {}", logMapName(), valueStruct);
+			log.info("*************************key:" + sinkRecord.key().getClass().toString());
+			log.info("*************************value:" + sinkRecord.value().getClass().toString());
+			log.info(sinkRecord.key().toString());
+			log.info(sinkRecord.value().toString());
 
-			boolean isDelete = valueStruct == null;
-			Struct afterStruct = null;
-			Object op = null;
-			if (isSmtEnabled) {
-				afterStruct = valueStruct;
-			} else if (valueStruct != null) {
-				op = valueStruct.get("op");
-				isDelete = op != null && op.toString().equals("d");
-				afterStruct = (Struct) valueStruct.get("after");
+			Object keyFieldValues[] = null;
+			Object valueFieldValues[] = null;
+			boolean isDelete;
+			if (sinkRecord.key() instanceof Map) {
+				keyFieldValues = getFieldFromMap((Map) sinkRecord.key());
+				isDelete = sinkRecord.value() == null;
+				if (sinkRecord.value() != null) {
+					valueFieldValues = getValueFieldsFromMap((Map) sinkRecord.value());
+				}
+			} else {
+				Struct keyStruct = (Struct) sinkRecord.key();
+				Struct valueStruct = (Struct) sinkRecord.value();
+
+				isDelete = valueStruct == null;
+				Struct afterStruct = null;
+				Object op = null;
+				if (isSmtEnabled) {
+					afterStruct = valueStruct;
+				} else if (valueStruct != null) {
+					op = valueStruct.get("op");
+					isDelete = op != null && op.toString().equals("d");
+					afterStruct = (Struct) valueStruct.get("after");
+				}
+				if (isDebugEnabled) {
+					System.out.println("op=" + op);
+					System.out.println("isDelete = " + isDelete);
+					System.out.println("afterStruct = " + afterStruct);
+					System.out.flush();
+				}
+
+				// Key
+				// Determine the key column names.
+				if (keyColumnNames == null) {
+					keyColumnNames = getColumnNames(keyStruct);
+				}
+				if (keyColumnNames != null) {
+					keyFieldValues = new Object[keyColumnNames.length];
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+					}
+				}
+
+				// Value
+				// Determine the value column names.
+				if (valueColumnNames == null) {
+					valueColumnNames = getColumnNames(valueStruct);
+				}
+				if (valueColumnNames != null) {
+					valueFieldValues = new Object[valueColumnNames.length];
+					Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
+					for (int j = 0; j < valueColumnNames.length; j++) {
+						valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
+						// TODO: This is a hack. Support other types also.
+						if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
+							if (valueFieldValues[j] instanceof Number) {
+								valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
+							}
+						}
+					}
+				}
 			}
-			if (isDebugEnabled) {
-				System.out.println("op=" + op);
-				System.out.println("isDelete = " + isDelete);
-				System.out.println("afterStruct = " + afterStruct);
-				System.out.flush();
-			}
 
-			/*
-			 * Key
-			 */
-			Object key;
-
-			// Determine the key column names.
-			if (keyColumnNames == null) {
-				keyColumnNames = getColumnNames(keyStruct);
-			}
-
+			// Key
+			Object key = null;
 			// If the key column names are not defined or cannot be determined then
 			// assign UUID for the key value
 			if (keyColumnNames == null) {
 				key = UUID.randomUUID().toString();
 			} else {
-				Object keyFieldValues[] = new Object[keyColumnNames.length];
-				for (int j = 0; j < keyColumnNames.length; j++) {
-					keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
-				}
 				try {
 					key = objConverter.createKeyObject(keyFieldValues);
 				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
@@ -250,26 +319,8 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				continue;
 			}
 
-			/*
-			 * Value
-			 */
-			Object value;
-
-			// Determine the value column names.
-			if (valueColumnNames == null) {
-				valueColumnNames = getColumnNames(valueStruct);
-			}
-			Object valueFieldValues[] = new Object[valueColumnNames.length];
-			Class<?>valueFieldTypes[] = objConverter.getValueFielTypes();
-			for (int j = 0; j < valueColumnNames.length; j++) {
-				valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
-				// TODO: This is a hack. Support other types also.
-				if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
-					if (valueFieldValues[j] instanceof Number) {
-						valueFieldValues[j] = new Date((long)valueFieldValues[j] / MICRO_IN_MILLI);
-					}
-				}
-			}
+			// Value
+			Object value = null;
 			try {
 				value = objConverter.createValueObject(valueFieldValues);
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
@@ -278,7 +329,8 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 			}
 			if (isDebugEnabled) {
 				for (int j = 0; j < valueColumnNames.length; j++) {
-					System.out.println("valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
+					System.out.println(
+							"valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
 				}
 				System.out.println("value = " + value);
 			}
@@ -317,7 +369,9 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 
 	@Override
 	public void stop() {
-		hzInstance.shutdown();
+		if (hzInstance != null) {
+			hzInstance.shutdown();
+		}
 	}
 
 	private String logMapName() {

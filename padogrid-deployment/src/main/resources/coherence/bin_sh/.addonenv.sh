@@ -458,6 +458,13 @@ else
 fi
 
 #
+# Java version
+#
+JAVA_VERSION=$($JAVA -version 2>&1)
+JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
+JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+
+#
 # COHERENCE_VERSION/PRODUCT_VERSION: Determine the Coherence version
 #
 COHERENCE_VERSION=""

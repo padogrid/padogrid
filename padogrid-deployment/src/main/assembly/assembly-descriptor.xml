@@ -1,4 +1,5 @@
-<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
 
 	<id>padogrid-assembly</id>
@@ -125,6 +126,17 @@
 			<useAllReactorProjects>true</useAllReactorProjects>
 			<includes>
 				<include>*:snappydata-addon-core</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>snappydata/lib</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:padogrid-snappydata-all</include>
 			</includes>
 			<binaries>
 				<includeDependencies>false</includeDependencies>
@@ -333,7 +345,7 @@
 		</fileSet>
 
 		<!-- plugins (include test jar in the plugins/ dir) -->
-		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but this works. -->
 		<fileSet>
 			<directory>../hazelcast-addon-core-3/target</directory>
 			<outputDirectory>hazelcast/plugins/v3</outputDirectory>
@@ -525,9 +537,11 @@
 		</fileSet>
 
 		<!-- k8s: k8s files -->
-		<!-- <fileSet> <directory>src/main/resources/snappydata/k8s</directory> <outputDirectory>snappydata/k8s/</outputDirectory> 
-			</fileSet> <fileSet> <directory>src/main/resources/snappydata/k8s/kustom/bin_sh</directory> <outputDirectory>snappydata/k8s/kustom/bin_sh</outputDirectory> 
-			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+		<!-- <fileSet> <directory>src/main/resources/snappydata/k8s</directory> 
+			<outputDirectory>snappydata/k8s/</outputDirectory> </fileSet> <fileSet> <directory>src/main/resources/snappydata/k8s/kustom/bin_sh</directory> 
+			<outputDirectory>snappydata/k8s/kustom/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
 
 		<!-- docker: docker files -->
 		<fileSet>
@@ -537,13 +551,17 @@
 
 		<!-- apps -->
 		<!-- Include the entire apps dir -->
-		<!-- <fileSet> <directory>src/main/resources/snappydata/apps</directory> <outputDirectory>snappydata/apps/</outputDirectory> 
-			<includes> <include>**</include> </includes> </fileSet> -->
+		<!-- <fileSet> <directory>src/main/resources/snappydata/apps</directory> 
+			<outputDirectory>snappydata/apps/</outputDirectory> <includes> <include>**</include> 
+			</includes> </fileSet> -->
 		<!-- Make app bin_sh files executable. -->
-		<!-- <fileSet> <directory>src/main/resources/snappydata/apps/grafana/bin_sh</directory> <outputDirectory>snappydata/apps/grafana/bin_sh</outputDirectory> 
-			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> <fileSet> 
-			<directory>src/main/resources/snappydata/apps/perf_test/bin_sh</directory> <outputDirectory>snappydata/apps/perf_test/bin_sh</outputDirectory> 
-			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+		<!-- <fileSet> <directory>src/main/resources/snappydata/apps/grafana/bin_sh</directory> 
+			<outputDirectory>snappydata/apps/grafana/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> <fileSet> <directory>src/main/resources/snappydata/apps/perf_test/bin_sh</directory> 
+			<outputDirectory>snappydata/apps/perf_test/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
 
 		<!-- plugins (include test jar in the plugins/ dir) -->
 		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
@@ -597,13 +615,15 @@
 		</fileSet>
 
 		<!-- k8s: k8s files -->
-		<!-- <fileSet> <directory>src/main/resources/coherence/k8s</directory> <outputDirectory>coherence/k8s/</outputDirectory> 
-			</fileSet> <fileSet> <directory>src/main/resources/coherence/k8s/kustom/bin_sh</directory> <outputDirectory>coherence/k8s/kustom/bin_sh</outputDirectory> 
-			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+		<!-- <fileSet> <directory>src/main/resources/coherence/k8s</directory> 
+			<outputDirectory>coherence/k8s/</outputDirectory> </fileSet> <fileSet> <directory>src/main/resources/coherence/k8s/kustom/bin_sh</directory> 
+			<outputDirectory>coherence/k8s/kustom/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
 
 		<!-- docker: docker files -->
-		<!-- <fileSet> <directory>src/main/resources/coherence/docker</directory> <outputDirectory>coherence/docker/</outputDirectory> 
-			</fileSet> -->
+		<!-- <fileSet> <directory>src/main/resources/coherence/docker</directory> 
+			<outputDirectory>coherence/docker/</outputDirectory> </fileSet> -->
 
 		<!-- apps -->
 		<!-- Include the entire apps dir -->
@@ -615,8 +635,10 @@
 			</includes>
 		</fileSet>
 		<!-- Make app bin_sh files executable. -->
-		<!-- <fileSet> <directory>src/main/resources/coherence/apps/grafana/bin_sh</directory> <outputDirectory>coherence/apps/grafana/bin_sh</outputDirectory> 
-			<includes> <include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> </fileSet> -->
+		<!-- <fileSet> <directory>src/main/resources/coherence/apps/grafana/bin_sh</directory> 
+			<outputDirectory>coherence/apps/grafana/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
 		<fileSet>
 			<directory>src/main/resources/coherence/apps/perf_test/bin_sh</directory>
 			<outputDirectory>coherence/apps/perf_test/bin_sh</outputDirectory>

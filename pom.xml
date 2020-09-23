@@ -16,7 +16,7 @@
 	<artifactId>padogrid-parent</artifactId>
 	<packaging>pom</packaging>
 	<name>padogrid-parent</name>
-	<version>0.9.2</version>
+	<version>0.9.3</version>
 	<description>padogrid data grid management addons and tools</description>
 
 	<properties>
@@ -25,6 +25,9 @@
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<padogrid.version>${project.version}</padogrid.version>
 		<geode.version>1.11.0</geode.version>
+		<maven.jar.plugin.version>2.4</maven.jar.plugin.version>
+		<maven.javadoc.plugin.version>3.1.0</maven.javadoc.plugin.version>
+		<maven.shade.plugin.version>3.2.2</maven.shade.plugin.version>
 	</properties>
 
 	<repositories>
@@ -90,19 +93,47 @@
 			</plugins>
 		</pluginManagement>
 	</build>
-	<modules>
-		<module>padogrid-common</module>
-		<module>padogrid-tools</module>
-		<!-- Leave out Coherence. It must be built separately due to the lack of public Maven support.
-		See pom-include-coherence.xml -->
-		<!-- <module>coherence-addon-core</module> -->
-		<module>geode-addon-core</module>
-		<module>hazelcast-addon-common</module>
-		<module>hazelcast-addon-core-3</module>
-		<module>hazelcast-addon-core-4</module>
-		<module>hazelcast-addon-jet-demo-3</module>
-		<module>hazelcast-addon-jet-demo-4</module>
-		<module>snappydata-addon-core</module>
-		<module>padogrid-deployment</module>
-	</modules>
+
+	<profiles>
+		<!-- Include coherence -->
+		<profile>
+			<id>coherence</id>
+			<modules>
+				<module>padogrid-common</module>
+				<module>padogrid-tools</module>
+				<module>coherence-addon-core</module>
+				<module>geode-addon-core</module>
+				<module>hazelcast-addon-common</module>
+				<module>hazelcast-addon-core-3</module>
+				<module>hazelcast-addon-core-4</module>
+				<module>hazelcast-addon-jet-demo-3</module>
+				<module>hazelcast-addon-jet-demo-4</module>
+				<module>snappydata-addon-core</module>
+				<module>padogrid-all/</module>
+				<module>padogrid-deployment</module>
+			</modules>
+		</profile>
+
+		<!-- Exclude coherence -->
+		<profile>
+			<id>default</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<modules>
+				<module>padogrid-common</module>
+				<module>padogrid-tools</module>
+				<module>geode-addon-core</module>
+				<module>hazelcast-addon-common</module>
+				<module>hazelcast-addon-core-3</module>
+				<module>hazelcast-addon-core-4</module>
+				<module>hazelcast-addon-jet-demo-3</module>
+				<module>hazelcast-addon-jet-demo-4</module>
+				<module>snappydata-addon-core</module>
+				<module>padogrid-all/</module>
+				<module>padogrid-deployment</module>
+			</modules>
+		</profile>
+	</profiles>
+	
 </project>

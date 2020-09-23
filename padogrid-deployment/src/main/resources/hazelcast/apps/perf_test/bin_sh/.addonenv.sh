@@ -30,7 +30,13 @@ if [ ! -d "$APP_LOG_DIR" ]; then
    mkdir -p "$APP_LOG_DIR"
 fi
 
-HAZELCAST_CLIENT_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client.xml
+# k8s pod
+if [ "NAMESPACE" != "" ] && [ "$HAZELCAST_SERVICE" != "" ]; then
+   K8S_PROPERTIES="-Dk8s.hazelcast.service=$HAZELCAST_SERVICE -Dk8s.namespace=$NAMESPACE"
+   HAZELCAST_CLIENT_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client-k8s.xml
+else
+   HAZELCAST_CLIENT_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client.xml
+fi
 HAZELCAST_CLIENT_FAILOVER_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client-failover.xml
 LOG_CONFIG_FILE=$APP_ETC_DIR/log4j2.properties
 export LOG_DIR=$APP_DIR/log
@@ -48,3 +54,8 @@ fi
 # Log properties for log4j2. The log file name is set in executable scripts.
 JAVA_OPTS="$JAVA_OPTS -Dhazelcast.logging.type=log4j2 \
 -Dlog4j.configurationFile=$LOG_CONFIG_FILE"
+
+# k8s
+if [ "$K8S_PROPERTIES" != "" ]; then
+   JAVA_OPTS="$JAVA_OPTS $K8S_PROPERTIES"
+fi
