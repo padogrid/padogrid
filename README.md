@@ -108,15 +108,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.3.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.4-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.3
+tree -L 1 padogrid_0.9.4-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.3
+padogrid_0.9.4-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -136,7 +136,7 @@ padogrid_0.9.3
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.3/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.4-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid on Kubernetes
