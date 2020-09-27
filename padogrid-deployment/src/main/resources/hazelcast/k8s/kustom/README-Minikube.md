@@ -127,6 +127,8 @@ $PADOGRID_HOME/hazelcast/plugins/v4/* \
 docker@minikube:/data/custom/plugins/v1/
 ```
 
+### WSL Users
+
 If you are using WSL then you will need to convert the minikube certificate file paths from Windows to Unix notations. From WSL, edit the `set_minikube` and `set_minikube.bat` scripts to enter the minikube IP and your user name, and run it as follows:
 
 ```console
@@ -143,13 +145,15 @@ MINIKUBE_IP=<minikube ip>
 
 :exclamation: Whenever you switch from WSL to Windows, you must run `set_minikube.bat` to set the correct paths, and vice versa.
 
-After running `set_minikube`, create certificates for Prometheus as follows.
+### Create TLS Cerficates
 
 ```console
 # Create TLS certificates for the Prometheus custom metrics API adapter
 cd $HAZELCAST_KUSTOM_DIR/bin_sh
 ./create_certs
 ```
+
+### Deploy Containers
 
 You are now ready to deploy containers.
 
