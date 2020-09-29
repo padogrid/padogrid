@@ -54,8 +54,50 @@ objects:
           rest-api:
             enabled: true
             endpoint-groups:
+              CLUSTER_READ:
+                enabled: true
+              CLUSTER_WRITE:
+                enabled: true
               HEALTH_CHECK:
                 enabled: true
+              HOT_RESTART:
+                enabled: true
+              WAN:
+                enabled: true
+              DATA:
+                enabled: true
+        wan-replication:
+          wan1-to-wan2-merkle:
+            batch-publisher:
+              dev:
+                target-endpoints: ${WAN_TARGET_ENDPONTS}
+                sync:
+                  consistency-check-strategy: MERKLE_TREES
+        map:
+          eligibility:
+            wan-replication-ref:
+              wan1-to-wan2-merkle: {}
+            merkle-tree:
+              enabled: true
+              depth: 10
+          profile:
+            wan-replication-ref:
+              wan1-to-wan2-merkle: {}
+            merkle-tree:
+              enabled: true
+              depth: 10
+          nw/customers:
+            wan-replication-ref:
+              wan1-to-wan2-merkle: {}
+            merkle-tree:
+              enabled: true
+              depth: 10
+          nw/orders:
+            wan-replication-ref:
+              wan1-to-wan2-merkle: {}
+            merkle-tree:
+              enabled: true
+              depth: 10
 
 - apiVersion: apps/v1
   kind: StatefulSet

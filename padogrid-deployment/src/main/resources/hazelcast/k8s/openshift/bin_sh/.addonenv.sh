@@ -29,3 +29,11 @@ APP_ETC_DIR=$APP_DIR/etc
 
 # Source in app specifics
 . $APP_DIR/bin_sh/setenv.sh
+
+# SED backup prefix
+if [[ ${OS_NAME} == DARWIN* ]]; then
+  # Mac - space required
+  __SED_BACKUP=" 0"
+else
+  __SED_BACKUP="0"
+fi

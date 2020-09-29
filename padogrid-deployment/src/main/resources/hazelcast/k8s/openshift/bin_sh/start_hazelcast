@@ -11,22 +11,40 @@ NAME
    $EXECUTABLE - Start a Hazelcast using Helm charts
 
 SYNOPSIS
-   $EXECUTABLE [-oss | -rhel] [-?]
+   $EXECUTABLE [-oss | -rhel] [-wan [endpoints]] [-?]
 
 DESCRIPTION
    Starts a Hazelcast cluster. If IMDG_LICENSE_KEY is defined then it starts Hazelcast Enterprise, otherwise,
-   it defaults to Hazelcast Open Source. If no option is specified, then it launches the docker.io Hazelccast
-   image.
+   it defaults to Hazelcast Open Source, i.e., '-oss'. If no option is specified, then it launches the
+   docker.io Hazelccast image.
+
+   Hazelcast is setup as follows:
+      Hazelcast member count: 3
+      Load balancer nodePort: 30001
+
+   If you want to launch Haelcast with WAN replication configured, then specified the '-wan' option.
 
 OPTIONS
    -oss
-             If specified launches Hazelcast OSS.
+             If specified then launches Hazelcast OSS.
 
    -rhel
-             If specified launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
-             you must first create an OpenShift scretes for image pull. Please see the accompanied READEM-crc.md
+             If specified then launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
+             you must first create an OpenShift secrets for image pull. Please see the accompanied READEM-crc.md
              for details. If IMDG_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
-             is used instead.
+             5is used instead.
+
+   -wan [endpoints]
+             This option is for Hazelcast Enterprise only. It is ignored if the '-oss' option is specified.
+             If specified then launches Hazelcast with the WAN replication configuration file
+             (see hazelcast/wan/hazelcast*.yaml) If endpoints is not specified then to prevent port conflicts,
+             30002 is set for the targent endpoints as follwos.
+
+                <master-node>:30002
+
+             To use the default endpoints, you must create a load balancer with the node port 30002. You can
+             also set the endpoints in the 'setenv.sh' file using the WAN_TARGET_ENDPOINTS environment varialbe
+             instead. Note that the endpoints set by this option overrides WAN_TARGET_ENDPOINTS.
 
 DEFAULT:
    ./$EXECUTABLE
@@ -40,19 +58,45 @@ fi
 
 oc project $APP_NAME
 
+
 pushd $APP_DIR/hazelcast > /dev/null
 
-if [ "$RHEL" == "true" ]; then
-  HAZELCAST_ENTERPRISE_YAML="hazelcast-enterprise-rhel.yaml"
+IS_ENTERPRISE="false"
+if [ "$OSS" == "true" ] || [ "$IMDG_LICENSE_KEY" == "" ]; then
+  HAZELCAST_YAML="hazelcast.yaml"
+elif [ "$RHEL" == "true" ]; then
+  IS_ENTERPRISE="true"
+  HAZELCAST_YAML="hazelcast-enterprise-rhel.yaml"
 else
-  HAZELCAST_ENTERPRISE_YAML="hazelcast-enterprise.yaml"
+  IS_ENTERPRISE="true"
+  HAZELCAST_YAML="hazelcast-enterprise.yaml"
 fi
-if [ "$IMDG_LICENSE_KEY" != "" ] && [ "$OSS" == "false" ]; then
-   echo "Starting Enterprise [$HAZELCAST_ENTERPRISE_YAML]..."
+
+if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
+   HAZELCAST_YAML="wan/$HAZELCAST_YAML"
+   if [ "$WAN_ARG" != "" ]; then
+      WAN_TARGET_ENDPOINTS="$WAN_ARG"
+   elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
+      WAN_TARGET_ENDPOINTS="$MASTER_NODE:30000"
+   else
+      WAN_TARGET_ENDPOINTS="$WAN_TARGET_ENDPOINTS"
+   fi
+fi
+
+echo ""
+echo "Starting Hazelcast..."
+echo ""
+echo -e "Hazelcast configuration: ${CLightGreen}hazelcast/${HAZELCAST_YAML}${CNone}"
+if [ "$WAN_TARGET_ENDPOINTS" != "" ]; then
+   echo -e "   WAN target endpoints: ${CLightGreen}${WAN_TARGET_ENDPOINTS}${CNone}"
+fi
+echo ""
+if [ "$IS_ENTERPRISE" == "true" ]; then
    oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
-   oc new-app -f $HAZELCAST_ENTERPRISE_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=3
+   # Update wan endpoints
+   sed -i${__SED_BACKUP} "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $HAZELCAST_YAML
+   oc new-app -f $HAZELCAST_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=3
 else
-   echo "Starting OSS [hazelcast/hazelcast.yaml]..."
    oc new-app -f hazelcast.yaml -p NAMESPACE=$(oc project -q)
 fi
 

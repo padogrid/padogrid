@@ -14,6 +14,19 @@
 # APP_ETC_DIR - App etc dir
 
 #
-# Default Kubernetes project name.
+# Follow the instructions in README.md using the following
+# environment variable.
+#
+export HAZELCAST_OPENSHIFT_DIR=$PADOGRID_WORKSPACE/k8s/wan1
+
+#
+# Default OpenShift project name
 #
 export PROJECT_NAME="$APP_NAME"
+
+#
+# Comma-separated list of WAN target endpoints, i.e., "ip-address1:5701,ipaddress2:5701"
+# By default, the master node and port 30000 is assigned. Change to other endpoints here.
+#
+MASTER_NODE=$(oc cluster-info |grep "Kubernetes master" | sed -e "s/^.*https:\/\///" -e "s/:.*$//")
+WAN_TARGET_ENDPOINTS="$MASTER_NODE:30002"
