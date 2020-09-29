@@ -191,13 +191,26 @@ elif [ "$K8S" == "minishift" ]; then
   echo "#" >> $SETENV_FILE
   echo "export HAZELCAST_OPENSHIFT_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
 
+#elif [ "$K8S" == "openshift" ]; then
+#
+#  K8S_DOC="README-Openshift.md"
+#  mkdir $CLUSTER_DIR/bin_sh
+#  cp $BASE_DIR/k8s/kustom/bin_sh/create_certs $CLUSTER_DIR/bin_sh/
+#  cp -rf $BASE_DIR/k8s/kustom/etc $CLUSTER_DIR
+#  cp -rf $BASE_DIR/k8s/kustom/README-Openshift.md $CLUSTER_DIR
+#  chmod 755 $CLUSTER_DIR/bin_sh/*
+#  create_setenv_file
+#  echo "" >> $SETENV_FILE
+#  echo "#" >> $SETENV_FILE
+#  echo "# Follow the instructions in $K8S_DOC using the following" >> $SETENV_FILE
+#  echo "# environment variable." >> $SETENV_FILE
+#  echo "#" >> $SETENV_FILE
+#  echo "export HAZELCAST_OPENSHIFT_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
+
 elif [ "$K8S" == "openshift" ]; then
 
-  K8S_DOC="README-Openshift.md"
-  mkdir $CLUSTER_DIR/bin_sh
-  cp $BASE_DIR/k8s/kustom/bin_sh/create_certs $CLUSTER_DIR/bin_sh/
-  cp -rf $BASE_DIR/k8s/kustom/etc $CLUSTER_DIR
-  cp -rf $BASE_DIR/k8s/kustom/README-Openshift.md $CLUSTER_DIR
+  K8S_DOC="README.md"
+  cp -rf $BASE_DIR/k8s/openshift/* $CLUSTER_DIR
   chmod 755 $CLUSTER_DIR/bin_sh/*
   create_setenv_file
   echo "" >> $SETENV_FILE
@@ -206,7 +219,11 @@ elif [ "$K8S" == "openshift" ]; then
   echo "# environment variable." >> $SETENV_FILE
   echo "#" >> $SETENV_FILE
   echo "export HAZELCAST_OPENSHIFT_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
-
+  echo "" >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "# Default OpenShift project name" >> $SETENV_FILE
+  echo "#" >> $SETENV_FILE
+  echo "export PROJECT_NAME=\"\$APP_NAME\"" >> $SETENV_FILE
 fi
 
 #
@@ -218,6 +235,9 @@ echo "    Kubernetes: $K8S"
 echo "Kubernetes Environment:"
 echo "   $CLUSTER_DIR"
 echo ""
-echo "Please follow the instructions in the $K8S_DOC document in the"
-echo "above directory."
+echo "Please follow the instructions in the $K8S_DOC document in the above directory."
+echo ""
+echo "To change directory to the K8S cluster:"
+echo ""
+echo -e "   ${CLightGreen}cd_k8s ${CLUSTER}${CNone}"
 echo ""

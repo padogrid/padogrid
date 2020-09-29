@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Login to the PadoGrid pod
+
+SYNOPSIS
+   $EXECUTABLE [paodgrid_pod_name] [-?]
+
+OPTIONS
+   padogrid_pod_name
+             PadoGrid pod name. If not specified, then the pod name that begins with 'padogrid-1' is assigned.
+
+DESCRIPTION
+   Logs in to the PadoGrid pod.
+
+EOF
+exit
+fi
+
+POD_NAME="$1"
+if [ "$POD_NAME" == "" ]; then
+   POD_NAME="$(oc get pods |grep padogrid-1 | grep -v deploy | sed 's/ .*//')"
+fi
+if [ "$POD_NAME" == "" ]; then
+   echo  >&2 "ERROR: PadoGrid pod not found in this project. Please see the usage. Command aborted."
+   exit 1
+fi
+
+oc exec -it $POD_NAME -- /bin/bash

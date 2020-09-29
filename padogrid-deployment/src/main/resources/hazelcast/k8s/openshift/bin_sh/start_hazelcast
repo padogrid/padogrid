@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Start a Hazelcast using Helm charts
+
+SYNOPSIS
+   $EXECUTABLE [-oss | -rhel] [-?]
+
+DESCRIPTION
+   Starts a Hazelcast cluster. If IMDG_LICENSE_KEY is defined then it starts Hazelcast Enterprise, otherwise,
+   it defaults to Hazelcast Open Source. If no option is specified, then it launches the docker.io Hazelccast
+   image.
+
+OPTIONS
+   -oss
+             If specified launches Hazelcast OSS.
+
+   -rhel
+             If specified launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
+             you must first create an OpenShift scretes for image pull. Please see the accompanied READEM-crc.md
+             for details. If IMDG_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
+             is used instead.
+
+DEFAULT:
+   ./$EXECUTABLE
+
+SEE ALSO
+   https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift/hazelcast-cluster
+
+EOF
+exit
+fi
+
+oc project $APP_NAME
+
+pushd $APP_DIR/hazelcast > /dev/null
+
+if [ "$RHEL" == "true" ]; then
+  HAZELCAST_ENTERPRISE_YAML="hazelcast-enterprise-rhel.yaml"
+else
+  HAZELCAST_ENTERPRISE_YAML="hazelcast-enterprise.yaml"
+fi
+if [ "$IMDG_LICENSE_KEY" != "" ] && [ "$OSS" == "false" ]; then
+   echo "Starting Enterprise [$HAZELCAST_ENTERPRISE_YAML]..."
+   oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
+   oc new-app -f $HAZELCAST_ENTERPRISE_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=3
+else
+   echo "Starting OSS [hazelcast/hazelcast.yaml]..."
+   oc new-app -f hazelcast.yaml -p NAMESPACE=$(oc project -q)
+fi
+
+# Create the load balancer service
+oc apply -f service-lb.yaml
+
+# Expose the Hazelcast and Management Center service.
+oc expose svc/hazelcast-service-lb
+if [ "$IMDG_LICENSE_KEY" != "" ] && [ "$OSS" == "false" ]; then
+   oc expose svc/management-center-service
+fi
+
+popd > /dev/null

@@ -116,6 +116,7 @@ TREE=false
 OVERWRITE=false
 ALL=false
 OSS=false
+RHEL=false
 PID=
 PIDONLY=
 BEGIN_NUM=1
@@ -312,6 +313,8 @@ do
       ALL=true
    elif [ "$i" == "-oss" ]; then
       OSS=true
+   elif [ "$i" == "-rhel" ]; then
+      RHEL=true
    elif [ "$i" == "-kill" ]; then
       KILL=true
    elif [ "$i" == "-debug" ]; then
