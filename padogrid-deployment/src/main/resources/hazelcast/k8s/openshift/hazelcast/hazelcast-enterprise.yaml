@@ -12,7 +12,7 @@ labels:
 parameters:
 - name: HAZELCAST_IMAGE
   description: "Defines the location of Hazelcast image"
-  value: hazelcast/hazelcast-enterprise:4.0
+  value: hazelcast/hazelcast-enterprise:latest
   required: true
 - name: SERVICE_NAME
   description: "Defines the service name of the POD to lookup of Kubernetes"
@@ -30,7 +30,7 @@ parameters:
   required": true
 - name: MANAGEMENT_CENTER_IMAGE
   description: "Defines the location of Hazelcast Management Center image"
-  value: hazelcast/management-center:4.0
+  value: hazelcast/management-center:latest
   required: true
 - name: MANAGEMENT_CENTER_SERVICE_NAME
   description: "Defines the service name of Management Center"
@@ -63,41 +63,9 @@ objects:
               HOT_RESTART:
                 enabled: true
               WAN:
-                enabled: true
+                enabled: false
               DATA:
                 enabled: true
-        wan-replication:
-          wan1-to-wan2-merkle:
-            batch-publisher:
-              dev:
-                target-endpoints: ${WAN_TARGET_ENDPONTS}
-                sync:
-                  consistency-check-strategy: MERKLE_TREES
-        map:
-          eligibility:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
-          profile:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
-          nw/customers:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
-          nw/orders:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
 
 - apiVersion: apps/v1
   kind: StatefulSet
@@ -105,6 +73,7 @@ objects:
     name: hazelcast
     labels:
       app: hazelcast
+      role: hazelcast
   spec:
     replicas: 3
     selector:

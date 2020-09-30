@@ -52,41 +52,9 @@ objects:
               HOT_RESTART:
                 enabled: true
               WAN:
-                enabled: true
+                enabled: false
               DATA:
                 enabled: true
-        wan-replication:
-          wan1-to-wan2-merkle:
-            batch-publisher:
-              dev:
-                target-endpoints: hazelcast-service-lb-wan2.apps-crc.testing:30000
-                sync:
-                  consistency-check-strategy: MERKLE_TREES
-        map:
-          eligibility:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
-          profile:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
-          nw/customers:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
-          nw/orders:
-            wan-replication-ref:
-              wan1-to-wan2-merkle: {}
-            merkle-tree:
-              enabled: true
-              depth: 10
 
 - apiVersion: apps/v1
   kind: StatefulSet
@@ -94,6 +62,7 @@ objects:
     name: hazelcast
     labels:
       app: hazelcast
+      role: hazelcast
   spec:
     replicas: 3 
     selector:

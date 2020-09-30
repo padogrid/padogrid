@@ -210,7 +210,7 @@ From inside the Padogrid pod, run the `perf_test` app as follows.
 ```bash
 create_app
 cd_app perft_test; cd bin_sh
-./test-ingestion -run
+./test_ingestion -run
 ```
 
 ### 9.2. External Client
@@ -242,11 +242,11 @@ cd_app perf_test
 vi etc/hazelcast-client.xml
 ```
 
-Run `test-ingestion`:
+Run `test_ingestion`:
 
 ```bash
 cd_app perf_test; cd bin_sh
-./test-ingestion -run
+./test_ingestion -run
 ```
 
 ## 10. Teardown
