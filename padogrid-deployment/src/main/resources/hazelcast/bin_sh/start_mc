@@ -197,14 +197,22 @@ else
    else
       WAR_FILE_PREFIX="hazelcast-mancenter-"
    fi
+   LIB_EXTENSION=""
    for file in $HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}*; do
       file=${file#*$WAR_FILE_PREFIX}
-      MC_VERSION=${file%.war}
+      if [[ $file == *.jar ]]; then
+         MC_VERSION=${file%.jar}
+         LIB_EXTENSION=".jar"
+      else
+         LIB_EXTENSION=".war"
+         MC_VERSION=${file%.war}
+      fi
+      echo MC_VERSION=$MC_VERSION
    done
    if [ -z $CLASSPATH ]; then
-      CLASSPATH="$BASE_DIR/lib/*:$BASE_DIR/plugins/*:$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}.war"
+      CLASSPATH="$BASE_DIR/lib/*:$BASE_DIR/plugins/*:$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}"
    else
-      CLASSPATH="$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*:$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}.war"
+      CLASSPATH="$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*:$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}"
    fi
 fi
 
