@@ -6,7 +6,7 @@ This article provides instructions for installing Hazelcast on OCP or CRC.
 
 ```console
 .
-├── README-OCP.md
+├── README.md
 ├── bin_sh
 │   ├── build_app
 │   ├── cleanup
@@ -19,8 +19,16 @@ This article provides instructions for installing Hazelcast on OCP or CRC.
 ├── hazelcast
 │   ├── hazelcast-enterprise-rhel.yaml
 │   ├── hazelcast-enterprise.yaml
+│   ├── hazelcast-enterprise.yaml0
 │   ├── hazelcast.yaml
-│   └── service-lb.yaml
+│   ├── rbac.yaml
+│   ├── service-lb.yaml
+│   ├── service-nodeport.yaml
+│   ├── service-pods-nodeports.yaml
+│   ├── service-pods.yaml
+│   └── wan
+│       ├── hazelcast-enterprise-rhel.yaml
+│       └── hazelcast-enterprise.yaml
 └── padogrid
     ├── padogrid-no-pvc.yaml
     ├── padogrid.yaml
