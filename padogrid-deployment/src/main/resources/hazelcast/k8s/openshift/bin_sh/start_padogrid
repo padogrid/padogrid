@@ -45,7 +45,10 @@ EOF
 exit
 fi
 
-oc project $APP_NAME
+CURRENT_PROJECT=$(oc project -q)
+if [ "$CURRENT_PROJECT" != "$APP_NAME" ]; then
+   oc project $APP_NAME
+fi
 
 DEFAULT_STORAGE_CLASS_NAME=$(oc get storageclass | grep default | awk '{print $1}')
 STORAGE_CLASS_NAME="$1"
