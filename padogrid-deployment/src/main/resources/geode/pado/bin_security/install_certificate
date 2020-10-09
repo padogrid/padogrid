@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# ========================================================================
+# Copyright (c) 2013-2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+pushd .. > /dev/null 2>&1
+. ./setenv.sh > /dev/null 2>&1
+. ./all_env.sh > /dev/null 2>&1
+popd > /dev/null 2>&1
+
+if [ "$1" == "-?" ]; then
+   echo "Usage:"
+   echo "   install_certificate <secure site>[:<port>] [-?]"
+   echo ""
+   echo "   Installs the certificate(s) downloaded from the specified web site"
+   echo "   into $PADO_HOME/security/pado.keystore"
+   echo "   if the file exists. If the keystore file does not exist then it"
+   echo "   stores the certificate(s) in the default Java keystore file found"
+   echo "   in the Java installation directory:"
+   echo ""
+   echo "      $JAVA_HOME/lib/security/cacerts"
+   echo ""
+   echo "   Note that the cacerts file may differ from OS to OS. If pado.keystore"
+   echo "   does not exist, then it is recommended that copy cacerts to:"
+   echo ""
+   echo "      $PADO_HOME/security/pado.keystore"
+   echo ""
+   echo "   See the 'Security' section in README.txt for details on how to read"
+   echo "   the keystore file from your Pado adapters."
+   echo ""
+   echo "      <secure site>   Web site address"
+   echo "      <port>          Securte site port number. Default: 443"
+   echo ""
+   echo "   Default: ./install_certificate ...:443"
+   echo ""
+   exit
+fi
+
+if [ "$1" == "" ]; then
+   echo "<secure site> not specified. Aborted. '-?' to see usage."
+   echo ""
+   exit
+fi
+
+pushd $PADO_HOME > /dev/null 2>&1
+$JAVA -Xms32m -Xmx32m com.netcrest.pado.tools.com.aw.ad.util.InstallCert $*
+popd > /dev/null 2>&1

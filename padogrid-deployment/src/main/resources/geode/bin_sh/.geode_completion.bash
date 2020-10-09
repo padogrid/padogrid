@@ -112,6 +112,14 @@ __padogrid_complete()
       type_list=`getClusters $__ENV`
       ;;
 
+   -type)
+      if [ "$second_word" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$second_word" == "create_cluster" ]; then
+         type_list="default pado"
+      fi
+      ;;
+
    -k8s) 
       if [ "$second_word" == "create_k8s" ]; then
          type_list="minikube"
@@ -460,6 +468,13 @@ __command_complete()
          __ENV="clusters"
       fi
       type_list=`getClusters $__ENV`
+      ;;
+   -type)
+      if [ "$command" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$command" == "create_cluster" ]; then
+         type_list="default pado"
+      fi
       ;;
    -product)
       if [ "$command" == "show_bundle" ]; then

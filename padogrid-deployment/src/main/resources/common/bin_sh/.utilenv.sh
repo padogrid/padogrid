@@ -312,11 +312,10 @@ function isValidRwe
 }
 
 # 
-# Returns a complete list of workspaces found in the specified workspaces (RWE) path.
+# Returns a complete list of workspaces found in the specified workspace path.
 # If the workspaces path is not specified then it returns the workspaces in 
 # PADOGRID_WORKSPACES_HOME.
 # @required PADOGRID_WORKSPACES_HOME
-# @param rwePath Workspaces full path
 #
 function getWorkspaces
 {
@@ -343,22 +342,6 @@ function getWorkspaces
       popd > /dev/null 2>&1
    fi
    echo $__WORKSPACES
-}
-
-#
-# Returns "true" if the specified workspace path exists and is valid.
-# @param workspacePath  Workspace fullpath.
-#
-function isValidWorkspace
-{
-   local WORKSPACE_PATH="$1"
-   if [ -d "$WORKSPACE_PATH" ]; then
-      if [ -f "$WORKSPACE_PATH/initenv.sh" ] && [ -f "$WORKSPACE_PATH/.addonenv.sh" ] && [ -f "$WORKSPACE_PATH/setenv.sh" ]; then
-         echo "true"
-         return 0
-      fi
-   fi
-   echo "false"
 }
 
 #
@@ -925,7 +908,7 @@ function setPodProperty
 # 
 # Sets the cluster property in the $ETC_DIR/cluster.properties file.
 # @required  CLUSTER Cluster name.
-# @parma     propertyName  Property name.
+# @param     propertyName  Property name.
 # @param     propertyValue Property value.
 #
 function setClusterProperty
@@ -1137,6 +1120,9 @@ function switch_rwe
       return
    fi
 
+   # Reset Pado home path
+   export PADO_HOME=""
+
    if [ "$1" == "" ]; then
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/clusters/$CLUSTER" ]; then
          export CLUSTER=""
@@ -1195,6 +1181,9 @@ function switch_workspace
       echo "-?"
       return
    fi
+
+   # Reset Pado home path
+   export PADO_HOME=""
 
    if [ "$1" == "" ]; then
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then

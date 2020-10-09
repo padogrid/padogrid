@@ -462,6 +462,15 @@ if [ "$REDUNDANCY_ZONE" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS --J=-Dgemfire.redundancy-zone=$REDUNDANCY_ZONE"
 fi
 
+#
+# Source in Pado specifics
+#
+. $SCRIPT_DIR/.padoenv.sh
+
+if [ "$PADO_ENABLED" ] && [ "$PADO_JAVA_OPTS" != "" ]; then
+  JAVA_OPTS="$JAVA_OPTS $PADO_JAVA_OPTS"
+fi
+
 # Start the member
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"

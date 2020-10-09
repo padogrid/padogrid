@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# ========================================================================
+# Copyright (c) 2013-2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh > /dev/null
+
+EXECUTABLE="`basename $0`"
+
+if [ "$1" == "-?" ]; then
+   echo "Usage:"
+   echo "   $EXECUTABLE [-sched] [-now] [-import] [-grid $GRIDS_OPT] [-site $SITES_OPT] [-?]"
+   echo ""
+   echo "   $EXECUTABLE imports database tables into the grid paths defined in the"
+   echo "   config files found in the following directory:"
+   echo "      $PADO_DATA_DIR/scheduler/etc"
+   echo ""
+   echo "  IMPORTANT: If login is required then you must include app ID, user name, and password"
+   echo "             in $ETC_DIR/client/scheduler.properties."
+   echo "             Note that locators are automatically picked up by import_csv and not required"
+   echo "             in scheduler.properties."
+   echo ""
+   echo "      -sched Runs the scheduler which periodically imports data into the grid."
+   echo "      -now   Downloads data immediately. If -sched is not specified"
+   echo "             then it teminates upon completion."
+   echo "      -import Imports downloaded data into the grid."
+   echo ""
+   echo "   Default: $EXECUTABLE -grid $GRID_DEFAULT -site $SITE_DEFAULT"
+   echo ""
+   echo "   Note that the default exits immediately. It does not execute the scheduler"
+   echo "   and has no effect. You must specify at least one of -sched, -now, -import."
+   echo ""
+   echo "   Examples:"
+   echo "      Download immeidately, import data into the grid, and terminate:"
+   echo "         ./$EXECUTABLE -now -import"
+   echo "      Download immeidately, import data into the grid, and start the schduler:"
+   echo "         ./$EXECUTABLE -now -import -sched"
+   echo "      Download immeidately and then terminate without importing data into the grid:"
+   echo "         ./$EXECUTABLE -now"
+   echo "      Import previously downloaded data into the grid and then terminate:"
+   echo "         ./$EXECUTABLE -import"
+   echo ""
+   exit
+fi
+
+if [ "$SCHED" == "" ] && [ "$NOW" == "" ] && [ "$IMPORT" == "" ]; then
+   echo "Must specify one of -sched, -now, import. Exited without executing"
+   echo "the scheduler. Use the -? option to see usage."
+   echo ""
+   exit
+fi
+
+GEMFIRE_PROPERTIES="-DgemfirePropertyFile=$ETC_DIR/client/client.properties -Dgemfire.log-file=$LOG_DIR/$0-gemfire.log"
+PADO_PROPERTIES="-Dpado.home.dir=$PADO_HOME -Dpado.server=false -Dpado.locators=$LOCATORS -Dpado.properties=$ETC_DIR/client/pado.properties -Dpado.scheduler.dir=data/scheduler"
+pushd $PADO_HOME > /dev/null 2>&1 
+nohup $GF_JAVA -Xms512m -Xmx512m -Djava.awt.headless=true $GEMFIRE_PROPERTIES $SECURITY_PROPERTIES $PADO_PROPERTIES com.netcrest.pado.tools.ImportScheduler -locators $LOCATORS $* > $LOG_DIR/$0.log 2>&1&
+echo "$0 started. Please see the following log files for status:"
+echo "   $LOG_DIR/$0.log"
+echo "   $LOG_DIR/$0-gemfire.log"
+echo ""
+popd > /dev/null 2>&1

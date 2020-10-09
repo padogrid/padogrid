@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# ========================================================================
+# Copyright (c) 2013-2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh > /dev/null
+
+EXECUTABLE="`basename $0`"
+
+if [ "$1" == "-?" ]; then
+   echo "Usage:"
+   echo "   $EXECUTABLE [-buildlucene [-path <comma-separated grid paths>] [-all]"
+   echo "            [-clear [-path <comma-separated grid paths> [-grid <grid ID>]]]"
+   echo "            [-create [-nontemporal] [-path <comma-separated grid paths> [-grid <grid ID>]]"
+   echo "                     [-type local | local_persistent | local_overflow | local_persistent_overflow |"
+   echo "                            replicate | replicate_persistent | repliate_overflow |"
+   echo "                            replicate_persistent_overflow | repliate_empty | partition | "
+   echo "                            partition_persistent | partition_persistent_overflow]"
+   echo "                     [-colocatedWith <grid path>]"
+   echo "                     [-bucket <total bucket count>]"
+   echo "                     [-redundantCopies <Number of redundant copies of path entries>]]"
+   echo "            [-dump [-path <comma-separated grid paths>]]"
+   echo "            [-import [-path <comma-separated grid paths>]]"
+   echo "            [-enable | -disable [-path <comma-separated grid paths>]]"
+   echo "            [-interactive [-path <grid path>]"
+   echo "            [-list [-grid <grid ID>]]"
+   echo "            [-locators <host:port>]"
+   echo "            [-remove [-path <comma-separated grid paths> [-grid <grid ID>]]]"
+   echo "            [-?]"
+   echo "            [-grid $GRIDS_OPT] [-site $SITES_OPT] [-?]"
+   echo ""
+   echo "   TemporalTool is a uility tool for for building Lucene indexes, enabling or"
+   echo "   disabling temporal data, dumping grid path contents, and interactively"
+   echo "   accessing temporal data."
+   echo ""
+   echo "      -all          builds Lucene indexes in all grids including this grid's"
+   echo "                    child grids."
+   echo "      -buildlucene  builds Lucene indexes for all or specified paths. If -all"
+   echo "                    is not specified then it build indexes for this (default) grid only."
+   echo "      -clear        clears the specified paths. Path(s) must be specified."
+   echo "      -create       creates specified paths in the specified grid ID. If the"
+   echo "                    grid ID is not specified then it creates the paths"
+   echo "                    in this (default) grid. It always creates temporal paths"
+   echo "                    unless -nontemporal is specified."
+   echo "      -nontemporal  specify this option to create non-temporal paths."
+   echo "      -colocatedWith if specified then the specified grid paths are colocated"
+   echo "                    with this grid path"
+   echo "      -bucket       Total number of buckets. Default: 113"
+   echo "      -type         Partitioned path type. Default: partition"
+   echo "      -redundantCopies  Number of redudant copies of path entries. Default: 1"
+   echo "      -dump         dumps the contents of the specified paths to files in the"
+   echo "                    servers' dump dir. If -path is not specified then it dumps all paths."
+   echo "      -import       imports data from the latest data files in the servers' dump dir."
+   echo "                    If -path is not specified then it imports all paths found."
+   echo "      -disable      disables all or specified paths"
+   echo "      -enable       enables all or specified paths"
+   echo "      -list         lists all temporal paths definted in the grid"
+   echo "      -remove       removes the specified paths"
+   echo "      -interactive  runs in an interactive mode for executing 'put', 'get'"
+   echo "                    and 'dump' commands on a grid path."
+   echo "      -grid         executes the temporal command on the specified grid. Default: ${GRID_DEFAULT}"
+   echo "      -site         executes the temporal comman on the specified site. Default: ${SITE_DEFAULT}"
+   echo ""
+   echo "   Default: $EXECUTABLE -interactive -grid $GRID_DEFAULT -site $SITE_DEFAULT"
+   echo ""
+   exit
+fi
+
+GEMFIRE_PROPERTIES="-DgemfirePropertyFile=$ETC_DIR/client/client.properties"
+PADO_PROPERTIES="-Dpado.home.dir=$PADO_HOME -Dpado.server=false -Dpado.properties=$ETC_DIR/client/pado.properties"
+pushd $PADO_HOME > /dev/null 2>&1 
+"$JAVA" -Xms512m -Xmx512m -Djava.awt.headless=true $GEMFIRE_PROPERTIES $SECURITY_PROPERTIES $PADO_PROPERTIES com.netcrest.pado.tools.TemporalTool -locators $LOCATORS $*
+popd > /dev/null 2>&1

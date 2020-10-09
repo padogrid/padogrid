@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -pod -vm -locator -port -?"
+   echo "-cluster -type -pod -vm -locator -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,9 @@ NAME
    $EXECUTABLE - Create a new cluster in the current padogrid workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-pod pod_name]
+   $EXECUTABLE [-cluster cluster_name]
+               [-type default|pado]
+               [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-locator comma_separated_locator_hosts]
                [-port first_locator_port_number] [-?]
@@ -57,6 +59,11 @@ OPTIONS
              Unique cluster name. The cluster name is prepended
              to all member names.
 
+   -type default|pado
+             If the 'pado' option is specified, then it creates a Pado cluster that provide
+             full support for grid federation. The 'default' option creates a normal cluster
+             without any Pado dependencies.
+  
    -pod pod_name
              Pod name. The 'local' pod is the local machine.
              Default: local
@@ -133,6 +140,17 @@ if [ "`isPodExist $POD`" == "false" ]; then
    echo >&2 "    ERROR: This pod does not exist [$POD]. Command aborted."
    echo >&2 "----------------------------------------------------------------"
    exit 1
+fi
+
+if [ "$TYPE_ARG" == "pado" ]; then
+  if [ "$PADO_HOME" == "" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Pado is not found. You must specify the Pado installation path in the workspace 'setenv.sh' file."
+   echo >&2 "           using the PADO_HOME environment variable. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+  fi
 fi
 
 function writeCluster() 
@@ -330,6 +348,31 @@ function writeCluster()
          echo "vm.${VM_HOST}.hostnameForClients=${VM_HOST}" >> $ETC_DIR/cluster.properties
          echo "vm.${VM_HOST}.redundancyZone=" >> $ETC_DIR/cluster.properties
       done
+   fi
+
+   # Pado
+   if [ "$TYPE_ARG" == "pado" ]; then
+      cp -r $PADO_HOME/data $CLUSTER_DIR/
+      cp -r $PADO_HOME/db $CLUSTER_DIR/
+      cp -r $PADO_HOME/etc/pado1_0.dtd $ETC_DIR/
+      cp -r $PADO_HOME/etc/mygrid $ETC_DIR/$CLUSTER
+      cp -r $PADO_HOME/etc/mygrid/server.xml $ETC_DIR/cache.xml
+      cp -r $PADO_HOME/lang $CLUSTER_DIR/
+      cp -r $PADO_HOME/ldap $CLUSTER_DIR/
+      cp -r $PADO_HOME/plugins $CLUSTER_DIR/
+      cp -r $PADO_HOME/script $CLUSTER_DIR/
+      cp -r $PADO_HOME/security $CLUSTER_DIR/
+      setClusterProperty "locator.tcp.startPort" 20000
+      sed "s/mygrid/$CLUSTER/g" $PADO_HOME/data/template/scheduler/etc/db-example.json > $CLUSTER_DIR/data/template/scheduler/etc/db-example.json
+      sed "s/mygrid/$CLUSTER/g" $PADO_HOME/data/template/scheduler/README_SCHEDULER.txt > $CLUSTER_DIR/data/template/scheduler/README_SCHEDULER.txt
+      sed "s/mygrid/$CLUSTER/g" $PADO_HOME/etc/mygrid/pado.xml > $ETC_DIR/$CLUSTER/pado.xml
+      sed "s/mygrid/$CLUSTER/g" $PADO_HOME/etc/mygrid/pado.properties > $ETC_DIR/$CLUSTER/pado.properties
+      sed "s/mygrid/$CLUSTER/g" $PADO_HOME/etc/mygrid/app/test.xml > $ETC_DIR/$CLUSTER/app/test.xml
+      sed "s/mygrid/$CLUSTER/g" $PADO_HOME/ldap/example/newco-all.ldif > $CLUSTER_DIR/ldap/example/newco-all.ldif
+      mv $CLUSTER_DIR/security/client/mygrid-user.keystore $CLUSTER_DIR/security/client/$CLUSTER-user.keystore
+      mv $CLUSTER_DIR/data/template/scheduler/schema/mygrid-grid_path.schema $CLUSTER_DIR/data/template/scheduler/schema/$CLUSTER-grid_path.schema
+      # Pado specifics maintained by PadoGrid
+      cp -r $PADOGRID_HOME/geode/pado/* $CLUSTER_DIR/
    fi
 }
 
