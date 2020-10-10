@@ -423,21 +423,21 @@ else
       mkdir -p $LOG_DIR
    fi
    if [ "$RUN_SCRIPT" != "" ]; then
-      $RUN_SCRIPT >> $LOG_FILE &
+      nohup $RUN_SCRIPT >> $LOG_FILE &
    else
 	   
       pushd ${MEMBER_DIR} > /dev/null 2>&1
       if [ "$CLUSTER_TYPE" == "jet" ]; then
          if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
-            "$JAVA" -server $JAVA_OPTS com.hazelcast.jet.server.JetMemberStarter >> $LOG_FILE 2>&1 &
+            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.jet.server.JetMemberStarter >> $LOG_FILE 2>&1 &
          else
-            "$JAVA" -server $JAVA_OPTS com.hazelcast.jet.server.StartServer >> $LOG_FILE 2>&1 &
+            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.jet.server.StartServer >> $LOG_FILE 2>&1 &
 	 fi
       else
          if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
-            "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.HazelcastMemberStarter >> $LOG_FILE 2>&1 &
+            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.HazelcastMemberStarter >> $LOG_FILE 2>&1 &
          else
-            "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.StartServer >> $LOG_FILE 2>&1 &
+            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.StartServer >> $LOG_FILE 2>&1 &
 	 fi
       fi
       popd > /dev/null 2>&1
