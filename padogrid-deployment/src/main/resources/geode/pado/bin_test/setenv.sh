@@ -46,7 +46,6 @@ fi
 
 LOCATORS=$(echo $LOCATOR_TCP_LIST | sed -e "s/\[/:/g"  -e "s/\]//g")
 GEODE_LOCATORS=$LOCATOR_TCP_LIST
-PADO_HOME=$CLUSTER_DIR
 SECURITY_DIR=$CLUSTER_DIR/security
 
 if [ "$GEMFIRE_SECURITY_PROPERTY_FILE" == "" ]; then

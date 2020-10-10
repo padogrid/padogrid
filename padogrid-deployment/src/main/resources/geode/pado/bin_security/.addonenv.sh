@@ -30,6 +30,10 @@ APP_ETC_DIR=$APP_DIR/etc
 # Source in app specifics
 . $APP_DIR/bin_sh/setenv.sh
 
+# Set PADO_HOME to the cluster directory. All Pado commands are executed
+# relative to the cluster directory.
+PADO_HOME=$CLUSTER_DIR
+
 # SED backup prefix
 if [[ ${OS_NAME} == DARWIN* ]]; then
   # Mac - space required
