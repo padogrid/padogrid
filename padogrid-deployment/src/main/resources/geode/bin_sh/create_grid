@@ -1,0 +1,306 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-prefix -count -type -port -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create multiple clusters
+
+SYNOPSIS
+   $EXECUTABLE [-prefix cluster_prefix_name]
+               [-type default|pado]
+               [-count cluster_count]
+               [-port first_locator_port_number] [-?]
+
+DESCRIPTION
+   Creates multiple clusters in the current workspace. Once the clusters are created,
+   you can reconfigured each cluster by editing the followig file in their cluster directory.
+
+   etc/cluster.properties
+
+OPTIONS
+   -prefix cluster_prefix_name
+             The prefix of each cluster's name. Cluster names are enumuerated starting from
+             0 and incremented by 1. For example, if the prefix is 'mycluster' then the first
+             cluster is named 'mycluster0', the second, 'mycluster1', and so on up to one
+             less than the number specified by the '-count' option. If '-count' is 3 then
+             then the last cluster is named 'mycluster2'.
+
+   -type default|pado
+             If the 'pado' option is specified, then it creates Pado cluster that provide
+             full support for grid federation. The 'default' option creates normal clusters
+             without federation support and any Pado dependencies.
+  
+   -count cluster_count
+            The number of clusters. The max number of clusters allowed is 10. If this option
+            is not specified then by default it creates two (2) clusters.
+
+   -port first_locator_port_number
+             First locator's port number. Port number is incremented
+             starting from this port number for the subsquent locators.
+             The port number difference between the default locator port
+             number and the specified port number is added to the default
+             port numbers of other components. For example, if the port
+             number 10336 is specified then the difference of 2 (10336-$DEFAULT_LOCATOR_START_PORT)
+             is added to the member's default port number of $DEFAULT_MEMBER_START_PORT
+             to obtain the port number 40406 for the member's first port number.
+             Similarly, the JMX Manager's first HTTP port number would be 7072 ($DEFAULT_JMX_MANAGER_HTTP_START_PORT+2).
+
+             To create multiple clusters, this number is incremented by 10. The specified
+             number is used for the first cluster and then incremented by 10 for the second
+             cluster, and so on.
+
+             Default: $DEFAULT_LOCATOR_START_PORT 
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -prefix grid -count 2 -type default -port $DEFAULT_MEMBER_START_PORT
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "create_cluster" $EXECUTABLE
+   exit
+fi
+
+if [ -z $PREFIX ]; then
+   PREFIX="grid"
+fi
+
+if [ "$COUNT" == "" ]; then
+   COUNT=2
+fi
+let LAST_CLUSTER_NUM=COUNT-1
+
+if [ "$COUNT" -lt 1 ] || [ "$COUNT" -gt 10 ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Invalid count. The valid range is [1, 10]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Abort if any of the clusters exists
+for i in $(seq 0 $LAST_CLUSTER_NUM); do
+   CLUSTER=$PREFIX$i
+   CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+   if [ -d $CLUSTER_DIR ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: Cluster already exists: [$CLUSTER]. Use the '-prefix' option to set a different name."
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+done
+
+if [ "$TYPE_ARG" == "pado" ]; then
+  if [ "$PADO_HOME" == "" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "ERROR: Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
+   echo >&2 "       workspace 'setenv.sh' file."
+   echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
+   echo >&2 "       Command aborted."
+   exit 1
+  fi
+fi
+
+if [ "$TYPE_ARG" == "" ]; then
+   TYPE_ARG="default"
+fi
+
+#
+# Generate base clusters
+#
+PARENT_LOCATOR_PORT=$DEFAULT_LOCATOR_START_PORT
+LOCATOR_PORT=$PARENT_LOCATOR_PORT
+for i in $(seq 0 $LAST_CLUSTER_NUM); do
+   create_cluster -cluster $PREFIX$i -type $TYPE_ARG -port $LOCATOR_PORT
+   let LOCATOR_PORT=LOCATOR_PORT+10
+done
+
+if [ "$TYPE_ARG" != "pado" ]; then
+  exit
+fi
+
+# Generate pado.xml
+PARENT_PADO_XML="pado.xml"
+PARENT_GRID_ID="${PREFIX}0"
+PARENT_CLUSTER=$PARENT_GRID_ID
+
+# sys
+CHILD_GRIDS=""
+if [ $LAST_CLUSTER_NUM -gt 0 ]; then
+for i in $(seq 1 $LAST_CLUSTER_NUM); do
+  CLUSTER="${PREFIX}$i"
+  CHILD_GRID="                \<grid id=\"${CLUSTER}\"\ routing-weight=\"1\">\<\/grid\>"
+  CHILD_GRIDS="                ${CHILD_GRIDS}\|${CHILD_GRID}"
+done
+fi
+
+# app1
+APP1=""
+if [ $LAST_CLUSTER_NUM -eq 0 ]; then
+  CLUSTER_NUM=0
+else
+  CLUSTER_NUM=1
+fi
+CLUSTER=${PREFIX}${CLUSTER_NUM}
+APP1="        <app id=\"app1\">"
+APP1="$APP1|            \<grid-list id=\"app1 grid list\" default-grid-id=\"$CLUSTER\">"
+for i in $(seq 0 $LAST_CLUSTER_NUM); do
+  CLUSTER="${PREFIX}$i"
+  if [ $i -eq 0 ]; then
+    ROUTING_WEIGHT="10"
+  else
+    ROUTING_WEIGHT="1"
+  fi
+  CHILD_GRID="                \<grid id=\"${CLUSTER}\"\ routing-weight=\"${ROUTING_WEIGHT}\">\<\/grid\>"
+  APP1="${APP1}\|${CHILD_GRID}"
+done
+APP1="${APP1}|                <description>Allowed grids for app1.<\/description>"
+APP1="${APP1}|            <\/grid-list>"
+APP1="${APP1}|       <\/app>"
+
+# test
+TEST="        <app id=\"test\">"
+TEST="$TEST|            \<grid-list id=\"test grid list\" default-grid-id=\"$CLUSTER\">"
+for i in $(seq 0 $LAST_CLUSTER_NUM); do
+  CLUSTER="${PREFIX}$i"
+  if [ $i -eq 0 ]; then
+    ROUTING_WEIGHT="10"
+  else
+    ROUTING_WEIGHT="1"
+  fi
+  CHILD_GRID="                \<grid id=\"${CLUSTER}\"\ routing-weight=\"${ROUTING_WEIGHT}\">\<\/grid\>"
+  TEST="${TEST}\|${CHILD_GRID}"
+done
+TEST="${TEST}|                <description>Allowed grids for test.<\/description>"
+TEST="${TEST}|            <\/grid-list>"
+TEST="${TEST}|            <description>The test app is for running test suites.<\/description>"
+TEST="${TEST}|        <\/app>"
+
+# demo
+DEMO="            <app id=\"demo\">"
+DEMO="$DEMO|                \<grid-list id=\"demo grid list\" default-grid-id=\"$CLUSTER\">"
+for i in $(seq 0 $LAST_CLUSTER_NUM); do
+  CLUSTER="${PREFIX}$i"
+  if [ $i -eq 0 ]; then
+    ROUTING_WEIGHT="10"
+  else
+    ROUTING_WEIGHT="1"
+  fi
+  CHILD_GRID="                \<grid id=\"${CLUSTER}\"\ routing-weight=\"${ROUTING_WEIGHT}\">\<\/grid\>"
+  DEMO="${DEMO}\|${CHILD_GRID}"
+done
+DEMO="${DEMO}|                <description>Allowed grids for demo.<\/description>"
+DEMO="${DEMO}|            <\/grid-list>"
+DEMO="${DEMO}|        <\/app>"
+
+# app2
+APP2=""
+if [ $LAST_CLUSTER_NUM -gt 1 ]; then
+CLUSTER=${PREFIX}2
+APP2="        <app id=\"app2\">"
+APP2="$APP2|            \<grid-list id=\"app2 grid list\" default-grid-id=\"$CLUSTER\">"
+for i in $(seq 0 $LAST_CLUSTER_NUM); do
+  CLUSTER="${PREFIX}$i"
+  if [ $i -eq 0 ]; then
+    ROUTING_WEIGHT="10"
+  else
+    ROUTING_WEIGHT="1"
+  fi
+  CHILD_GRID="                \<grid id=\"${CLUSTER}\"\ routing-weight=\"${ROUTING_WEIGHT}\">\<\/grid\>"
+  APP2="${APP2}\|${CHILD_GRID}"
+done
+APP2="${APP2}|                <description>Allowed grids for app2.<\/description>"
+APP2="${APP2}|            <\/grid-list>"
+APP2="${APP2}|        <\/app>"
+fi
+
+#
+# Generate parent pado.xml
+#
+PARENT_CLUSTER_DIR=$CLUSTERS_DIR/$PARENT_CLUSTER
+sed -e "s/\${GRID_ID}/$PARENT_GRID_ID/g" \
+    -e "s/\${CHILD_GRIDS}/$CHILD_GRIDS/g" \
+    -e "s/\${APP1}/$APP1/g" \
+    -e "s/\${APP2}/$APP2/g" \
+    -e "s/\${TEST}/$TEST/g" \
+    -e "s/\${DEMO}/$DEMO/g" \
+    $PADOGRID_HOME/geode/pado/etc/grid/template-pado-parent.xml \
+    | tr '|' '\n' \
+    > $PARENT_CLUSTER_DIR/etc/grid/$PARENT_PADO_XML
+
+#
+# Generate child pado.xml
+#
+PARENT_GRID_ID="${PREFIX}0"
+PARENT_ROOT_PATH="$PARENT_GRID_ID"
+PARENT_LOCATORS="localhost:$PARENT_LOCATOR_PORT"
+if [ $LAST_CLUSTER_NUM -gt 0 ]; then
+for i in $(seq 1 $LAST_CLUSTER_NUM); do
+  CLUSTER="${PREFIX}$i"
+  GRID_ID=$CLUSTER
+  CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+  sed -e "s/\${GRID_ID}/$GRID_ID/g" \
+      -e "s/\${PARENT_GRID_ID}/$PARENT_GRID_ID/g" \
+      -e "s/\${PARENT_ROOT_PATH}/$PARENT_ROOT_PATH/g" \
+      -e "s/\${PARENT_LOCATORS}/$PARENT_LOCATORS/g" \
+      $PADOGRID_HOME/geode/pado/etc/grid/template-pado-child.xml  > $CLUSTER_DIR/etc/grid/pado.xml
+done
+fi
+
+#
+# Copy pado.properties to all
+#
+for i in $(seq 0 $LAST_CLUSTER_NUM); do
+  CLUSTER="${PREFIX}$i"
+  GRID_ID=$CLUSTER
+  CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+  cp $PADOGRID_HOME/geode/pado/etc/grid/pado.properties $CLUSTER_DIR/etc/grid/pado.properties
+done

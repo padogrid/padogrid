@@ -90,7 +90,7 @@ __padogrid_complete()
       ;;
 
    -port)
-      if [ "$second_word" == "create_cluster" ]; then
+      if [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_docker" ] || [ "$second_word" == "create_grid" ]; then
          type_list="$DEFAULT_LOCATOR_START_PORT"
       fi
      ;;
@@ -112,10 +112,16 @@ __padogrid_complete()
       type_list=`getClusters $__ENV`
       ;;
 
+   -prefix)
+      if [ "$second_word" == "create_grid" ]; then
+         type_list="grid"
+      fi
+     ;;
+
    -type)
       if [ "$second_word" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$second_word" == "create_cluster" ]; then
+      elif [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_grid" ]; then
          type_list="default pado"
       fi
       ;;
@@ -469,10 +475,15 @@ __command_complete()
       fi
       type_list=`getClusters $__ENV`
       ;;
+   -prefix)
+      if [ "$command" == "create_grid" ]; then
+         type_list="grid"
+      fi
+      ;;
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$command" == "create_cluster" ]; then
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
          type_list="default pado"
       fi
       ;;
@@ -530,7 +541,7 @@ __command_complete()
       type_list="1 2 3 4 5 6 7 8 9"
      ;;
    -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_LOCATOR_START_PORT"
       fi
      ;;

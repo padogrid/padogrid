@@ -121,12 +121,12 @@ PADO_JAVA_OPTS=" \
 --J=-Dpado.site.name=$SITE_NAME \
 --J=-Dpado.plugins.dir=$PADO_PLUGINS_DIR \
 --J=-Dpado.etc.dir=$CLUSTER_DIR/etc  \
---J=-Dpado.etc.grid.dir=$ETC_DIR/$GRID_ID \
+--J=-Dpado.etc.grid.dir=$ETC_DIR/grid \
 --J=-Dpado.db.dir=$CLUSTER_DIR/db \
---J=-Dpado.properties=$ETC_DIR/$GRID_ID/pado.properties \
---J=-Dpado.appConfigDir=$ETC_DIR/$GRID_ID/app \
+--J=-Dpado.properties=$ETC_DIR/grid/pado.properties \
+--J=-Dpado.appConfigDir=$ETC_DIR/grid/app \
 --J=-Dpado.server=true \
---J=-Dpado.config-file=$ETC_DIR/$GRID_ID/pado.xml \
+--J=-Dpado.config-file=$ETC_DIR/grid/pado.xml \
 --J=-Dpado.log.gridInfo=false \
 --J=-Djavax.xml.accessExternalDTD=all \
 --J=-Djavax.net.ssl.trustStore=$CLUSTER_DIR/security/pado.keystore"

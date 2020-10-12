@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://geode.apache.org/schema/cache"
+  xsi:schemaLocation="http://geode.apache.org/schema/cache http://geode.apache.org/schema/cache/cache-1.0.xsd"
+  version="1.0" lock-lease="120" lock-timeout="60" search-timeout="300" is-server="false" copy-on-read="false">
+
+    <!-- Partition region attributes explained:
+    - Unit is msec for both recovery-delay and start-recovery-delay. 
+    - recovery-delay: when a member left 
+    - start-recovery-delay: when the member joined 
+    - Do not restore redundancy after a member fails or after a new member 
+      joins, until a rebalance is invoked. 
+      Solution: recovery-delay="-1" startup-recovery-delay="-1" 
+    - The buckets are unevenly balanced, i.e., some buckets have more data
+      than others therefore one VM has much more data than others. 
+      Solution: Invoke rebalance to mix large buckets with small buckets. 
+    - For each partitioned region, the rebalancing operation always performs 
+      these steps: 
+        1. Restores redundancy by creating copies of any low redundancy 
+           buckets on the partitions that are storing the least amount of
+           data. 
+        2. Rebalances partitions to average out the amount of data on each
+           member. 
+    - Use local-max-memory to control the amount of memory each VM will 
+      allow for the partitioned region. Default is 90% of the max heap size. 
+      This means the higher max heap size will receive more data. 
+    -->
+        
+    <!-- 
+        The following region attributes are referenced in pado.xml via refid.
+    -->
+    <region-attributes id="partition" data-policy="partition">
+        <partition-attributes redundant-copies="1"
+            total-num-buckets="20">
+        </partition-attributes>
+    </region-attributes>
+    <region-attributes id="replicate" data-policy="replicate">
+    </region-attributes>
+
+    <!-- Manage heap resources -->
+    <resource-manager critical-heap-percentage="95"
+        eviction-heap-percentage="80" />
+
+    <!-- Pado initializer -->
+    <initializer>
+        <class-name>com.netcrest.pado.gemfire.GemfirePadoServerInitializer</class-name>
+    </initializer>
+
+</cache>
+
