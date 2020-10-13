@@ -28,7 +28,7 @@ popd > /dev/null 2>&1
 APP_ETC_DIR=$APP_DIR/etc
 
 # Source in app specifics
-. $APP_DIR/bin_sh/setenv.sh
+. $APP_DIR/bin_test/setenv.sh
 
 # Set PADO_HOME to the cluster directory. All Pado commands are executed
 # relative to the cluster directory.
