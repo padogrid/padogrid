@@ -118,6 +118,9 @@ TREE=false
 OVERWRITE=false
 ALL=false
 OSS=false
+RHEL=false
+WAN=false
+WAN_ARG=
 PID=
 PIDONLY=
 BEGIN_NUM=1
@@ -229,6 +232,9 @@ do
       BRANCH=$i
    elif [ "$PREV" == "-connect" ]; then
       CONNECT=$i
+   elif [ "$PREV" == "-wan" ]; then
+      WAN_ARG=$i
+      WAN=true
    elif [ "$PREV" == "-vm" ]; then
       if [[ "$i" != "-"* ]]; then
          VM_HOSTS_ARG=$i
@@ -317,6 +323,10 @@ do
       ALL=true
    elif [ "$i" == "-oss" ]; then
       OSS=true
+   elif [ "$i" == "-rhel" ]; then
+      RHEL=true
+   elif [ "$i" == "-wan" ]; then
+      WAN=true
    elif [ "$i" == "-kill" ]; then
       KILL=true
    elif [ "$i" == "-debug" ]; then

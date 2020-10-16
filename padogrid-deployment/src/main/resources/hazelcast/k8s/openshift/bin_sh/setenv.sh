@@ -26,7 +26,8 @@ export PROJECT_NAME="$APP_NAME"
 
 #
 # Comma-separated list of WAN target endpoints, i.e., "ip-address1:5701,ipaddress2:5701"
-# By default, the master node and port 30000 is assigned. Change to other endpoints here.
+# By default, the master node and port 30100 is assigned. Change to other endpoints here.
 #
+WAN_TARGET_PORT=30100
 MASTER_NODE=$(oc cluster-info |grep "Kubernetes master" | sed -e "s/^.*https:\/\///" -e "s/:.*$//")
-WAN_TARGET_ENDPOINTS="$MASTER_NODE:30002"
+WAN_TARGET_ENDPOINTS="$MASTER_NODE:$WAN_TARGET_PORT"

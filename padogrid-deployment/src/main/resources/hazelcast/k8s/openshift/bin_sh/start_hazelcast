@@ -37,14 +37,15 @@ OPTIONS
    -wan [endpoints]
              This option is for Hazelcast Enterprise only. It is ignored if the '-oss' option is specified.
              If specified then launches Hazelcast with the WAN replication configuration file
-             (see hazelcast/wan/hazelcast*.yaml) If endpoints is not specified then to prevent port conflicts,
-             30002 is set for the targent endpoints as follwos.
+             (see hazelcast/wan/hazelcast*.yaml) If endpoints is not specified, then to prevent port conflicts,
+             $WAN_TARGET_PORT is set for the targent endpoints as follwos.
 
-                <master-node>:30002
+                <master-node>:$WAN_TARGET_PORT
 
-             To use the default endpoints, you must create a load balancer with the node port 30002. You can
-             also set the endpoints in the 'setenv.sh' file using the WAN_TARGET_ENDPOINTS environment varialbe
-             instead. Note that the endpoints set by this option overrides WAN_TARGET_ENDPOINTS.
+             To use the default endpoints, for the target Hazelcast cluster, you must create a load balancer
+             with the node port $WAN_TARGET_PORT. You can also set the endpoints in the 'setenv.sh' file using the
+             WAN_TARGET_ENDPOINTS environment variable instead. Note that the endpoints set by this option
+             overrides WAN_TARGET_ENDPOINTS.
 
 DEFAULT:
    ./$EXECUTABLE
@@ -55,6 +56,8 @@ SEE ALSO
 EOF
 exit
 fi
+
+echo -e "Project: ${CLightGreen}${APP_NAME}${CNone}"
 
 CURRENT_PROJECT=$(oc project -q)
 if [ "$CURRENT_PROJECT" != "$APP_NAME" ]; then
@@ -79,7 +82,7 @@ if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
    if [ "$WAN_ARG" != "" ]; then
       WAN_TARGET_ENDPOINTS="$WAN_ARG"
    elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
-      WAN_TARGET_ENDPOINTS="$MASTER_NODE:30000"
+      WAN_TARGET_ENDPOINTS="$MASTER_NODE:$WAN_TARGET_PORT"
    else
       WAN_TARGET_ENDPOINTS="$WAN_TARGET_ENDPOINTS"
    fi
@@ -99,11 +102,14 @@ if [ "$WAN_TARGET_ENDPOINTS" != "" ]; then
 fi
 echo ""
 if [ "$IS_ENTERPRISE" == "true" ]; then
+   echo "Starting enterpise..."
    oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
    # Update wan endpoints
    sed -i${__SED_BACKUP} "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $HAZELCAST_YAML
    oc new-app -f $HAZELCAST_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=3
 else
+   echo "Starting oss..."
+   oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
    oc new-app -f hazelcast.yaml -p NAMESPACE=$(oc project -q)
 fi
 
