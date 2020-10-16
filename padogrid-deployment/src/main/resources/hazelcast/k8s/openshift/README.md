@@ -43,10 +43,14 @@ There are three (3) templates obtained from the [Hazelcast GitHub repo](https://
 
 ## 1. Build Local Environment
 
-Run `build_app` which initializes your local environment. This script creates a new OpenShift project using the k8s cluster name. The example shown in this article uses **crc** as the cluster name (and project name).
+Run `build_app` which initializes your local environment. This script creates a new OpenShift project using the k8s cluster name. The example shown in this article uses the environment variable **PROJECT** for both the k8s cluster mame and project name.
 
 ```bash
-cd_k8s crc; cd bin_sh
+# "myocp" is used as the project name throughout this article
+export PROJECT="myocp"
+
+# Build app
+cd_k8s $PROJECT; cd bin_sh
 ./build_app
 ```
 ## 2. CRC Users (Optional): Create Mountable Persistent Volumes in Master Node
@@ -79,7 +83,7 @@ We will use the volumes created as follows:
 We can now create the required persistent volumes using **hostPath** by executing the following.
 
 ```bash
-cd_k8s crc; cd padogrid
+cd_k8s $PROJECT; cd padogrid
 oc create -f pv-hostPath.yaml
 ```
 
@@ -97,11 +101,11 @@ oc edit scc nonroot
 
 **nonroot SCC:**
 
-Add your project under the`users:` section. For our example, since our project name is **crc**, we would enter the following.
+Add your project under the`users:` section. For our example, since our project name is **myocp**, we would enter the following.
 
 ```yaml
 users:
-- system:serviceaccount:crc:default
+- system:serviceaccount:myocp:default
 ```
 
 ### 3.2. Using CLI
@@ -111,10 +115,10 @@ users:
 oc adm policy who-can use scc nonroot
 
 # Add user
-oc adm policy add-scc-to-user nonroot system:serviceaccount:crc:default
+oc adm policy add-scc-to-user nonroot system:serviceaccount:myocp:default
 ```
 
-:exclamation: Note that as of **oc *v4.5*.9**, `oc get scc nonroot -o yaml` will not show the user you added using CLI. This is also true for the user added using the editor, which will not be shown in the output of `oc adm policy who-can use scc nonroot`.
+:exclamation: Note that as of **oc v4.5.9**, `oc get scc nonroot -o yaml` will not show the user you added using CLI. This is also true for the user added using the editor, which will not be shown in the output of `oc adm policy who-can use scc nonroot`.
 
 ## 4. Create OpenShift secrets
 
@@ -149,7 +153,7 @@ oc create secret generic hz-enterprise-license --from-literal=key=<hazelcast-ent
 ## 5. Start Hazelcast
 
 ```bash
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
 ./start_hazelcast
 ```
 
@@ -180,12 +184,12 @@ oc get route
 Output:
 
 ```console
-NAME                        HOST/PORT                                        PATH   SERVICES                    PORT        TERMINATION   WILDCARD
-hazelcast-service-0         hazelcast-service-0-crc.apps-crc.testing                hazelcast-service-0         hazelcast                 None
-hazelcast-service-1         hazelcast-service-1-crc.apps-crc.testing                hazelcast-service-1         hazelcast                 None
-hazelcast-service-2         hazelcast-service-2-crc.apps-crc.testing                hazelcast-service-2         hazelcast                 None
-hazelcast-service-lb        hazelcast-service-lb-crc.apps-crc.testing               hazelcast-service-lb        5701                      None
-management-center-service   management-center-service-crc.apps-crc.testing          management-center-service   8080                      None
+NAME                        HOST/PORT                                          PATH   SERVICES                    PORT        TERMINATION   WILDCARD
+hazelcast-service-0         hazelcast-service-0-myocp.apps-crc.testing                hazelcast-service-0         hazelcast                 None
+hazelcast-service-1         hazelcast-service-1-myocp.apps-crc.testing                hazelcast-service-1         hazelcast                 None
+hazelcast-service-2         hazelcast-service-2-myocp.apps-crc.testing                hazelcast-service-2         hazelcast                 None
+hazelcast-service-lb        hazelcast-service-lb-myocp.apps-crc.testing               hazelcast-service-lb        5701                      None
+management-center-service   management-center-service-myocp.apps-crc.testing          management-center-service   8080                      None
 ```
 
 :exclamation: The `oc` executable version (4.5.9) used for writing this article has a bug that does not properly parse numeric parameters. The following error message is seen if ${HALZELCAST_REPLICAS} is kept in the `hazelcast/hazelcast.yaml` file. 
@@ -212,7 +216,7 @@ To prevent the error, `${HAZELCAST_REPLICAS}` has been replaced with  the numeri
 ## 6. Start PadoGrid
 
 ```bash
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
 
 # If you have not created local-storage
 ./start_padogrid
@@ -222,7 +226,7 @@ cd_k8s crc; cd bin_sh
 
 **Note that Management Center is not available for Hazelcast OSS.**
 
-**URL:** <http://management-center-service-crc.apps-crc.testing>
+**URL:** <http://management-center-service-myocp.apps-crc.testing>
 
 ## 8. Client Applications
 
@@ -231,7 +235,7 @@ cd_k8s crc; cd bin_sh
 You can use the included PadoGrid container as a client to the Hazelcast cluster. 
 
 ```bash
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
 ./login_padogrid_pod
 ```
 
@@ -255,7 +259,7 @@ To connect to the Hazelcast cluster from an external client, you have two choice
    <network>  
       <smart-routing>false</smart-routing>  
       <cluster-members>  
-         <address>hazelcast-service-lb-crc.apps-crc.testing:30000</address>  
+         <address>hazelcast-service-lb-myocp.apps-crc.testing:30000</address>  
       </cluster-members>  
    </network>
 ...
@@ -313,7 +317,7 @@ Enter the master URI, encoded token, and certificate in the `hazelcast-client.xm
    <network>
       <smart-routing>true</smart-routing>
       <kubernetes enabled="true">
-         <namespace>crc</namespace>
+         <namespace>myocp</namespace>
          <service-name>hazelcast-service-lb</service-name>
          <use-public-ip>true</use-public-ip>
          <kubernetes-master>https://api.crc.testing:6443</kubernetes-master>
@@ -472,16 +476,16 @@ cd_app perf_test; cd bin_sh
 oc get all --selector app=hazelcast -o name
 
 # To delete all resource objects:  
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
 ./cleanup
 
 # Remove user from nonroot SCC
-# Editor - edit scc nonroot and remove the 'system:serviceaccount:crc:default'
+# Editor - edit scc nonroot and remove the 'system:serviceaccount:myocp:default'
 # from under 'users:'
 oc edit scc nonroot
 
 # CLI
-oc adm policy remove-scc-from-user nonroot system:serviceaccount:crc:default
+oc adm policy remove-scc-from-user nonroot system:serviceaccount:myocp:default
 ```
 
 ## References
