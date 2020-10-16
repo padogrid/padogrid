@@ -83,15 +83,19 @@ cd_k8s crc; cd padogrid
 oc create -f pv-hostPath.yaml
 ```
 
-## 3. Add User to anyuid SCC (Security Context Constraints)
+## 3. Add User to `nonroot` SCC (Security Context Constraints)
 
-PadoGrid runs as a non-root user that requires read/write permissions to the persistent volume. Let's add your project's default user to the anyuid SCC.
+PadoGrid runs as a non-root user (padogrid/1001) that requires read/write permissions to the persistent volume. Let's add your project's default user to the `nonroot` SCC.
+
+You can use one of the following methods to add the user to `nonroot` SSC.
+
+### 3.1. Using Editor
 
 ```bash
-oc edit scc anyuid
+oc edit scc nonroot
 ```
 
-**anyuid SCC:**
+**nonroot SCC:**
 
 Add your project under the`users:` section. For our example, since our project name is **crc**, we would enter the following.
 
@@ -99,6 +103,18 @@ Add your project under the`users:` section. For our example, since our project n
 users:
 - system:serviceaccount:crc:default
 ```
+
+### 3.2. Using CLI
+
+```bash
+# See if user can use nonroot
+oc adm policy who-can use scc nonroot
+
+# Add user
+oc adm policy add-scc-to-user nonroot system:serviceaccount:crc:default
+```
+
+:exclamation: Note that as of **oc *v4.5*.9**, `oc get scc nonroot -o yaml` will not show the user you added using CLI. This is also true for the user added using the editor, which will not be shown in the output of `oc adm policy who-can use scc nonroot`.
 
 ## 4. Create OpenShift secrets
 
@@ -458,6 +474,14 @@ oc get all --selector app=hazelcast -o name
 # To delete all resource objects:  
 cd_k8s crc; cd bin_sh
 ./cleanup
+
+# Remove user from nonroot SCC
+# Editor - edit scc nonroot and remove the 'system:serviceaccount:crc:default'
+# from under 'users:'
+oc edit scc nonroot
+
+# CLI
+oc adm policy remove-scc-from-user nonroot system:serviceaccount:crc:default
 ```
 
 ## References
