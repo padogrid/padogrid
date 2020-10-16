@@ -492,4 +492,5 @@ oc adm policy remove-scc-from-user nonroot system:serviceaccount:myocp:default
 
 1. Hazelcast for OpenShift Example, [https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift).
 2. Hazelcast Discovery Plugin for Kubernetes, [https://github.com/hazelcast/hazelcast-kubernetes](https://github.com/hazelcast/hazelcast-kubernetes).
+3. Blog: Managing SCCs in OpenShift, [https://www.openshift.com/blog/managing-sccs-in-openshift](https://www.openshift.com/blog/managing-sccs-in-openshift)
 
