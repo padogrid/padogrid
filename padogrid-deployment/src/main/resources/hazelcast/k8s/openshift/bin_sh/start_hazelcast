@@ -8,13 +8,26 @@ if [ "$HELP" == "true" ]; then
 cat <<EOF
 
 NAME
-   $EXECUTABLE - Start a Hazelcast using Helm charts
+   $EXECUTABLE [-oss | -rhel] [-?]
 
 SYNOPSIS
    $EXECUTABLE [-?]
 
 DESCRIPTION
-   Starts the Hazelcast cluster configured by the 'build_app' script.
+   Starts the Hazelcast cluster configured by the 'build_app' script. If no options are specified then
+   it automatically determines the environment based on the workspace setup. If IMDG_LICENSE_KEY is defined
+   then it run docker.io Hazelcast Enterprise. To turn RHEL, specify the '-rhel' option. Note that if
+   IMDG_LICENSE_KEY is not defined then it runs Hazelcast OSS regardless of any options specified.
+
+OPTIONS
+   -oss
+             If specified then starts Hazelcast OSS. 
+
+   -rhel
+             If specified then launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
+             you must first create an OpenShift secret for image pull. Please see the accompanied READE.md
+             for details. If IMDG_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
+             is used instead.
 
 DEFAULT:
    ./$EXECUTABLE
@@ -46,39 +59,23 @@ else
   HAZELCAST_YAML="hazelcast-enterprise.yaml"
 fi
 
-if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
-   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/wan/$HAZELCAST_YAML
-   if [ "$WAN_ARG" != "" ]; then
-      WAN_TARGET_ENDPOINTS="$WAN_ARG"
-   elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
-      WAN_TARGET_ENDPOINTS="$MASTER_NODE:$WAN_TARGET_PORT"
-   else
-      WAN_TARGET_ENDPOINTS="$WAN_TARGET_ENDPOINTS"
-   fi
-else
-   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/$HAZELCAST_YAML
-fi
-
-
-echo ""
-echo "Starting Hazelcast..."
-echo ""
-
 # Create cluster role
 echo "Applying RBAC..."
 oc apply -f rbac.yaml
 
+echo ""
 echo -e "Hazelcast configuration: ${CLightGreen}hazelcast/${HAZELCAST_YAML}${CNone}"
-if [ "$WAN_TARGET_ENDPOINTS" != "" ]; then
-   echo -e "   WAN target endpoints: ${CLightGreen}${WAN_TARGET_ENDPOINTS}${CNone}"
-fi
 echo ""
 if [ "$IS_ENTERPRISE" == "true" ]; then
-   echo -e "Starting ${CLightGreen}enterpise${CNone}..."
+   if [ "$RHEL" == "true" ]; then
+      echo -e "Starting ${CLightGreen}Hazelcast Enterpise RHEL${CNone}..."
+   else
+      echo -e "Starting ${CLightGreen}Hazelcast Enterpise${CNone}..."
+   fi
    oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
    oc new-app -f $HAZELCAST_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=$MEMBER_COUNT
 else
-   echo "Starting ${CLightGreen}oss${CNone}..."
+   echo -e "Starting ${CLightGreen}Hazelcast OSS${CNone}..."
    oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
    oc new-app -f hazelcast.yaml -p NAMESPACE=$(oc project -q)
 fi

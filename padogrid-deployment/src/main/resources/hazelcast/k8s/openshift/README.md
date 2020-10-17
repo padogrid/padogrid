@@ -150,7 +150,15 @@ oc secrets link default rhcc --for=pull
 
 ```bash
 cd_k8s $PROJECT; cd bin_sh
+
+# To start default (Enterprise or OSS depending on your workspace environment)
 ./start_hazelcast
+
+# To start OSS:
+./start_hazelcast -oss
+
+# To start RHEL container
+./start_hazelcast -rhel
 ```
 
 The `start_hazelcast` starts a Hazelcast cluster with one (10) headless cluster IP service and three (3) pod services exposed as follows.

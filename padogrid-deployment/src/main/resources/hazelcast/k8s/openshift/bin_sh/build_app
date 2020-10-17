@@ -32,7 +32,7 @@ NAME
    $EXECUTABLE - Builds the Hazelcast CRC environment.
 
 SYNOPSIS
-   $EXECUTABLE [-oss | -rhel] [-wan [endpoints]] [-?]
+   $EXECUTABLE [-wan [endpoints]] [-?]
 
 DESCRIPTION
    Builds the Hazelcast OpenShift environment and creates the OpenShift project, $APP_NAME. The default
@@ -49,20 +49,11 @@ DESCRIPTION
       NODE_PORT_GAP=$NODE_PORT_GAP
 
 OPTIONS
-   -oss
-             If specified then builds the Hazelcast OSS environment.
-
-   -rhel
-             If specified then launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
-             you must first create an OpenShift secrets for image pull. Please see the accompanied READE.md
-             for details. If IMDG_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
-             is used instead.
-
    -wan [endpoints]
              This option is for Hazelcast Enterprise only. It is ignored if the '-oss' option is specified.
-             If specified then launches Hazelcast with the WAN replication configuration file
+             If specified then configures Hazelcast with the WAN replication configuration file
              (see hazelcast/wan/hazelcast*.yaml) If endpoints is not specified, then to prevent port conflicts,
-             $WAN_TARGET_PORT is set to the target endpoints as follwos.
+             $WAN_TARGET_PORT is set to the target endpoints as follows.
 
                 <master-node>:$WAN_TARGET_PORT
 
@@ -87,44 +78,35 @@ fi
 cp -r $APP_DIR/templates/hazelcast $APP_DIR/
 cp -r $APP_DIR/templates/padogrid $APP_DIR/
 
-
-
-IS_ENTERPRISE="false"
-if [ "$OSS" == "true" ] || [ "$IMDG_LICENSE_KEY" == "" ]; then
-  HAZELCAST_YAML="hazelcast.yaml"
-elif [ "$RHEL" == "true" ]; then
-  IS_ENTERPRISE="true"
-  HAZELCAST_YAML="hazelcast-enterprise-rhel.yaml"
-else
-  IS_ENTERPRISE="true"
-  HAZELCAST_YAML="hazelcast-enterprise.yaml"
+if [ "$WAN_ARG" != "" ]; then
+   WAN_TARGET_ENDPOINTS="$WAN_ARG"
+elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
+   WAN_TARGET_ENDPOINTS="$MASTER_NODE:$WAN_TARGET_PORT"
 fi
-
-if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
-   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/wan/$HAZELCAST_YAML
-   if [ "$WAN_ARG" != "" ]; then
-      WAN_TARGET_ENDPOINTS="$WAN_ARG"
-   elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
-      WAN_TARGET_ENDPOINTS="$MASTER_NODE:$WAN_TARGET_PORT"
-   else
-      WAN_TARGET_ENDPOINTS="$WAN_TARGET_ENDPOINTS"
-   fi
-else
-   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/$HAZELCAST_YAML
-fi
-HAZELCAST_YAML=$APP_DIR/hazelcast/$HAZELCAST_YAML
 
 #
+# hazelcast.xml
+#
+
 # There is a bug in OpenShift that fails to read the value of HAZELCAST_REPLICAS.
 # Replace it with the actual value.
-#
-if [ "$IS_ENTERPRISE" == "true" ]; then
+if [ "$WAN" == "true" ]; then
    # Update wan endpoints
    sed -e "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" \
-       -e "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $TEMPLATE_HAZELCAST_YAML > $HAZELCAST_YAML
+       -e "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" \
+       $APP_DIR/templates/hazelcast/wan/hazelcast-enterprise-rhel.yaml > $APP_DIR/hazelcast/hazelcast-enterprise-rhel.yaml
+   sed -e "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" \
+       -e "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" \
+       $APP_DIR/templates/hazelcast/wan/hazelcast-enterprise.yaml > $APP_DIR/hazelcast/hazelcast-enterprise.yaml
+       $APP_DIR/hazelcast/hazelcast.yaml > $APP_DIR/hazelcast/hazelcast.yaml
 else
-   sed "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" $TEMPLATE_HAZELCAST_YAML > $HAZELCAST_YAML
+   sed -e "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" \
+       $APP_DIR/templates/hazelcast/hazelcast-enterprise-rhel.yaml > $APP_DIR/hazelcast/hazelcast-enterprise-rhel.yaml
+   sed -e "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" \
+       $APP_DIR/templates/hazelcast/hazelcast-enterprise.yaml > $APP_DIR/hazelcast/hazelcast-enterprise.yaml
 fi
+sed -e "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" \
+    $APP_DIR/templates/hazelcast/hazelcast.yaml > $APP_DIR/hazelcast/hazelcast.yaml
 
 #
 # Services
