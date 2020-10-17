@@ -32,12 +32,127 @@ NAME
    $EXECUTABLE - Builds the Hazelcast CRC environment.
 
 SYNOPSIS
-   $EXECUTABLE [-?]
+   $EXECUTABLE [-oss | -rhel] [-wan [endpoints]] [-?]
 
 DESCRIPTION
-   Builds the Hazelcast CRC environment by downloading the latest Hazelcast template.
+   Builds the Hazelcast OpenShift environment and creates the OpenShift project, $APP_NAME. The default
+   settings  are configured based on the PadoGrid cluster environment. If the environment varialble,
+   IMDG_LICENSE_KEY, is defined then the Hazelcast Enterprise container is configured. The Hazelcast
+   Enterprise container images come in two (2) flavors: rhel and docker.io. To run rhel, specify the
+   '-rhel' option. To run the docker.io enterprise container, do not specify neither '-oss' nor '-rhel'.
+
+   You can change the number of members, the load balancer port, and node port gap by setting the following
+   environment variables in the 'setenv.sh' file. Seee 'setenv.sh' for details.
+
+      MEMBER_COUNT=$MEMBER_COUNT
+      START_SERVICE_PORT=$START_SERVICE_PORT
+      NODE_PORT_GAP=$NODE_PORT_GAP
+
+OPTIONS
+   -oss
+             If specified then builds the Hazelcast OSS environment.
+
+   -rhel
+             If specified then launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
+             you must first create an OpenShift secrets for image pull. Please see the accompanied READE.md
+             for details. If IMDG_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
+             is used instead.
+
+   -wan [endpoints]
+             This option is for Hazelcast Enterprise only. It is ignored if the '-oss' option is specified.
+             If specified then launches Hazelcast with the WAN replication configuration file
+             (see hazelcast/wan/hazelcast*.yaml) If endpoints is not specified, then to prevent port conflicts,
+             $WAN_TARGET_PORT is set to the target endpoints as follwos.
+
+                <master-node>:$WAN_TARGET_PORT
+
+             To use the default endpoints, for the target Hazelcast cluster, you must create a load balancer
+             with the node port $WAN_TARGET_PORT. You can also set the endpoints in the 'setenv.sh' file using the
+             WAN_TARGET_ENDPOINTS environment variable instead. Note that the endpoints set by this option
+             overrides WAN_TARGET_ENDPOINTS.
+
+NOTES
+   The '-wan' option may not work for some OpenShift clusters.
+
+SEE ALSO
+   setenv.sh, start_hazelcast
 
 EOF
+exit
 fi
+
+#
+# Copy templates
+#
+cp -r $APP_DIR/templates/hazelcast $APP_DIR/
+cp -r $APP_DIR/templates/padogrid $APP_DIR/
+
+IS_ENTERPRISE="false"
+if [ "$OSS" == "true" ] || [ "$IMDG_LICENSE_KEY" == "" ]; then
+  HAZELCAST_YAML="hazelcast.yaml"
+elif [ "$RHEL" == "true" ]; then
+  IS_ENTERPRISE="true"
+  HAZELCAST_YAML="hazelcast-enterprise-rhel.yaml"
+else
+  IS_ENTERPRISE="true"
+  HAZELCAST_YAML="hazelcast-enterprise.yaml"
+fi
+
+if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
+   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/wan/$HAZELCAST_YAML
+   if [ "$WAN_ARG" != "" ]; then
+      WAN_TARGET_ENDPOINTS="$WAN_ARG"
+   elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
+      WAN_TARGET_ENDPOINTS="$MASTER_NODE:$WAN_TARGET_PORT"
+   else
+      WAN_TARGET_ENDPOINTS="$WAN_TARGET_ENDPOINTS"
+   fi
+else
+   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/$HAZELCAST_YAML
+fi
+HAZELCAST_YAML=$APP_DIR/hazelcast/$HAZELCAST_YAML
+
+if [ "$IS_ENTERPRISE" == "true" ]; then
+   # Update wan endpoints
+   sed "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $TEMPLATE_HAZELCAST_YAML > $HAZELCAST_YAML
+fi
+
+#
+# Services
+#
+
+# service-lb.yaml
+NODE_PORT=$START_SERVICE_PORT
+sed "s/nodePort:.*$/nodePort: $NODE_PORT/" $APP_DIR/templates/hazelcast/service-lb.yaml > $APP_DIR/hazelcast/service-lb.yaml
+
+# service-pods.yaml
+rm $APP_DIR/hazelcast/service-lb-pods.yaml
+let LAST_MEMBER_NUM=MEMBER_COUNT-1
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   let NODE_PORT=NODE_PORT+1
+   if [ $i -gt 0 ]; then
+      echo "" >> $APP_DIR/hazelcast/service-lb-pods.yaml
+      echo "---" >> $APP_DIR/hazelcast/service-lb-pods.yaml
+      echo "" >> $APP_DIR/hazelcast/service-lb-pods.yaml
+   fi
+   sed -e "s/nodePort:.*$/nodePort: $NODE_PORT/g" -e "s/\-0/\-$i/g" $APP_DIR/templates/hazelcast/service-lb-pods.yaml >> $APP_DIR/hazelcast/service-lb-pods.yaml
+done
+
+# service-nodeport.yaml
+let NODE_PORT=START_SERVICE_PORT+NODE_PORT_GAP
+sed "s/nodePort:.*$/nodePort: $NODE_PORT/" $APP_DIR/templates/hazelcast/service-nodeport.yaml > $APP_DIR/hazelcast/service-nodeport.yaml
+
+# service-pods-nodeports.yaml
+rm $APP_DIR/hazelcast/service-nodeport-pods.yaml
+let LAST_MEMBER_NUM=MEMBER_COUNT-1
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   let NODE_PORT=NODE_PORT+1
+   if [ $i -gt 0 ]; then
+      echo "" >> $APP_DIR/hazelcast/service-nodeport-pods.yaml
+      echo "---" >> $APP_DIR/hazelcast/service-nodeport-pods.yaml
+      echo "" >> $APP_DIR/hazelcast/service-nodeport-pods.yaml
+   fi
+   sed -e "s/nodePort:.*$/nodePort: $NODE_PORT/g" -e "s/\-0/\-$i/g" $APP_DIR/templates/hazelcast/service-nodeport-pods.yaml >> $APP_DIR/hazelcast/service-nodeport-pods.yaml
+done
 
 oc new-project $APP_NAME

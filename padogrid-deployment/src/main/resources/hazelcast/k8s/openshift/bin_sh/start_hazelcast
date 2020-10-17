@@ -11,41 +11,10 @@ NAME
    $EXECUTABLE - Start a Hazelcast using Helm charts
 
 SYNOPSIS
-   $EXECUTABLE [-oss | -rhel] [-wan [endpoints]] [-?]
+   $EXECUTABLE [-?]
 
 DESCRIPTION
-   Starts a Hazelcast cluster. If IMDG_LICENSE_KEY is defined then it starts Hazelcast Enterprise, otherwise,
-   it defaults to Hazelcast Open Source, i.e., '-oss'. If no option is specified, then it launches the
-   docker.io Hazelccast image.
-
-   Hazelcast is setup as follows:
-      Hazelcast member count: 3
-      Load balancer nodePort: 30001
-
-   If you want to launch Haelcast with WAN replication configured, then specified the '-wan' option.
-
-OPTIONS
-   -oss
-             If specified then launches Hazelcast OSS.
-
-   -rhel
-             If specified then launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
-             you must first create an OpenShift secrets for image pull. Please see the accompanied READEM-crc.md
-             for details. If IMDG_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
-             5is used instead.
-
-   -wan [endpoints]
-             This option is for Hazelcast Enterprise only. It is ignored if the '-oss' option is specified.
-             If specified then launches Hazelcast with the WAN replication configuration file
-             (see hazelcast/wan/hazelcast*.yaml) If endpoints is not specified, then to prevent port conflicts,
-             $WAN_TARGET_PORT is set for the targent endpoints as follwos.
-
-                <master-node>:$WAN_TARGET_PORT
-
-             To use the default endpoints, for the target Hazelcast cluster, you must create a load balancer
-             with the node port $WAN_TARGET_PORT. You can also set the endpoints in the 'setenv.sh' file using the
-             WAN_TARGET_ENDPOINTS environment variable instead. Note that the endpoints set by this option
-             overrides WAN_TARGET_ENDPOINTS.
+   Starts the Hazelcast cluster configured by the 'build_app' script.
 
 DEFAULT:
    ./$EXECUTABLE
@@ -78,7 +47,7 @@ else
 fi
 
 if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
-   HAZELCAST_YAML="wan/$HAZELCAST_YAML"
+   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/wan/$HAZELCAST_YAML
    if [ "$WAN_ARG" != "" ]; then
       WAN_TARGET_ENDPOINTS="$WAN_ARG"
    elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
@@ -86,7 +55,10 @@ if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
    else
       WAN_TARGET_ENDPOINTS="$WAN_TARGET_ENDPOINTS"
    fi
+else
+   TEMPLATE_HAZELCAST_YAML=$APP_DIR/templates/hazelcast/$HAZELCAST_YAML
 fi
+
 
 echo ""
 echo "Starting Hazelcast..."
@@ -102,13 +74,11 @@ if [ "$WAN_TARGET_ENDPOINTS" != "" ]; then
 fi
 echo ""
 if [ "$IS_ENTERPRISE" == "true" ]; then
-   echo "Starting enterpise..."
+   echo -e "Starting ${CLightGreen}enterpise${CNone}..."
    oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
-   # Update wan endpoints
-   sed -i${__SED_BACKUP} "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $HAZELCAST_YAML
    oc new-app -f $HAZELCAST_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=3
 else
-   echo "Starting oss..."
+   echo "Starting ${CLightGreen}oss${CNone}..."
    oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
    oc new-app -f hazelcast.yaml -p NAMESPACE=$(oc project -q)
 fi
@@ -116,26 +86,27 @@ fi
 # Create the load balancer service
 echo "Creating services..."
 oc apply -f service-lb.yaml
-oc apply -f service-pods.yaml
+oc apply -f service-lb-pods.yaml
 
 # Expose the Hazelcast and Management Center service.
 echo "Exposing services (routes)..."
 oc expose svc/hazelcast-service-lb
-oc expose svc/hazelcast-service-0
-oc expose svc/hazelcast-service-1
-oc expose svc/hazelcast-service-2
+let LAST_MEMBER_NUM=MEMBER_COUNT-1
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   oc expose svc/hazelcast-service-$i
+done
 if [ "$IMDG_LICENSE_KEY" != "" ] && [ "$OSS" == "false" ]; then
    oc expose svc/management-center-service
 fi
 echo ""
-echo "One (1) service for headless cluster IP and three (3) services for pods exposed."
+echo "One (1) service for headless cluster IP and $MEMBER_COUNT services for pods exposed."
 echo "In addition to these services, to expose NodePort services, execute the following:"
 echo "   oc apply -f ../hazelcast/service-nodeport.yaml"
-echo "   oc apply -f ../hazelcast/service-pods-nodeports.yaml"
+echo "   oc apply -f ../hazelcast/service-nodeport-pods.yaml"
 echo "   oc expose svc/hazelcast-service-nodeport"
-echo "   oc expose svc/hazelcast-service-nodeport-0"
-echo "   oc expose svc/hazelcast-service-nodeport-1"
-echo "   oc expose svc/hazelcast-service-nodeport-2"
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   echo "   oc expose svc/hazelcast-service-nodeport-$i"
+done
 echo ""
 echo "Services expose external IPs so that external applications can connect to the Hazelcast cluster by"
 echo "configuring Smart Client. If Smart Client does not work, then your OpenShift cluster has been"

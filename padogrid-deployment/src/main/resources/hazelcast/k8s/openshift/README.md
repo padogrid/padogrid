@@ -16,26 +16,26 @@ This article provides instructions for installing Hazelcast on OCP or CRC.
 │   ├── start_padogrid
 │   ├── stop_hazelcast
 │   └── stop_padogrid
-├── hazelcast
-│   ├── hazelcast-enterprise-rhel.yaml
-│   ├── hazelcast-enterprise.yaml
-│   ├── hazelcast-enterprise.yaml0
-│   ├── hazelcast.yaml
-│   ├── rbac.yaml
-│   ├── service-lb.yaml
-│   ├── service-nodeport.yaml
-│   ├── service-pods-nodeports.yaml
-│   ├── service-pods.yaml
-│   └── wan
-│       ├── hazelcast-enterprise-rhel.yaml
-│       └── hazelcast-enterprise.yaml
-└── padogrid
-    ├── padogrid-no-pvc.yaml
-    ├── padogrid.yaml
-    └── pv-hostPath.yaml
+└── templates
+    ├── hazelcast
+    │   ├── hazelcast-enterprise-rhel.yaml
+    │   ├── hazelcast-enterprise.yaml
+    │   ├── hazelcast.yaml
+    │   ├── rbac.yaml
+    │   ├── service-lb-pods.yaml
+    │   ├── service-lb.yaml
+    │   ├── service-nodeport-pods.yaml
+    │   ├── service-nodeport.yaml
+    │   └── wan
+    │       ├── hazelcast-enterprise-rhel.yaml
+    │       └── hazelcast-enterprise.yaml
+    └── padogrid
+        ├── padogrid-no-pvc.yaml
+        ├── padogrid.yaml
+        └── pv-hostPath.yaml
 ```
 
-There are three (3) templates obtained from the [Hazelcast GitHub repo](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift/hazelcast-cluster) in the `hazelcast` directory. The first two (2) are Hazelcast Enterprise which requires an enterprise license key. The last one is an open source Hazelcast template.
+There are three (3) templates obtained from the [Hazelcast GitHub repo](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift/hazelcast-cluster) in the `template/hazelcast` directory. The first two (2) are Hazelcast Enterprise which requires an enterprise license key. The last one is an open source Hazelcast template.
 
 * **Hazelcast Enterprise RHEL:** template to deploy Hazelcast IMDG Enterprise RHEL onto OpenShift Container Platform, i.e., `registry.connect.redhat.com/hazelcast/hazelcast-4-rhel8:4.0`.
 * **Hazelcast Enterprise:** template to deploy Hazelcast IMDG Enterprise onto OpenShift Container Platform, i.e., `hazelcast/hazelcast-enterprise:4.0`.
@@ -52,7 +52,14 @@ export PROJECT="myocp"
 # Build app
 cd_k8s $PROJECT; cd bin_sh
 ./build_app
+
+# If you want to setup wan replication, then specify the '-wan` option as follows.
+# Note that -wan may not work for some OpenShift clusters.
+./build_app -wan
 ```
+
+The `build_app` script creates the `hazelcast` and `padogrid` directories containing Kubernetes `.yaml` files. By default, `build_app` configures three (3) Hazelcast members. You can change the number of members, the node port numbers, etc. by editing the `setenv.sh` file.
+
 ## 2. CRC Users (Optional): Create Mountable Persistent Volumes in Master Node
 
 :exclamation: **This section is optional and only applies to CRC users.**
@@ -120,11 +127,9 @@ oc adm policy add-scc-to-user nonroot system:serviceaccount:myocp:default
 
 :exclamation: Note that as of **oc v4.5.9**, `oc get scc nonroot -o yaml` will not show the user you added using CLI. This is also true for the user added using the editor, which will not be shown in the output of `oc adm policy who-can use scc nonroot`.
 
-## 4. Create OpenShift secrets
+## 4. Create Hazelcast Enterprise RHEL regitry secret
 
 _You can skip this step and go to [Step #5](#5-start-hazelcast) if you are running Hazelcast OSS._
-
-### 4.1. Hazelcast Enterprise RHEL
 
 To download the Hazelcast images from the RedHat Registry, i.e., `registry.connect.redhat.com`, you must create a secret using your RedHat account; otherwise, you will get an "unauthorized" error during the image download time.
 
@@ -139,15 +144,6 @@ oc create secret docker-registry rhcc \
 
 # Link the rhcc secret to default.  
 oc secrets link default rhcc --for=pull
-```
-
-### 4.2. Hazelcast Enterprise RHEL and Hazelcast Enterprise
-
-Let's also create a secret that holds the Hazelcast enterprise license key.
-
-```bash
-# Create hz-enterprise-license secret expected by hazelcast.yaml  
-oc create secret generic hz-enterprise-license --from-literal=key=<hazelcast-enterprise-license-key>
 ```
 
 ## 5. Start Hazelcast
