@@ -87,6 +87,8 @@ fi
 cp -r $APP_DIR/templates/hazelcast $APP_DIR/
 cp -r $APP_DIR/templates/padogrid $APP_DIR/
 
+
+
 IS_ENTERPRISE="false"
 if [ "$OSS" == "true" ] || [ "$IMDG_LICENSE_KEY" == "" ]; then
   HAZELCAST_YAML="hazelcast.yaml"
@@ -112,9 +114,16 @@ else
 fi
 HAZELCAST_YAML=$APP_DIR/hazelcast/$HAZELCAST_YAML
 
+#
+# There is a bug in OpenShift that fails to read the value of HAZELCAST_REPLICAS.
+# Replace it with the actual value.
+#
 if [ "$IS_ENTERPRISE" == "true" ]; then
    # Update wan endpoints
-   sed "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $TEMPLATE_HAZELCAST_YAML > $HAZELCAST_YAML
+   sed -e "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" \
+       -e "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $TEMPLATE_HAZELCAST_YAML > $HAZELCAST_YAML
+else
+   sed "s/replicas: \${HAZELCAST_REPLICAS}/replicas: $MEMBER_COUNT/" $TEMPLATE_HAZELCAST_YAML > $HAZELCAST_YAML
 fi
 
 #
