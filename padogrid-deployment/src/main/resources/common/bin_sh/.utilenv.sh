@@ -1986,7 +1986,7 @@ function printSeeAlsoList
 #
 # Displays a tree view of the specified list
 # @param list          Space separated list
-# @param highlightItem Optional. If sepedified, then the matching item is highlighted in green.
+# @param highlightItem Optional. If sepecified, then the matching item is highlighted in green.
 #
 function showTree
 {
