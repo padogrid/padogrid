@@ -21,7 +21,7 @@ export PROJECT_NAME="$APP_NAME"
 #
 # Number of members
 #
-MEMBER_COUNT=4
+MEMBER_COUNT=3
 
 #
 # Gap between the first load balancer port and the first node port. This numer is used
