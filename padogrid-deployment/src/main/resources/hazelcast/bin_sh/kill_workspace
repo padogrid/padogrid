@@ -128,7 +128,10 @@ for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
       echo ""
       echo -e "${CLightRed}Killing cluster $CLUSTER...${CNone}"
       kill_cluster -cluster $CLUSTER
-      stop_mc -cluster $CLUSTER
+      # Check product in case 'kill_workspace -all' is invoked
+      if [ "$PRODUCT" == "hazelcast" ]; then
+         stop_mc -cluster $CLUSTER
+      fi
    done
 done
 if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
