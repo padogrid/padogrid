@@ -64,6 +64,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 	private boolean isDeleteEnabled = true;
 	private boolean isHazelcastEnabled = true;
 	private boolean isAvroDeepCopyEnabled = false;
+	private boolean isColumnNamesCaseSensitiveEnabled = true;
 	private String keyClassName;
 	private String valueClassName;
 	private String[] keyColumnNames;
@@ -71,7 +72,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 	private String[] valueColumnNames;
 	private String[] valueFieldNames;
 	private ObjectConverter objConverter;
-	private org.apache.avro.Schema avroSchema;
+	private org.apache.avro.Schema avroSchema; 
 	int[] colocatedFieldIndexes = new int[0];
 
 	@Override
@@ -104,6 +105,9 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		String isAvroDeepCopyStr = props.get(DebeziumKafkaAvroSinkConnector.AVRO_DEEP_COPY_ENABLED);
 		isAvroDeepCopyEnabled = isAvroDeepCopyStr != null && isAvroDeepCopyStr.equalsIgnoreCase("true") ? true
 				: isAvroDeepCopyEnabled;
+		String isColumnNamesCaseSensitiveStr = props.get(DebeziumKafkaAvroSinkConnector.COLUMN_NAMES_CASE_SENSITVIE_ENABLED);
+		isColumnNamesCaseSensitiveEnabled = isColumnNamesCaseSensitiveStr != null && isColumnNamesCaseSensitiveStr.equalsIgnoreCase("false") ? false
+				: isColumnNamesCaseSensitiveEnabled;
 		keyClassName = props.get(DebeziumKafkaAvroSinkConnector.KEY_CLASS_NAME_CONFIG);
 		valueClassName = props.get(DebeziumKafkaAvroSinkConnector.VALUE_CLASS_NAME_CONFIG);
 
@@ -216,6 +220,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		}
 		try {
 			objConverter = new ObjectConverter(keyClassName, keyFieldNames, valueClassName, valueFieldNames);
+			objConverter.setColumnNamesCaseSensitive(isColumnNamesCaseSensitiveEnabled);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
@@ -317,8 +322,14 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 				key = UUID.randomUUID().toString();
 			} else {
 				Object keyFieldValues[] = new Object[keyColumnNames.length];
-				for (int j = 0; j < keyColumnNames.length; j++) {
-					keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+				if (keyStruct != null) {
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+					}
+				} else {
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = valueStruct.get(keyColumnNames[j]);
+					}
 				}
 				try {
 					key = objConverter.createKeyObject(keyFieldValues);
@@ -367,7 +378,6 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 					logger.info("op=" + op);
 					logger.info("isDelete=" + isDelete);
 					logger.info("afterStruct=" + afterStruct);
-					System.out.flush();
 				}
 
 				// Determine the value column names.
@@ -378,12 +388,6 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 				Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
 				for (int j = 0; j < valueColumnNames.length; j++) {
 					valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
-					// TODO: This is a hack. Support other types also.
-//				if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
-//					if (valueFieldValues[j] instanceof Number) {
-//						valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
-//					}
-//				}
 				}
 				try {
 					value = objConverter.createValueObject(valueFieldValues);
@@ -415,6 +419,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			}
 
 			if (isDebugEnabled) {
+				logger.info("**** key class=" + key.getClass().getName());
 				logger.info("**** key=" + key);
 			}
 
@@ -432,6 +437,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			}
 			
 			if (isDebugEnabled) {
+				logger.info("**** value class=" + value.getClass().getName());
 				logger.info("**** value=" + value);
 			}
 

@@ -11,7 +11,7 @@ NAME
    $EXECUTABLE - Build padogrid along with all required files such as Unix man pages
 
 SYNOPSIS
-   ./$EXECUTABLE [-man] [-coherence] [-?]
+   ./$EXECUTABLE [-all] [-man] [-coherence] [-?]
 
    Builds padogrid without man pages and Coherence by default.
     
@@ -30,6 +30,9 @@ SYNOPSIS
    coherence-addon-core/README.md
 
 OPTIONS
+   -all
+             If specified, then builds all modules and generates man pages.
+
    -man
              If specified, then generate man pages for all modules.
 

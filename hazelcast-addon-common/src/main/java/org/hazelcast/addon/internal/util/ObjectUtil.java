@@ -489,4 +489,21 @@ public class ObjectUtil {
 			return Character.toUpperCase(property.charAt(0)) + property.substring(1);
 		}
 	}
+
+	/**
+	 * Returns true if the column names are case senstivie. Default: true
+	 */
+	public boolean isColumnNamesCaseSensitive() {
+		return isColumnNamesCaseSensitive;
+	}
+
+	/**
+	 * Enable or disable column name case sensitivity. Default: true
+	 * 
+	 * @param isColumnNamesCaseSensitive true to make column names case sensitive,
+	 *                                   false to make column names case insensitive.
+	 */
+	public void setColumnNamesCaseSensitive(boolean isColumnNamesCaseSensitive) {
+		this.isColumnNamesCaseSensitive = isColumnNamesCaseSensitive;
+	}
 }

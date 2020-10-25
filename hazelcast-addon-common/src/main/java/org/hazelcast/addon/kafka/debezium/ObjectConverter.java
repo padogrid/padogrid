@@ -68,15 +68,16 @@ public class ObjectConverter extends ObjectUtil {
 			} else {
 				return UUID.randomUUID().toString();
 			}
-		} if (keyClass == String.class) {
+		} else if (keyClass == String.class) {
 			String key = "";
-			for (Object object : keyFieldValues) {
+			for (int i = 0; i < keyFieldValues.length; i++) {
+				if (i > 0) {
+					key = key + ".";
+				}
+				Object object= keyFieldValues[i];
 				if (object != null) {
 					key += object.toString();
 				}
-			}
-			if (key.length() == 0) {
-				key = UUID.randomUUID().toString();
 			}
 			return key;
 		} else {
@@ -87,5 +88,22 @@ public class ObjectConverter extends ObjectUtil {
 	public Object createValueObject(Object[] valueFieldValues) throws InstantiationException, IllegalAccessException,
 			IllegalArgumentException, InvocationTargetException, ParseException {
 		return createObject(valueClass, valueClassSetters, valueFieldValues, 0);
+	}
+	
+	/**
+	 * Returns true if the column names are case senstivie. Default: true
+	 */
+	public boolean isColumnNamesCaseSensitive() {
+		return super.isColumnNamesCaseSensitive();
+	}
+
+	/**
+	 * Enable or disable column name case sensitivity. Default: true
+	 * 
+	 * @param isColumnNamesCaseSensitive true to make column names case sensitive,
+	 *                                   false to make column names case insensitive.
+	 */
+	public void setColumnNamesCaseSensitive(boolean isColumnNamesCaseSensitive) {
+		super.setColumnNamesCaseSensitive(isColumnNamesCaseSensitive);
 	}
 }

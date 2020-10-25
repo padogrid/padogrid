@@ -25,6 +25,9 @@ SYNOPSIS
    coherence-addon-core/README.md
 
 OPTIONS
+   -all
+             If specified, then builds all modules and generates man pages.
+
    -man
              If specified, then generate man pages for all modules.
 
