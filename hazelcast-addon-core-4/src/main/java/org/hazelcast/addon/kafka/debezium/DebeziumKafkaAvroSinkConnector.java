@@ -30,6 +30,7 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 	public static final String HAZELCAST_ENABLED = "hazelcast.enabled";
 	public static final String AVRO_DEEP_COPY_ENABLED = "avro.deep.copy.enabled";
 	public static final String COLUMN_NAMES_CASE_SENSITVIE_ENABLED = "column.names.case.sensitive.enabled";
+	public static final String KEY_STRUCT_ENABLED = "key.struct.enabled";
 	public static final String KEY_CLASS_NAME_CONFIG = "key.class";
 	public static final String KEY_COLUMN_NAMES_CONFIG = "key.column.names";
 	public static final String KEY_FIELD_NAMES_CONFIG = "key.field.names";
@@ -64,6 +65,10 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 					+ "including Avro.")
 			.define(COLUMN_NAMES_CASE_SENSITVIE_ENABLED, Type.BOOLEAN, true, Importance.MEDIUM,
 					"If false, then the both the column names and object field names are treated case insensitive.")
+			.define(KEY_STRUCT_ENABLED, Type.BOOLEAN, false, Importance.HIGH,
+					"By default, the key objects are constructed with the columns in the value records. If this option "
+					+ "is set to true, then the key objects are constructed using the key records. Note that if the key "
+					+ "records are missing or any of the listed key columns are missing then it defaults to the value records.")
 			.define(KEY_CLASS_NAME_CONFIG, Type.STRING, null, Importance.HIGH,
 					"Key class name. Name of serializable class for transforming table key columns to key objects into Hazelcast. "
 							+ "If not specified but the key column names are specified, then the column values are concatenated with the delimiter '.'. "
@@ -92,6 +97,7 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 	private boolean isHazelcastEnabled = true;
 	private boolean isAvroDeepCopyEnabled = false;
 	private boolean isColumnNamesCaseSensitiveEnabled = true;
+	private boolean isKeyStructEnabled = false;
 	private String keyClassName;
 	private String keyColumnNames;
 	private String keyFieldNames;
@@ -124,6 +130,8 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 		isAvroDeepCopyEnabled = isAvroDeepCopyStr != null && isAvroDeepCopyStr.equalsIgnoreCase("true") ? true : isAvroDeepCopyEnabled;
 		String isColumnNamesCaseSensitiveStr = props.get(COLUMN_NAMES_CASE_SENSITVIE_ENABLED);
 		isColumnNamesCaseSensitiveEnabled = isColumnNamesCaseSensitiveStr != null && isHazelcastStr.equalsIgnoreCase("false") ? false : isColumnNamesCaseSensitiveEnabled;
+		String isKeyStructStr = props.get(KEY_STRUCT_ENABLED);
+		isKeyStructEnabled = isKeyStructStr != null && isKeyStructStr.equalsIgnoreCase("false") ? false : isKeyStructEnabled;
 		keyClassName = props.get(KEY_CLASS_NAME_CONFIG);
 		keyColumnNames = props.get(KEY_COLUMN_NAMES_CONFIG);
 		keyFieldNames = props.get(KEY_FIELD_NAMES_CONFIG);
@@ -151,6 +159,7 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 		System.out.println("connector: isHazelcastEnabled = " + isHazelcastEnabled);
 		System.out.println("connector: isAvroDeepCopyEnabled = " + isAvroDeepCopyEnabled);
 		System.out.println("connector: isColumnNamesCaseSensitiveEnabled = " + isColumnNamesCaseSensitiveEnabled);
+		System.out.println("connector: isKeyStructEnabled = " + isKeyStructEnabled);
 		System.out.println(
 				"connector: ====================================================================================");
 		System.out.flush();
@@ -179,6 +188,7 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 			config.put(HAZELCAST_ENABLED, Boolean.toString(isHazelcastEnabled));
 			config.put(AVRO_DEEP_COPY_ENABLED, Boolean.toString(isAvroDeepCopyEnabled));
 			config.put(COLUMN_NAMES_CASE_SENSITVIE_ENABLED, Boolean.toString(isHazelcastEnabled));
+			config.put(KEY_STRUCT_ENABLED, Boolean.toString(isKeyStructEnabled));
 			if (keyClassName != null) {
 				config.put(KEY_CLASS_NAME_CONFIG, keyClassName);
 			}

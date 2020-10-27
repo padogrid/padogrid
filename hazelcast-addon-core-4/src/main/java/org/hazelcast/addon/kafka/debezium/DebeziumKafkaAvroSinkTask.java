@@ -16,6 +16,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.json.JSONObject;
@@ -65,6 +66,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 	private boolean isHazelcastEnabled = true;
 	private boolean isAvroDeepCopyEnabled = false;
 	private boolean isColumnNamesCaseSensitiveEnabled = true;
+	private boolean isKeyStructEnabled = false;
 	private String keyClassName;
 	private String valueClassName;
 	private String[] keyColumnNames;
@@ -108,6 +110,8 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		String isColumnNamesCaseSensitiveStr = props.get(DebeziumKafkaAvroSinkConnector.COLUMN_NAMES_CASE_SENSITVIE_ENABLED);
 		isColumnNamesCaseSensitiveEnabled = isColumnNamesCaseSensitiveStr != null && isColumnNamesCaseSensitiveStr.equalsIgnoreCase("false") ? false
 				: isColumnNamesCaseSensitiveEnabled;
+		String isKeyStructStr = props.get(DebeziumKafkaAvroSinkConnector.KEY_STRUCT_ENABLED);
+		isKeyStructEnabled = isKeyStructStr != null && isKeyStructStr.equalsIgnoreCase("false") ? false : isKeyStructEnabled;
 		keyClassName = props.get(DebeziumKafkaAvroSinkConnector.KEY_CLASS_NAME_CONFIG);
 		valueClassName = props.get(DebeziumKafkaAvroSinkConnector.VALUE_CLASS_NAME_CONFIG);
 
@@ -309,7 +313,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			/*
 			 * Key
 			 */
-			Object key;
+			Object key = null;
 
 			// Determine the key column names.
 			if (keyColumnNames == null) {
@@ -322,20 +326,14 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 				key = UUID.randomUUID().toString();
 			} else {
 				Object keyFieldValues[] = new Object[keyColumnNames.length];
-				if (keyStruct != null) {
-					for (int j = 0; j < keyColumnNames.length; j++) {
-						keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+				if (isKeyStructEnabled && keyStruct != null) {
+					try {
+						for (int j = 0; j < keyColumnNames.length; j++) {
+							keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+						}
+					} catch (DataException ex) {
+						// ignore
 					}
-				} else {
-					for (int j = 0; j < keyColumnNames.length; j++) {
-						keyFieldValues[j] = valueStruct.get(keyColumnNames[j]);
-					}
-				}
-				try {
-					key = objConverter.createKeyObject(keyFieldValues);
-				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-						| InvocationTargetException | ParseException e) {
-					throw new RuntimeException(e);
 				}
 			}
 
@@ -365,6 +363,18 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 
 				value = SpecificData.get().deepCopy(avroSchema, after);
 			
+				if (key == null) {
+					Object keyFieldValues[] = new Object[keyColumnNames.length];
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = after.get(keyColumnNames[j]);
+					}
+					try {
+						key = objConverter.createKeyObject(keyFieldValues);
+					} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+							| InvocationTargetException | ParseException e) {
+						throw new RuntimeException(e);
+					}
+				}
 
 			} else {
 
@@ -400,6 +410,19 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 					for (int j = 0; j < valueColumnNames.length; j++) {
 						logger.info(
 								"valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
+					}
+				}
+				
+				if (key == null) {
+					Object keyFieldValues[] = new Object[keyColumnNames.length];
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = afterStruct.get(keyColumnNames[j]);
+					}
+					try {
+						key = objConverter.createKeyObject(keyFieldValues);
+					} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+							| InvocationTargetException | ParseException e) {
+						throw new RuntimeException(e);
 					}
 				}
 

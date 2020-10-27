@@ -43,7 +43,7 @@ public class ObjectConverter extends ObjectUtil {
 		this.valueClass = valueClass;
 		this.valueFieldNames = valueFieldNames;
 
-		keyClassSetters = getFieldMethodList(valueClass, keyFieldNames, "set", 1);
+		keyClassSetters = getFieldMethodList(keyClass, keyFieldNames, "set", 1);
 		valueClassSetters = getFieldMethodList(valueClass, valueFieldNames, "set", 1);
 		valueFieldTypes = new Class<?>[valueClassSetters.length];
 		for (int i = 0; i < valueClassSetters.length; i++) {
