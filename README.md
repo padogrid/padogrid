@@ -144,13 +144,31 @@ Run the `create_rwe` command to create the first RWE (Root Workspace Environment
 You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
+# kubctl
 kubectl create deployment padogid --image=docker.io/padogrid/padogrid
+
+# oc
+oc create deployment padogid --image=docker.io/padogrid/padogrid
 ```
 
 To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
 
 ```bash
+# kubctl
 kubectl exec -it <padogrid-pod-name> -- bash
+
+# oc
+oc exec -it <padogrid-pod-name> -- bash
+```
+
+If you have a Hazelcast cluster running in the same namespace (project) as PadoGrid, then you can run the `perf_test` app as follows.
+
+```bash
+export NAMESPACE=<Kubernetes namespace/project>
+export HAZELCAST_SERVICE=<Hazelcast Kubernetes service>
+create_app
+cd_app perf_test; cd bin_sh
+./test_ingestion -run
 ```
 
 ## Data Grid Products
