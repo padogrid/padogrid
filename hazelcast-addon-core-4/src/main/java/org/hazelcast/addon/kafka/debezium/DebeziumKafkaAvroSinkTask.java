@@ -509,7 +509,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		}
 		return columnNames;
 	}
-
+	
 	@Override
 	public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
 		if (map != null) {
@@ -526,6 +526,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		if (hzInstance != null) {
 			hzInstance.shutdown();
 		}
+		logger.info("DebeziumKafkaAvroSinkTask.stop() invoked. Hazelcast instance shutdown.");
 	}
 
 	private String logMapName() {

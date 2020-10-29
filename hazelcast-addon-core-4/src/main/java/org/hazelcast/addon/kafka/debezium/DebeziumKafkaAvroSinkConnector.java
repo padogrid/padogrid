@@ -217,7 +217,7 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 
 	@Override
 	public void stop() {
-		HazelcastClient.shutdownAll();
+		// Do not shutdown Hazelcast here. Hazelcast shutdown is done on an individual task basis.
 	}
 
 	@Override
