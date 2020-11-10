@@ -46,6 +46,7 @@ COHERENCE_ARG=
 GEODE_ARG=
 HAZELCAST_ARG=
 PATH_ARG=
+JAR_ARG=
 CLASSPATH_ARG=
 DATAGRID_ARG=
 JET_ARG=
@@ -164,6 +165,8 @@ do
       HAZELCAST_ARG=$i
    elif [ "$PREV" == "-path" ]; then
       PATH_ARG=$i
+   elif [ "$PREV" == "-jar" ]; then
+      JAR_ARG=$i
    elif [ "$PREV" == "-classpath" ]; then
       CLASSPATH_ARG=$i
    elif [ "$PREV" == "-datagrid" ]; then
