@@ -49,10 +49,15 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 	 * Returns an entry with the specified idNum as part of the primary key
 	 */
 	@Override
-	public DataObjectFactory.Entry createEntry(int idNum) {
+	public DataObjectFactory.Entry createEntry(int idNum, Object erKey) {
 		Order order = createOrder();
 		if (isKeyRandom == false) {
 			order.setOrderId(createKey(idNum));
+		}
+		
+		// parent ER
+		if (erKey != null) {
+			order.setCustomerId(erKey.toString());
 		}
 		return new DataObjectFactory.Entry(order.getOrderId(), order);
 	}

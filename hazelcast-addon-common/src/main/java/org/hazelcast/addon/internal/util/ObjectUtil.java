@@ -143,7 +143,13 @@ public class ObjectUtil {
 						field.set(dataObject, value);
 					}
 				} catch (IllegalArgumentException ex) {
-					throw new IllegalArgumentException("Field: " + field + ", Value: [" + value.getClass() + ", " + value + "]", ex);
+					String valueClassName;
+					if (value == null) {
+						valueClassName = "null";
+					} else {
+						valueClassName = value.getClass().getName();
+					}
+					throw new IllegalArgumentException("Field: " + field + ", Value: [" + valueClassName + ", " + value + "]", ex);
 				}
 			} else {
 				Method method = null;
@@ -171,7 +177,13 @@ public class ObjectUtil {
 						method.invoke(dataObject, value);
 					}
 				} catch (IllegalArgumentException ex) {
-					throw new IllegalArgumentException("Method: " + method + ", Value: [" + value.getClass() + ", " + value + "]", ex);
+					String valueClassName;
+					if (value == null) {
+						valueClassName = "null";
+					} else {
+						valueClassName = value.getClass().getName();
+					}
+					throw new IllegalArgumentException("Method: " + method + ", Value: [" + valueClassName + ", " + value + "]", ex);
 				}
 			}
 
