@@ -1016,6 +1016,9 @@ public class GroupTest implements Constants {
 		writeLine("   will be outputted in the following directory:");
 		writeLine("      " + resultsDirStr);
 		writeLine();
+		writeLine("Notes:");
+		writeLine("   ICache is not currently supported.");
+		writeLine();
 	}
 
 	@SuppressWarnings("unchecked")
