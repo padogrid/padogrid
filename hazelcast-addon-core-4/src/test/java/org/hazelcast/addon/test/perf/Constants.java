@@ -1,5 +1,6 @@
 package org.hazelcast.addon.test.perf;
 
+import org.hazelcast.addon.test.perf.GroupTest.DataStructureEnum;
 import org.hazelcast.addon.test.perf.TransactionTest.TestCaseEnum;
 
 public interface Constants {
@@ -31,7 +32,8 @@ public interface Constants {
 	public final static int DEFAULT_threadCount = (int) (Runtime.getRuntime().availableProcessors() * 1.5);
 	public final static int DEFAULT_batchSize = 1000;
 	public final static int DEFAULT_totalEntryCount = 100000;
-	public final static TestCaseEnum DEFAULT_testCase = TestCaseEnum.getall;
+	public final static DataStructureEnum DEFAULT_ds = DataStructureEnum.map;
+	public final static TestCaseEnum DEFAULT_testCase = TestCaseEnum.putall;
 
 	// Ingestion specific properties
 	public final String PROPERTY_payloadSize = "payloadSize";
