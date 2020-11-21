@@ -1,12 +1,23 @@
 # Hazelcast `perf_test` App
 
+The `perf_test` app provides Hazelcast client programs to perform the following:
+
+- Ingest mock data of any size
+- Ingest transactional data of any size
+- Ingest mock data with entity relationships (ER)
+- Ingest mock data directly to databases
+- Simulate complex appliation workflows that invoke Hazelcast operations without coding
+- Measure Hazelcast latencies and throughputs in a multi-threaded user session environment
+
 The `perf_test` app provides a pair of scripts to ingest and transact mock data for testing Hazelcast throughputs and latencies. It provides a quick way to run your performance tests by configuring a few properties such as the payload size, the number of objects (entries), and the number of worker threads. Out of the box, these properties have already been pre-configured in `etc/ingestion.properties` and `etc/tx.properties`, which you can modify as needed to meet your test criteria.
 
-The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of IMap operations and execute them in parallel. A group is analogous to a function that makes multiple IMap method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files that have been preconfigured to invoke 22 put calls and 22 get calls on 22 different maps. You can configure the Near Cache in `etc/hazelcast-client.xml` to measure the throughput. 
+The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of Hazelcast data structure operations and execute them in sequence and/or in parallel. A group is analogous to a function that makes multiple data structure method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files for demonstrating complex workflows that invoke 22 put calls and 22 get calls on 22 different maps. There are also several example `group-*.properties` files for each data structure. You can also configure the Near Cache in `etc/hazelcast-client.xml` to measure the improved throughput. 
 
-## Maps
+The `perf_test` app can directly *upsert* mock data into your database of choice using Hibernate, which automatically creates tables as needed. This capability allows you to quickly synchrnize Hazelcast with your database and perform latency tests.
 
-All of the test cases are performed on three (3) distributed maps with a simple PBM (Pharmacy Benefit Management) data model that associates the client group number with group members. Simply put, all of the members that belong to a group are co-located in the same Hazelcast partition. This enables each Hazelcast member to complete transactions with their local datasets without encountering additional netowork hops.
+## Transaction Test Cases
+
+All of the transaction test cases are performed on three (3) distributed maps with a simple PBM (Pharmacy Benefit Management) data model that associates the client group number with group members. Simply put, all of the members that belong to a group are co-located in the same Hazelcast partition. This enables each Hazelcast member to complete transactions with their local datasets without encountering additional netowork hops.
 
 |Map    | Description | Script |
 |------ | ------------| ------ |
@@ -16,12 +27,22 @@ All of the test cases are performed on three (3) distributed maps with a simple 
 
 ## Configuration Files
 
-There are two configuration files with pref-configured properties as follows:
-- `etc/ingestion.properties` - This file defines properties for ingesting data into the `eligibility` and `profile` maps.
-- `etc/tx.properties` - This file defines properties for performing transactions.
-- `etc/group.properties` - This file defines properties for performing groups of IMap method calls.
-- `etc/group-put.properties` - This file defines properties for making 22 put calls on 22 different maps in a single group.
-- `etc/group-get.properties` - This file defines properties for making 22 get calls on 22 different maps in a single group. Note that group-put must be invoked first to ingest data. 
+The following table describes a list of preconfigured properties files in the `etc/` directory.
+
+| Properties File | Description |
+| --------------- | ----------- |
+| `ingestion.properties` | Defines properties for ingesting data into the `eligibility` and `profile` maps. |
+| `tx.properties`        | Defines properties for performing transactions. |
+| `group.properties`     | Defines properties for performing groups of `IMap` method calls. |
+| `group-put.properties` | Dfines properties for making 22 put calls on 22 different maps in a single group. |
+| `group-get.properties` | Defines properties for making 22 get calls on 22 different maps in a single group. Note that before invoking this file, `group-put.properties` must be invoked first to ingest data. |
+| `group-cache.properties` | Defines properties for `ICache` (JCache) operations. Unlike other, data structures, `ICache` requires you to first configure the cluster with the caches that you want to test before running the `test_group` script. |
+| `group-queue.properties` |  Defines properties for `IQueue` operations. |
+| `group-rmap.properties` | Defines properties for `ReplicatedMap` operations. |
+| `group-rtopic.properties` | Defines properties for `ReliableTopic` operations.|
+| `group-topic.properties` | Defines properties for `ITopic` operations. |
+| `group-factory.properties` | Defines properties for ingesting mock data. |
+| `group-factory-er.properties` | Defines properties for ingesting mock data with entity relationships. |
 
 You can introduce your own test criteria by modifying the properties the above files or supply another properties file by specifying the `-prop` option of the scripts described below.
 
@@ -33,7 +54,7 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 | ------ | ----------- |
 | `test_ingestion` | Displays or runs data ingestion test cases (`putall` or `put`) specified in the `etc/ingestion.properties` file. It ingests mock data into the `eligibility` and `profile` maps. |
 | `test_tx` | Displays or runs transaction and query test cases specified in the `etc/tx.properties` file. It runs `get`, `getall`, `tx` test cases specified in the `perf.properties` file. |
-| `test_group` | Displays or runs group test cases (`set`, `put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Hazelcast IMap operations. |
+| `test_group` | Displays or runs group test cases (`set`, `put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Hazelcast `IMap` operations. |
 
 ## Script Usages
 
@@ -50,8 +71,10 @@ Usage:
       ../etc/ingestion.properties
 
        -run              Run test cases.
+
        -failover         Configure failover client using the following config file:
                             ../etc/hazelcast-client-failover.xml
+
        <properties-file> Optional properties file path.
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
@@ -62,6 +85,8 @@ Usage:
 ### test_tx
 
 ```console
+./test_tx -?
+
 Usage:
    test_tx [-run] [-failover] [-prop <properties-file>] [-?]
 
@@ -70,8 +95,10 @@ Usage:
       ../etc/tx.properties
 
        -run              Run test cases.
+
        -failover         Configure failover client using the following config file:
                             ../etc/hazelcast-client-failover.xml
+
        <properties-file> Optional properties file path.
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
@@ -82,8 +109,10 @@ Usage:
 ### test_group
 
 ```console
+./test_group -?
+
 Usage:
-   test_group [-run] [-prop <properties-file>] [-?]
+   test_group [-run|-list] [-db|-delete] [-prop <properties-file>] [-?]
 
    Displays or runs group test cases specified in the properties file.
    A group represents a function that executes one or more Hazelcast IMap
@@ -92,18 +121,32 @@ Usage:
    The default properties file is
       ../etc/group.properties
 
-       -run              Run test cases.
-       -db               Run test cases on database instead of Hazelcast. To use this
+       -run              Runs test cases.
+
+       -list             Lists data structures and their sizes.
+
+       -db               Runs test cases on database instead of Hazelcast. To use this
                          option, each test case must supply a data object factory class
                          by specifying the 'factory.class' property and Hibernate must
                          be configured by running the 'build_app' command.
+
+       -delete           Deletes (destroys) all the data structures pertaining to the group
+                         test cases that were created in the Hazelcast cluster. If the '-run'
+                         option is not specified, then it has the same effect as the '-list'
+                         option. It only lists data strcutures and their without deleting them.
+
        -failover         Configure failover client using the following config file:
                            ../etc/hazelcast-client-failover.xml
+
        <properties-file> Optional properties file path.
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
-      /Users/dpark/padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
+      /Users/dpark/Padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
+
+Notes:
+   ICache requires explicit configuration. It will fail if you run it without first configuring
+   the cluster with caches.
 ```
 
 ### MapStorePkDbImpl (Database Integration)
@@ -357,6 +400,16 @@ JAVA_OPTS="$JAVA_OPTS -Dhazelcast-addon.hibernate.config=$APP_ETC_DIR/hibernate.
 
 Run `test_group -db`.
 
-```
+```bash
 ./test_group -db -run -prop ../etc/group-factory.properties
 ```
+
+## Generating Entity Relationships (ER)
+
+If you want to add entity relationships to your data, then you can implement `DataObjectFactory.` or extend `AbstractDataObjectFactory` and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see `org.hazelcast.demo.nw.impl.OrderFactoryImpl` for details. You can run the example as follows:
+
+```bash
+./test_group -run -prop ../etc/group-factory-er.properties
+```
+
+The ER capbility provides you a quick way to ingest co-located data into Hazelcast and test server-side operations that take advatange of data affinity.

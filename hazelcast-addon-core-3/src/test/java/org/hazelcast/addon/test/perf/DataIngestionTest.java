@@ -606,8 +606,10 @@ public class DataIngestionTest implements Constants
 		writeLine("      " + DEFAULT_ingestionPropertiesFile);
 		writeLine("");
 		writeLine("       -run              Run test cases.");
+		writeLine();
 		writeLine("       -failover         Configure failover client using the following config file:");
 		writeLine("                            ../etc/hazelcast-client-failover.xml");
+		writeLine();
 		writeLine("       <properties-file> Optional properties file path.");
 		writeLine();
 		writeLine("   To run the the test cases, specify the '-run' option. Upon run completion, the results");
