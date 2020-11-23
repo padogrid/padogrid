@@ -166,6 +166,8 @@ If you have a Hazelcast cluster running in the same namespace (project) as PadoG
 ```bash
 export NAMESPACE=<Kubernetes namespace/project>
 export HAZELCAST_SERVICE=<Hazelcast Kubernetes service>
+# The default cluster name is "dev".
+export HAZELCAST_CLUSTER_NAME=<cluster name>
 create_app
 cd_app perf_test; cd bin_sh
 ./test_ingestion -run
