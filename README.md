@@ -139,6 +139,18 @@ Run the `create_rwe` command to create the first RWE (Root Workspace Environment
 ~/Padogrid/products/padogrid_0.9.4-SNAPSHOT/bin_sh/create_rwe
 ```
 
+## Running PadoGrid on Docker and Podman
+
+PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.4-SNAPSHOT-7` image has the build number 7. The SNAPSHOT versions are for testing only and subject to removal without notice.
+
+```bash
+# docker
+docker run -it --rm padogrid/padogrid /bin/bash
+
+# podman
+podman run -it --rm padogrid/padogrid /bin/bash
+```
+
 ## Running PadoGrid on Kubernetes
 
 You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
