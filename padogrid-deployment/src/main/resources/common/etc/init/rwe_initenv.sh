@@ -23,7 +23,7 @@ __IFS=$IFS
 IFS=":"
 PATH_ARRAY=($PATH)
 for i in "${PATH_ARRAY[@]}"; do
-   if [ "$i" == "$JAVA_HOME" ]; then
+   if [ "$i" == "$JAVA_HOME/bin" ]; then
       continue;
    elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
       continue;

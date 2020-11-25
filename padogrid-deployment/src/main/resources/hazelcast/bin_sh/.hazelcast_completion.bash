@@ -406,7 +406,11 @@ __get_jet_jobs()
       fi
       __PREV_WORD=$__WORD
    done
-   __JOBS=$(jet.sh $__ADDRESSES list-jobs)
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
+      __JOBS=$(jet $__ADDRESSES list-jobs)
+   else
+      __JOBS=$(jet.sh $__ADDRESSES list-jobs)
+   fi
    if [ "$jobStatus" == "RUNNING" ] || [ "$jobStatus" == "SUSPENDED" ]; then
       __JOBS=$(echo "$__JOBS" | sed -e 's/ID.*NAME//' | grep ${jobStatus} | sed -e 's/ .*$//')
    else
@@ -442,7 +446,11 @@ __get_jet_snapshots()
    done
 
    __TMP_FILE=/tmp/__dump.txt
-   jet.sh $__ADDRESSES list-snapshots > $__TMP_FILE
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
+      jet $__ADDRESSES list-snapshots > $__TMP_FILE
+   else
+      jet.sh $__ADDRESSES list-snapshots > $__TMP_FILE
+   fi
    while IFS= read -r line; do
       line=$(echo "$line" | sed -e 's/ /|/g')
       if [[ $line == TIME** ]]; then
@@ -466,12 +474,11 @@ __cluster_complete()
    cur_word="${COMP_WORDS[COMP_CWORD]}"
    prev_word="${COMP_WORDS[COMP_CWORD-1]}"
    len=${#COMP_WORDS[@]}
-   before_prev_word="${COMP_WORDS[COMP_CWORD-2]}"
+   if [ $len -gt 2 ]; then
+      before_prev_word="${COMP_WORDS[COMP_CWORD-2]}"
+   fi
 
    case "$before_prev_word" in
-   cancel|delete-snapshot|restart|resume|sumbit|suspend)
-      type_list=""
-      ;;
    *)
       type_list="-o --operation -s --state -a --address -p --port -g --groupname -P --password -v --version -h --help"
       if [ "$CLUSTER_TYPE" == "imdg" ]; then
@@ -565,20 +572,22 @@ __cluster_complete()
 
 __jet_complete()
 {
-   local cur_word prev_word type_list commands len
+   local cur_word prev_word type_list commands len before_prev_word
 
    # COMP_WORDS is an array of words in the current command line.
    # COMP_CWORD is the index of the current word (the one the cursor is
    # in). So COMP_WORDS[COMP_CWORD] is the current word.
+   len=${#COMP_WORDS[@]}
    second_word="${COMP_WORDS[1]}"
    third_word="${COMP_WORDS[2]}"
    cur_word="${COMP_WORDS[COMP_CWORD]}"
    prev_word="${COMP_WORDS[COMP_CWORD-1]}"
-   len=${#COMP_WORDS[@]}
-   before_prev_word="${COMP_WORDS[COMP_CWORD-2]}"
 
+   if [ $len -gt 2 ]; then
+      before_prev_word="${COMP_WORDS[COMP_CWORD-2]}"
+   fi
    case "$before_prev_word" in
-   cancel|delete-snapshot|restart|resume|sumbit|suspend)
+      help|cancel|cluster|delete-snapshot|list-jobs|list-snapshots|restart|resume|save-snapshot|submit|suspend)
       type_list=""
       ;;
    *)
@@ -588,70 +597,54 @@ __jet_complete()
          type_list="-h --help -V --version -f --config -v --verbosity -a --addresses -g --group help cancel cluster delete-snapshot list-jobs list-snapshots restart resume submit suspend"
       fi
 
-   for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
-      __WORD="${COMP_WORDS[$i]}"
-      if [ "$__WORD" != "$cur_word" ]; then
-         type_list=${type_list/$__WORD/}
-         if [ "$__WORD" == "-g" ]; then
-            type_list=${type_list/--group/}
-         elif [ "$__WORD" == "--group" ]; then
-            type_list=${type_list/-g/}
-         elif [ "$__WORD" == "-a" ]; then
-            type_list=${type_list/--addresses/}
-         elif [ "$__WORD" == "--addresses" ]; then
-            type_list=${type_list/-a/}
-         elif [ "$__WORD" == "-n" ]; then
-            type_list=${type_list/--cluster-name/}
-         elif [ "$__WORD" == "--cluster-name" ]; then
-            type_list=${type_list/-n/}
-         elif [ "$__WORD" == "-v" ]; then
-            type_list=${type_list/--version/}
-         elif [ "$__WORD" == "--version" ]; then
-            type_list=${type_list/-v/}
-         elif [ "$__WORD" == "-f" ]; then
-            type_list=${type_list/--config/}
-         elif [ "$__WORD" == "--config" ]; then
-            type_list=${type_list/-f/}
-         elif [ "$__WORD" == "-h" ]; then
-            type_list=${type_list/--help/}
-         elif [ "$__WORD" == "--help" ]; then
-            type_list=${type_list/-h/}
+      for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
+         __WORD="${COMP_WORDS[$i]}"
+         if [ "$__WORD" != "$cur_word" ]; then
+            type_list=${type_list/$__WORD/}
+            if [ "$__WORD" == "-g" ]; then
+               type_list=${type_list/--group/}
+            elif [ "$__WORD" == "--group" ]; then
+               type_list=${type_list/-g/}
+            elif [ "$__WORD" == "-a" ]; then
+               type_list=${type_list/--addresses/}
+            elif [ "$__WORD" == "--addresses" ]; then
+               type_list=${type_list/-a/}
+            elif [ "$__WORD" == "-n" ]; then
+               type_list=${type_list/--cluster-name/}
+            elif [ "$__WORD" == "--cluster-name" ]; then
+               type_list=${type_list/-n/}
+            elif [ "$__WORD" == "-v" ]; then
+               type_list=${type_list/--version/}
+            elif [ "$__WORD" == "--version" ]; then
+               type_list=${type_list/-v/}
+            elif [ "$__WORD" == "-f" ]; then
+               type_list=${type_list/--config/}
+            elif [ "$__WORD" == "--config" ]; then
+               type_list=${type_list/-f/}
+            elif [ "$__WORD" == "-h" ]; then
+               type_list=${type_list/--help/}
+            elif [ "$__WORD" == "--help" ]; then
+               type_list=${type_list/-h/}
+            fi
          fi
-      fi
-   done
+      done
       ;;
    esac
 
-   
    case "$prev_word" in
-   -a)
+   -a|--addresses)
       type_list="localhost:5701"
       ;;
-   --addresses)
-      type_list="localhost:5701"
-      ;;
-   -n)
+   -n|--cluster-name)
       type_list="jet"
       ;;
-   --cluster-name)
-      type_list="jet"
-      ;;
-   -g)
+   -g|--group)
       type_list="dev"
       ;;
-   --group)
-      type_list="dev"
-      ;;
-   -f)
+   -f|--config)
       type_list=""
       ;;
-   --config)
-      type_list=""
-      ;;
-   -h)
-      type_list=""
-      ;;
-   --help)
+   -h|--help)
       type_list=""
       ;;
    help)
