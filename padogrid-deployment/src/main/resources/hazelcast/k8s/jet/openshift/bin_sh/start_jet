@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Start the Hazelcast Jet cluster configured by the 'build_app' script
+
+SYNOPSIS
+   $EXECUTABLE [-oss | -rhel] [-?]
+
+DESCRIPTION
+   Starts the Hazelcast Jet cluster configured by the 'build_app' script. If no options are specified then
+   it automatically determines the environment based on the workspace setup. If JET_LICENSE_KEY is defined
+   then it runs docker.io Hazelcast Jet Enterprise. To turn RHEL, specify the '-rhel' option. Note that if
+   JET_LICENSE_KEY is not defined then it runs Hazelcast Jet OSS regardless of any options specified.
+
+OPTIONS
+   -oss
+             If specified then starts Hazelcast Jet OSS. 
+
+   -rhel
+             If specified then launches the image downloaded from Hazelcast Jet Enterprise Red Hat. To use this
+             option, you must first create an OpenShift secret for image pull. Please see the accompanied READE.md
+             for details. If JET_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
+             is used instead.
+
+DEFAULT:
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+echo -e "Project: ${CLightGreen}${APP_NAME}${CNone}"
+
+CURRENT_PROJECT=$(oc project -q)
+if [ "$CURRENT_PROJECT" != "$APP_NAME" ]; then
+   oc project $APP_NAME
+fi
+
+pushd $APP_DIR/jet > /dev/null
+
+IS_ENTERPRISE="false"
+if [ "$OSS" == "true" ] || [ "$JET_LICENSE_KEY" == "" ]; then
+  HAZELCAST_JET_YAML="hazelcast-jet.yaml"
+elif [ "$RHEL" == "true" ]; then
+  IS_ENTERPRISE="true"
+  HAZELCAST_JET_YAML="hazelcast-jet-enterprise-rhel.yaml"
+else
+  IS_ENTERPRISE="true"
+  HAZELCAST_JET_YAML="hazelcast-jet-enterprise.yaml"
+fi
+
+#hazelcast-jet-config.yaml		
+#hazelcast-jet-enterprise.yaml		
+#hazelcast-jet-management-center.yaml	
+#hazelcast-jet.yaml			
+#mancenter-configmap.yaml		
+#mancenter-service.yaml			
+#rbac.yaml
+
+# Create cluster role
+echo "Applying RBAC..."
+oc apply -f rbac.yaml
+
+# ConfigMaps
+oc apply -f hazelcast-jet-config.yaml
+oc apply -f mancenter-configmap.yaml
+
+echo ""
+echo -e "Hazelcast configuration: ${CLightGreen}jet/${HAZELCAST_JET_YAML}${CNone}"
+echo ""
+if [ "$IS_ENTERPRISE" == "true" ]; then
+   if [ "$RHEL" == "true" ]; then
+      echo -e "Starting ${CLightGreen}Hazelcast Enterpise RHEL${CNone}..."
+   else
+      echo -e "Starting ${CLightGreen}Hazelcast Enterpise${CNone}..."
+   fi
+   oc new-app -f $HAZELCAST_JET_YAML -p NAMESPACE=$PROJECT_NAME -p ENTERPRISE_LICENSE_KEY=$JET_LICENSE_KEY -p HAZELCAST_JET_REPLICAS=$MEMBER_COUNT -p SERVICE_NAME=$SERVICE_NAME -p MANAGEMENT_CENTER_SERVICE_NAME=$MANAGEMENT_CENTER_SERVICE_NAME
+else
+   echo -e "Starting ${CLightGreen}Hazelcast OSS${CNone}..."
+   oc new-app -f hazelcast-jet.yaml -p NAMESPACE=$PROJECT_NAME -p HAZELCAST_JET_REPLICAS=$MEMBER_COUNT -p SERVICE_NAME=$SERVICE_NAME -p MANAGEMENT_CENTER_SERVICE_NAME=$MANAGEMENT_CENTER_SERVICE_NAME
+fi
+
+exit
+
+# Create the load balancer service
+echo "Creating services..."
+oc apply -f service-lb.yaml
+oc apply -f service-lb-pods.yaml
+
+# Expose the Hazelcast Jet and Management Center service.
+echo "Exposing services (routes)..."
+oc expose svc/hazelcast-jet-service-lb
+let LAST_MEMBER_NUM=MEMBER_COUNT-1
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   oc expose svc/hazelcast-jet-service-$i
+done
+if [ "$JET_LICENSE_KEY" != "" ] && [ "$OSS" == "false" ]; then
+   oc expose svc/hazelcast-jet-management-center-service
+fi
+echo ""
+echo "One (1) service for headless cluster IP and $MEMBER_COUNT services for pods exposed."
+echo "In addition to these services, to expose NodePort services, execute the following:"
+echo "   oc apply -f ../hazelcast/service-nodeport.yaml"
+echo "   oc apply -f ../hazelcast/service-nodeport-pods.yaml"
+echo "   oc expose svc/hazelcast-service-nodeport"
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   echo "   oc expose svc/hazelcast-service-nodeport-$i"
+done
+echo ""
+echo "Services expose external IPs so that external applications can connect to the Hazelcast cluster by"
+echo "configuring Smart Client. If Smart Client does not work, then your OpenShift cluster has been"
+echo "configured to block external IPs from being created. If you must use Smart Client then please"
+echo "consult your OpenShift administrator to lift this restriction. If Smart Client is not an option,"
+echo "then you can use Dummy Client instead."
+echo ""
+echo "You can also use the PadoGrid container to connect to the Hazelcast cluster. The PadoGrid container"
+echo "uses the Kuberntees DNS service to connect to the Hazelcast cluster as Smart Client."
+echo ""
+echo "Please see ../README.md for instructions on how to configure and run Hazelcast clients."
+echo ""
+popd > /dev/null
