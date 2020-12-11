@@ -87,8 +87,6 @@ else
    oc new-app -f hazelcast-jet.yaml -p NAMESPACE=$PROJECT_NAME -p HAZELCAST_JET_REPLICAS=$MEMBER_COUNT -p SERVICE_NAME=$SERVICE_NAME -p MANAGEMENT_CENTER_SERVICE_NAME=$MANAGEMENT_CENTER_SERVICE_NAME
 fi
 
-exit
-
 # Create the load balancer service
 echo "Creating services..."
 oc apply -f service-lb.yaml
@@ -107,11 +105,11 @@ fi
 echo ""
 echo "One (1) service for headless cluster IP and $MEMBER_COUNT services for pods exposed."
 echo "In addition to these services, to expose NodePort services, execute the following:"
-echo "   oc apply -f ../hazelcast/service-nodeport.yaml"
-echo "   oc apply -f ../hazelcast/service-nodeport-pods.yaml"
-echo "   oc expose svc/hazelcast-service-nodeport"
+echo "   oc apply -f ../jet/service-nodeport.yaml"
+echo "   oc apply -f ../jet/service-nodeport-pods.yaml"
+echo "   oc expose svc/hazelcast-jet-service-nodeport"
 for i in $(seq 0 $LAST_MEMBER_NUM); do
-   echo "   oc expose svc/hazelcast-service-nodeport-$i"
+   echo "   oc expose svc/hazelcast-jet-service-nodeport-$i"
 done
 echo ""
 echo "Services expose external IPs so that external applications can connect to the Hazelcast cluster by"

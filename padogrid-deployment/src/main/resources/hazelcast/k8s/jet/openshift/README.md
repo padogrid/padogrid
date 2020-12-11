@@ -176,3 +176,32 @@ oc get all --selector app=hazelcast-jet -o name
 cd_k8s $PROJECT_NAME; cd bin_sh
 ./cleanup
 ```
+
+## Tips
+
+### Incresing Docker Rate Limit
+
+Docker enforces rate limit. Whether you pay Docker for unlimite pulls or use your free account to increase the rate limit to 200 pulls per 6 hours (as of 12/2020), you need to first login to Docker. You can use the steps shown below to create an image pull secret for each Kubernetes namespace.
+
+1. Create an image pull secret for your namespace:
+
+```bash
+oc create secret docker-registry my-private-pull \
+    --docker-username=$DOCKER_USERNAME \
+    --docker-password=$DOCKER_PASSWORD \
+    --docker-email=$DOCKER_EMAIL \
+    --namespace $PROJECT_NAME
+```
+
+2. Edit the default service account for the namespace:
+
+```bash
+oc edit serviceaccount default -n $PROJECT_NAME
+```
+
+3. Add the following in the service account:
+
+```yaml
+imagePullSecrets:
+- name: my-private-pull
+```

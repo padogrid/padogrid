@@ -52,7 +52,7 @@ objects:
     selector:
       matchLabels:
         app: hazelcast-jet
-    serviceName: hazelcast-jet-service
+    serviceName: ${SERVICE_NAME}
     template:
       metadata:
         labels:
@@ -64,7 +64,7 @@ objects:
             value: ${ENTERPRISE_LICENSE_KEY}
           - name: JAVA_OPTS
             value: -Dhazelcast.config=/data/hazelcast-jet/hazelcast.yaml
-          image: ${MANAGEMENT_CENTER_IMAGE}
+          image: ${HAZELCAST_JET_IMAGE}
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
@@ -112,22 +112,24 @@ objects:
   kind: Service
   metadata:
     name: ${SERVICE_NAME}
+    labels:
+      app: hazelcast-jet
   spec:
     ports:
-    - port: 5701
+    - name: jet
+      port: 5701
       protocol: TCP
-      targetPort: 5701
     selector:
       app: hazelcast-jet
-    sessionAffinity: None
     type: ClusterIP
+    clusterIP: None
 
 - apiVersion: v1
   kind: Service
   metadata:
+    name: ${MANAGEMENT_CENTER_SERVICE_NAME}
     labels:
       app: hazelcast-jet
-    name: ${MANAGEMENT_CENTER_SERVICE_NAME}
   spec:
     ports:
     - name: mc-port
@@ -170,14 +172,11 @@ objects:
         containers:
         - env:
           - name: MC_LICENSE_KEY
-            valueFrom:
-              secretKeyRef:
-                key: key
-                name: jet-license-key-secret
+            value: ${ENTERPRISE_LICENSE_KEY}
           - name: JAVA_OPTS
             value: ' -Djet.clientConfig=/data/hazelcast-jet-management-center/hazelcast-client.yaml
-              -DserviceName=hazelcast-jet-service -Dnamespace=${namespace} '
-          image: hazelcast/${MANAGEMENT_CENTER_IMAGE}
+              -DserviceName=${SERVICE_NAME} -Dnamespace=${NAMESPACE} '
+          image: ${MANAGEMENT_CENTER_IMAGE}
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
