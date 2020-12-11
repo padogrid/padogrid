@@ -100,7 +100,7 @@ public class TransformerContext {
 	private ClientConfig createImdgClientConfig() {
 		ClientConfig cfg = new ClientConfig();
 		if (props.get("hazelcast.client.config") != null) {
-			System.setProperty("haxelcast.client.config", props.get("hazelcast.client.config"));
+			System.setProperty("hazelcast.client.config", props.get("hazelcast.client.config"));
 		}
 		return cfg;
 	}
