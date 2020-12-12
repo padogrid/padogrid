@@ -55,7 +55,7 @@ __get_cluster()
 
 __padogrid_complete()
 {
-   local cur_word prev_word type_list commands len
+   local second_word cur_word prev_word type_list commands len
 
    # COMP_WORDS is an array of words in the current command line.
    # COMP_CWORD is the index of the current word (the one the cursor is
@@ -210,6 +210,14 @@ __padogrid_complete()
       elif [ "$second_word" == "switch_rwe" ] || [ "$second_word" == "cd_rwe" ]; then
             if [ $len -lt 4 ]; then
                type_list=`list_rwes`
+            elif [ $len -lt 5 ]; then
+               local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+               if [ ! -d "$RWE_HOME/$prev_word" ]; then
+                  echo "No such RWE: $prev_word"
+               else
+                  type_list=`ls $RWE_HOME/$prev_word`
+                  type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
+               fi
             fi
       elif [ "$second_word" == "switch_workspace" ] || [ "$second_word" == "cd_workspace" ]; then
             if [ $len -lt 4 ]; then
@@ -277,12 +285,21 @@ __rwe_complete()
 {
    local len cur_word type_list
    len=${#COMP_WORDS[@]}
+   prev_word=${COMP_WORDS[COMP_CWORD-1]}
    cur_word="${COMP_WORDS[COMP_CWORD]}"
 
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
+   if [ $len -lt 3 ]; then
       type_list=`list_rwes`
+   elif [ $len -lt 4 ]; then
+      local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+      if [ ! -d "$RWE_HOME/$prev_word" ]; then
+         echo "No such RWE: $prev_word"
+      else
+         type_list=`ls $RWE_HOME/$prev_word`
+         type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
+      fi
+   else
+      type_list=""
    fi
 
    COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
@@ -592,7 +609,7 @@ __jet_complete()
       ;;
    *)
       if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
-         type_list="-h --help -V --version -f --config -v --verbosity -a --addresses -n --cluster-name help cancel cluster delete-snapshot list-jobs list-snapshots restart resume submit suspend"
+         type_list="-t --targets -h --help -V --version -f --config -v --verbosity -a --addresses -n --cluster-name help cancel cluster delete-snapshot list-jobs list-snapshots restart resume submit suspend"
       else
          type_list="-h --help -V --version -f --config -v --verbosity -a --addresses -g --group help cancel cluster delete-snapshot list-jobs list-snapshots restart resume submit suspend"
       fi
