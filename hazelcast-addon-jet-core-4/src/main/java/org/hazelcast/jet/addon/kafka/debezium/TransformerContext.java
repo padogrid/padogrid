@@ -73,8 +73,8 @@ public class TransformerContext {
 		isHazelcastEnabled = isHazelcastStr != null && isHazelcastStr.equalsIgnoreCase("false") ? false
 				: isHazelcastEnabled;
 		if (isHazelcastEnabled) {
-			ClientConfig clientConfig = createImdgClientConfig();
-			this.imdg = HazelcastClient.newHazelcastClient(clientConfig);
+//			ClientConfig clientConfig = createImdgClientConfig();
+			this.imdg = HazelcastClient.newHazelcastClient();
 		}
 
 		this.jet = jet;
@@ -98,11 +98,10 @@ public class TransformerContext {
 	}
 
 	private ClientConfig createImdgClientConfig() {
-		ClientConfig cfg = new ClientConfig();
 		if (props.get("hazelcast.client.config") != null) {
 			System.setProperty("hazelcast.client.config", props.get("hazelcast.client.config"));
 		}
-		return cfg;
+		return ClientConfig.load();
 	}
 
 	public String getName() {

@@ -21,12 +21,18 @@ import com.hazelcast.jet.JetInstance;
  *
  */
 public class JetAggregator {
+	private ClassLoader classLoader;
 	private JetInstance jet;
 	private String connectorConfigFile;
 	private LocalContext localContext;
 	private TransformerContext transformerContext;
 
 	public JetAggregator(JetInstance jet, String connectorConfigFile) {
+		this(null, jet, connectorConfigFile);
+	}
+	
+	public JetAggregator(ClassLoader classLoader, JetInstance jet, String connectorConfigFile) {
+		this.classLoader = classLoader;
 		this.jet = jet;
 		this.connectorConfigFile = connectorConfigFile;
 		init();
@@ -73,12 +79,15 @@ public class JetAggregator {
 	private InputStream getFileFromResourceAsStream(String fileName) {
 
 		// The class loader that loaded the class
-		ClassLoader classLoader = JetAggregator.class.getClassLoader();
+		ClassLoader classLoader = this.classLoader;
+		if (classLoader == null) {
+			classLoader = JetAggregator.class.getClassLoader();
+		}
 		InputStream inputStream = classLoader.getResourceAsStream(fileName);
 
 		// the stream holding the file content
 		if (inputStream == null) {
-			throw new IllegalArgumentException("file not found! " + fileName);
+			throw new RuntimeException("file not found! " + fileName);
 		} else {
 			return inputStream;
 		}

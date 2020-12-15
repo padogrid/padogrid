@@ -100,7 +100,7 @@ public class DataConverter<K, V> {
 				valueAvroSchema = getAvroSchema(valueClassName);
 			} catch (ClassNotFoundException | IllegalArgumentException | IllegalAccessException
 					| NoSuchFieldException ex) {
-				throw new RuntimeException("Invalid Avro class [" + valueClassName + "]");
+				throw new RuntimeException("Invalid Avro value class [" + valueClassName + "]", ex);
 			}
 		}
 
