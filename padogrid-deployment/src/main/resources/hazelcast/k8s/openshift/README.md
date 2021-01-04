@@ -466,6 +466,20 @@ cd_app perf_test
 vi etc/hazelcast-client.xml
 ```
 
+#### 8.2.3. Port Forwarding
+
+If the OpenShift node has **socat** installed then you can forward one or more local ports to a pod. Run the provided `listen_hazelcast_port_forward` to forward localhost 5701 to pods.
+
+```bash
+cd_k8s $PROJECT; cd bin_sh
+# The following command blocks.
+./listen_hazelcast_port_forward
+```
+
+If port-forwarding is successful then you can run smart clients (or dummy clients) by connecting to localhost:5701. This means you can simply create and run the `perf_test` app without any modifications.
+
+### 8.3. Running `perf_test`
+
 Run `test_ingestion`:
 
 ```bash
