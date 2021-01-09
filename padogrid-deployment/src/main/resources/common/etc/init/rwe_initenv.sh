@@ -13,6 +13,14 @@ RWE_DIR="$PADOGRID_WORKSPACES_HOME/.rwe"
 DEFAULTENV_FILE="$RWE_DIR/defaultenv.sh"
 if [ -f "$DEFAULTENV_FILE" ]; then
    . "$DEFAULTENV_FILE"
+else
+   # Find the first workspace directory
+   for i in $PADOGRID_WORKSPACES_HOME/*; do
+      if [ -f "$i/initenv.sh" ]; then
+         . "$i/initenv.sh" -quiet
+         break
+      fi
+   done
 fi
 
 #

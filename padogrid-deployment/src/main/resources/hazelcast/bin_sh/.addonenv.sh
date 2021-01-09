@@ -648,3 +648,5 @@ CCyan='\033[0;36m'
 CLightCyan='\033[1;36m'
 CLightGray='\033[0;37m'
 CWhite='\033[1;37m'
+CUnderline='\033[4m'
+CUrl=$CBlue$CUnderline
