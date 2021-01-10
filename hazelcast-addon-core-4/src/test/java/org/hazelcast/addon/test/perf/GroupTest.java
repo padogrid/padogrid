@@ -41,9 +41,9 @@ import com.hazelcast.topic.ITopic;
 
 /**
  * GroupTest is a test tool for capturing the throughput and average latency of
- * multiple Hazelcast data structure operations performed as a single atomic operation.
- * This is achieved by allowing you to group one or more operations and invoke them as a
- * single call.
+ * multiple Hazelcast data structure operations performed as a single atomic
+ * operation. This is achieved by allowing you to group one or more operations
+ * and invoke them as a single call.
  * <p>
  * <table>
  * <thead>
@@ -71,12 +71,13 @@ import com.hazelcast.topic.ITopic;
  * </tr>
  * <tr>
  * <td>Data Structures</td>
- * <td>map | rmap | cache | topic | rtopic | queue </td>
+ * <td>map | rmap | cache | topic | rtopic | queue</td>
  * <td>{@linkplain #DEFAULT_testCase}</td>
  * </tr>
  * <tr>
  * <td>testCase</td>
- * <td>set | put | putall | get | getall | publish | publishall | offer | poll | peek | take </td>
+ * <td>set | put | putall | get | getall | publish | publishall | offer | poll |
+ * peek | take</td>
  * <td>{@linkplain #DEFAULT_testCase}</td>
  * </tr>
  * </table>
@@ -95,9 +96,9 @@ public class GroupTest implements Constants {
 	private HazelcastInstance hazelcastInstance;
 
 	enum DataStructureEnum {
-		map, rmap, cache, topic, rtopic, queue
+		map, rmap, cache, topic, rtopic, queue, sleep
 	}
-	
+
 	enum TestCaseEnum {
 		set, put, putall, get, getall, publish, publishall, offer, poll, peek, take;
 
@@ -144,6 +145,7 @@ public class GroupTest implements Constants {
 		String name;
 		String ref;
 		String dsName;
+		int sleep;
 		IMap imap;
 		ICache icache;
 		ReplicatedMap rmap;
@@ -165,6 +167,7 @@ public class GroupTest implements Constants {
 			op.name = name;
 			op.ref = ref;
 			op.dsName = dsName;
+			op.sleep = sleep;
 			op.imap = imap;
 			op.icache = icache;
 			op.rmap = rmap;
@@ -399,275 +402,293 @@ public class GroupTest implements Constants {
 			}
 
 			long startTime = System.currentTimeMillis();
-			for (int i = threadStartIndex; i <= threadStopIndex; i++) {
+			try {
+				for (int i = threadStartIndex; i <= threadStopIndex; i++) {
 
-				for (int j = 0; j < group.operations.length; j++) {
-					Operation operation = group.operations[j];
-					
-					switch (operation.ds) {
-					
-					case rmap:
-						switch (operation.testCase) {
+					for (int j = 0; j < group.operations.length; j++) {
+						Operation operation = group.operations[j];
 
-						case put: {
-							int idNum = operation.startNum + i - 1;
-							if (operation.dataObjectFactory == null) {
-								String key = operation.keyPrefix + idNum;
-								Blob blob = new Blob(new byte[operation.payloadSize]);
-								operation.rmap.put(key, blob);
-							} else {
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
-								operation.rmap.put(entry.key, entry.value);
-							}
-						}
-							break;
+						switch (operation.ds) {
 
-						case get: {
-							int val = operation.random.nextInt(operation.totalEntryCount);
-							int idNum = operation.startNum + val;
-							Object key;
-							Object value;
-							if (operation.dataObjectFactory == null) {
-								key = operation.keyPrefix + idNum;
-								value = operation.rmap.get(key);
-							} else {
-								key = operation.dataObjectFactory.getKey(idNum);
-								value = operation.rmap.get(key);
-							}
-							if (value == null) {
-								writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-										+ operation.testCase + "] key=" + key + " value=null");
-							}
-						}
-							break;
+						case rmap:
+							switch (operation.testCase) {
 
-						case putall:
-						default: {
-							HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
-							keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum, group.threadCount);
-							operation.rmap.putAll(map);
-						}
-							break;
-						}
-						break;
-						
-					case cache:
-						switch (operation.testCase) {
-						case put: {
-							int idNum = operation.startNum + i - 1;
-							if (operation.dataObjectFactory == null) {
-								String key = operation.keyPrefix + idNum;
-								Blob blob = new Blob(new byte[operation.payloadSize]);
-								operation.icache.put(key, blob);
-							} else {
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
-								operation.icache.put(entry.key, entry.value);
-							}
-						}
-							break;
-
-						case get: {
-							int val = operation.random.nextInt(operation.totalEntryCount);
-							int idNum = operation.startNum + val;
-							Object key;
-							Object value;
-							if (operation.dataObjectFactory == null) {
-								key = operation.keyPrefix + idNum;
-								value = operation.icache.get(key);
-							} else {
-								key = operation.dataObjectFactory.getKey(idNum);
-								value = operation.icache.get(key);
-							}
-							if (value == null) {
-								writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-										+ operation.testCase + "] key=" + key + " value=null");
-							}
-						}
-							break;
-
-						case getall: {
-							HashSet<Object> keys = createGetAllKeySet(operation);
-							Map<Object, Object> map = operation.icache.getAll(keys);
-							if (map == null) {
-								writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-										+ operation.testCase + "] returned null");
-							} else if (map.size() < keys.size()) {
-								writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-										+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
-							}
-						}
-							break;
-						case putall:
-						default: {
-							HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
-							keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum, group.threadCount);
-							operation.icache.putAll(map);
-						}
-							break;
-						}
-						break;
-						
-					case queue:
-						switch (operation.testCase) {
-
-						case poll: {
-							operation.iqueue.poll();
-						}
-							break;
-
-						case peek: {
-							operation.iqueue.peek();
-						}
-							break;
-
-						case take: {
-							try {
-								operation.iqueue.take();
-							} catch (InterruptedException e) {
+							case put: {
 								int idNum = operation.startNum + i - 1;
-								writeLine(e.getClass().getSimpleName() + ": IQueue.take() interrupted [" + idNum + ". "
-										+ operation.name + ", " + operation.dsName + "].");
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.rmap.put(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.rmap.put(entry.key, entry.value);
+								}
 							}
-						}
-							break;
-							
-						case offer:
-						default: {
-							int idNum = operation.startNum + i - 1;
-							if (operation.dataObjectFactory == null) {
-								Blob blob = new Blob(new byte[operation.payloadSize]);
-								operation.iqueue.offer(blob);
-							} else {
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
-								operation.iqueue.offer(entry.value);
+								break;
+
+							case get: {
+								int val = operation.random.nextInt(operation.totalEntryCount);
+								int idNum = operation.startNum + val;
+								Object key;
+								Object value;
+								if (operation.dataObjectFactory == null) {
+									key = operation.keyPrefix + idNum;
+									value = operation.rmap.get(key);
+								} else {
+									key = operation.dataObjectFactory.getKey(idNum);
+									value = operation.rmap.get(key);
+								}
+								if (value == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] key=" + key + " value=null");
+								}
 							}
-						}
-							break;
-						}
-						break;
-						
-					case topic:
-					case rtopic:
-						switch (operation.testCase) {
-						
-						case publish: {
-							int idNum = operation.startNum + i - 1;
-							if (operation.dataObjectFactory == null) {
-								Blob blob = new Blob(new byte[operation.payloadSize]);
-								operation.itopic.publish(blob);
-							} else {
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
-								operation.itopic.publish(entry.value);
+								break;
+
+							case putall:
+							default: {
+								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
+								operation.rmap.putAll(map);
 							}
-						}
+								break;
+							}
 							break;
 
-						case publishall:
-						default: {
-							int entryCount = operation.totalEntryCount / group.threadCount;
-							List<Object> list = new ArrayList<Object>(operation.batchSize);
-							int keyIndex = keyIndexes[j];
-							if (operation.dataObjectFactory == null) {
-								for (int k = 0; k < operation.batchSize; k++) {
-									list.add(new Blob(new byte[operation.payloadSize]));
+						case cache:
+							switch (operation.testCase) {
+							case put: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.icache.put(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.icache.put(entry.key, entry.value);
 								}
-							} else {
-								for (int k = 0; k < operation.batchSize; k++) {
-									int idNum = operation.startNum + keyIndex;
-									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
-									keyIndex++;
-									list.add(entry.value);
-									if (keyIndex >= threadNum * entryCount) {
-										keyIndex = (threadNum - 1) * entryCount;
+							}
+								break;
+
+							case get: {
+								int val = operation.random.nextInt(operation.totalEntryCount);
+								int idNum = operation.startNum + val;
+								Object key;
+								Object value;
+								if (operation.dataObjectFactory == null) {
+									key = operation.keyPrefix + idNum;
+									value = operation.icache.get(key);
+								} else {
+									key = operation.dataObjectFactory.getKey(idNum);
+									value = operation.icache.get(key);
+								}
+								if (value == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] key=" + key + " value=null");
+								}
+							}
+								break;
+
+							case getall: {
+								HashSet<Object> keys = createGetAllKeySet(operation);
+								Map<Object, Object> map = operation.icache.getAll(keys);
+								if (map == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned null");
+								} else if (map.size() < keys.size()) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+								}
+							}
+								break;
+							case putall:
+							default: {
+								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
+								operation.icache.putAll(map);
+							}
+								break;
+							}
+							break;
+
+						case queue:
+							switch (operation.testCase) {
+
+							case poll: {
+								operation.iqueue.poll();
+							}
+								break;
+
+							case peek: {
+								operation.iqueue.peek();
+							}
+								break;
+
+							case take: {
+								try {
+									operation.iqueue.take();
+								} catch (InterruptedException e) {
+									int idNum = operation.startNum + i - 1;
+									writeLine(e.getClass().getSimpleName() + ": IQueue.take() interrupted [" + idNum
+											+ ". " + operation.name + ", " + operation.dsName + "].");
+								}
+							}
+								break;
+
+							case offer:
+							default: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.iqueue.offer(blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.iqueue.offer(entry.value);
+								}
+							}
+								break;
+							}
+							break;
+
+						case topic:
+						case rtopic:
+							switch (operation.testCase) {
+
+							case publish: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.itopic.publish(blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.itopic.publish(entry.value);
+								}
+							}
+								break;
+
+							case publishall:
+							default: {
+								int entryCount = operation.totalEntryCount / group.threadCount;
+								List<Object> list = new ArrayList<Object>(operation.batchSize);
+								int keyIndex = keyIndexes[j];
+								if (operation.dataObjectFactory == null) {
+									for (int k = 0; k < operation.batchSize; k++) {
+										list.add(new Blob(new byte[operation.payloadSize]));
+									}
+								} else {
+									for (int k = 0; k < operation.batchSize; k++) {
+										int idNum = operation.startNum + keyIndex;
+										DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+												null);
+										keyIndex++;
+										list.add(entry.value);
+										if (keyIndex >= threadNum * entryCount) {
+											keyIndex = (threadNum - 1) * entryCount;
+										}
 									}
 								}
-							}
-							try {
-								operation.itopic.publishAll(list);
-							} catch (Exception e) {
-								writeLine(e.getClass().getSimpleName() + ": ITopic.publishAll() error [" + keyIndexes[j]
-										+ ". " + operation.name + ", " + operation.dsName + "].");
+								try {
+									operation.itopic.publishAll(list);
+								} catch (Exception e) {
+									writeLine(e.getClass().getSimpleName() + ": ITopic.publishAll() error ["
+											+ keyIndexes[j] + ". " + operation.name + ", " + operation.dsName + "].");
 
+								}
+								keyIndexes[j] = keyIndex;
 							}
-							keyIndexes[j] = keyIndex;
-						}
-							break;
-						}
-						break;
-					
-					case map:
-					default:
-						switch (operation.testCase) {
-						case set: {
-							int idNum = operation.startNum + i - 1;
-							if (operation.dataObjectFactory == null) {
-								String key = operation.keyPrefix + idNum;
-								Blob blob = new Blob(new byte[operation.payloadSize]);
-								operation.imap.set(key, blob);
-							} else {
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
-								operation.imap.set(entry.key, entry.value);
+								break;
 							}
-						}
 							break;
 
-						case put: {
-							int idNum = operation.startNum + i - 1;
-							if (operation.dataObjectFactory == null) {
-								String key = operation.keyPrefix + idNum;
-								Blob blob = new Blob(new byte[operation.payloadSize]);
-								operation.imap.put(key, blob);
-							} else {
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
-								operation.imap.put(entry.key, entry.value);
-							}
-						}
+						case sleep:
+							Thread.sleep(operation.sleep);
 							break;
 
-						case get: {
-							int val = operation.random.nextInt(operation.totalEntryCount);
-							int idNum = operation.startNum + val;
-							Object key;
-							Object value;
-							if (operation.dataObjectFactory == null) {
-								key = operation.keyPrefix + idNum;
-								value = operation.imap.get(key);
-							} else {
-								key = operation.dataObjectFactory.getKey(idNum);
-								value = operation.imap.get(key);
+						case map:
+						default:
+							switch (operation.testCase) {
+							case set: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.imap.set(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.imap.set(entry.key, entry.value);
+								}
 							}
-							if (value == null) {
-								writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-										+ operation.testCase + "] key=" + key + " value=null");
-							}
-						}
-							break;
+								break;
 
-						case getall: {
-							HashSet<Object> keys = createGetAllKeySet(operation);
-							Map<Object, Object> map = operation.imap.getAll(keys);
-							if (map == null) {
-								writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-										+ operation.testCase + "] returned null");
-							} else if (map.size() < keys.size()) {
-								writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-										+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+							case put: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.imap.put(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.imap.put(entry.key, entry.value);
+								}
 							}
-						}
+								break;
+
+							case get: {
+								int val = operation.random.nextInt(operation.totalEntryCount);
+								int idNum = operation.startNum + val;
+								Object key;
+								Object value;
+								if (operation.dataObjectFactory == null) {
+									key = operation.keyPrefix + idNum;
+									value = operation.imap.get(key);
+								} else {
+									key = operation.dataObjectFactory.getKey(idNum);
+									value = operation.imap.get(key);
+								}
+								if (value == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] key=" + key + " value=null");
+								}
+							}
+								break;
+
+							case getall: {
+								HashSet<Object> keys = createGetAllKeySet(operation);
+								Map<Object, Object> map = operation.imap.getAll(keys);
+								if (map == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned null");
+								} else if (map.size() < keys.size()) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+								}
+							}
+								break;
+
+							case putall:
+							default: {
+								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
+								operation.imap.putAll(map);
+							}
+								break;
+							}
 							break;
-							
-						case putall:
-						default: {
-							HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
-							keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum, group.threadCount);
-							operation.imap.putAll(map);
 						}
-							break;
-						}
-						break;
 					}
+					operationCount++;
 				}
-				operationCount++;
+			} catch (InterruptedException e) {
+				// ignore
 			}
 			long stopTime = System.currentTimeMillis();
 
@@ -799,8 +820,8 @@ public class GroupTest implements Constants {
 						Object key = operation.dataObjectFactory.getKey(idNum);
 						Object value = session.find(entityClass, key);
 						if (value == null) {
-							writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-									+ operation.testCase + "] key=" + key + " value=null");
+							writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "." + operation.testCase
+									+ "] key=" + key + " value=null");
 						}
 					}
 						break;
@@ -864,8 +885,8 @@ public class GroupTest implements Constants {
 							}
 						}
 						if (map.size() < keys.size()) {
-							writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
-									+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+							writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "." + operation.testCase
+									+ "] returned " + map.size() + "/" + keys.size());
 						}
 					}
 						break;
@@ -909,7 +930,7 @@ public class GroupTest implements Constants {
 			return "get" + fieldName;
 		}
 	}
-	
+
 	private void deleteDataStructures(boolean delete) {
 		for (Group[] groups : concurrentGroupList) {
 			String groupNames = getGroupNames(groups);
@@ -1073,7 +1094,7 @@ public class GroupTest implements Constants {
 				String operationsStr = System.getProperty(groupName + ".operations", "putall");
 				group.operationsStr = operationsStr;
 				String[] split = operationsStr.split(",");
-				Operation[] operations = new Operation[split.length];
+				ArrayList<Operation> operationList = new ArrayList<Operation>(split.length);
 				for (int k = 0; k < split.length; k++) {
 					String operationName = split[k];
 					operationName = operationName.trim();
@@ -1091,47 +1112,62 @@ public class GroupTest implements Constants {
 						operation = new Operation();
 						operation.name = operationName;
 						operationMap.put(operationName, operation);
-						operation.ref = System.getProperty(operationName + ".ref");
-						operation.dsName = dsName;
 						operation.ds = ds;
-						String testCase = System.getProperty(operationName + ".testCase");
-						if (testCase != null) {
-							operation.testCase = TestCaseEnum.getTestCase(testCase);
-						}
-						Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
-						if (payloadSize != null) {
-							operation.payloadSize = payloadSize;
-						}
-						operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
-						Integer startNum = Integer.getInteger(operationName + ".key.startNum");
-						if (startNum != null) {
-							operation.startNum = startNum;
-						}
-						Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
-						if (totalEntryCount != null) {
-							operation.totalEntryCount = totalEntryCount;
-						}
-						Integer batchSize = Integer.getInteger(operationName + ".batchSize");
-						if (batchSize != null) {
-							operation.batchSize = batchSize;
-						}
-						Long randomSeed = Long.getLong(operationName + ".randomSeed");
-						if (randomSeed != null) {
-							operation.random = new Random(randomSeed);
-						}
-						String factoryClassName = System.getProperty(operationName + ".factory.class");
-						if (factoryClassName != null) {
-							Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class.forName(factoryClassName);
-							operation.dataObjectFactory = clazz.newInstance();
-							Properties factoryProps = getFactoryProps(operationName);
-							operation.dataObjectFactory.initialize(factoryProps);
+						if (ds == DataStructureEnum.sleep) {
+							try {
+								operation.sleep = Integer.parseInt(dsName);
+								if (operation.sleep <= 0) {
+									operation = null;
+								}
+							} catch (Exception ex) {
+								throw new RuntimeException("Parsing error: " + operation.name + ".sleep=" + dsName, ex);
+							}
+						} else {
+							operation.ref = System.getProperty(operationName + ".ref");
+							operation.dsName = dsName;
+
+							String testCase = System.getProperty(operationName + ".testCase");
+							if (testCase != null) {
+								operation.testCase = TestCaseEnum.getTestCase(testCase);
+							}
+							Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
+							if (payloadSize != null) {
+								operation.payloadSize = payloadSize;
+							}
+							operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
+							Integer startNum = Integer.getInteger(operationName + ".key.startNum");
+							if (startNum != null) {
+								operation.startNum = startNum;
+							}
+							Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
+							if (totalEntryCount != null) {
+								operation.totalEntryCount = totalEntryCount;
+							}
+							Integer batchSize = Integer.getInteger(operationName + ".batchSize");
+							if (batchSize != null) {
+								operation.batchSize = batchSize;
+							}
+							Long randomSeed = Long.getLong(operationName + ".randomSeed");
+							if (randomSeed != null) {
+								operation.random = new Random(randomSeed);
+							}
+							String factoryClassName = System.getProperty(operationName + ".factory.class");
+							if (factoryClassName != null) {
+								Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class
+										.forName(factoryClassName);
+								operation.dataObjectFactory = clazz.newInstance();
+								Properties factoryProps = getFactoryProps(operationName);
+								operation.dataObjectFactory.initialize(factoryProps);
+							}
 						}
 					}
-					operations[k] = operation;
+					if (operation != null) {
+						operationList.add(operation);
+					}
 				}
 
 				// Set references
-				for (Operation operation : operations) {
+				for (Operation operation : operationList) {
 					if (operation.ref != null) {
 						Operation refOperation = operationMap.get(operation.ref);
 						if (refOperation != null) {
@@ -1170,7 +1206,10 @@ public class GroupTest implements Constants {
 				}
 
 				// Set default values if not defined.
-				for (Operation operation : operations) {
+				for (Operation operation : operationList) {
+					if (operation.ds == DataStructureEnum.sleep) {
+						continue;
+					}
 					if (operation.dsName == null) {
 						operation.dsName = "map1";
 					}
@@ -1197,7 +1236,7 @@ public class GroupTest implements Constants {
 					}
 				}
 
-				group.operations = operations;
+				group.operations = operationList.toArray(new Operation[0]);
 				group.comment = System.getProperty(groupName + ".comment", "");
 			}
 		}
@@ -1271,7 +1310,7 @@ public class GroupTest implements Constants {
 				System.err.println("       Command aborted.");
 				System.exit(1);
 			}
-		} 
+		}
 
 		if (perfPropertiesFilePath == null) {
 			perfPropertiesFilePath = DEFAULT_groupPropertiesFile;
@@ -1334,7 +1373,7 @@ public class GroupTest implements Constants {
 			writeLine();
 			writeLine("             Test Run Count: " + TEST_COUNT);
 			writeLine("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
-	
+
 			for (Group[] groups : concurrentGroupList) {
 				String groupNames = getGroupNames(groups);
 				writeLine();
