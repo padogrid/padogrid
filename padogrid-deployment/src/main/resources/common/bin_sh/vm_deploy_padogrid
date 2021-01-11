@@ -167,10 +167,18 @@ echo "----------------------------------------------------------------"
 __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
 DEFAULT_USER=$(whoami)
 VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-if [ "$VM_KEY" != "" ]; then 
-   VM_KEY="-i $VM_KEY"
+KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" != "" ]; then 
+   VM_KEY="$KEY_FILE"
+elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+   KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
+if [ ! -f "$KEY_FILE" ]; then
+   echo >&2 "ERROR: Specified private key does not exist [$KEY_FILE]."
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+VM_KEY="-i $KEY_FILE"
 
 # Fail fast: Exit if any of the hosts is not reachable
 for VM_HOST in $__VM_HOSTS; do

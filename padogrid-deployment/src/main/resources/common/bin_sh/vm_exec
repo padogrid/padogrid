@@ -168,16 +168,20 @@ done
 
 # Replace , with space
 __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-if [ "$CLUSTER_SPECIFIED" == "true" ]; then
-   VM_USER=`getClusterProperty "vm.user"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+DEFAULT_USER=$(whoami)
+VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" != "" ]; then 
+   VM_KEY="$KEY_FILE"
+elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+   KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-if [ "$VM_USER" == "" ]; then
-   VM_USER=$(whoami)
+if [ ! -f "$KEY_FILE" ]; then
+   echo >&2 "ERROR: Specified private key does not exist [$KEY_FILE]."
+   echo >&2 "       Command aborted."
+   exit 1
 fi
-if [ "$VM_KEY" != "" ]; then 
-   VM_KEY="-i $VM_KEY"
-fi
+VM_KEY="-i $KEY_FILE"
 THIS_VM_HOSTNAME=`hostname`
 for VM_HOST in $__VM_HOSTS; do
      HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
