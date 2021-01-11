@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$1" == "-?" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Deletes PadoGrid deployment
+
+SYNOPSIS
+   $EXECUTABLE [-all] [-?]
+
+DESCRIPTION
+   Deletes PadoGrid deployment pods. If '-all' is specified then it also deletes the persistent
+   claim and the 'local-storage' storage class.
+
+OPTIONS
+   -all
+             If specified then it also deletes the 'padogrid-pvc' persistent claim along with
+             'local-storage'.
+
+EOF
+exit
+fi
+
+echo -e "Project: ${CLightGreen}${APP_NAME}${CNone}"
+
+echo "Deleting PadoGrid..."
+oc delete all -l app=padogrid --namespace=$APP_NAME
+if [ "$ALL" == "true" ]; then
+   echo "Deleting PadoGrid pvc, pv, and local-storage..."
+   oc delete pvc padogrid-pvc --namespace=$APP_NAME
+   oc delete -f $APP_DIR/padogrid/pv-hostPath.yaml --namespace=$APP_NAME > /dev/null 2>&1
+fi

@@ -462,6 +462,15 @@ if [ "$REDUNDANCY_ZONE" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS --J=-Dgemfire.redundancy-zone=$REDUNDANCY_ZONE"
 fi
 
+#
+# Source in Pado specifics
+#
+. $SCRIPT_DIR/.padoenv.sh
+
+if [ "$PADO_ENABLED" ] && [ "$PADO_JAVA_OPTS" != "" ]; then
+  JAVA_OPTS="$JAVA_OPTS $PADO_JAVA_OPTS"
+fi
+
 # Start the member
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"
@@ -496,14 +505,14 @@ else
       if [ "$FG_SPECIFIED" == "true" ]; then
          $RUN_SCRIPT >> $LOG_FILE
       else
-         $RUN_SCRIPT >> $LOG_FILE &
+         nohup $RUN_SCRIPT >> $LOG_FILE &
       fi
    else
       echo gfsh start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH
       if [ "$FG_SPECIFIED" == "true" ]; then
          gfsh start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH
       else
-         gfsh start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH >> $LOG_FILE &
+         nohup gfsh start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH >> $LOG_FILE &
       fi
    fi
    PID=`getMemberPid $MEMBER $WORKSPACE`

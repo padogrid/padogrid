@@ -908,7 +908,7 @@ function setPodProperty
 # 
 # Sets the cluster property in the $ETC_DIR/cluster.properties file.
 # @required  CLUSTER Cluster name.
-# @parma     propertyName  Property name.
+# @param     propertyName  Property name.
 # @param     propertyValue Property value.
 #
 function setClusterProperty
@@ -1099,7 +1099,7 @@ function switch_rwe
       echo "   $EXECUTABLE - Switch to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [rwe_name] [-?]"
+      echo "   $EXECUTABLE [rwe_name [workspace_name]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Switches to the specified root workspaces environment."
@@ -1108,6 +1108,10 @@ function switch_rwe
       echo "   rwe_name"
       echo "             Name of the root workspaces environment. If not specified, then switches"
       echo "             to the current root workspaces environment."
+      echo ""
+      echo "   workspace_name"
+      echo "             Workspace to switch to. If not specified, then switches"
+      echo "             to the default workspace of the specified RWE."
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
@@ -1120,6 +1124,9 @@ function switch_rwe
       return
    fi
 
+   # Reset Pado home path
+   export PADO_HOME=""
+
    if [ "$1" == "" ]; then
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/clusters/$CLUSTER" ]; then
          export CLUSTER=""
@@ -1130,13 +1137,22 @@ function switch_rwe
       if [ ! -d "$PARENT_DIR/$1" ]; then
          echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
          return 1
+      elif [ "$2" != "" ]; then
+         if [ ! -d "$PARENT_DIR/$1/$2" ]; then
+            echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+            return 1
+         fi
       fi
       if [ ! -d "$PARENT_DIR/$1/clusters/$CLUSTER" ]; then
          export CLUSTER=""
       fi
       . $PARENT_DIR/$1/initenv.sh -quiet
    fi
-   cd_rwe $1
+   if [ "$2" != "" ]; then
+      switch_workspace $2
+   else
+      cd_rwe $1
+   fi
 }
 
 # 
@@ -1178,6 +1194,9 @@ function switch_workspace
       echo "-?"
       return
    fi
+
+   # Reset Pado home path
+   export PADO_HOME=""
 
    if [ "$1" == "" ]; then
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then
@@ -1275,7 +1294,7 @@ function cd_rwe
       echo "   $EXECUTABLE - Change directory to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [rwe_name] [-?]"
+      echo "   $EXECUTABLE [rwe_name [workspace_name]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Changes directory to the specified root workspaces environment."
@@ -1284,6 +1303,10 @@ function cd_rwe
       echo "   rwe_name"
       echo "             Root environment name. If not specified then changes to the"
       echo "             current root workspaces environment directory."
+      echo ""
+      echo "   workspace_name"
+      echo "             Workspace name. If not specified then changes to the"
+      echo "             default workspace directory of the specified RWE."
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
@@ -1303,6 +1326,12 @@ function cd_rwe
       if [ ! -d "$PARENT_DIR/$1" ]; then
          echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
          return 1
+      elif [ "$2" != "" ]; then
+         if [ ! -d "$PARENT_DIR/$1/$2" ]; then
+            echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+            return 1
+         fi
+         cd $PARENT_DIR/$1/$2
       else
          cd $PARENT_DIR/$1
       fi
@@ -1980,7 +2009,7 @@ function printSeeAlsoList
 #
 # Displays a tree view of the specified list
 # @param list          Space separated list
-# @param highlightItem Optional. If sepedified, then the matching item is highlighted in green.
+# @param highlightItem Optional. If sepecified, then the matching item is highlighted in green.
 #
 function showTree
 {

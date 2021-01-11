@@ -79,6 +79,8 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
       if [ "$VM_KEY" != "" ]; then
          VM_KEY="-i $VM_KEY"
+      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
@@ -197,14 +199,22 @@ else
    else
       WAR_FILE_PREFIX="hazelcast-mancenter-"
    fi
+   LIB_EXTENSION=""
    for file in $HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}*; do
       file=${file#*$WAR_FILE_PREFIX}
-      MC_VERSION=${file%.war}
+      if [[ $file == *.jar ]]; then
+         MC_VERSION=${file%.jar}
+         LIB_EXTENSION=".jar"
+      else
+         LIB_EXTENSION=".war"
+         MC_VERSION=${file%.war}
+      fi
+      echo MC_VERSION=$MC_VERSION
    done
    if [ -z $CLASSPATH ]; then
-      CLASSPATH="$BASE_DIR/lib/*:$BASE_DIR/plugins/*:$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}.war"
+      CLASSPATH="$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
    else
-      CLASSPATH="$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*:$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}.war"
+      CLASSPATH="$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
    fi
 fi
 

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Listen on the specified port on localhost, forwarding to 5701 in the pod
+
+SYNOPSIS
+   $EXECUTABLE [pod_number localhost_port] [-?]
+
+DESCRIPTION
+   Listens on the specified port on localhost, forwarding to 5701 in the pod. This command blocks
+   continue to listen on the specified port. Ctrl-C to stop.
+
+OPTIONS
+   pod_number
+             Pod number starting from 0.
+
+   localhost_port
+             localhost port number. Listen on this port locally, forwarding to 5701 in the pod.
+
+DEFAULT:
+   ./$EXECUTABLE 0 5701
+
+EOF
+exit
+fi
+
+POD_NUMBER=0
+LOCALHOST_PORT=5701
+
+if [ "$1" != "" ]; then
+  POD_NUMBER=$1
+fi
+if [ "$2" != "" ]; then
+  LOCALHOST_PORT=$2
+fi
+
+oc port-forward pods/hazelcast-jet-$POD_NUMBER $LOCALHOST_PORT:5701

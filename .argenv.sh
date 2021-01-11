@@ -14,6 +14,7 @@ fi
 #
 # Determine arguments
 #
+ALL_SPECIFIED=false
 MAN_SPECIFIED=false
 COHERENCE_SPECIFIED=false
 DEBUG=false
@@ -21,7 +22,11 @@ PREV=
 
 for i in "$@" -ignore
 do
-   if [ "$PREV" == "-man" ]; then
+   if [ "$PREV" == "-all" ]; then
+      ALL_SPECIFIED="true"
+      MAN_SPECIFIED="true"
+      COHERENCE_SPECIFIED="true"
+   elif [ "$PREV" == "-man" ]; then
       MAN_SPECIFIED="true"
    elif [ "$PREV" == "-coherence" ]; then
       COHERENCE_SPECIFIED="true"

@@ -124,7 +124,7 @@ function displayMcShort()
    if [ "$VM_ENABLED" == "true" ]; then
    echo "       Deployment: VM"
    fi
-   echo "              URL: $MC_URL"
+   echo -e "              URL: $CUrl$MC_URL$CNone"
    echo "----------------------------------------------------------------"
 }
 
@@ -172,7 +172,7 @@ function displayMcLong()
    fi
    echo "          Cluster: $CLUSTER"
    echo "Management Center: hazelcast-mancenter"
-   echo "              URL: $MC_URL"
+   echo -e "              URL: $CUrl$MC_URL$CNone"
    echo "          JMX_URL: $MC_JMX_URL"
    echo "      WORKING_DIR: $WORKING_DIR"
    echo "        HTTP_PORT: $MC_HTTP_PORT"
@@ -195,6 +195,8 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
       if [ "$VM_KEY" != "" ]; then
          VM_KEY="-i $VM_KEY"
+      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then

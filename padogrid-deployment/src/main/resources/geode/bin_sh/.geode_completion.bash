@@ -90,10 +90,10 @@ __padogrid_complete()
       ;;
 
    -port)
-      if [ "$second_word" == "create_cluster" ]; then
+      if [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_docker" ] || [ "$second_word" == "create_grid" ]; then
          type_list="$DEFAULT_LOCATOR_START_PORT"
       fi
-     ;;
+      ;;
 
    -id)
       if [ "$second_word" == "create_cluster" ]; then
@@ -110,6 +110,20 @@ __padogrid_complete()
          __ENV="clusters"
       fi
       type_list=`getClusters $__ENV`
+      ;;
+
+   -prefix)
+      if [ "$second_word" == "create_grid" ]; then
+         type_list="grid"
+      fi
+     ;;
+
+   -type)
+      if [ "$second_word" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_grid" ]; then
+         type_list="default pado"
+      fi
       ;;
 
    -k8s) 
@@ -207,15 +221,23 @@ __padogrid_complete()
    -path | -datagrid | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
      ;;
    *)
-      if [ "$second_word" == "cp_sub" ]; then
+      if [ "$second_word" == "cp_sub" ] || [ "$second_word" == "tools" ]; then
          if [ $len -gt 3 ]; then
             type_list=`$third_word -options`
          else
-            type_list=`ls $SCRIPT_DIR/cp_sub`
+            type_list=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$second_word`
          fi
       elif [ "$second_word" == "switch_rwe" ] || [ "$second_word" == "cd_rwe" ]; then
             if [ $len -lt 4 ]; then
                type_list=`list_rwes`
+            elif [ $len -lt 5 ]; then
+               local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+               if [ ! -d "$RWE_HOME/$prev_word" ]; then
+                  echo "No such RWE: $prev_word"
+               else
+                  type_list=`ls $RWE_HOME/$prev_word`
+                  type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
+               fi
             fi
       elif [ "$second_word" == "switch_workspace" ] || [ "$second_word" == "cd_workspace" ]; then
             if [ $len -lt 4 ]; then
@@ -263,12 +285,17 @@ __padogrid_complete()
       type_list=${type_list/\-\?/}
    fi
    # Remove typed options from the list
-   for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
-      __WORD="${COMP_WORDS[$i]}"
-      if [ "$__WORD" != "$cur_word" ]; then
-         type_list=${type_list/$__WORD/}
-      fi
-   done
+   if [ "$prev_word" == "padogrid" ]; then
+      type_list=${type_list/ padogrid/}
+   else
+      for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
+         __WORD="${COMP_WORDS[$i]}"
+         if [ "$__WORD" != "$cur_word" ]; then
+            type_list=${type_list/$__WORD/}
+         fi
+      done
+   fi
+
 
    COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    return 0
@@ -278,12 +305,21 @@ __rwe_complete()
 {
    local len cur_word type_list
    len=${#COMP_WORDS[@]}
+   prev_word=${COMP_WORDS[COMP_CWORD-1]}
    cur_word="${COMP_WORDS[COMP_CWORD]}"
 
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
+   if [ $len -lt 3 ]; then
       type_list=`list_rwes`
+   elif [ $len -lt 4 ]; then
+      local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+      if [ ! -d "$RWE_HOME/$prev_word" ]; then
+         echo "No such RWE: $prev_word"
+      else
+         type_list=`ls $RWE_HOME/$prev_word`
+         type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
+      fi
+   else
+      type_list=""
    fi
 
    COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
@@ -461,6 +497,18 @@ __command_complete()
       fi
       type_list=`getClusters $__ENV`
       ;;
+   -prefix)
+      if [ "$command" == "create_grid" ]; then
+         type_list="grid"
+      fi
+      ;;
+   -type)
+      if [ "$command" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
+         type_list="default pado"
+      fi
+      ;;
    -product)
       if [ "$command" == "show_bundle" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
@@ -515,7 +563,7 @@ __command_complete()
       type_list="1 2 3 4 5 6 7 8 9"
      ;;
    -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_LOCATOR_START_PORT"
       fi
      ;;
@@ -547,9 +595,9 @@ __command_complete()
 commands=`ls $SCRIPT_DIR`
 for i in $commands; do
    if [ "$i" != "setenv.sh" ]; then
-      if [ "$i" == "cp_sub" ]; then
-         cp_commands=`ls $SCRIPT_DIR/$PRODUCT/bin_sh/cp_sub`
-         for j in $cp_commands; do
+      if [ "$i" == "cp_sub" ] || [ "$i" == "tools" ]; then
+         sub_commands=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$i`
+         for j in $sub_commands; do
             complete -F __command_complete -o bashdefault -o default $j
          done
          complete -F __command_complete -o bashdefault -o default $i

@@ -46,6 +46,7 @@ COHERENCE_ARG=
 GEODE_ARG=
 HAZELCAST_ARG=
 PATH_ARG=
+JAR_ARG=
 CLASSPATH_ARG=
 DATAGRID_ARG=
 JET_ARG=
@@ -54,6 +55,8 @@ PORT_ARG=
 CREATE_SCRIPT=false
 POD_SPECIFIED=false
 POD_TYPE=
+TYPE_ARG=
+REFID=
 K8S=
 K8S_SPECIFIED=false
 DOCKER=
@@ -116,6 +119,9 @@ TREE=false
 OVERWRITE=false
 ALL=false
 OSS=false
+RHEL=false
+WAN=false
+WAN_ARG=
 PID=
 PIDONLY=
 BEGIN_NUM=1
@@ -159,6 +165,8 @@ do
       HAZELCAST_ARG=$i
    elif [ "$PREV" == "-path" ]; then
       PATH_ARG=$i
+   elif [ "$PREV" == "-jar" ]; then
+      JAR_ARG=$i
    elif [ "$PREV" == "-classpath" ]; then
       CLASSPATH_ARG=$i
    elif [ "$PREV" == "-datagrid" ]; then
@@ -174,6 +182,9 @@ do
       PORT_ARG=$i
    elif [ "$PREV" == "-type" ]; then
       POD_TYPE=$i
+      TYPE_ARG=$i
+   elif [ "$PREV" == "-refid" ]; then
+      REFID=$i
    elif [ "$PREV" == "-primary" ]; then
       PRIMARY=$i
    elif [ "$PREV" == "-box" ]; then
@@ -224,6 +235,9 @@ do
       BRANCH=$i
    elif [ "$PREV" == "-connect" ]; then
       CONNECT=$i
+   elif [ "$PREV" == "-wan" ]; then
+      WAN_ARG=$i
+      WAN=true
    elif [ "$PREV" == "-vm" ]; then
       if [[ "$i" != "-"* ]]; then
          VM_HOSTS_ARG=$i
@@ -312,6 +326,10 @@ do
       ALL=true
    elif [ "$i" == "-oss" ]; then
       OSS=true
+   elif [ "$i" == "-rhel" ]; then
+      RHEL=true
+   elif [ "$i" == "-wan" ]; then
+      WAN=true
    elif [ "$i" == "-kill" ]; then
       KILL=true
    elif [ "$i" == "-debug" ]; then

@@ -506,7 +506,11 @@ fi
 if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$JET_HOME/bin:$PATH"
+else
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
+fi
 
 #
 # Java executable
@@ -644,3 +648,5 @@ CCyan='\033[0;36m'
 CLightCyan='\033[1;36m'
 CLightGray='\033[0;37m'
 CWhite='\033[1;37m'
+CUnderline='\033[4m'
+CUrl=$CBlue$CUnderline

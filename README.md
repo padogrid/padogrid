@@ -22,10 +22,10 @@ A workspace provides a sandbox environment completely isolated from other worksp
 
 A workspace snapshot can be taken at any time in the form of a bundle that can be quickly deployed and run on another workspace created by another user on another platform. Because of their portability, bundles provide the means to shrink-wrap fully operational use cases. PadoGrid includes bundle catalogs from which you can search your use cases.
 
+- [**Releases/Downloads**](https://github.com/padogrid/padogrid/releases)
+- [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start)
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
-- [Releases/Downloads](https://github.com/padogrid/padogrid/releases)
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
-- [Quick Start](https://github.com/padogrid/padogrid/wiki/Quick-Start)
 - [Building PadoGrid](#building-padogrid)
 - [Installing PadoGrid](#installing-padogrid)
 
@@ -108,15 +108,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.3.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.4-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.3
+tree -L 1 padogrid_0.9.4-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.3
+padogrid_0.9.4-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -136,7 +136,19 @@ padogrid_0.9.3
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.3/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.4-SNAPSHOT/bin_sh/create_rwe
+```
+
+## Running PadoGrid on Docker and Podman
+
+PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.4-SNAPSHOT-7` image has the build number 7. The SNAPSHOT versions are for testing only and subject to removal without notice.
+
+```bash
+# docker
+docker run -it --rm padogrid/padogrid /bin/bash
+
+# podman
+podman run -it --rm padogrid/padogrid /bin/bash
 ```
 
 ## Running PadoGrid on Kubernetes
@@ -144,13 +156,33 @@ Run the `create_rwe` command to create the first RWE (Root Workspace Environment
 You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
+# kubctl
 kubectl create deployment padogid --image=docker.io/padogrid/padogrid
+
+# oc
+oc create deployment padogid --image=docker.io/padogrid/padogrid
 ```
 
 To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
 
 ```bash
+# kubctl
 kubectl exec -it <padogrid-pod-name> -- bash
+
+# oc
+oc exec -it <padogrid-pod-name> -- bash
+```
+
+If you have a Hazelcast cluster running in the same namespace (project) as PadoGrid, then you can run the `perf_test` app as follows.
+
+```bash
+export NAMESPACE=<Kubernetes namespace/project>
+export HAZELCAST_SERVICE=<Hazelcast Kubernetes service>
+# The default cluster name is "dev".
+export HAZELCAST_CLUSTER_NAME=<cluster name>
+create_app
+cd_app perf_test; cd bin_sh
+./test_ingestion -run
 ```
 
 ## Data Grid Products

@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$WORKSPACE_ARG" != "" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+else
+   WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start all Hazelcast clusters and management centers in the specified workspace
+
+WpARNING
+   This command assumes that the clusters have properly been configured to prevent port conflicts.
+   Only one (1) cluster will start if there are more than one cluster configured with the same
+   port number(s).
+
+SYNOPSIS
+   $EXECUTABLE [-workspace workspace_name] [-quiet] [-?]
+
+DESCRIPTION
+   Starts all Hazelcast clusters and management centers in the specified workspace.
+
+OPTIONS
+   -workspace workspace_name
+             Workspace name. If not specified, then starts the current workspace.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -workspace $WORKSPACE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$QUIET" == "false" ]; then
+   echo "Workspace: $WORKSPACE"
+   echo "   This command starts all clusters in the workspace. Local clusters configured with the ame"
+   echo "   port numbers may not start properly. Make sure the clusters have been properly configured"
+   echo "   to prevent port conflicts."
+   echo "Do you want to continue?"
+   echo "(Enter 'continue' + Enter to continue to start all clusters, other keys to abort.)"
+   read INPUT
+   if [ "$INPUT" != "continue" ]; then
+      echo "Command aborted."
+      exit
+   fi
+fi
+
+CURRENT_DIR="`pwd`"
+CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+CURRENT_CLUSTER=$CLUSTER
+
+__WORKSPACES=( $WORKSPACE )
+
+let NUM_WORKSPACES=${#__WORKSPACES[@]};
+for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
+   __WORKSPACE="${__WORKSPACES[$__i]}"
+   if [ $NUM_WORKSPACES -eq 1 ]; then
+      if [ "$__WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+         switch_workspace $__WORKSPACE
+      fi
+   else
+      switch_workspace $__WORKSPACE
+   fi
+   echo ""
+   echo -e "${CLightGreen}Starting workspace $__WORKSPACE...${CNone}"
+   for j in $PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/*; do
+      CLUSTER="`basename $j`"
+      echo ""
+      echo -e "${CLightGreen}Starting cluster $CLUSTER...${CNone}"
+      start_cluster -cluster $CLUSTER
+      start_mc -cluster $CLUSTER
+   done
+done
+if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+   switch_workspace $CURRENT_WORKSPACE
+   switch_cluster $CLUSTER
+   cd $CURRENT_DIR
+fi

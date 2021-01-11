@@ -179,6 +179,21 @@ if [ "$ABS_PATH" == "-1" ]; then
    exit 1
 fi
 
+KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" == "" ]; then 
+   KEY_FILE="$VM_PRIVATE_KEY_FILE"
+fi
+if [ ! -f "$KEY_FILE" ]; then
+   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+if [ "$KEY_FILE" == "" ]; then
+   VM_KEY=""
+else
+   VM_KEY="-i $KEY_FILE"
+fi
+
 # Fail fast: Exit if any of the hosts is not reachable
 for VM_HOST in $__VM_HOSTS; do
    REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
@@ -202,18 +217,6 @@ __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
 DEFAULT_USER=$(whoami)
 VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
 
-if [ "$KEY" == "" ]; then
-   KEY=`getClusterProperty "vm.privateKeyFile"`
-fi
-VM_KEY=""
-if [ "$KEY" != "" ]; then 
-   if [ ! -f "$KEY" ]; then
-      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
-      echo >&2 "       Command aborted."
-      exit 1
-   fi
-   VM_KEY="-i $KEY"
-fi
 
 # Find all existing and new hosts
 EXISTING_HOSTS=
@@ -222,7 +225,7 @@ THIS_VM_HOSTNAME=`hostname`
 COMMAND="if [ -d "$BASE_DIR" ]; then echo true; else echo false; fi"
 EXISTING_HOST_COUNT=0
 NEW_HOST_COUNT=0
-echo "Copy $ABS_PATH to other VMs."
+echo "Copy $ABS_PATH to VMs."
 if [ "$MIRROR_SPECIFIED" == "true" ]; then
    if [ -d $ABS_PATH ]; then
       TO_PATH="$(dirname "$ABS_PATH")"

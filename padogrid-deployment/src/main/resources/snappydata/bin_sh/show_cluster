@@ -75,6 +75,10 @@ EOF
    exit
 fi
 
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
+
 # Displays short status of a VM cluster.
 # @required VM_LOCATOR_HOSTS A space separated list of VM locator hosts (addresses)
 # @required VM_LEADER_HOSTS  A space separated list of VM leader hosts (addresses)
@@ -138,6 +142,7 @@ function displayVmClusterShort()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $PRODUCT_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo ""
 } # displayVmClusterShort
 
@@ -263,6 +268,7 @@ function displayVmClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $PRODUCT_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
 } # displayVmClusterLong
 
 # Displays short status of a local/pod cluster.
@@ -381,6 +387,7 @@ function displayClusterShort()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $PRODUCT_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo ""
 } # dispalyClusterShort
 
@@ -568,7 +575,7 @@ function displayClusterLong()
 
    # Display members
    MEMBER_PREFIX=`getMemberPrefix`
-   displayMember
+   displayMember "Member"
    __MEMBER_COUNT=$MEMBER_COUNT
    __RUNNING_MEMBER_COUNT=$RUNNING_MEMBER_COUNT
    
@@ -580,7 +587,7 @@ function displayClusterLong()
    JMX_START_PORT=$LEADER_JMX_START_PORT
    PROMETHEUS_ENABLED=$LEADER_PROMETHEUS_ENABLED
    PROMETHEUS_START_PORT=$LEADER_PROMETHEUS_START_PORT
-   displayMember
+   displayMember "Leader"
    LEADER_COUNT=$MEMBER_COUNT
    RUNNING_LEADER_COUNT=$RUNNING_MEMBER_COUNT
    DOWN_LEADER_COUNT=$DOWN_MEMBER_COUNT
@@ -615,6 +622,7 @@ function displayClusterLong()
    echo -e " Leaders Running: ${CLightRed}$RUNNING_LEADER_COUNT/$LEADER_COUNT${CNone}"
    fi
    echo "         Version: $PRODUCT_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
 
@@ -672,7 +680,7 @@ function displayVmMember
       echo "     MEMBER_PORT: $MEMBER_PORT"
       if [ "$__MEMBER_TYPE" == "Leader" ] ; then
          PULSE_URL="http://${HOSTNAME_FOR_CLIENTS}:$SPARK_UI_PORT/dashboard"
-         echo -e "       Dashboard: ${CLightBlue}$PULSE_URL${CNone}"
+         echo -e "       Dashboard: ${CUrl}$PULSE_URL${CNone}"
       fi
       echo "      DEBUG_PORT: $DEBUG_PORT"
       echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
@@ -687,6 +695,7 @@ function displayVmMember
 # @required MEMBER_PREFIX
 function displayMember
 {
+   __MEMBER_TYPE=$1
    MEMBER_COUNT=0
    RUNNING_MEMBER_COUNT=0
    DOWN_MEMBER_COUNT=0
@@ -782,6 +791,10 @@ function displayMember
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
          echo "         JMX_URL: $JMX_URL"
+         if [ "$__MEMBER_TYPE" == "Leader" ] ; then
+            PULSE_URL="http://${HOSTNAME_FOR_CLIENTS}:$SPARK_UI_PORT/dashboard"
+            echo -e "       Dashboard: ${CUrl}$PULSE_URL${CNone}"
+         fi
          echo "     Working Dir: $MEMBER_DIR"
          echo "        LOG_FILE: $LOG_FILE"
          echo ""

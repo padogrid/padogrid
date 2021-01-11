@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Delete all resources
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+DESCRIPTION
+   Deletes all resources including PadoGrid and Hazelcast.
+
+EOF
+exit
+fi
+
+# Delete PadoGrid
+./stop_padogrid -all $*
+
+# Delete Hazelcast
+./stop_hazelcast $*
+
+#oc delete -f $APP_DIR/padogrid/pv-hostPath.yaml
+
+echo "Cleanup complete."

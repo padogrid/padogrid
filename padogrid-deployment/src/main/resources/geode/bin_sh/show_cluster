@@ -76,6 +76,10 @@ EOF
    exit
 fi
 
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
+
 # Displays short status of a VM cluster.
 # @required VM_LOCATOR_HOSTS A space separated list of VM locator hosts (addresses)
 # @required VM_HOSTS         A space separated list of VM member hosts (addresses)
@@ -109,6 +113,7 @@ function displayVmClusterShort()
    echo "         CLUSTER: $CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "        Run Type: $RUN_TYPE"
    echo "      Deployment: VM"
    if [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
    echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
@@ -121,6 +126,7 @@ function displayVmClusterShort()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $GEODE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo ""
 } # displayVmClusterShort
 
@@ -224,7 +230,7 @@ function displayVmClusterLong()
       echo "    LOCATOR_PORT: $LOCATOR_PORT"
 #      echo "      DEBUG_PORT: $DEBUG_PORT"
 #      echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-      echo "       PULSE_URL: $PULSE_URL"
+      echo -e "       PULSE_URL: $CUrl$PULSE_URL$CNone"
       echo "         JMX_URL: $JMX_URL"
       echo "     Working Dir: $LOCATOR_DIR"
       echo "        LOG_FILE: $LOG_FILE"
@@ -246,7 +252,7 @@ function displayVmClusterLong()
       if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
          MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
          HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
-         MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+         MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/geode/swagger-ui.html"
       fi
       if [ "$DEBUG_ENABLED" == "true" ]; then
          DEBUG_PORT=$DEBUG_START_PORT
@@ -301,6 +307,7 @@ function displayVmClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $GEODE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
 } # displayVmClusterLong
 
 # Displays short status of a local/pod cluster.
@@ -370,10 +377,12 @@ function displayClusterShort()
       done
       popd > /dev/null 2>&1
    fi
+
    echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    echo "         CLUSTER: $CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "        Run Type: $RUN_TYPE"
    echo "             POD: $POD"
    echo "        POD_TYPE: $POD_TYPE"
    if [ $RUNNING_LOCATOR_COUNT -lt 0 ]; then
@@ -391,6 +400,7 @@ function displayClusterShort()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $GEODE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo ""
 } # dispalyClusterShort
 
@@ -407,7 +417,7 @@ function displayClusterLong()
    NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
    NODE=`getOsNodeName`
    LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
-   MEMBER_START_PORT=`getClusterProperty "tcp.startRPort" $DEFAULT_MEMBER_START_PORT`
+   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
    MEMBER_HTTP_START_PORT=`getClusterProperty "http.startRPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
@@ -452,6 +462,7 @@ function displayClusterLong()
    fi
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "        Run Type: $RUN_TYPE"
    echo "             POD: $POD"
    echo "        POD_TYPE: $POD_TYPE"
    echo ""
@@ -559,7 +570,7 @@ function displayClusterLong()
          echo "    LOCATOR_PORT: $LOCATOR_PORT"
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-         echo "       PULSE_URL: $PULSE_URL"
+         echo -e "       PULSE_URL: $CUrl$PULSE_URL$CNone"
          echo "         JMX_URL: $JMX_URL"
          echo "     Working Dir: $LOCATOR_DIR"
          echo "        LOG_FILE: $LOG_FILE"
@@ -596,7 +607,7 @@ function displayClusterLong()
             MEMBER_PORT=$MEMBER_START_PORT
             if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
                MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
-               MEMBER_HTTP_URL="http://${NODE}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+               MEMBER_HTTP_URL="http://${NODE}:${MEMBER_HTTP_PORT}/geode/swagger-ui.html"
 	    fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                DEBUG_PORT=$DEBUG_START_PORT
@@ -616,7 +627,7 @@ function displayClusterLong()
             if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
                let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
                HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$NODE"`
-               MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+               MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/geode/swagger-ui.html"
             fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
@@ -658,7 +669,7 @@ function displayClusterLong()
             DOWN_MEMBER_COUNT=-1
          fi
          echo "     MEMBER_PORT: $MEMBER_PORT"
-         echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
+         echo -e " MEMBER_HTTP_URL: $CUrl$MEMBER_HTTP_URL$CNone"
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
          echo "         JMX_URL: $JMX_URL"
@@ -673,6 +684,7 @@ function displayClusterLong()
    # Summary
    echo "         CLUSTER: $CLUSTER"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "        Run Type: $RUN_TYPE"
    if [ $RUNNING_LOCATOR_COUNT -lt 0 ]; then
    echo -e "Locators Running: ${CYellow}Unknown${CNone}"
    elif [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
@@ -688,6 +700,7 @@ function displayClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $GEODE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
 

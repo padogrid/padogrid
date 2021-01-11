@@ -169,6 +169,15 @@ mkdir -p $TMP_BUNDLE_DIR
 # 
 # Collect files
 #
+ if [ "$PRODUCT" == "hazelcast" ]; then
+    if [ "$CLUSTER_TYPE" == "jet" ]; then
+       __PRODUCT="jet"
+    else
+       __PRODUCT="hazelcast"
+    fi
+ else
+     __PRODUCT="$PRODUCT"
+ fi
 
 TIMESTAMP=`date +%y%m%d-%H%M%S`
 DOCKER_CLUSTERS=""
@@ -183,7 +192,7 @@ if [ "$ALL" = "true" ]; then
       K8S_CLUSTERS=`ls -A $K8S_DIR`
    fi
    APPS=`ls -A $APPS_DIR`
-   BUNDLE_TAR_FILE_PATH=$BUNDLE_DIR/bundle-${CLUSTER_TYPE}-${PRODUCT_VERSION}-all-${TIMESTAMP}.tar.gz
+   BUNDLE_TAR_FILE_PATH=$BUNDLE_DIR/bundle-${__PRODUCT}-${PRODUCT_VERSION}-workspace-all-${TIMESTAMP}.tar.gz
 else
    FILE_PREFIX=""
    FILE_POSTFIX=""
@@ -268,15 +277,6 @@ else
          FILE_TRAIL="${FILE_TRAIL}-"
       fi
       FILE_TRAIL="${FILE_TRAIL}pod-${PODS}"
-   fi
-   if [ "$PRODUCT" == "hazelcast" ]; then
-      if [ "$CLUSTER_TYPE" == "jet" ]; then
-         __PRODUCT="jet"
-      else
-         __PRODUCT="hazelcast"
-      fi
-   else
-       __PRODUCT="$PRODUCT"
    fi
       
    BUNDLE_TAR_FILE_PATH=$BUNDLE_DIR/bundle-${__PRODUCT}-${PRODUCT_VERSION}-${FILE_TRAIL}-${TIMESTAMP}.tar.gz

@@ -578,6 +578,7 @@ echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 
 if [ "$PRODUCT" == "geode" ]; then
    echo "   export GEODE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   export PADO_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "coherence" ]; then
    echo "   export COHERENCE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "snappydata" ]; then
@@ -624,17 +625,17 @@ echo "# VM user name." >> $WORKSPACE_DIR/setenv.sh
 echo "VM_USER=\"$VM_USER\"" >> $WORKSPACE_DIR/setenv.sh
 echo "# VM private key file path. If not set, then it defaults to the first .pem file" >> $WORKSPACE_DIR/setenv.sh
 echo "# found in the workspace directory." >> $WORKSPACE_DIR/setenv.sh
-if [ "$__VM_PRIVATE_KEY_FILE" != "" ]; then
-echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
-else
-echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
-fi
 if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
    cp $VM_PRIVATE_KEY_FILE $WORKSPACE_DIR/
    __VM_PRIVATE_KEY_FILE="$(basename $VM_PRIVATE_KEY_FILE)"
    chmod 400 $WORKSPACE_DIR/$__VM_PRIVATE_KEY_FILE
 else
    __VM_PRIVATE_KEY_FILE=""
+fi
+if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
+else
+echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
 fi
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# VM hosts may have installation paths dfferent from the local paths." >> $WORKSPACE_DIR/setenv.sh

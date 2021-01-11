@@ -76,6 +76,10 @@ EOF
    exit
 fi
 
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
+
 # Displays short status of a VM cluster.
 # @required VM_HOSTS A space separated list of VM hosts (addresses)
 function displayVmClusterShort()
@@ -97,11 +101,12 @@ function displayVmClusterShort()
    echo "     Deployment: VM"
    echo "   MEMBER_COUNT: $MEMBER_COUNT" 
    if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
-   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
-   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "        Version: $HAZELCAST_VERSION"
+   echo " Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo ""
 } # displayVmClusterShort
 
@@ -199,7 +204,7 @@ function displayVmClusterLong()
       echo "     DEBUG_PORT: $DEBUG_PORT"
       echo "PROMETHEUS_PORT: $PROMETHEUS_PORT"
       echo "        JMX_URL: $JMX_URL"
-      echo "         MC_URL: $MC_URL"
+      echo -e "         MC_URL: $CUrl$MC_URL$CNone"
       echo "    Working Dir: $MEMBER_DIR"
       echo "       LOG_FILE: $LOG_FILE"
       echo ""
@@ -208,11 +213,12 @@ function displayVmClusterLong()
    echo "        CLUSTER: $CLUSTER"
    echo "   Member Count: $MEMBER_COUNT"
     if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
-   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
-   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "        Version: $HAZELCAST_VERSION"
+   echo " Switch Cluster: $SWITCH_CLUSTER_COMMAND"
 } # displayVmClusterLong
 
 # Displays short status of a local/pod cluster.
@@ -271,6 +277,7 @@ function displayClusterShort()
    echo -e "Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "        Version: $HAZELCAST_VERSION"
+   echo " Switch Cluster: $SWITCH_CLUSTER_COMMAND"
 }
 
 # Displays long status of a local/pod cluster.
@@ -404,7 +411,7 @@ function displayClusterLong()
          echo "     DEBUG_PORT: $DEBUG_PORT"
          echo "PROMETHEUS_PORT: $PROMETHEUS_PORT"
          echo "        JMX_URL: $JMX_URL"
-         echo "         MC_URL: $MC_URL"
+         echo -e "         MC_URL: $CUrl$MC_URL$CNone"
          echo "    Working Dir: $MEMBER_DIR"
          echo "       LOG_FILE: $LOG_FILE"
          echo ""
@@ -421,6 +428,7 @@ function displayClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "        Version: $HAZELCAST_VERSION"
+   echo " Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
 
@@ -458,6 +466,8 @@ if [ "$VM_ENABLED" == "true" ]; then
    VM_KEY=`getClusterProperty "vm.privateKeyFile"`
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
+   elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
    fi
   
    if [ "$LONG" == "false" ]; then

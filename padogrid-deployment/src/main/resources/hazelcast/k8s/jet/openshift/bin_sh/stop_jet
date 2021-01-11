@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Delete all Hazelcast Jet resources
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+DESCRIPTION
+   Deletes all Hazelccast Jet resources.
+
+EOF
+exit
+fi
+
+# Delete Hazelcast
+echo -e "Project: ${CLightGreen}${APP_NAME}${CNone}"
+
+if [ "$OSS" == "true" ]; then
+   echo "Deleting OSS resources..."
+else
+   echo "Deleting Enterprise resources..."
+fi
+
+# To delete all resource objects:
+pushd $APP_DIR/jet > /dev/null
+
+oc delete route hazelcast-jet-service-lb --namespace=$APP_NAME
+oc delete -f service-lb.yaml --namespace=$APP_NAME
+oc delete -f service-lb-pods.yaml --namespace=$APP_NAME
+oc delete all,configmap,pvc,serviceaccount,rolebinding --selector app=hazelcast-jet -l template=hazelcast-jet-openshift-template --namespace=$APP_NAME
+oc delete route,svc --all --namespace=$APP_NAME
+oc delete -f hazelcast-jet-config.yaml
+oc delete -f mancenter-configmap.yaml
+oc delete -f rbac.yaml
+
+popd > /dev/null

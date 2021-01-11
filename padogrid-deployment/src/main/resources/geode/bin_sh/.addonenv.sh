@@ -498,6 +498,9 @@ if [ "$GEODE_HOME" == "" ]; then
    CLUSTER_TYPE="geode"
 else
    GEMFIRE_CHECK=$(ls $GEODE_HOME/Pivotal* 2> /dev/null | wc -l)
+   if [ "$GEMFIRE_CHECK" -eq 0 ]; then
+      GEMFIRE_CHECK=$(ls $GEODE_HOME/VMware* 2> /dev/null | wc -l)
+   fi
    if [ "$GEMFIRE_CHECK" -gt 0 ]; then
       IS_GEODE_ENTERPRISE=true
       CLUSTER_TYPE="gemfire"
@@ -506,6 +509,11 @@ else
       file=${file##*geode\-core\-}
       GEODE_VERSION=${file%.jar}
    done
+fi
+if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then
+   RUN_TYPE="pado"
+else
+   RUN_TYPE="default"
 fi
 GEODE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
 PRODUCT_VERSION=$GEODE_VERSION
@@ -565,3 +573,5 @@ CCyan='\033[0;36m'
 CLightCyan='\033[1;36m'
 CLightGray='\033[0;37m'
 CWhite='\033[1;37m'
+CUnderline='\033[4m'
+CUrl=$CBlue$CUnderline

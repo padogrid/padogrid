@@ -16,6 +16,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.json.JSONObject;
@@ -64,6 +65,8 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 	private boolean isDeleteEnabled = true;
 	private boolean isHazelcastEnabled = true;
 	private boolean isAvroDeepCopyEnabled = false;
+	private boolean isColumnNamesCaseSensitiveEnabled = true;
+	private boolean isKeyStructEnabled = false;
 	private String keyClassName;
 	private String valueClassName;
 	private String[] keyColumnNames;
@@ -71,7 +74,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 	private String[] valueColumnNames;
 	private String[] valueFieldNames;
 	private ObjectConverter objConverter;
-	private org.apache.avro.Schema avroSchema;
+	private org.apache.avro.Schema avroSchema; 
 	int[] colocatedFieldIndexes = new int[0];
 
 	@Override
@@ -104,6 +107,11 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		String isAvroDeepCopyStr = props.get(DebeziumKafkaAvroSinkConnector.AVRO_DEEP_COPY_ENABLED);
 		isAvroDeepCopyEnabled = isAvroDeepCopyStr != null && isAvroDeepCopyStr.equalsIgnoreCase("true") ? true
 				: isAvroDeepCopyEnabled;
+		String isColumnNamesCaseSensitiveStr = props.get(DebeziumKafkaAvroSinkConnector.COLUMN_NAMES_CASE_SENSITVIE_ENABLED);
+		isColumnNamesCaseSensitiveEnabled = isColumnNamesCaseSensitiveStr != null && isColumnNamesCaseSensitiveStr.equalsIgnoreCase("false") ? false
+				: isColumnNamesCaseSensitiveEnabled;
+		String isKeyStructStr = props.get(DebeziumKafkaAvroSinkConnector.KEY_STRUCT_ENABLED);
+		isKeyStructEnabled = isKeyStructStr != null && isKeyStructStr.equalsIgnoreCase("false") ? false : isKeyStructEnabled;
 		keyClassName = props.get(DebeziumKafkaAvroSinkConnector.KEY_CLASS_NAME_CONFIG);
 		valueClassName = props.get(DebeziumKafkaAvroSinkConnector.VALUE_CLASS_NAME_CONFIG);
 
@@ -216,6 +224,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		}
 		try {
 			objConverter = new ObjectConverter(keyClassName, keyFieldNames, valueClassName, valueFieldNames);
+			objConverter.setColumnNamesCaseSensitive(isColumnNamesCaseSensitiveEnabled);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		}
@@ -304,7 +313,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			/*
 			 * Key
 			 */
-			Object key;
+			Object key = null;
 
 			// Determine the key column names.
 			if (keyColumnNames == null) {
@@ -315,17 +324,6 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			// assign UUID for the key value
 			if (keyColumnNames == null) {
 				key = UUID.randomUUID().toString();
-			} else {
-				Object keyFieldValues[] = new Object[keyColumnNames.length];
-				for (int j = 0; j < keyColumnNames.length; j++) {
-					keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
-				}
-				try {
-					key = objConverter.createKeyObject(keyFieldValues);
-				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-						| InvocationTargetException | ParseException e) {
-					throw new RuntimeException(e);
-				}
 			}
 
 			/*
@@ -354,6 +352,18 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 
 				value = SpecificData.get().deepCopy(avroSchema, after);
 			
+				if (key == null) {
+					Object keyFieldValues[] = new Object[keyColumnNames.length];
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = after.get(keyColumnNames[j]);
+					}
+					try {
+						key = objConverter.createKeyObject(keyFieldValues);
+					} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+							| InvocationTargetException | ParseException e) {
+						throw new RuntimeException(e);
+					}
+				}
 
 			} else {
 
@@ -367,7 +377,6 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 					logger.info("op=" + op);
 					logger.info("isDelete=" + isDelete);
 					logger.info("afterStruct=" + afterStruct);
-					System.out.flush();
 				}
 
 				// Determine the value column names.
@@ -378,12 +387,6 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 				Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
 				for (int j = 0; j < valueColumnNames.length; j++) {
 					valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
-					// TODO: This is a hack. Support other types also.
-//				if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
-//					if (valueFieldValues[j] instanceof Number) {
-//						valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
-//					}
-//				}
 				}
 				try {
 					value = objConverter.createValueObject(valueFieldValues);
@@ -396,6 +399,19 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 					for (int j = 0; j < valueColumnNames.length; j++) {
 						logger.info(
 								"valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
+					}
+				}
+				
+				if (key == null) {
+					Object keyFieldValues[] = new Object[keyColumnNames.length];
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = afterStruct.get(keyColumnNames[j]);
+					}
+					try {
+						key = objConverter.createKeyObject(keyFieldValues);
+					} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+							| InvocationTargetException | ParseException e) {
+						throw new RuntimeException(e);
 					}
 				}
 
@@ -415,6 +431,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			}
 
 			if (isDebugEnabled) {
+				logger.info("**** key class=" + key.getClass().getName());
 				logger.info("**** key=" + key);
 			}
 
@@ -432,6 +449,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 			}
 			
 			if (isDebugEnabled) {
+				logger.info("**** value class=" + value.getClass().getName());
 				logger.info("**** value=" + value);
 			}
 
@@ -480,7 +498,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		}
 		return columnNames;
 	}
-
+	
 	@Override
 	public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
 		if (map != null) {
@@ -497,6 +515,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 		if (hzInstance != null) {
 			hzInstance.shutdown();
 		}
+		logger.info("DebeziumKafkaAvroSinkTask.stop() invoked. Hazelcast instance shutdown.");
 	}
 
 	private String logMapName() {
