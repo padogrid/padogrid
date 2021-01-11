@@ -6,7 +6,7 @@ The `grafana` app provides a simple and quick way to integrate Hazelcast with Gr
 
 Support for Grafana is enabled by default for all Hazelcast clusters created by the `create_cluster` command. You can enable or disable it by setting the `grafana.enabled` property in each cluster's `etc/cluster.properties` file as follows:
 
-```shell
+```properties
 # etc/cluster.properties
 # By default, Grafana is enabled.
 grafana.enabled=true
@@ -18,6 +18,13 @@ Grafana is supported via the JMX exporter provided by Prometheus. It is already 
 
 **URL:** [https://github.com/prometheus/jmx_exporter](https://github.com/prometheus/jmx_exporter)
 
+## Installing Grafana App
+
+The Grafana app is part of the `padogrid` distribution. Run the `create_app` to install it in your workspace.
+
+```bash
+create_app -app grafana
+```
 
 ## Required Software
 
@@ -35,7 +42,7 @@ The `grafana` app relies on JQ to process JSON objects.
 
 Include it in your PATH:
 
-```
+```bash
 # Assuming jq is placed in your home bin directory:
 export PATH=~/bin:$PATH
 ```
@@ -46,16 +53,36 @@ Download and install Prometheus:
 
 **URL:** [https://prometheus.io/download](https://prometheus.io/download/)
 
-Include Prometheus in your `PATH` and run the following:
+Include Prometheus home directory in your `PATH` and run the following:
 
-```shell
-prometheus --config.file=$HAZELCAST_ADDON_HOME/apps/grafana/etc/prom-hazelcast.yml
+**Unix:**
+```bash
+# Using relative path:
+cd_app grafana
+prometheus --config.file=etc/prom-hazelcast.yml
+
+# Using absolute path
+prometheus --config.file=$PADOGRID_WORKSPACE/apps/grafana/etc/prom-hazelcast.yml
+```
+
+**Cygwin:**
+
+```bash
+# Using relative path:
+cd_app grafana
+prometheus.exe --config.file=$(cygpath -wp etc/prom-hazelcast.yml)
+
+# Using absolute path
+prometheus --config.file=$(cygpath -wp "$PADOGRID_WORKSPACE/apps/grafana/etc/prom-hazelcast.yml")
 ```
 
 You can monitor Prometheus from your browser:
 
 **URL:** [http://localhost:9090](http://localhost:9090)
 
+To view a complete list of metrics:
+
+**URL:** [http://localhost:9090/metrics](http://localhost:9090/metrics)
 
 ### Grafana
 
@@ -63,10 +90,22 @@ Download and install Grafana:
 
 **URL:** [https://grafana.com/grafana/download](https://grafana.com/grafana/download)
 
-Include Grafana in your `PATH` and run the following:
+Include Grafana `bin` directory in your `PATH` and run `grafana-server`:
 
-```shell
+**Unix:**
+
+```bash
+export GRAFANA_HOME=<grafana-installation-directory>
+export PATH=$PATH:$GRAFANA_HOME
 grafana-server -homepath $GRAFANA_HOME
+```
+
+**Cygwin:**
+
+```bash
+export GRAFANA_HOME=<grafana-installation-directory>
+export PATH=$PATH:$GRAFANA_HOME/bin
+grafana-server -homepath $(cygpath -wp "$GRAFANA_HOME")
 ```
 
 Once Grafana is running, use your web browser to set the user account as follows:
@@ -88,16 +127,16 @@ The `grafana` app has been preconfigured with the above user name and password. 
 
 The dashboards are organized by Grafana folders and they can be found in the following directory:
 
-```shell
-cd $HAZELCAST_ADDON_HOME/apps/grafana
+```bash
+cd_app grafana
 ls etc/dashboards
 ```
 
 The following folders of dashboards are bundled with this distribution.
 
-- **hazelcast-addon-perf_test** - A set of dashboards for monitoring the entire cluster and map operations executed by the `perf_test` app.
+- **padogrid-perf_test** - A set of dashboards for monitoring the entire cluster and map operations executed by the `perf_test` app.
 
-To import the default folder, i.e., `hazelcast-addon-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as folllows:
+To import the default folder, i.e., `padogrid-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as folllows:
 
 ```shell
 cd bin_sh
@@ -108,7 +147,7 @@ To import other folders, specify the `-folder` or `-all` option.
 
 ```shell
 # To import a folder in 'etc/dashboards'
-./import_folder -folder hazelcast-addon-perf_test
+./import_folder -folder padogrid-perf_test
 
 # To imporal all folders in 'etc/dashboards'
 ./import_folder -all
@@ -116,9 +155,13 @@ To import other folders, specify the `-folder` or `-all` option.
 
 ### App: perf_test
 
-The `hazelcast-addon-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts.
+The `padogrid-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, `perf_test`, in your workspace.
 
-[Go to perf_test](../perf_test)
+```bash
+create_app
+```
+
+For perf_test details, see [perf_test README.md](../perf_test/README.md).
 
 ## Exporting Dashboards
 
@@ -151,9 +194,9 @@ Usage:
 
    Creates the specfied Grafana folder.
 
-Default: ./create_folder -folder hazelcast-addon-perf_test
+Default: ./create_folder -folder padogrid-perf_test
 ```
 
 ## Screenshots
 
-![Grafana Screenshot](/images/grafana-screenshot.png)
+![Grafana Screenshot](https://github.com/padogrid/padogrid/blob/develop/images/grafana-screenshot.png?raw=true)

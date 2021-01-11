@@ -19,8 +19,8 @@
 #
 # All of the variables set with the default values shown below. If you need to override any of them
 # set them in this file.
-#   DEFAULT_FOLDER       The default folder name. Default: hazelcast-addon-perf_test
-#   DEFAULT_DATASOURCE   The default data source name. Default: hazelcast-addon-perf_test
+#   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
+#   DEFAULT_DATASOURCE   The default data source name. Default: padogrid-perf_test
 #   GRAFANA_USER_NAME    Grafana HTTP login user name. The user must have admin previledges. Default: admin
 #   GRAFANA_PASSWORD     Grafana HTTP login password. The user must have admin previledges. Default: admin
 #   GRAFANA_HOST         Grafana HTTP host name. Default: localhost
@@ -34,7 +34,7 @@
 #
 # Default folder name
 #
-DEFAULT_FOLDER="hazelcast-addon-perf_test"
+DEFAULT_FOLDER="padogrid-perf_test"
 
 #
 # Default data source name
