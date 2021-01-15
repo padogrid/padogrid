@@ -105,7 +105,11 @@ function displayMcShort()
       fi
    fi
    MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
-   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
    WORKING_DIR=$RUN_DIR/$MC_NAME
    LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
    PID=`getMcPid $MC_NAME $WORKSPACE`
@@ -155,7 +159,11 @@ function displayMcLong()
    fi
    MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
    MC_JMX_URL="service:jmx:rmi:///jndi/rmi://${MC_HOST}:${MC_JMX_PORT}/jmxrmi"
-   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
    WORKING_DIR=$RUN_DIR/$MC_NAME
    LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
    PID=`getMcPid $MC_NAME $WORKSPACE`
@@ -175,7 +183,11 @@ function displayMcLong()
    echo -e "              URL: $CUrl$MC_URL$CNone"
    echo "          JMX_URL: $MC_JMX_URL"
    echo "      WORKING_DIR: $WORKING_DIR"
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   echo "       HTTPS_PORT: $MC_HTTPS_PORT"
+   else
    echo "        HTTP_PORT: $MC_HTTP_PORT"
+   fi
    echo "         JMX_PORT: $MC_JMX_PORT"
    echo "          LOG_DIR: $LOG_DIR"
    echo "         LOG_FILE: $LOG_FILE"
