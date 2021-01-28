@@ -26,6 +26,7 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start)
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+- [Bundle Templates](https://github.com/padogrid/padogrid/wiki/Using-Bundle-Templates)
 - [Building PadoGrid](#building-padogrid)
 - [Installing PadoGrid](#installing-padogrid)
 
@@ -236,3 +237,15 @@ The PadoGrid Manual describes product concepts and provides complete instruction
 PadoGrid has been built with use cases in mind. It aims to deliver out-of-the-box turnkey solutions on top of data grid products. The bundle catalogs provide compiled lists of readily available solutions. Just install and run.
 
 [Bundle (Use Case) Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+
+### Creating Your Own Bundles
+
+You can also create online bundles hosted by your repos. The following link provides how-to instructions.
+
+[Understanding Bundles](https://github.com/padogrid/padogrid/wiki/Understanding-Bundles)
+
+### Bundle Templates
+
+Creating your own online bundles is made easy by using the bundle templates. The following link povides template links.
+
+[Using Bundle Templates](https://github.com/padogrid/padogrid/wiki/Using-Bundle-Templates)
