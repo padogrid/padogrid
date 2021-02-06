@@ -316,6 +316,7 @@ function isValidRwe
 # If the workspaces path is not specified then it returns the workspaces in 
 # PADOGRID_WORKSPACES_HOME.
 # @required PADOGRID_WORKSPACES_HOME
+# @param workspacePath Workspace path.
 #
 function getWorkspaces
 {
@@ -1683,7 +1684,7 @@ function padogrid
       echo "   $EXECUTABLE - Execute the specified padogrid command"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [<padogrid-command>] [-version] [-?]"
+      echo "   $EXECUTABLE [<padogrid-command>] [-product|-rwe|-version] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Executes the specified padogrid command. If no options are specified then it displays"
@@ -1693,11 +1694,15 @@ function padogrid
       echo "   padogrid_command"
       echo "             Padogrid command to execute."
       echo ""
-      echo "   -version"
-      echo "             If specified, then displays the current workspace padogrid version."
+      echo "   -rwe"
+      echo "             If specified, then displays only RWEs in tree view. To display RWEs a space sparated"
+      echo "             list, run 'list_rwes' instead."
       echo ""
       echo "   -product"
       echo "             If specified, then displays the current workspace product version."
+      echo ""
+      echo "   -version"
+      echo "             If specified, then displays the current workspace padogrid version."
       echo ""
       echo "COMMANDS"
       ls $SCRIPT_DIR
@@ -1706,19 +1711,21 @@ function padogrid
    fi
 
    if [ "$1" == "cp_sub" ] || [ "$1" == "tools" ]; then
-      COMMAND=$2
-      SHIFT_NUM=2
-   elif [ "$1" == "-version" ]; then
-      echo "$PADOGRID_VERSION"
-      return 0
+      local COMMAND=$2
+      local SHIFT_NUM=2
+   elif [ "$1" == "-rwe" ]; then
+      local COMMAND=""
+      local RWE_SPECIFIED="true"
    elif [ "$1" == "-product" ]; then
       echo "$PRODUCT"
       return 0
+   elif [ "$1" == "-version" ]; then
+      echo "$PADOGRID_VERSION"
+      return 0
    else
-      COMMAND=$1
-      SHIFT_NUM=1
+      local COMMAND=$1
+      local SHIFT_NUM=1
    fi
-
 
    if [ "$COMMAND" == "" ]; then
 cat <<EOF
@@ -1750,15 +1757,18 @@ EOF
                echo -e "├── ${CLightGreen}$RWE${CNone}"
             else
                echo "├── $RWE"
-	    fi
+            fi
             LEADING_BAR="│   "
          else
             if [ "$RWE" == "$CURRENT_RWE" ]; then
                echo -e "└── ${CLightGreen}$RWE${CNone}"
             else
                echo "└── $RWE"
-	    fi
+            fi
             LEADING_BAR="    "
+         fi
+         if [ "$RWE_SPECIFIED" == "true" ]; then
+            continue;
          fi
          local WORKSPACES=`ls $RWE_HOME/$RWE`
          WORKSPACES=$(removeTokens "$WORKSPACES" "initenv.sh setenv.sh")
@@ -1772,13 +1782,13 @@ EOF
                   echo -e "${LEADING_BAR}├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
                   echo "${LEADING_BAR}├── $WORKSPACE [$WORKSPACE_INFO]"
-	       fi
+            fi
             else
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
                   echo -e "${LEADING_BAR}└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
                   echo "${LEADING_BAR}└── $WORKSPACE [$WORKSPACE_INFO]"
-	       fi
+               fi
             fi
          done
       done

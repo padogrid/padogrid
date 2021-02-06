@@ -274,7 +274,7 @@ __padogrid_complete()
          else
             type_list=`ls $SCRIPT_DIR`
             type_list=$(removeTokens "$type_list" "setenv.sh")
-            type_list="-version -product $type_list"
+            type_list="-product -rwe -version $type_list"
          fi
       fi
       ;;
