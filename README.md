@@ -12,6 +12,10 @@ Download links to all the supported data grids are also provided in the followin
 
 [Supported Data Grid Downloads](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products-and-Downloads)
 
+Online use case bundles:
+
+[Bundle (Use Case) Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+
 ## PadoGrid Brief
 
 PadoGrid is a collection of add-on components and tools specifically designed for [data grid products](#data-Grid-Products) to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
