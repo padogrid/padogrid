@@ -39,4 +39,7 @@ JAVA_OPTS="-Xms1g -Xmx1g"
 JAVA_OPTS="$JAVA_OPTS -DgemfirePropertyFile=$GEMFIRE_PROPERTY_FILE \
 	-Dgemfire.cache-xml-file=$GEODE_CLIENT_CONFIG_FILE"
 
+# Hibernate
+JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
+
 # CLASSPATH="$CLASSPATH"

@@ -15,6 +15,9 @@ import org.apache.geode.cache.query.SelectResults;
  * QueryFunction executes the specified OQL query and returns the results as a list.
  * It takes a single query string as an argument.
  * 
+ * <p>
+ * <b>Arguments:</b>
+ * <ul><li><b>queryStatement</b> String OQL query string</li></ul>
  * @author dpark
  *
  */
