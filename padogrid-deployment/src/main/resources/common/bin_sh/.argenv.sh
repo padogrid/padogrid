@@ -177,7 +177,6 @@ do
       NAME_ARG=$i
    elif [ "$PREV" == "-pod" ]; then
       POD=$i
-      POD_SPECIFIED=true
    elif [ "$PREV" == "-port" ]; then
       PORT_ARG=$i
    elif [ "$PREV" == "-type" ]; then
@@ -201,18 +200,14 @@ do
       COUNT=$i
    elif [ "$PREV" == "-cluster" ]; then
       CLUSTER=$i
-      CLUSTER_SPECIFIED=true
    elif [ "$PREV" == "-num" ]; then
       MEMBER_NUM=$i
-      MEMBER_NUM_SPECIFIED=true
    elif [ "$PREV" == "-password" ]; then
       PASSWORD=$i
    elif [ "$PREV" == "-k8s" ]; then
       K8S=$i
-      K8S_SPECIFIED=true
    elif [ "$PREV" == "-docker" ]; then
       DOCKER=$i
-      DOCKER_SPECIFIED=true
    elif [ "$PREV" == "-host" ]; then
       HOST=$i
    elif [ "$PREV" == "-group" ]; then
@@ -258,22 +253,16 @@ do
       KEY=$i
    elif [ "$PREV" == "-app" ]; then
       APP=$i
-      APP_SPECIFIED=true
    elif [ "$PREV" == "-grid" ]; then
       GRID=$i
-      GRID_SPECIFIED=true
    elif [ "$PREV" == "-site" ]; then
       SITE=$i
-      SITE_SPECIFIED=true
    elif [ "$PREV" == "-locator" ]; then
       LOCATOR=$i
-      LOCATOR_SPECIFIED=true
    elif [ "$PREV" == "-mc" ]; then
       MC=$i
-      MC_SPECIFIED=true
    elif [ "$PREV" == "-member" ]; then
       MEMBER=$i
-      MEMBER_SPECIFIED=true
    elif [ "$PREV" == "-log" ]; then
       LOG=$i
    elif [ "$PREV" == "-begin" ]; then
@@ -346,6 +335,28 @@ do
       QUIET=true
    elif [ "$i" == "-long" ]; then
       LONG=true
+   elif [ "$i" == "-num" ]; then
+      MEMBER_NUM_SPECIFIED=true
+   elif [ "$i" == "-pod" ]; then
+      POD_SPECIFIED=true
+   elif [ "$i" == "-cluster" ]; then
+      CLUSTER_SPECIFIED=true
+   elif [ "$i" == "-k8s" ]; then
+      K8S_SPECIFIED=true
+   elif [ "$i" == "-docker" ]; then
+      DOCKER_SPECIFIED=true
+   elif [ "$i" == "-app" ]; then
+      APP_SPECIFIED=true
+   elif [ "$i" == "-grid" ]; then
+      GRID_SPECIFIED=true
+   elif [ "$i" == "-site" ]; then
+      SITE_SPECIFIED=true
+   elif [ "$i" == "-mc" ]; then
+      MC_SPECIFIED=true
+   elif [ "$i" == "-member" ]; then
+      MEMBER_SPECIFIED=true
+   elif [ "$i" == "-locator" ]; then
+      LOCATOR_SPECIFIED=true
    elif [ "$i" == "-vm" ]; then
       VM_SPECIFIED=true
    elif [ "$i" == "-rwe" ]; then

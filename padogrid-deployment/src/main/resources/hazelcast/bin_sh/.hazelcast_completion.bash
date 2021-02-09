@@ -74,7 +74,9 @@ __padogrid_complete()
       ;;
       
    -pod)
-      type_list=`getPods`
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getPods`
+      fi
       ;;
 
    -count)
@@ -84,13 +86,13 @@ __padogrid_complete()
    -app)
       if [ "$second_word" == "create_app" ]; then
          type_list=`getAddonApps $CLUSTER_TYPE`
-      else
+      elif [ "$second_word" != "find_padogrid" ]; then
          type_list=`getApps`
       fi
       ;;
 
    -port)
-      if [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_docker" ]; then
+      if [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_docker" ] || [ "$second_word" == "create_grid" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
       fi
       ;;
@@ -103,13 +105,29 @@ __padogrid_complete()
       else
          __ENV="clusters"
       fi
-      type_list=`getClusters $__ENV`
+      if [ "$second_word" != "find_padogrid" ]; then
+         type_list=`getClusters $__ENV`
+      fi
+      ;;
+
+   -prefix)
+      if [ "$second_word" == "create_grid" ]; then
+         type_list="grid"
+      fi
+     ;;
+
+   -type)
+      if [ "$second_word" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_grid" ]; then
+         type_list="default pado"
+      fi
       ;;
 
    -k8s) 
       if [ "$second_word" == "create_k8s" ]; then
-         type_list="minikube gke minishift openshift"
-      else
+         type_list="minikube"
+      elif [ "$second_word" != "find_padogrid" ]; then
          type_list=`getClusters k8s`
       fi
       ;;
@@ -117,7 +135,7 @@ __padogrid_complete()
    -docker) 
       if [ "$second_word" == "create_bundle" ]; then
          type_list=`getClusters docker`
-      else
+      elif [ "$second_word" != "find_padogrid" ]; then
          type_list="compose"
       fi
       ;;
@@ -129,19 +147,21 @@ __padogrid_complete()
       ;;
 
    -rwe)
-      type_list=`getRweList`
+      if [ "$second_word" != "find_padogrid" ]; then
+         type_list=`getRweList`
+      fi
       ;;
       
    -workspace)
       if [ "$second_word" == "install_bundle" ]; then
          type_list=`$second_word -options`
-      else
+      elif [ "$second_word" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
       fi
       ;;
 
    -host)
-      if [ "$command" == "create_docker" ]; then
+      if [ "$second_word" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
       fi
       ;;
@@ -198,7 +218,7 @@ __padogrid_complete()
          ;;
       esac
       ;;
-   -path | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
+   -path | -datagrid | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
      ;;
    *)
       if [ "$second_word" == "cp_sub" ] || [ "$second_word" == "tools" ]; then
@@ -718,7 +738,9 @@ __command_complete()
       type_list=""
       ;;
    -pod)
-      type_list=`getPods`
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getPods`
+      fi
       ;;
    -count)
       type_list="1 2 3 4 5 6 7 8 9"
@@ -726,7 +748,7 @@ __command_complete()
    -app)
       if [ "$command" == "create_app" ]; then
          type_list=`getAddonApps $CLUSTER_TYPE`
-      else
+      elif [ "$command" != "find_padogrid" ]; then
          type_list=`getApps`
       fi
       ;;
@@ -738,7 +760,21 @@ __command_complete()
       else
          __ENV="clusters"
       fi
-      type_list=`getClusters $__ENV`
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getClusters $__ENV`
+      fi
+      ;;
+   -prefix)
+      if [ "$command" == "create_grid" ]; then
+         type_list="grid"
+      fi
+      ;;
+   -type)
+      if [ "$command" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
+         type_list="default pado"
+      fi
       ;;
    -product)
       if [ "$command" == "show_bundle" ]; then
@@ -746,26 +782,28 @@ __command_complete()
       fi
       ;;
    -rwe)
-      type_list=`getRweList`
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getRweList`
+      fi
       ;;
    -workspace)
       if [ "$command" == "install_bundle" ]; then
          type_list=`$command -options`
-      else
+      elif [ "$command" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
       fi
       ;;
    -k8s)
       if [ "$command" != "create_workspace" ]; then
          type_list="minikube gke minishift openshift"
-      else
+      elif [ "$command" != "find_padogrid" ]; then
          type_list=`getClusters k8s`
       fi
       ;;
    -docker)
       if [ "$command" == "create_bundle" ]; then
          type_list=`getClusters docker`
-      else
+      elif [ "$command" != "find_padogrid" ]; then
          type_list="compose"
       fi
       ;;
@@ -794,11 +832,11 @@ __command_complete()
       type_list="1 2 3 4 5 6 7 8 9"
      ;;
    -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
       fi
      ;;
-   -path | -datagrid | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast) 
+   -path | -datagrid | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
      ;;
    *)
       # Command options
