@@ -1,3 +1,4 @@
+
 package org.apache.geode.addon.demo.nw.data;
 
 import javax.persistence.Column;

@@ -6,8 +6,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
 
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
@@ -26,13 +24,10 @@ public class Order implements PdxSerializable, Comparable<Order>
 	@Column(length = 20)
 	private String employeeId;
 	@Column
-	@Temporal(TemporalType.DATE)
 	private Date orderDate;
 	@Column
-	@Temporal(TemporalType.DATE)
 	private Date requiredDate;
 	@Column
-	@Temporal(TemporalType.DATE)
 	private Date shippedDate;
 	@Column(length = 50)
 	private String shipVia;

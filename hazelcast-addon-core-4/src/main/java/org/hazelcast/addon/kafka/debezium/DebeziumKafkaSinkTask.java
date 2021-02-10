@@ -7,7 +7,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -47,7 +46,7 @@ import com.hazelcast.map.IMap;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class DebeziumKafkaSinkTask extends SinkTask {
 
-	private static final Logger log = LoggerFactory.getLogger(DebeziumKafkaSinkTask.class);
+	private static final Logger logger = LoggerFactory.getLogger(DebeziumKafkaSinkTask.class);
 
 	private static final int MICRO_IN_MILLI = 1000;
 
@@ -76,7 +75,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 
 		String hazelcastConfigFile = props.get(DebeziumKafkaSinkConnector.HAZELCAST_CLIENT_CONFIG_FILE_CONFIG);
 		if (hazelcastConfigFile == null) {
-			hazelcastConfigFile = "/hazelcast-addon/etc/hazelcast-client.xml";
+			hazelcastConfigFile = "/padogrid/etc/client-cache.xml";
 		}
 		mapName = props.get(DebeziumKafkaSinkConnector.MAP_CONFIG);
 		if (mapName == null) {
@@ -231,10 +230,10 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 			}
 
 			// Struct objects expected
-			log.info("*************************key:" + sinkRecord.key().getClass().toString());
-			log.info("*************************value:" + sinkRecord.value().getClass().toString());
-			log.info(sinkRecord.key().toString());
-			log.info(sinkRecord.value().toString());
+			System.out.println("*************************key:" + sinkRecord.key().getClass().toString());
+			System.out.println("*************************value:" + sinkRecord.value().getClass().toString());
+			System.out.println(sinkRecord.key().toString());
+			System.out.println(sinkRecord.value().toString());
 
 			Object keyFieldValues[] = null;
 			Object valueFieldValues[] = null;
@@ -364,7 +363,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 
 	@Override
 	public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
-		log.trace("Flushing map for {}", logMapName());
+		logger.trace("Flushing map for {}", logMapName());
 		map.flush();
 	}
 

@@ -87,7 +87,7 @@ public class DebeziumKafkaAvroSinkTask extends SinkTask {
 
 		String hazelcastConfigFile = props.get(DebeziumKafkaAvroSinkConnector.HAZELCAST_CLIENT_CONFIG_FILE_CONFIG);
 		if (hazelcastConfigFile == null) {
-			hazelcastConfigFile = "/hazelcast-addon/etc/hazelcast-client.xml";
+			hazelcastConfigFile = "/padogrid/etc/hazelcast-client.xml";
 		}
 		mapName = props.get(DebeziumKafkaAvroSinkConnector.MAP_CONFIG);
 		if (mapName == null) {

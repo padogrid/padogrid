@@ -118,12 +118,75 @@ public class ObjectUtil {
 			// Invoke setter
 			Object value = values[i];
 			if (object instanceof Field) {
-				Field field = (Field) object;
-				field.set(dataObject, value);
+				Field field = null;
+				try {
+					field = (Field) object;
+					if (value instanceof Number) {
+						Number number = (Number)value;
+						Class<?> type = field.getType();
+						if (type.isInstance(value)) {
+							field.set(dataObject, value);
+						} else if (Short.class.isAssignableFrom(type) || short.class.isAssignableFrom(type)) {
+							field.set(dataObject, number.shortValue());
+						} else if (Integer.class.isAssignableFrom(type) || int.class.isAssignableFrom(type)) {
+							field.set(dataObject, number.intValue());
+						} else if (Long.class.isAssignableFrom(type) || long.class.isAssignableFrom(type)) {
+							field.set(dataObject, number.longValue());
+						} else if (Byte.class.isAssignableFrom(type) || byte.class.isAssignableFrom(type)) {
+							field.set(dataObject, number.byteValue());
+						} else if (Double.class.isAssignableFrom(type) || double.class.isAssignableFrom(type)) {
+							field.set(dataObject, number.doubleValue());
+						} else if (Float.class.isAssignableFrom(type) || float.class.isAssignableFrom(type)) {
+							field.set(dataObject, number.floatValue());
+						}
+					} else {
+						field.set(dataObject, value);
+					}
+				} catch (IllegalArgumentException ex) {
+					String valueClassName;
+					if (value == null) {
+						valueClassName = "null";
+					} else {
+						valueClassName = value.getClass().getName();
+					}
+					throw new IllegalArgumentException("Field: " + field + ", Value: [" + valueClassName + ", " + value + "]", ex);
+				}
 			} else {
-				Method method = (Method) object;
-				method.invoke(dataObject, value);
+				Method method = null;
+				try {
+					method = (Method) object;
+					if (value instanceof Number) {
+						Number number = (Number)value;
+						Class<?> type = method.getParameterTypes()[0];
+						if (type.isInstance(value)) {
+							method.invoke(dataObject, value);
+						} else if (Short.class.isAssignableFrom(type) || short.class.isAssignableFrom(type)) {
+							method.invoke(dataObject, number.shortValue());
+						} else if (Integer.class.isAssignableFrom(type) || int.class.isAssignableFrom(type)) {
+							method.invoke(dataObject, number.intValue());
+						} else if (Long.class.isAssignableFrom(type) || long.class.isAssignableFrom(type)) {
+							method.invoke(dataObject, number.longValue());
+						} else if (Byte.class.isAssignableFrom(type) || byte.class.isAssignableFrom(type)) {
+							method.invoke(dataObject, number.byteValue());
+						} else if (Double.class.isAssignableFrom(type) || double.class.isAssignableFrom(type)) {
+							method.invoke(dataObject, number.doubleValue());
+						} else if (Float.class.isAssignableFrom(type) || float.class.isAssignableFrom(type)) {
+							method.invoke(dataObject, number.floatValue());
+						}
+					} else {
+						method.invoke(dataObject, value);
+					}
+				} catch (IllegalArgumentException ex) {
+					String valueClassName;
+					if (value == null) {
+						valueClassName = "null";
+					} else {
+						valueClassName = value.getClass().getName();
+					}
+					throw new IllegalArgumentException("Method: " + method + ", Value: [" + valueClassName + ", " + value + "]", ex);
+				}
 			}
+
 		}
 		return dataObject;
 	}
@@ -488,5 +551,23 @@ public class ObjectUtil {
 		} else {
 			return Character.toUpperCase(property.charAt(0)) + property.substring(1);
 		}
+	}
+
+	/**
+	 * Returns true if the column names are case senstivie. Default: true
+	 */
+	public boolean isColumnNamesCaseSensitive() {
+		return isColumnNamesCaseSensitive;
+	}
+
+	/**
+	 * Enable or disable column name case sensitivity. Default: true
+	 * 
+	 * @param isColumnNamesCaseSensitive true to make column names case sensitive,
+	 *                                   false to make column names case
+	 *                                   insensitive.
+	 */
+	public void setColumnNamesCaseSensitive(boolean isColumnNamesCaseSensitive) {
+		this.isColumnNamesCaseSensitive = isColumnNamesCaseSensitive;
 	}
 }
