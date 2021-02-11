@@ -47,7 +47,10 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 
 	private static final Logger logger = LoggerFactory.getLogger(DebeziumKafkaSinkTask.class);
 	
-	private static final int MICRO_IN_MILLI = 1000;
+	/**
+	 * Source time factor. Date long values are divided by this number. 
+	 */
+	private static int TIME_FACTOR = Integer.getInteger("padogrid.data.time.factor", 1);
 
 	private ClientCache clientCache;
 	private boolean isDebugEnabled = false;
@@ -208,7 +211,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				// TODO: This is a hack. Support other types also.
 				if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
 					if (valueFieldValues[j] instanceof Number) {
-						valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
+						valueFieldValues[j] = new Date((long) valueFieldValues[j] / TIME_FACTOR);
 					}
 				}
 			}
@@ -299,7 +302,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 						// TODO: This is a hack. Support other types also.
 						if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
 							if (valueFieldValues[j] instanceof Number) {
-								valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
+								valueFieldValues[j] = new Date((long) valueFieldValues[j] / TIME_FACTOR);
 							}
 						}
 					}
