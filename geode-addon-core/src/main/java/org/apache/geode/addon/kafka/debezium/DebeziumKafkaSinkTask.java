@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * The {@link SinkRecord} argument of the {@link #put(Collection)} method
  * includes only the key record and does not include delete event information
- * needed to properly delete the entries in Gedoe/GemFire. Without the "before"
+ * needed to properly delete the entries in Geode/GemFire. Without the "before"
  * Struct data, we are left to construct the Geode/GemFire key object solely based
  * on the key record. For tables with the primary key, this should be sufficient
  * since the key record holds the the primary key. For those tables without the
@@ -244,15 +244,19 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 			// Struct objects expected
 			System.out.println("*************************key:" + sinkRecord.key().getClass().toString());
 			System.out.println("*************************value:" + sinkRecord.value().getClass().toString());
-			System.out.println(sinkRecord.key().toString());
-			System.out.println(sinkRecord.value().toString());
+			System.out.println("sinkeRecord.key()=" + sinkRecord.key().toString());
+			System.out.println("sinkRecord.value()=" + sinkRecord.value().toString());
 
 			Object keyFieldValues[] = null;
 			Object valueFieldValues[] = null;
 			boolean isDelete;
 			if (sinkRecord.key() instanceof Map) {
-				keyFieldValues = getFieldFromMap((Map) sinkRecord.key());
 				isDelete = sinkRecord.value() == null;
+				if (isDelete) {
+					keyFieldValues = getFieldFromMap((Map) sinkRecord.key());
+				} else {
+					keyFieldValues = getFieldFromMap((Map) sinkRecord.value());
+				}
 				if (sinkRecord.value() != null) {
 					valueFieldValues = getValueFieldsFromMap((Map) sinkRecord.value());
 				}
@@ -273,6 +277,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				if (isDebugEnabled) {
 					System.out.println("op=" + op);
 					System.out.println("isDelete = " + isDelete);
+					System.out.println("keyStruct = " + keyStruct);
 					System.out.println("afterStruct = " + afterStruct);
 					System.out.flush();
 				}
@@ -284,8 +289,19 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				}
 				if (keyColumnNames != null) {
 					keyFieldValues = new Object[keyColumnNames.length];
-					for (int j = 0; j < keyColumnNames.length; j++) {
-						keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+					if (isDelete) {
+						for (int j = 0; j < keyColumnNames.length; j++) {
+							keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+						}
+					} else {
+						// If not delete (in that case, only the keys are sent), then
+						// get key field values from the value, i.e., afterStruct.
+						// Note deletes may not be possible if non-primary keys are used
+						// to construct the Geode/GemFire keys since there are no value
+						// payloads.
+						for (int j = 0; j < keyColumnNames.length; j++) {
+							keyFieldValues[j] = afterStruct.get(keyColumnNames[j]);
+						}
 					}
 				}
 
