@@ -22,6 +22,8 @@ import org.apache.kafka.connect.sink.SinkTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.netcrest.pado.internal.util.ObjectConverter;
+
 /**
  * DebeziumKafkaSinkTask is a Kafka sink connector for receiving Debezium change
  * events. Use it for demo only until further notice.
@@ -398,6 +400,9 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 	public void stop() {
 		if (clientCache != null && clientCache.isClosed() == false) {
 			clientCache.close();
+			logger.info("DebeziumKafkaAvroSinkTask.stop() invoked. clientCache closed.");
+		} else {
+			logger.info("DebeziumKafkaAvroSinkTask.stop() invoked.");
 		}
 	}
 

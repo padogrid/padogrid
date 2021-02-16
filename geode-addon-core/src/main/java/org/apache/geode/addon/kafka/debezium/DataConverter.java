@@ -1,7 +1,9 @@
-package org.hazelcast.jet.addon.kafka.debezium;
+package org.apache.geode.addon.kafka.debezium;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -9,38 +11,40 @@ import java.util.UUID;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.specific.SpecificData;
-import org.hazelcast.addon.kafka.debezium.DebeziumKafkaAvroSinkConnector;
-import org.hazelcast.addon.kafka.debezium.ObjectConverter;
+import org.apache.geode.cache.Region;
+import org.apache.geode.cache.client.ClientCache;
+import org.apache.geode.cache.client.ClientCacheFactory;
+import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.sink.SinkRecord;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hazelcast.client.HazelcastClient;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.jet.Util;
-import com.hazelcast.map.IMap;
-import com.hazelcast.replicatedmap.ReplicatedMap;
+import com.netcrest.pado.gemfire.GemfireEntryImpl;
+import com.netcrest.pado.internal.util.ObjectConverter;
+
+import io.confluent.connect.avro.AvroData;
 
 /**
- * DataConverter converts raw entries to object entries and puts
- * them in Hazelcast IMDG if Hazelcast IMDG is enabled. An instance of
- * DataConverter is provided by {@linkplain TransformerContext} which
- * in turn is managed by {@linkplain JetConnector}.
+ * DataConverter converts raw entries to object entries and puts them in
+ * Geode/GemFire if Gedoe/GemFire is enabled.
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class DataConverter<K, V> {
 
 	private static final Logger logger = LoggerFactory.getLogger(DataConverter.class);
 
+	private ClientCache clientCache;
 	private boolean isDebugEnabled = false;
 
-	private HazelcastInstance hzInstance;
-	private String mapName;
-	private Map map;
-	private boolean isReplicatedMapEnabled = false;
+	private String gemfirePropertyFile;
+	private String gemfireClientFile;
+	private String regionPath;
+	private Region region;
 	private boolean isSmtEnabled = true;
 	private boolean isDeleteEnabled = true;
-	private boolean isHazelcastEnabled = true;
+	private boolean isGeodeEnabled = true;
 	private boolean isAvroDeepCopyEnabled = false;
 	private boolean isColumnNamesCaseSensitiveEnabled = true;
 	private boolean isKeyStructEnabled = false;
@@ -56,33 +60,31 @@ public class DataConverter<K, V> {
 	private Schema avroSchema;
 	int[] colocatedFieldIndexes = new int[0];
 
-	DataConverter(Map<String, String> props, HazelcastInstance imdg) {
-		this.hzInstance = imdg;
+	public DataConverter(Map<String, String> props) {
 		init(props);
 	}
 
 	private void init(Map<String, String> props) {
-		String hazelcastConfigFile = props.get(DebeziumKafkaAvroSinkConnector.HAZELCAST_CLIENT_CONFIG_FILE_CONFIG);
-		if (hazelcastConfigFile == null) {
-			hazelcastConfigFile = "/hazelcast-addon/etc/hazelcast-client.xml";
+		gemfirePropertyFile = props.get(DebeziumKafkaSinkConnector.GEMFIRE_PROPERTY_FILE_CONFIG);
+		if (gemfirePropertyFile == null) {
+			gemfirePropertyFile = "/padogrid/etc/client-gemfire.properties";
 		}
-		mapName = props.get(DebeziumKafkaAvroSinkConnector.MAP_CONFIG);
-		if (mapName == null) {
-			mapName = "map";
+		gemfireClientFile = props.get(DebeziumKafkaSinkConnector.GEMFIRE_CLIENT_CONFIG_FILE_CONFIG);
+		if (gemfireClientFile == null) {
+			gemfireClientFile = "/padogrid/etc/client-cache.xml";
 		}
-		String isReplicatedMapEnabledStr = props.get(DebeziumKafkaAvroSinkConnector.MAP_REPLICATED_MAP_ENABLED);
-		isReplicatedMapEnabled = isReplicatedMapEnabledStr != null && isReplicatedMapEnabledStr.equalsIgnoreCase("true")
-				? true
-				: isReplicatedMapEnabled;
+		regionPath = props.get(DebeziumKafkaSinkConnector.REGION_CONFIG);
+		if (regionPath == null) {
+			regionPath = "myregion";
+		}
 		String isDebugStr = props.get(DebeziumKafkaAvroSinkConnector.DEBUG_ENABLED);
 		isDebugEnabled = isDebugStr != null && isDebugStr.equalsIgnoreCase("true") ? true : isDebugEnabled;
 		String isSmtStr = props.get(DebeziumKafkaAvroSinkConnector.SMT_ENABLED);
 		isSmtEnabled = isSmtStr != null && isSmtStr.equalsIgnoreCase("false") ? false : isSmtEnabled;
 		String isDeleteStr = props.get(DebeziumKafkaAvroSinkConnector.DELETE_ENABLED);
 		isDeleteEnabled = isDeleteStr != null && isDeleteStr.equalsIgnoreCase("false") ? false : isDeleteEnabled;
-		String isHazelcastStr = props.get(DebeziumKafkaAvroSinkConnector.HAZELCAST_ENABLED);
-		isHazelcastEnabled = isHazelcastStr != null && isHazelcastStr.equalsIgnoreCase("false") ? false
-				: isHazelcastEnabled;
+		String isGeodeStr = props.get(DebeziumKafkaAvroSinkConnector.GEODE_ENABLED);
+		isGeodeEnabled = isGeodeStr != null && isGeodeStr.equalsIgnoreCase("false") ? false : isGeodeEnabled;
 		String isAvroDeepCopyStr = props.get(DebeziumKafkaAvroSinkConnector.AVRO_DEEP_COPY_ENABLED);
 		isAvroDeepCopyEnabled = isAvroDeepCopyStr != null && isAvroDeepCopyStr.equalsIgnoreCase("true") ? true
 				: isAvroDeepCopyEnabled;
@@ -168,8 +170,7 @@ public class DataConverter<K, V> {
 			System.out.print("classpath=" + classpathStr);
 
 			logger.info(props.toString());
-			logger.info("mapName=" + mapName);
-			logger.info("isReplicatedMapEnabled=" + isReplicatedMapEnabled);
+			logger.info("regionPath=" + regionPath);
 			logger.info("smtEnabled=" + isSmtEnabled);
 			logger.info("deleteEnabled=" + isDeleteEnabled);
 			logger.info("keyClassName=" + keyClassName);
@@ -234,17 +235,25 @@ public class DataConverter<K, V> {
 			throw new RuntimeException(e);
 		}
 
-		if (hzInstance == null) {
-			System.setProperty("hazelcast.client.config", hazelcastConfigFile);
-			hzInstance = HazelcastClient.newHazelcastClient();
+		if (isGeodeEnabled) {
+			System.setProperty(DebeziumKafkaSinkConnector.GEMFIRE_PROPERTY_FILE_CONFIG, gemfirePropertyFile);
+			System.setProperty(DebeziumKafkaSinkConnector.GEMFIRE_CLIENT_CONFIG_FILE_CONFIG, gemfireClientFile);
+			clientCache = new ClientCacheFactory().create();
+			region = clientCache.getRegion(regionPath);
 		}
-		if (isHazelcastEnabled) {
-			if (isReplicatedMapEnabled) {
-				map = hzInstance.getReplicatedMap(mapName);
-			} else {
-				map = hzInstance.getMap(mapName);
-			}
+	}
+	
+	private String[] getColumnNames(Struct structObj) {
+		if (structObj == null) {
+			return null;
 		}
+		List<Field> fieldList = structObj.schema().fields();
+		String[] columnNames = new String[fieldList.size()];
+		int j = 0;
+		for (Field field : fieldList) {
+			columnNames[j++] = field.name();
+		}
+		return columnNames;
 	}
 
 	private String[] getColumnNames(GenericData.Record record) {
@@ -272,10 +281,218 @@ public class DataConverter<K, V> {
 		jo.put("namespace", clazz.getPackage().getName());
 		return new Schema.Parser().parse(jo.toString());
 	}
+	
+	public void put(Collection<SinkRecord> records) {
+		HashMap keyValueMap = new HashMap();
+		int count = 0;
+		for (SinkRecord sinkRecord : records) {
+
+			org.apache.kafka.connect.data.Schema keySchema = sinkRecord.keySchema();
+			org.apache.kafka.connect.data.Schema valueSchema = sinkRecord.valueSchema();
+
+			if (isDebugEnabled) {
+				logger.info("sinkRecord=" + sinkRecord);
+				logger.info("keySchema=" + keySchema);
+				logger.info("valueSchema=" + valueSchema);
+				if (keySchema == null) {
+					logger.info("keyFields=null");
+				} else {
+					logger.info("keyFields=" + keySchema.fields());
+				}
+				if (valueSchema == null) {
+					logger.info("valueSchema=null");
+				} else {
+					logger.info("valueFields=" + valueSchema.fields());
+				}
+			}
+
+			// Struct objects expected
+			Object keyObj = sinkRecord.key();
+			Object valueObj = sinkRecord.value();
+
+			if (isDebugEnabled) {
+				if (keyObj == null) {
+					logger.info("keyObjType=null");
+				} else {
+					logger.info("keyObjType=" + keyObj.getClass().getName());
+				}				
+				logger.info("valueObj=" + valueObj.getClass().getName());
+				logger.info("keyObj=" + keyObj);
+				logger.info("valueObj=" + valueObj);
+			}
+
+			Struct keyStruct;
+			if (keyObj == null) {
+				keyStruct = null;
+			} else {
+				keyStruct = (Struct) keyObj;
+			}
+			Struct valueStruct = (Struct) sinkRecord.value();
+			boolean isDelete = valueStruct == null;
+			Object op = null;
+			if (valueStruct != null) {
+				op = valueStruct.get("op");
+				isDelete = op != null && op.toString().equals("d");
+			}
+
+			/*
+			 * Key
+			 */
+			Object key = null;
+
+			// Determine the key column names.
+			if (keyColumnNames == null) {
+				keyColumnNames = getColumnNames(keyStruct);
+			}
+
+			// If the key column names are not defined or cannot be determined then
+			// assign UUID for the key value
+			if (keyColumnNames == null) {
+				key = UUID.randomUUID().toString();
+			}
+
+			/*
+			 * Value
+			 */
+			Object value;
+
+			if (isAvroDeepCopyEnabled) {
+				AvroData avroData = new AvroData(1);
+				final GenericData.Record avro = (GenericData.Record) avroData.fromConnectData(valueSchema, valueStruct);
+				if (isDebugEnabled) {
+					logger.info("*******avro class=" + avro.getClass().getName());
+					logger.info("*******avro=" + avro);
+				}
+
+				GenericData.Record after = (GenericData.Record) avro.get("after");
+
+				if (isDebugEnabled) {
+					if (after == null) {
+						logger.info("after=null");
+					} else {
+						logger.info("afterClass=" + after.getClass().getName());
+						logger.info("after=" + after);
+					}
+				}
+
+				value = SpecificData.get().deepCopy(avroSchema, after);
+			
+				if (key == null) {
+					Object keyFieldValues[] = new Object[keyColumnNames.length];
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = after.get(keyColumnNames[j]);
+					}
+					try {
+						key = objConverter.createKeyObject(keyFieldValues);
+					} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+							| InvocationTargetException | ParseException e) {
+						throw new RuntimeException(e);
+					}
+				}
+
+			} else {
+
+				Struct afterStruct = null;
+				if (isSmtEnabled) {
+					afterStruct = valueStruct;
+				} else if (valueStruct != null) {
+					afterStruct = (Struct) valueStruct.get("after");
+				}
+				if (isDebugEnabled) {
+					logger.info("op=" + op);
+					logger.info("isDelete=" + isDelete);
+					logger.info("afterStruct=" + afterStruct);
+				}
+
+				// Determine the value column names.
+				if (valueColumnNames == null) {
+					valueColumnNames = getColumnNames(valueStruct);
+				}
+				Object valueFieldValues[] = new Object[valueColumnNames.length];
+				Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
+				for (int j = 0; j < valueColumnNames.length; j++) {
+					valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
+				}
+				try {
+					value = objConverter.createValueObject(valueFieldValues);
+				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+						| InvocationTargetException | ParseException e) {
+					throw new RuntimeException(e);
+				}
+
+				if (isDebugEnabled) {
+					for (int j = 0; j < valueColumnNames.length; j++) {
+						logger.info(
+								"valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
+					}
+				}
+				
+				if (key == null) {
+					Object keyFieldValues[] = new Object[keyColumnNames.length];
+					for (int j = 0; j < keyColumnNames.length; j++) {
+						keyFieldValues[j] = afterStruct.get(keyColumnNames[j]);
+					}
+					try {
+						key = objConverter.createKeyObject(keyFieldValues);
+					} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+							| InvocationTargetException | ParseException e) {
+						throw new RuntimeException(e);
+					}
+				}
+
+				if (colocatedFieldIndexes.length > 0) {
+					String keyStr = key.toString() + "@";
+					String dot = "";
+					for (int index : colocatedFieldIndexes) {
+						if (valueFieldValues[index] == null) {
+							keyStr = keyStr + dot + "null";
+						} else {
+							keyStr = keyStr + dot + valueFieldValues[index].toString();
+						}
+						dot = ".";
+					}
+					key = keyStr;
+				}
+			}
+
+			if (isDebugEnabled) {
+				logger.info("**** key class=" + key.getClass().getName());
+				logger.info("**** key=" + key);
+			}
+
+			if (isDeleteEnabled && isDelete) {
+				if (isGeodeEnabled) {
+					// Invoke delete() to avoid returning previous value
+					region.destroy(key);
+				}
+				continue;
+			}
+			
+			if (isDebugEnabled) {
+				logger.info("**** value class=" + value.getClass().getName());
+				logger.info("**** value=" + value);
+			}
+
+			keyValueMap.put(key, value);
+			count++;
+			if (count % 100 == 0) {
+				if (isGeodeEnabled) {
+					region.putAll(keyValueMap);
+				}
+				keyValueMap.clear();
+			}
+		}
+		if (count % 100 > 0) {
+			if (isGeodeEnabled) {
+				region.putAll(keyValueMap);
+			}
+			keyValueMap.clear();
+		}
+	}
 
 	/**
-	 * Converts the specified GenericData.Record entry in object form and puts it in Hazelcast
-	 * IMDG if it is enabled.
+	 * Converts the specified GenericData.Record entry in object form and puts it in
+	 * Geode/GEmFire if it is enabled.
 	 * 
 	 * @param entry Key/value entry of GenericData records.
 	 * @return Converted key/value objects
@@ -401,23 +618,13 @@ public class DataConverter<K, V> {
 			logger.info("**** key=" + key);
 		}
 
-		if (isDeleteEnabled && isDelete) {
-			if (isHazelcastEnabled) {
-				if (isReplicatedMapEnabled) {
-					// ReplicatedMap has no support for delete that has void return type
-					map.remove(key);
-				} else {
-					// Invoke delete() to avoid returning previous value
-					((IMap) map).delete(key);
-				}
+		if (isGeodeEnabled) {
+			if (isDeleteEnabled && isDelete) {
+				region.remove(key);
 			}
-		}
-		if (isHazelcastEnabled) {
-			if (map instanceof ReplicatedMap) {
-				map.put(key, value);
-			} else {
-				((IMap) map).set(key, value);
-			}
+		} else {
+			region.put(key, value);
+
 		}
 
 		if (isDebugEnabled) {
@@ -425,6 +632,21 @@ public class DataConverter<K, V> {
 			logger.info("**** value=" + value);
 		}
 
-		return Util.entry(key, value);
+		return new GemfireEntryImpl(key, value);
 	}
+	
+	public String getRegionPath()
+	{
+		return regionPath;
+	}
+	
+	public void close() {
+		if (clientCache != null && clientCache.isClosed() == false) {
+			clientCache.close();
+			logger.info("DebeziumKafkaAvroSinkTask.stop() invoked. clientCache closed.");
+		} else {
+			logger.info("DebeziumKafkaAvroSinkTask.stop() invoked.");
+		}
+	}
+
 }
