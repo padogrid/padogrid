@@ -50,8 +50,8 @@ public class DataConverter<K, V> {
 	private boolean isKeyStructEnabled = false;
 	private String keyClassName;
 	private String valueClassName;
-	private Schema keyAvroSchema;
-	private Schema valueAvroSchema;
+//	private Schema keyAvroSchema;
+//	private Schema valueAvroSchema;
 	private String[] keyColumnNames;
 	private String[] keyFieldNames;
 	private String[] valueColumnNames;
@@ -62,6 +62,11 @@ public class DataConverter<K, V> {
 
 	public DataConverter(Map<String, String> props) {
 		init(props);
+	}
+	
+	private void log(String message) {
+//		logger.info(message);
+		System.out.println(message);
 	}
 
 	private void init(Map<String, String> props) {
@@ -97,14 +102,15 @@ public class DataConverter<K, V> {
 				: isKeyStructEnabled;
 		keyClassName = props.get(DebeziumKafkaAvroSinkConnector.KEY_CLASS_NAME_CONFIG);
 		valueClassName = props.get(DebeziumKafkaAvroSinkConnector.VALUE_CLASS_NAME_CONFIG);
-		if (valueClassName != null) {
-			try {
-				valueAvroSchema = getAvroSchema(valueClassName);
-			} catch (ClassNotFoundException | IllegalArgumentException | IllegalAccessException
-					| NoSuchFieldException ex) {
-				throw new RuntimeException("Invalid Avro value class [" + valueClassName + "]", ex);
-			}
-		}
+		
+//		if (valueClassName != null) {
+//			try {
+//				valueAvroSchema = getAvroSchema(valueClassName);
+//			} catch (ClassNotFoundException | IllegalArgumentException | IllegalAccessException
+//					| NoSuchFieldException ex) {
+//				throw new RuntimeException("Invalid Avro value class [" + valueClassName + "]", ex);
+//			}
+//		}
 
 		// Key
 		String cnames = props.get(DebeziumKafkaAvroSinkConnector.KEY_COLUMN_NAMES_CONFIG);
@@ -165,52 +171,53 @@ public class DataConverter<K, V> {
 		}
 
 		if (isDebugEnabled) {
-			logger.info("====================================================================================");
+			log("====================================================================================");
 			String classpathStr = System.getProperty("java.class.path");
 			System.out.print("classpath=" + classpathStr);
 
-			logger.info(props.toString());
-			logger.info("regionPath=" + regionPath);
-			logger.info("smtEnabled=" + isSmtEnabled);
-			logger.info("deleteEnabled=" + isDeleteEnabled);
-			logger.info("keyClassName=" + keyClassName);
-			logger.info("keyColumnNames");
+			log(props.toString());
+			log("isDebugEnabled=" + isDebugEnabled);
+			log("regionPath=" + regionPath);
+			log("smtEnabled=" + isSmtEnabled);
+			log("deleteEnabled=" + isDeleteEnabled);
+			log("keyClassName=" + keyClassName);
+			log("keyColumnNames");
 			if (keyColumnNames == null) {
-				logger.info("keyColumnNames=null");
+				log("keyColumnNames=null");
 			} else {
-				logger.info("keyColumnNames");
+				log("keyColumnNames");
 				for (int i = 0; i < keyColumnNames.length; i++) {
-					logger.info("   [" + i + "] " + keyColumnNames[i]);
+					log("   [" + i + "] " + keyColumnNames[i]);
 				}
 			}
 			if (keyFieldNames == null) {
-				logger.info("keyFieldNames=null");
+				log("keyFieldNames=null");
 			} else {
-				logger.info("keyFieldNames");
+				log("keyFieldNames");
 				for (int i = 0; i < keyFieldNames.length; i++) {
-					logger.info("   [" + i + "] " + keyFieldNames[i]);
+					log("   [" + i + "] " + keyFieldNames[i]);
 				}
 			}
-			logger.info("valueClassName=" + valueClassName);
-			logger.info("valueColumnNames");
+			log("valueClassName=" + valueClassName);
+			log("valueColumnNames");
 			for (int i = 0; i < valueColumnNames.length; i++) {
-				logger.info("   [" + i + "] " + valueColumnNames[i]);
+				log("   [" + i + "] " + valueColumnNames[i]);
 			}
-			logger.info("valueFieldNames");
+			log("valueFieldNames");
 			for (int i = 0; i < valueFieldNames.length; i++) {
-				logger.info("   [" + i + "] " + valueFieldNames[i]);
+				log("   [" + i + "] " + valueFieldNames[i]);
 			}
 			if (colocatedFieldIndexes.length == 0) {
-				logger.info("partitionAwareIndexes: undefined");
+				log("partitionAwareIndexes: undefined");
 			} else {
-				logger.info("partitionAwareIndexes");
+				log("partitionAwareIndexes");
 				for (int i = 0; i < colocatedFieldIndexes.length; i++) {
-					logger.info("   [" + i + "] " + colocatedFieldIndexes[i] + ": "
+					log("   [" + i + "] " + colocatedFieldIndexes[i] + ": "
 							+ valueFieldNames[colocatedFieldIndexes[i]]);
 				}
 			}
 
-			logger.info("====================================================================================");
+			log("====================================================================================");
 		}
 		try {
 			objConverter = new ObjectConverter(keyClassName, keyFieldNames, valueClassName, valueFieldNames);
@@ -219,20 +226,22 @@ public class DataConverter<K, V> {
 			throw new RuntimeException(e);
 		}
 
-		Class<?> clazz;
-		try {
-			clazz = Class.forName(valueClassName);
-			java.lang.reflect.Field field = (java.lang.reflect.Field) clazz.getField("SCHEMA$");
-			avroSchema = (Schema) field.get(null);
-
-			// Create a new schema in case the specified class is a wrapper class.
-			JSONObject jo = new JSONObject(avroSchema.toString());
-			jo.put("name", clazz.getSimpleName());
-			jo.put("namespace", clazz.getPackage().getName());
-			avroSchema = new Schema.Parser().parse(jo.toString());
-
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		if (isAvroDeepCopyEnabled) {
+			Class<?> clazz;
+			try {
+				clazz = Class.forName(valueClassName);
+				java.lang.reflect.Field field = (java.lang.reflect.Field) clazz.getField("SCHEMA$");
+				avroSchema = (Schema) field.get(null);
+	
+				// Create a new schema in case the specified class is a wrapper class.
+				JSONObject jo = new JSONObject(avroSchema.toString());
+				jo.put("name", clazz.getSimpleName());
+				jo.put("namespace", clazz.getPackage().getName());
+				avroSchema = new Schema.Parser().parse(jo.toString());
+	
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		if (isGeodeEnabled) {
@@ -291,18 +300,18 @@ public class DataConverter<K, V> {
 			org.apache.kafka.connect.data.Schema valueSchema = sinkRecord.valueSchema();
 
 			if (isDebugEnabled) {
-				logger.info("sinkRecord=" + sinkRecord);
-				logger.info("keySchema=" + keySchema);
-				logger.info("valueSchema=" + valueSchema);
+				log("sinkRecord=" + sinkRecord);
+				log("keySchema=" + keySchema);
+				log("valueSchema=" + valueSchema);
 				if (keySchema == null) {
-					logger.info("keyFields=null");
+					log("keyFields=null");
 				} else {
-					logger.info("keyFields=" + keySchema.fields());
+					log("keyFields=" + keySchema.fields());
 				}
 				if (valueSchema == null) {
-					logger.info("valueSchema=null");
+					log("valueSchema=null");
 				} else {
-					logger.info("valueFields=" + valueSchema.fields());
+					log("valueFields=" + valueSchema.fields());
 				}
 			}
 
@@ -312,13 +321,13 @@ public class DataConverter<K, V> {
 
 			if (isDebugEnabled) {
 				if (keyObj == null) {
-					logger.info("keyObjType=null");
+					log("keyObjType=null");
 				} else {
-					logger.info("keyObjType=" + keyObj.getClass().getName());
+					log("keyObjType=" + keyObj.getClass().getName());
 				}				
-				logger.info("valueObj=" + valueObj.getClass().getName());
-				logger.info("keyObj=" + keyObj);
-				logger.info("valueObj=" + valueObj);
+				log("valueObj=" + valueObj.getClass().getName());
+				log("keyObj=" + keyObj);
+				log("valueObj=" + valueObj);
 			}
 
 			Struct keyStruct;
@@ -360,18 +369,18 @@ public class DataConverter<K, V> {
 				AvroData avroData = new AvroData(1);
 				final GenericData.Record avro = (GenericData.Record) avroData.fromConnectData(valueSchema, valueStruct);
 				if (isDebugEnabled) {
-					logger.info("*******avro class=" + avro.getClass().getName());
-					logger.info("*******avro=" + avro);
+					log("*******avro class=" + avro.getClass().getName());
+					log("*******avro=" + avro);
 				}
 
 				GenericData.Record after = (GenericData.Record) avro.get("after");
 
 				if (isDebugEnabled) {
 					if (after == null) {
-						logger.info("after=null");
+						log("after=null");
 					} else {
-						logger.info("afterClass=" + after.getClass().getName());
-						logger.info("after=" + after);
+						log("afterClass=" + after.getClass().getName());
+						log("after=" + after);
 					}
 				}
 
@@ -399,9 +408,9 @@ public class DataConverter<K, V> {
 					afterStruct = (Struct) valueStruct.get("after");
 				}
 				if (isDebugEnabled) {
-					logger.info("op=" + op);
-					logger.info("isDelete=" + isDelete);
-					logger.info("afterStruct=" + afterStruct);
+					log("op=" + op);
+					log("isDelete=" + isDelete);
+					log("afterStruct=" + afterStruct);
 				}
 
 				// Determine the value column names.
@@ -422,7 +431,7 @@ public class DataConverter<K, V> {
 
 				if (isDebugEnabled) {
 					for (int j = 0; j < valueColumnNames.length; j++) {
-						logger.info(
+						log(
 								"valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
 					}
 				}
@@ -456,8 +465,8 @@ public class DataConverter<K, V> {
 			}
 
 			if (isDebugEnabled) {
-				logger.info("**** key class=" + key.getClass().getName());
-				logger.info("**** key=" + key);
+				log("**** key class=" + key.getClass().getName());
+				log("**** key=" + key);
 			}
 
 			if (isDeleteEnabled && isDelete) {
@@ -469,8 +478,8 @@ public class DataConverter<K, V> {
 			}
 			
 			if (isDebugEnabled) {
-				logger.info("**** value class=" + value.getClass().getName());
-				logger.info("**** value=" + value);
+				log("**** value class=" + value.getClass().getName());
+				log("**** value=" + value);
 			}
 
 			keyValueMap.put(key, value);
@@ -501,16 +510,16 @@ public class DataConverter<K, V> {
 		GenericData.Record keyRecord = (GenericData.Record) entry.getKey();
 		GenericData.Record valueRecord = (GenericData.Record) entry.getValue();
 
-		if (isDebugEnabled) {
-			logger.info("keySchema=" + keyAvroSchema);
-			logger.info("valueSchema=" + valueAvroSchema);
-			if (keyAvroSchema != null) {
-				logger.info("keyFields=" + keyAvroSchema.getFields());
-			}
-			if (valueAvroSchema != null) {
-				logger.info("valueAvroFields=" + valueAvroSchema.getFields());
-			}
-		}
+//		if (isDebugEnabled) {
+//			log("keySchema=" + keyAvroSchema);
+//			log("valueSchema=" + valueAvroSchema);
+//			if (keyAvroSchema != null) {
+//				log("keyFields=" + keyAvroSchema.getFields());
+//			}
+//			if (valueAvroSchema != null) {
+//				log("valueAvroFields=" + valueAvroSchema.getFields());
+//			}
+//		}
 
 		boolean isDelete = valueRecord == null;
 		Object op = null;
@@ -581,7 +590,7 @@ public class DataConverter<K, V> {
 
 			if (isDebugEnabled) {
 				for (int j = 0; j < valueColumnNames.length; j++) {
-					logger.info("valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
+					log("valueColumnNames[" + j + "] = " + valueColumnNames[j] + ": " + valueFieldValues[j]);
 				}
 			}
 
@@ -614,8 +623,8 @@ public class DataConverter<K, V> {
 		}
 
 		if (isDebugEnabled) {
-			logger.info("**** key class=" + key.getClass().getName());
-			logger.info("**** key=" + key);
+			log("**** key class=" + key.getClass().getName());
+			log("**** key=" + key);
 		}
 
 		if (isGeodeEnabled) {
@@ -628,8 +637,8 @@ public class DataConverter<K, V> {
 		}
 
 		if (isDebugEnabled) {
-			logger.info("**** value class=" + value.getClass().getName());
-			logger.info("**** value=" + value);
+			log("**** value class=" + value.getClass().getName());
+			log("**** value=" + value);
 		}
 
 		return new GemfireEntryImpl(key, value);
@@ -643,9 +652,9 @@ public class DataConverter<K, V> {
 	public void close() {
 		if (clientCache != null && clientCache.isClosed() == false) {
 			clientCache.close();
-			logger.info("DebeziumKafkaAvroSinkTask.stop() invoked. clientCache closed.");
+			log("DebeziumKafkaAvroSinkTask.stop() invoked. clientCache closed.");
 		} else {
-			logger.info("DebeziumKafkaAvroSinkTask.stop() invoked.");
+			log("DebeziumKafkaAvroSinkTask.stop() invoked.");
 		}
 	}
 
