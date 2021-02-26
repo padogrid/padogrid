@@ -182,7 +182,11 @@ function writeCluster()
       done
       sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
    else
-      cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
+         cp $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
+      else
+         cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+       fi
    fi
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
