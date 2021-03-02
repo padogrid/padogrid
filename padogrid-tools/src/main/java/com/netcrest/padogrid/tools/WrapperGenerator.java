@@ -32,7 +32,7 @@ public class WrapperGenerator {
 	public final static String PDX_WRAPPER_CLASS_TEMPLAGE = "PdxWrapperClassTemplate.txt";
 	public final static String SIMPLE_WRAPPER_CLASS_TEMPLATE = "WrapperClassTemplate.txt";
 
-	enum WrapperType {
+	public enum WrapperType {
 		simple, pdx
 	}
 

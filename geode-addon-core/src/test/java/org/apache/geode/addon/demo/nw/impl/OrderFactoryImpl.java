@@ -29,7 +29,8 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 		Company company = faker.company();
 		order.setCustomerId(faker.idNumber().invalidSvSeSsn());
 		order.setEmployeeId(faker.idNumber().invalidSvSeSsn());
-		order.setFreight(200 * random.nextDouble());
+		// Round to 2 digits after the decimal point
+		order.setFreight(Math.round(10000 * random.nextDouble())/100d);
 		order.setOrderDate(faker.date().past(7, TimeUnit.DAYS));
 		order.setOrderId(faker.idNumber().invalidSvSeSsn());
 		order.setRequiredDate(faker.date().future(10, TimeUnit.DAYS, order.getOrderDate()));
