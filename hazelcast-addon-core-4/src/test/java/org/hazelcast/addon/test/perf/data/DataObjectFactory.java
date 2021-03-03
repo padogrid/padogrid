@@ -27,7 +27,7 @@ public interface DataObjectFactory {
 	 * Creates a new key/value entry with the specified ID.
 	 * 
 	 * @param idNum ID for constructing the unique key
-	 * @param erKey If null or {@link #isEr()} if false then there are no
+	 * @param erKey If null or {@link #isEr()} is false then there are no
 	 *              relationship and this argument is ignored.
 	 * @return an entry with the specified idNum as part of the primary key
 	 */

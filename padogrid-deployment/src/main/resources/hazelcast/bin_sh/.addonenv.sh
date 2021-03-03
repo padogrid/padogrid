@@ -304,7 +304,7 @@ HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
 # Disagnostics logging
 DEFAULT_DIAGNOSTICS_ENABLED="true"
 DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
--Dhazelcast.diagnostics.metric.level=info \
+-Dhazelcast.diagnostics.metric.level=Debug \
 -Dhazelcast.diagnostics.invocation.sample.period.seconds=30 \
 -Dhazelcast.diagnostics.pending.invocations.period.seconds=30 \
 -Dhazelcast.diagnostics.slowoperations.period.seconds=30 \
@@ -576,7 +576,9 @@ else
       fi
    fi
 fi
-HAZELCAST_MAJOR_VERSION_NUMBER=`expr "$HAZELCAST_VERSION" : '\([0-9]*\)'`
+HAZELCAST_MAJOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[1]'})
+HAZELCAST_MINOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[2]'})
+#HAZELCAST_MAJOR_VERSION_NUMBER=`expr "$HAZELCAST_VERSION" : '\([0-9]*\)'`
 PRODUCT_VERSION=$HAZELCAST_VERSION
 PRODUCT_MAJOR_VERSION=$HAZELCAST_MAJOR_VERSION_NUMBER
 
