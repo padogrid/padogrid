@@ -1737,9 +1737,9 @@ cat <<EOF
 | _|    /__/     \__\ |_______/ \______/   \______| | _| '._____||__| |_______/ 
 Copyright 2020 Netcrest Technologies, LLC. All rights reserved.
 v$PADOGRID_VERSION
-Manual: https://github.com/padogrid/padogrid/wiki
-
 EOF
+echo -e "Manual: ${CUrl}https://github.com/padogrid/padogrid/wiki${CNone}"
+echo ""
 
       RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       echo "Root Workspaces Environments (RWEs)"
