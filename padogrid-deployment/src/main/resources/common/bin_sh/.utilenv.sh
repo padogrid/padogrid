@@ -1776,6 +1776,9 @@ echo ""
          let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
          for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
             local WORKSPACE=${WORKSPACES[$j]}
+            if [ ! -f $RWE_HOME/$RWE/$WORKSPACE/.addonenv.sh ]; then
+               continue;
+            fi
             local WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$RWE_HOME/$RWE")
             if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
@@ -1835,7 +1838,8 @@ function getWorkspaceInfoList
 
    local CLUSTER_TYPE=$(grep "CLUSTER_TYPE" $WORKSPACE_PATH/.addonenv.sh)
    CLUSTER_TYPE=$(echo "$CLUSTER_TYPE" | sed 's/^.*=//')
-   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh")
+   # Remove blank lines from grep results. Pattern includes space and tab.
+   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
    local PRODUCT_VERSION
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//')
@@ -1877,7 +1881,9 @@ function getWorkspaceInfoList
       VM_WORKSPACE=""
    fi
    PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
-   PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/^.*padogrid_//' -e 's/"//')
+   # Remove blank lines from grep results. Pattern includes space and tab.
+   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
+   PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
    echo "${VM_WORKSPACE}${CLUSTER_TYPE}_${PRODUCT_VERSION}, padogrid_$PADOGRID_VERSION"
 }
 
