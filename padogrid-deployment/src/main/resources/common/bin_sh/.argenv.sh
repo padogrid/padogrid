@@ -48,7 +48,6 @@ HAZELCAST_ARG=
 PATH_ARG=
 JAR_ARG=
 CLASSPATH_ARG=
-DATAGRID_ARG=
 JET_ARG=
 NAME_ARG=
 PORT_ARG=
@@ -169,8 +168,6 @@ do
       JAR_ARG=$i
    elif [ "$PREV" == "-classpath" ]; then
       CLASSPATH_ARG=$i
-   elif [ "$PREV" == "-datagrid" ]; then
-      DATAGRID_ARG=$i
    elif [ "$PREV" == "-jet" ]; then
       JET_ARG=$i
    elif [ "$PREV" == "-name" ]; then

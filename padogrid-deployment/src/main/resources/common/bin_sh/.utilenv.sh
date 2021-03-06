@@ -1150,9 +1150,10 @@ function switch_rwe
       . $PARENT_DIR/$1/initenv.sh -quiet
    fi
    if [ "$2" != "" ]; then
-      switch_workspace $2
+      shift 1
+      switch_workspace $@
    else
-      cd_rwe $1
+      cd_rwe $@
    fi
 }
 
@@ -1230,7 +1231,7 @@ function switch_workspace
       fi
       . $PADOGRID_WORKSPACES_HOME/$1/initenv.sh -quiet
    fi
-   cd_workspace $1
+   cd_workspace $@
 }
 
 # 
@@ -1276,7 +1277,7 @@ function switch_cluster
    if [ "$1" != "" ]; then
       export CLUSTER=$1
    fi
-   cd_cluster $CLUSTER
+   cd_cluster $@
 }
 
 #
@@ -1327,14 +1328,17 @@ function cd_rwe
       if [ ! -d "$PARENT_DIR/$1" ]; then
          echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
          return 1
-      elif [ "$2" != "" ]; then
-         if [ ! -d "$PARENT_DIR/$1/$2" ]; then
-            echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
-         cd $PARENT_DIR/$1/$2
-      else
-         cd $PARENT_DIR/$1
+         cd "$DIR"
       fi
    fi
    pwd
@@ -1381,7 +1385,22 @@ function cd_workspace
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE
    else
-      cd $PADOGRID_WORKSPACES_HOME/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACES_HOME"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1406,7 +1425,7 @@ function cd_pod
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [pod_name] [-?]"
+      echo "   $EXECUTABLE [pad_name] [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Changes directory to the specified pod."
@@ -1415,6 +1434,9 @@ function cd_pod
       echo "   pod_name" 
       echo "             Pod name. If not specified then changes to the"
       echo "             current pod directory."
+      echo ""
+      echo "   directory"
+      echo "             Directory name. One or more nested directory names within the specified app."
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1430,18 +1452,23 @@ function cd_pod
    fi
 
    if [ "$1" == "" ]; then
-      if [ -d $PADOGRID_WORKSPACE/pods/$POD ]; then
-         cd $PADOGRID_WORKSPACE/pods/$POD
-         pwd
-      else
-         echo >&2 "ERROR: Pod does not exist [$POD]. Command aborted."
-      fi
+      cd $PADOGRID_WORKSPACE/pods/$POD
    else
-      if [ -d $PADOGRID_WORKSPACE/pods/$1 ]; then
-         cd $PADOGRID_WORKSPACE/pods/$1
-         pwd
+      local PARENT_DIR="$PADOGRID_WORKSPACE/pods"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         return 1
       else
-         echo >&2 "ERROR: Pod does not exist [$1]. Command aborted."
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
       fi
    fi
 }
@@ -1479,7 +1506,7 @@ function cd_cluster
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Changes directory to the specified cluster."
@@ -1488,6 +1515,9 @@ function cd_cluster
       echo "   cluster_name" 
       echo "             Cluster name. If not specified then changes to the"
       echo "             current cluster directory."
+      echo ""
+      echo "   directory"
+      echo "             Directory name. One or more nested directory names within the specified app."
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1505,7 +1535,22 @@ function cd_cluster
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/clusters/$CLUSTER
    else
-      cd $PADOGRID_WORKSPACE/clusters/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/clusters"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1530,7 +1575,7 @@ function cd_k8s
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Changes directory to the specified Kubernetes directory."
@@ -1539,6 +1584,9 @@ function cd_k8s
       echo "   cluster_name"
       echo "             Kubernetes cluster name. If not specified then changes to the"
       echo "             current Kubernetes cluster directory."
+      echo ""
+      echo "   directory"
+      echo "             Directory name. One or more nested directory names within the specified app."
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1556,7 +1604,22 @@ function cd_k8s
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/k8s/$K8S
    else
-      cd $PADOGRID_WORKSPACE/k8s/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/k8s"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1581,7 +1644,7 @@ function cd_docker
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name] [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Changes directory to the specified Docker cluster."
@@ -1590,6 +1653,9 @@ function cd_docker
       echo "   cluster_name"
       echo "             Docker cluster name. If not specified then changes to the"
       echo "             current Docker cluster directory."
+      echo ""
+      echo "   directory"
+      echo "             Directory name. One or more nested directory names within the specified app."
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1607,7 +1673,22 @@ function cd_docker
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/docker/$DOCKER
    else
-      cd $PADOGRID_WORKSPACE/docker/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/docker"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid docker name. Docker name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1633,15 +1714,18 @@ function cd_app
       echo "                 padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [app_name] [-?]"
+      echo "   $EXECUTABLE [app_name [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Changes directory to the specified app."
       echo ""
       echo "OPTIONS"
       echo "   app_name"
-      echo "             App name. If not specified then changes to the"
-      echo "             current app directory."
+      echo "             App name. If not specified then changes to the current app directory."
+      echo ""
+      echo "   directory"
+      echo "             Directory name. One or more nested directory names within the specified app."
+
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1659,7 +1743,22 @@ function cd_app
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/apps/$APP
    else
-      cd $PADOGRID_WORKSPACE/apps/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/apps"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid app name. App name does not exist. Command aborted."
+         return 1
+      else 
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
