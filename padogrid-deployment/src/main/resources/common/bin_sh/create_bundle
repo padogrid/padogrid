@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -pod -k8s -docker -app -all -quiet -?"
+   echo "-cluster -workspace -pod -k8s -docker -app -all -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -31,11 +31,22 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
+#
+# Set workspace and its path
+#
+if [ "$WORKSPACE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "default" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+   WORKSPACE_PATH="$PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG"
+else
+   WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+   WORKSPACE_PATH="$PADOGRID_WORKSPACE"
+fi
+
 if [ "$HELP" == "true" ]; then
 cat <<EOF
 
 WORKSPACE
-   $PADOGRID_WORKSPACE
+   $WORKSPACE_PATH
 
 NAME
    $EXECUTABLE - Create a bundle tar ball that includes the files that may have been
@@ -47,12 +58,13 @@ SYNOPSIS
                [-k8s kubernetes_cluster_name] 
                [-docker docker_cluster_name] 
                [-app app_name] 
+               [-workspace default | workspace_name]
                [-all] 
                [-quiet] [-?]
 
 DESCRIPTION
    Creates a bundle tar ball that includes the files that may have been modified or added
-   in the current padogrid workspace. The created bundle can be used as a backup, 
+   in the current or specified padogrid workspace. The created bundle can be used as a backup, 
    for a migration to a new version of padogrid, or for a distribution to another
    padogrid environment.
 
@@ -103,6 +115,10 @@ cat <<EOF
              apps/app_name/plugins
              apps/app_name/export
 
+   -workspace default | workspace_name
+             If specified, then the specified workspace's contents are bundled.  If the
+             workspace name is 'default', then the current workspace is bundled.
+
    -all
              Bundle all files including all clusters, pods and apps.
 
@@ -135,7 +151,7 @@ DEFAULT
    $EXECUTABLE -cluster $CLUSTER
 
 FILES
-   $PADOGRID_WORKSPACE/bundles
+   $WORKSPACE_PATH/bundles
              The current workspace bundles directory where locally generated bundles are stored.
 
 EOF
@@ -147,6 +163,14 @@ EOF
    exit
 fi
 
+# 
+# Exit if the specified workspace does not exist
+#
+if [ ! -d "$WORKSPACE_PATH" ]; then
+  echo >&2 "ERROR: Specified workspace does not exist: [$WORKSPACE]. Command aborted."
+  exit 1
+fi
+
 #
 # Override the default cluster if -cluster is not specified.
 #
@@ -154,13 +178,13 @@ fi
 #
 # Bundle files
 #
-BUNDLE_DIR=$PADOGRID_WORKSPACE/bundles
+BUNDLE_DIR=$WORKSPACE_PATH/bundles
 if [ ! -d $BUNDLE_DIR ]; then
    mkdir -p $BUNDLE_DIR
 fi
 
 # Create the temp bundle dir where all of the files will be temporarily placed.
-TMP_BUNDLE_DIR="$PADOGRID_WORKSPACE/tmp/bundles"
+TMP_BUNDLE_DIR="$WORKSPACE_PATH/tmp/bundles"
 if [ -d $TMP_BUNDLE_DIR ]; then
    rm -rf $TMP_BUNDLE_DIR
 fi
@@ -209,7 +233,7 @@ else
    if [ "$APP" != "" ]; then
       if  [ "`isAppExist $APP`" == "false" ]; then 
          echo "----------------------------------------------------------------"
-         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "WORKSPACE: $WORKSPACE_PATH"
          echo "    ERROR: Undefined app: [$APP]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
@@ -221,7 +245,7 @@ else
       if [ "$CLUSTER" != "" ]; then
          if  [ "`isClusterExist $CLUSTER`" == "false" ]; then 
             echo "----------------------------------------------------------------"
-            echo "WORKSPACE: $PADOGRID_WORKSPACE"
+            echo "WORKSPACE: $WORKSPACE_PATH"
             echo "    ERROR: Undefined cluster: [$CLUSTER]. Command aborted."
             echo "----------------------------------------------------------------"
             exit 1
@@ -236,7 +260,7 @@ else
    if [ "$DOCKER" != "" ]; then
       if  [ "`isDockerExist $DOCKER`" == "false" ]; then
          echo "----------------------------------------------------------------"
-         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "WORKSPACE: $WORKSPACE_PATH"
          echo "    ERROR: Undefined Docker: [$DOCKER]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
@@ -250,7 +274,7 @@ else
    if [ "$K8S" != "" ]; then
       if  [ "`isK8sExist $K8S`" == "false" ]; then
          echo "----------------------------------------------------------------"
-         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "WORKSPACE: $WORKSPACE_PATH"
          echo "    ERROR: Undefined Kubernetes: [$K8S]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
@@ -267,7 +291,7 @@ else
    if [ "$POD" != "" ]; then
       if  [ "`isPodExist $POD`" == "false" ]; then 
          echo "----------------------------------------------------------------"
-         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "WORKSPACE: $WORKSPACE_PATH"
          echo "    ERROR: Undefined pod: [$POD]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
@@ -439,7 +463,8 @@ fi
 #
 # Display bundle info
 #
-echo "     WORKSPACE: $PADOGRID_WORKSPACE"
+echo ""
+echo "     WORKSPACE: $WORKSPACE_PATH"
 echo "Bundle Created:"
 echo "   $BUNDLE_TAR_FILE_PATH"
 echo ""

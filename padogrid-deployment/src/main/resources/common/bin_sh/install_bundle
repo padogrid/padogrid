@@ -47,8 +47,13 @@ WARNING
 
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-githost github|gitea]  [-branch git_branch] 
-               [-connect https|ssh] [-preview] [-download [-workspace]] [-quiet] [-?] bundle_file_path
+   $EXECUTABLE [-user git_user_name]
+               [-githost github|gitea]
+               [-branch git_branch] 
+               [-connect https|ssh]
+               [-workspace default | workspace_name]
+               [-preview] [-download]
+               [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
    Installs the specified bundle file in the current padogrid workspace. Make
@@ -56,7 +61,7 @@ DESCRIPTION
    this command. Otherwise, the running processes may produce unpredictable behavior.
 
 OPTIONS
-   -user
+   -user git_user_name
              Git user name. If specified, then it downloads the specified bundle from user's
              Git repos.
 
@@ -68,9 +73,10 @@ OPTIONS
 
 
    -connect https|ssh
-             Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh' is supported
-             and this option is ignored. Specify 'ssh' if the bundle repos are private. To connect to
-             private repos, you must first deploy your public key, i.e., ~/.ssh/id_rsa.pub to your repo account.
+             Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh'
+             is supported and this option is ignored. Specify 'ssh' if the bundle repos are 
+             private. To connect to private repos, you must first deploy your public key, i.e.,
+             ~/.ssh/id_rsa.pub to your repo account.
 
    -preview
              Do not install but display the bundle contents.
@@ -82,11 +88,11 @@ OPTIONS
              contents but does not install the bundle. You can install the downloaded
              bundle later by specifying the bundle file path.
 
-   -workspace
-             Workspace Developement Mode. If this option is specified then the bundle is checked out in
-             the form of workspace. By installing the bundle as a workspace, you are able to make changes
-             to the bundle and check in the changes directly from the workspace. This option must
-             be specified with the '-download' option.
+   -workspace default | workspace_name
+             If this option is specified then it installs the bundle in the specified workspace.
+             if the workspace name is 'default' then the bundle name is used as the workspace name. 
+             The new workspace it creates clones the same configuration as the current workspace. 
+             If the '-download' option is also specified, then it checks out the bundle from the repo.
 
    -quiet
              Quiet mode. Supresses the interactive prompt.
@@ -144,7 +150,12 @@ fi
 if [ "$DOWNLOAD" == "true" ]; then
    IS_DOWNLOAD="true"
    if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-      GIT_DIR="$PADOGRID_WORKSPACES_HOME/$BUNDLE_FILE_PATH"
+      if [ "$WORKSPACE_ARG" != "default" ]; then
+         REPO_NAME="$WORKSPACE_ARG"
+      else
+         REPO_NAME="$BUNDLE_FILE_PATH"
+      fi
+      GIT_DIR="$PADOGRID_WORKSPACES_HOME/$REPO_NAME"
       if [ "$QUIET" == "false" ] && [ -d "$GIT_DIR" ]; then
          echo >&2 "ERROR: The specified bundle workspace already exists. Command aborted."
          exit 1
@@ -169,7 +180,6 @@ if [ "$DOWNLOAD" == "true" ]; then
          done
       fi
    fi
-
    if [ "$IS_DOWNLOAD" == "true" ]; then
       if [ "$WORKSPACE_SPECIFIED" == "false" ]; then
          if [ -d $GIT_DIR ]; then
@@ -195,8 +205,8 @@ if [ "$DOWNLOAD" == "true" ]; then
       
       if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
          pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1 
-         echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
-         git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
+         echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME
+         git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME> /dev/null 2>&1
          popd > /dev/null 2>&1 
       else
          pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
@@ -231,8 +241,8 @@ if [ "$DOWNLOAD" == "true" ]; then
          cp $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
          rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}
          echo ""
-         echo "Bundle workspace created. Switch workspace by executinig the following command:"
-         echo -e "   ${CLightGreen}switch_workspace $BUNDLE_FILE_PATH ${CNone}"
+         echo "Bundle workspace created. Switch workspace by executing the following command:"
+         echo -e "   ${CLightGreen}switch_workspace $REPO_NAME ${CNone}"
          echo ""
          exit
       else
@@ -287,31 +297,42 @@ if [ "$PREVIEW" == "false" ] && [ "$PRODUCT" == "hazelcast" ] && [ "$CLUSTER_TYP
    exit 1
 fi
 
-if [ "$PREVIEW" == "false" ] && [ "$QUIET" == "false" ]; then
-   echo "        WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "Bundle to Install: $BUNDLE_FILE_PATH"
-   echo "   This command installs the specified bundle in the padogrid workspace."
-   echo "   Any conflicting files will be overwritten with the files in the bundle. Note that"
-   echo "   as a safety measure, it will automatically back up the padogrid workspace"
-   echo "   in the 'bundles' directory before installing the specified bundle."
-   echo "Do you want to continue?"
-   echo "(Enter 'continue' + Enter to continue the cluster removal, other keys to abort.)"
-   read INPUT
-   if [ "$INPUT" != "continue" ]; then
-      echo "Bundle installation aborted."
-      exit
-   fi
+# Set workspace and its path
+if [ "$WORKSPACE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "default" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+   WORKSPACE_PATH="$PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG"
+else
+   WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+   WORKSPACE_PATH="$PADOGRID_WORKSPACE"
 fi
 
-#
-# Backup the entire workspace
-#
-if [ "$PREVIEW" == "false" ]; then
+# Display warning message and backup if the workspace exists
+if [ -d "$WORKSPACE_PATH" ] && [ "$PREVIEW" == "false" ]; then
+   if [ "$QUIET" == "false" ]; then
+      echo ""
+      echo "        WORKSPACE: $WORKSPACE_PATH"
+      echo "Bundle to Install: $BUNDLE_FILE_PATH"
+      echo ""
+      echo -e "${CBrownOrange}WARNING:${CNone}"
+      echo "   This command installs the specified bundle in the existing workspace. Any"
+      echo "   conflicting files will be overwritten with the files in the bundle. Note that"
+      echo "   as a safety measure, it will automatically back up the padogrid workspace"
+      echo "   in the 'bundles' directory before installing the specified bundle."
+      echo "Do you want to continue?"
+      echo "(Enter 'continue' + Enter to continue the cluster removal, other keys to abort.)"
+      read INPUT
+      if [ "$INPUT" != "continue" ]; then
+         echo "Bundle installation aborted."
+         exit
+      fi
+   fi
+
+   # Backup the entire workspace
    BUNDLE_DISPLAY_MESSAGE="Backup Bundle Created:"
    echo ""
    echo "BACKUP"
    echo "------"
-   $SCRIPT_DIR/create_bundle -all -quiet
+   $SCRIPT_DIR/create_bundle -workspace $WORKSPACE -all -quiet
 fi
 
 # 
@@ -376,13 +397,21 @@ for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* clus
    fi
 done
 
+# Create workspace if it does not exist
+if [ ! -d "$WORKSPACE_PATH" ]; then
+   create_workspace -name $WORKSPACE_ARG -product $PRODUCT_HOME -quiet > /dev/null
+   WORKSPACE_CREATED="true"
+else
+   WORKSPACE_CREATED="false"
+fi
+
 #
 # Install the specified bundle
 # 
 if [ "$PREVIEW" == "true" ]; then
    tar -tzvf $BUNDLE_FILE_PATH
 else
-   tar -C $PADOGRID_WORKSPACE -xzvf $BUNDLE_FILE_PATH
+   tar -C $WORKSPACE_PATH -xzvf $BUNDLE_FILE_PATH
 fi
 
 echo ""
@@ -406,7 +435,7 @@ if [ "$PREVIEW" == "true" ]; then
    echo "    Preview Docker:$DOCKERS"
    echo "      Preiview K8S:$K8S"
 else
-   echo "           WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "           WORKSPACE: $WORKSPACE_PATH"
    echo "        Cluster Type: $cluster_type"
    echo "              Bundle: $BUNDLE_FILE_PATH"
    echo "    Installed Pod(s):$PODS"
@@ -416,5 +445,11 @@ else
    echo "       Installed K8S:$K8S"
    echo ""
    echo "The specified bundle extracted and installed."
+fi
+
+if [ "$WORKSPACE_CREATED" == "true" ]; then
+   echo ""
+   echo "Bundle workspace created. Switch workspace by executing the following command:"
+   echo -e "   ${CLightGreen}switch_workspace $WORKSPACE_ARG ${CNone}"
 fi
 echo ""
