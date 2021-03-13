@@ -4,8 +4,9 @@
 
 ## Version 0.9.5-SNAPSHOT
 
-### Release Date: 03/07/21
+### Release Date: 03/13/21
 
+- Fixed the command completion ending issue. The command completion now blocks if all options have been exhausted.
 - Added support for naming workspaces for `install_bundle` and `create_bundle`. Using the `-workspace` option you can now set a workspace name when you install or create a bundle.
 - Tidied up command auto-completion with additional support for changing directory for `cd_*` and `switch_*` commands. You can now drill into the target directory by hitting the \<tab\> key. 
 - `show_bundle` now prints the bundle URLs. You can click on the URLs to view the bundle instructions in the web browser. macOS: Command-Mouse, Windows: Control-Mouse.
