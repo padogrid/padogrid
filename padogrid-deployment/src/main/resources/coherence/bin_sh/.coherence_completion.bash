@@ -300,9 +300,7 @@ __padogrid_complete()
       done
    fi
 
-   if [ "${type_list}" == "" ] && [ "$is_path" == "false" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ] || [ "$is_path" == "true" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -367,9 +365,7 @@ __rwe_complete()
 {
    cur_word="${COMP_WORDS[COMP_CWORD]}"
    type_list=$(__rwe_complete_arg 1)
-   if [ "${type_list}" == "" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -426,9 +422,7 @@ __workspace_complete()
 {
    cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__workspace_complete_arg 1)
-   if [ "${type_list}" == "" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -511,9 +505,7 @@ __clusters_complete()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "clusters" 1)
-   if [ "${type_list}" == "" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -523,9 +515,7 @@ __pods_complete()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "pods" 1)
-   if [ "${type_list}" == "" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -535,9 +525,7 @@ __k8s_complete()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "k8s" 1)
-   if [ "${type_list}" == "" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -547,9 +535,7 @@ __docker_complete()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "docker" 1)
-   if [ "${type_list}" == "" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -559,9 +545,7 @@ __apps_complete()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "apps" 1)
-   if [ "${type_list}" == "" ]; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -724,9 +708,7 @@ __command_complete()
       fi
    done
 
-   if [ "${type_list}" == "" ] && [ "$is_path" == "false" ] ; then
-      COMPREPLY=""
-   else
+   if [ "${type_list}" != "" ] || [ "$is_path" == "true" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
