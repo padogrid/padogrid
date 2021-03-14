@@ -307,7 +307,7 @@ function getVmMemberName
 {
    __HOST=$1
    __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-member-${__HOSTNAME}-01"
+   echo "${CLUSTER}-member-${__HOSTNAME}"
 }
 
 
