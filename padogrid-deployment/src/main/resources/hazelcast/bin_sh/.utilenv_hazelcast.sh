@@ -134,7 +134,11 @@ function getVmMemberName
 {
    __HOST=$1
    __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-${__HOSTNAME}"
+   if [ "$POD" == "local" ]; then
+      echo "${CLUSTER}-${__HOSTNAME}"
+   else
+      echo "${CLUSTER}-${__HOSTNAME}-01"
+   fi
 }
 
 # 
