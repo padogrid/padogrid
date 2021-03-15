@@ -714,6 +714,28 @@ function getMemberName
 }
 
 #
+# Returns the member name of the specified VM host (address).
+# @required POD     Pod name.
+# @required VM_USER VM ssh user name
+# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
+# @param    host    VM host name or address. If not specified then the current VM's host name is applied.
+#
+function getVmMemberName
+{
+   __HOST="$1"
+   if [ "$__HOST" == "" ]; then
+      __HOSTNAME=`hostname`
+   else
+      __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
+   fi
+   if [ "$POD" != "local" ]; then
+      echo "${CLUSTER}-${__HOSTNAME}"
+   else
+      echo "${CLUSTER}-${__HOSTNAME}-01"
+   fi
+}
+
+#
 # Returns a string list with all duplicate words removed from the specified string list.
 # @param stringList String list of words separated by spaces
 #

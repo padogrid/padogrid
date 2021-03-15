@@ -124,23 +124,6 @@ function getMemberPrefix
    fi
 }
 
-#
-# Returns the member name of the specified VM host (address).
-# @required VM_USER VM ssh user name
-# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
-# @param    host    VM host name or address
-#
-function getVmMemberName
-{
-   __HOST=$1
-   __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   if [ "$POD" == "local" ]; then
-      echo "${CLUSTER}-${__HOSTNAME}"
-   else
-      echo "${CLUSTER}-${__HOSTNAME}-01"
-   fi
-}
-
 # 
 # Returns a complete list of apps found in PADOGRID_HOME/$PRODUCT/apps
 # @required PADOGRID_HOME

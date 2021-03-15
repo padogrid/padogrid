@@ -103,8 +103,8 @@ fi
 #
 # VM cluster
 #
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
-   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
    if [ "$VM_ENABLED" == "true" ]; then
       VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
       if [ "$VM_LOCATOR_HOSTS" == "" ]; then
@@ -174,10 +174,16 @@ POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
-MEMBER=`getMemberName $MEMBER_NUMBER`
+if [ "$VM_ENABLED" == "true" ]; then
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
+   MEMBER=`getVmMemberName`
+else
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+fi
 MEMBER_DIR=$RUN_DIR/$MEMBER
 
-if  [ ! -d $CLUSTER_DIR ]; then
+if  [ ! -d "$CLUSTER_DIR" ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
    echo "  Cluster: $CLUSTER"
@@ -187,7 +193,7 @@ if  [ ! -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ ! -d $MEMBER_DIR ]; then
+if [ ! -d "$MEMBER_DIR" ]; then
    if [ "$REMOTE_SPECIFIED" == "true" ]; then
       $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
    else

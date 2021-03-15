@@ -298,24 +298,6 @@ function getVmLocatorName
 }
 
 #
-# Returns the member name of the specified VM host (address).
-# @required VM_USER VM ssh user name
-# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
-# @param    host    VM host name or address
-#
-function getVmMemberName
-{
-   __HOST=$1
-   __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   if [ "$POD" == "local" ]; then
-      echo "${CLUSTER}-member-${__HOSTNAME}"
-   else
-      echo "${CLUSTER}-member-${__HOSTNAME}-01"
-   fi
-}
-
-
-#
 # Returns merged comma-separated list of VM locator and member hosts
 # @required  CLUSTERS_DIR  Cluster directory path.
 # @required  CLUSTER       Cluster name.

@@ -138,7 +138,13 @@ POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM
-MEMBER=`getMemberName $MEMBER_NUMBER`
+if [ "$VM_ENABLED" == "true" ]; then
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
+   MEMBER=`getVmMemberName`
+else
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+fi
 MEMBER_DIR=$RUN_DIR/$MEMBER
 
 if  [ ! -d $CLUSTER_DIR ]; then
