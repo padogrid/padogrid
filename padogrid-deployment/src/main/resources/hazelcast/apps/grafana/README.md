@@ -2,14 +2,48 @@
 
 The `grafana` app provides a simple and quick way to integrate Hazelcast with Grafana by including several commands for accessing Grafana along with pre-configured Hazelcast dashboards. For example, you can import the included dashboards into Grafana with the `import_grafana` command and monitor the entire cluster in a single view.
 
+## Installing Grafana App
+
+The Grafana app is part of the padogrid distribution. Run the create_app to install it in your workspace.
+
+```bash
+create_app -app grafana
+```
+
 ## Enabling/Disabling Grafana
 
 Support for Grafana is enabled by default for all Hazelcast clusters created by the `create_cluster` command. You can enable or disable it by setting the `grafana.enabled` property in each cluster's `etc/cluster.properties` file as follows:
 
-```properties
+```bash
 # etc/cluster.properties
 # By default, Grafana is enabled.
 grafana.enabled=true
+```
+
+## Enabling Prometheus for Management Center
+
+By default, the clusters created by `create_cluster` also enable **Clustered JMX** for Management Center. To enable Prometheus for Management Center, however, you must explicitly configure the Management Center as shown below.
+
+```bash
+# Change directory to the cluster's directory
+cd_cluster
+vi bash_sh/setenv.sh
+```
+
+Add the following in the `bin_sh/setenv.sh` file. Note that you also need to configure Prometheus to include the Management Center as one of its targets as described in the [Prometheus](#Prometheus) section.
+
+```bash
+# Port number can be arbitrary but the same port number must
+# be included in the Prometheus configuration file.
+MC_JAVA_OPTS="-Dhazelcast.mc.prometheusExporter.enabled=true \
+              -Dhazelcast.mc.prometheusExporter.port=2222"
+```
+
+Restart the Management Center.
+
+```bash
+stop_mc
+start_mc
 ```
 
 ## JMX Exporter Agent
@@ -17,14 +51,6 @@ grafana.enabled=true
 Grafana is supported via the JMX exporter provided by Prometheus. It is already included in the distribution and fully integrated with Hazelcast out of the box. You can learn more about the exporter from the following site:
 
 **URL:** [https://github.com/prometheus/jmx_exporter](https://github.com/prometheus/jmx_exporter)
-
-## Installing Grafana App
-
-The Grafana app is part of the `padogrid` distribution. Run the `create_app` to install it in your workspace.
-
-```bash
-create_app -app grafana
-```
 
 ## Required Software
 
@@ -42,7 +68,7 @@ The `grafana` app relies on JQ to process JSON objects.
 
 Include it in your PATH:
 
-```bash
+```
 # Assuming jq is placed in your home bin directory:
 export PATH=~/bin:$PATH
 ```
@@ -53,10 +79,31 @@ Download and install Prometheus:
 
 **URL:** [https://prometheus.io/download](https://prometheus.io/download/)
 
-Include Prometheus home directory in your `PATH` and run the following:
+If you have enabled Prometheus for Management Center, then you must also include the Management Center as one of the targets in the Prometheus configuration files.
+
+```bash
+cd_app grafana
+vi etc/prom-hazelcast.yaml
+```
+
+Using our example in the [Enabling Prometheus for Management Center](#Enabling-Prometheus-for-Management-Center) section, add `localhost:2222` in the `targets` parameter.
+
+```yaml
+...
+  scrape_configs:
+...
+      static_configs:
+        - targets: [localhost:2222, localhost:8091, localhost:8092, localhost:8093, localhost:8094, localhost:8095, localhost:8096, localhost:8097, localhost:8098, localhost:8099, localhost:8100]
+...
+```
+
+To run Prometheus, include its home directory in your `PATH` and run the `prometheus` executable as follows:
 
 **Unix:**
+
 ```bash
+export PATH=$PATH:<path to Prometheus installation directory>
+
 # Using relative path:
 cd_app grafana
 prometheus --config.file=etc/prom-hazelcast.yml
@@ -68,6 +115,8 @@ prometheus --config.file=$PADOGRID_WORKSPACE/apps/grafana/etc/prom-hazelcast.yml
 **Cygwin:**
 
 ```bash
+export PATH=$PATH:<path to Prometheus installation directory>
+
 # Using relative path:
 cd_app grafana
 prometheus.exe --config.file=$(cygpath -wp etc/prom-hazelcast.yml)
@@ -82,7 +131,7 @@ You can monitor Prometheus from your browser:
 
 To view a complete list of metrics:
 
-**URL:** [http://localhost:9090/metrics](http://localhost:9090/metrics)
+URL: [http://localhost:9090/metrics](http://localhost:9090/metrics)
 
 ### Grafana
 
@@ -90,9 +139,9 @@ Download and install Grafana:
 
 **URL:** [https://grafana.com/grafana/download](https://grafana.com/grafana/download)
 
-Include Grafana `bin` directory in your `PATH` and run `grafana-server`:
+Include Grafana in your `PATH` and run the following (`GRAFANA_HOME` is the Grafana installation root directory path):
 
-**Unix:**
+**Unix**
 
 ```bash
 export GRAFANA_HOME=<grafana-installation-directory>
@@ -100,7 +149,7 @@ export PATH=$PATH:$GRAFANA_HOME
 grafana-server -homepath $GRAFANA_HOME
 ```
 
-**Cygwin:**
+**Cygwin**
 
 ```bash
 export GRAFANA_HOME=<grafana-installation-directory>
@@ -112,7 +161,7 @@ Once Grafana is running, use your web browser to set the user account as follows
 
 **URL:** [http://localhost:3000](http://localhost:3000)
 
-```shell
+```console
 User Name: admin
 Password: admin
 ```
@@ -121,7 +170,7 @@ The `grafana` app has been preconfigured with the above user name and password. 
  
 ## Cygwin: curl
 
-**IMPORTANT:** If you are running this app in the Windows environment then make sure to install **`curl`** from Cygwin. Other implementations may not work properly.
+❗️ If you are running this app in the Windows environment then make sure to install **`curl`** from Cygwin. Other implementations may not work properly.
 
 ## Importing Dashboards
 
@@ -134,20 +183,20 @@ ls etc/dashboards
 
 The following folders of dashboards are bundled with this distribution.
 
-- **padogrid-perf_test** - A set of dashboards for monitoring the entire cluster and map operations executed by the `perf_test` app.
+- **hazelcast-addon-perf_test** - A set of dashboards for monitoring the entire cluster and map operations executed by the `perf_test` app.
 
-To import the default folder, i.e., `padogrid-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as folllows:
+To import the default folder, i.e., `hazelcast-addon-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as follows:
 
-```shell
+```bash
 cd bin_sh
 ./import_folder
 ```
 
 To import other folders, specify the `-folder` or `-all` option.
 
-```shell
+```bash
 # To import a folder in 'etc/dashboards'
-./import_folder -folder padogrid-perf_test
+./import_folder -folder hazelcast-addon-perf_test
 
 # To imporal all folders in 'etc/dashboards'
 ./import_folder -all
@@ -155,7 +204,7 @@ To import other folders, specify the `-folder` or `-all` option.
 
 ### App: perf_test
 
-The `padogrid-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, `perf_test`, in your workspace.
+The `hazelcast-addon-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, perf_test, in your workspace.
 
 ```bash
 create_app
@@ -167,7 +216,7 @@ For perf_test details, see [perf_test README.md](../perf_test/README.md).
 
 You can also export your dashboards to use them as backup or templates by executing the `export_folder` command.
 
-```shell
+```bash
 # Export all folders found in Grafana. By default, the dashboards are 
 # exported in the export/ directory. You can change it in setenv.sh.
 ./export_folder -all
@@ -177,7 +226,7 @@ You can also export your dashboards to use them as backup or templates by execut
 
 You must convert the exported dashboards to templates by executing the `export_to_template` command before you can import them back to Grafana. This is due to the Grafana dependency of non-unique local IDs. The generated templates are portable and can be imported into any instance of Grafana using the `import_folder` command.
 
-```shell
+```bash
 # Convert the exported folders to templates. The templates are placed in
 # the templates/ directory. See the usage for details.
 ./export_to_template
@@ -187,14 +236,14 @@ You must convert the exported dashboards to templates by executing the `export_t
 
 The `bin_sh` directory contains several other useful commands. You can display the usage of each command by specifying the `-?` option as shown below.
 
-```shell
+```bash
 ./create_folder -?
 Usage:
    ./create_folder [-folder <folder-name>] [-?]
 
-   Creates the specfied Grafana folder.
+   Creates the specified Grafana folder.
 
-Default: ./create_folder -folder padogrid-perf_test
+Default: ./create_folder -folder hazelcast-addon-perf_test
 ```
 
 ## Screenshots
