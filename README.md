@@ -156,6 +156,13 @@ docker run -it --rm padogrid/padogrid /bin/bash
 podman run -it --rm padogrid/padogrid /bin/bash
 ```
 
+Once you are in the container, initialize PadoGrid as follows. Note that this is only required if you are running PadoGrid with `docker` or `podman`. This is not required for Kubernetes.
+
+```bash
+./padogrid_start -init
+. ~/.bashrc
+```
+
 ## Running PadoGrid on Kubernetes
 
 You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
