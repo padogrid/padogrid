@@ -24,7 +24,7 @@ import com.hazelcast.replicatedmap.ReplicatedMap;
 /**
  * DataConverter converts raw entries to object entries and puts
  * them in Hazelcast IMDG if Hazelcast IMDG is enabled. An instance of
- * DataConverter is provided by {@linkplain TransformerContext} which is
+ * DataConverter is provided by {@linkplain TransformerContext} which
  * in turn is managed by {@linkplain JetConnector}.
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })

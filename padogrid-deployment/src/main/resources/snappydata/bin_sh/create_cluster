@@ -522,6 +522,20 @@ else
    else
       NODE_NAME_PRIMARY="localhost"
    fi
+   
+   # Vagrant pod VMs
+   VM_ENABLED="true"
+   VM_HOSTS=""
+   for i in $(seq 1 $NODE_COUNT); do
+     __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+     NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+     if [ $i -eq 1 ]; then
+        VM_HOSTS="$NODE_LOCAL"
+     else
+        VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
+     fi
+   done
+   VM_USER="vagrant"
 fi
 
 # Write cluster files

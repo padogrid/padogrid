@@ -6,8 +6,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
 
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
@@ -17,6 +15,11 @@ import org.apache.geode.pdx.PdxWriter;
 @Table(name = "orders")
 public class Order implements PdxSerializable, Comparable<Order>
 {
+	/**
+	 * Source time factor. Date long values are divided by this number. 
+	 */
+	private static int TIME_FACTOR = Integer.getInteger("padogrid.data.time.factor", 1);
+	
 	@Id
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(length = 20)
@@ -26,13 +29,10 @@ public class Order implements PdxSerializable, Comparable<Order>
 	@Column(length = 20)
 	private String employeeId;
 	@Column
-	@Temporal(TemporalType.DATE)
 	private Date orderDate;
 	@Column
-	@Temporal(TemporalType.DATE)
 	private Date requiredDate;
 	@Column
-	@Temporal(TemporalType.DATE)
 	private Date shippedDate;
 	@Column(length = 50)
 	private String shipVia;
@@ -82,6 +82,10 @@ public class Order implements PdxSerializable, Comparable<Order>
 	public void setOrderDate(Date orderDate) {
 		this.orderDate=orderDate;
 	}
+	
+	public void setOrderDateTime(long orderDateTime) {
+		this.orderDate = new Date(orderDateTime/TIME_FACTOR);
+	}
 
 	public Date getOrderDate() {
 		return this.orderDate;
@@ -90,6 +94,10 @@ public class Order implements PdxSerializable, Comparable<Order>
 	public void setRequiredDate(Date requiredDate) {
 		this.requiredDate=requiredDate;
 	}
+	
+	public void setRequredDateTime(long requiredDateTime) {
+		this.requiredDate = new Date(requiredDateTime/TIME_FACTOR);
+	}
 
 	public Date getRequiredDate() {
 		return this.requiredDate;
@@ -97,6 +105,10 @@ public class Order implements PdxSerializable, Comparable<Order>
 
 	public void setShippedDate(Date shippedDate) {
 		this.shippedDate=shippedDate;
+	}
+	
+	public void setShippedDateTime(long shippedDateTime) {
+		this.shippedDate = new Date(shippedDateTime/TIME_FACTOR);
 	}
 
 	public Date getShippedDate() {

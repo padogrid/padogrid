@@ -127,7 +127,7 @@ public class DebeziumKafkaAvroSinkConnector extends SinkConnector {
 		String isAvroDeepCopyStr = props.get(AVRO_DEEP_COPY_ENABLED);
 		isAvroDeepCopyEnabled = isAvroDeepCopyStr != null && isAvroDeepCopyStr.equalsIgnoreCase("true") ? true : isAvroDeepCopyEnabled;
 		String isColumnNamesCaseSensitiveStr = props.get(COLUMN_NAMES_CASE_SENSITVIE_ENABLED);
-		isColumnNamesCaseSensitiveEnabled = isColumnNamesCaseSensitiveStr != null && isHazelcastStr.equalsIgnoreCase("false") ? false : isColumnNamesCaseSensitiveEnabled;
+		isColumnNamesCaseSensitiveEnabled = isColumnNamesCaseSensitiveStr != null && isColumnNamesCaseSensitiveStr.equalsIgnoreCase("false") ? false : isColumnNamesCaseSensitiveEnabled;
 		String isKeyStructStr = props.get(KEY_STRUCT_ENABLED);
 		isKeyStructEnabled = isKeyStructStr != null && isKeyStructStr.equalsIgnoreCase("false") ? false : isKeyStructEnabled;
 		keyClassName = props.get(KEY_CLASS_NAME_CONFIG);

@@ -22,7 +22,7 @@ import com.netcrest.pado.internal.util.ClassFinder;
  * @author dpark
  *
  */
-public class KryoGenerator {
+public class HazelcastKryoGenerator {
 
 	public final static String PROPERTY_executableName = "executable.name";
 	public final static int DEFAULT_TYPE_ID = 1100;
@@ -33,7 +33,7 @@ public class KryoGenerator {
 	int typeId = DEFAULT_TYPE_ID;
 	File srcDirFile = new File(DEFAULT_SRC_DIR);
 
-	public KryoGenerator(String packageName, String jarPath, int typeId, String srcDir) {
+	public HazelcastKryoGenerator(String packageName, String jarPath, int typeId, String srcDir) {
 		this.packageName = packageName;
 		this.jarPath = jarPath;
 		this.typeId = typeId;
@@ -190,7 +190,7 @@ public class KryoGenerator {
 	}
 
 	private static void usage() {
-		String executableName = System.getProperty(PROPERTY_executableName, KryoGenerator.class.getName());
+		String executableName = System.getProperty(PROPERTY_executableName, HazelcastKryoGenerator.class.getName());
 		writeLine();
 		writeLine("NAME");
 		writeLine("   " + executableName + " - Generate KryoSerializer");
@@ -284,7 +284,7 @@ public class KryoGenerator {
 			System.exit(1);
 		}
 
-		KryoGenerator generator = new KryoGenerator(packageName, jarPath, typeId, srcDir);
+		HazelcastKryoGenerator generator = new HazelcastKryoGenerator(packageName, jarPath, typeId, srcDir);
 		generator.generateKryoSerializer();
 	}
 }

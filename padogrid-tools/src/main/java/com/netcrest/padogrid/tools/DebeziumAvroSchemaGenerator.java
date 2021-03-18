@@ -16,7 +16,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * AvroDebeziumSchemaGenerator generates the Avro schema files from the Debezium
+ * DebeziumAvroSchemaGenerator generates the Avro schema files from the Debezium
  * schemas retrieved from the Apicurio registry.
  * 
  * @author dpark

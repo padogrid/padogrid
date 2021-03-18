@@ -12,6 +12,10 @@ Download links to all the supported data grids are also provided in the followin
 
 [Supported Data Grid Downloads](https://github.com/padogrid/padogrid/wiki/Supported-Data-Grid-Products-and-Downloads)
 
+Online use case bundles:
+
+[Bundle (Use Case) Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+
 ## PadoGrid Brief
 
 PadoGrid is a collection of add-on components and tools specifically designed for [data grid products](#data-Grid-Products) to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
@@ -26,6 +30,7 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start)
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+- [Bundle Templates](https://github.com/padogrid/padogrid/wiki/Using-Bundle-Templates)
 - [Building PadoGrid](#building-padogrid)
 - [Installing PadoGrid](#installing-padogrid)
 
@@ -108,15 +113,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.4-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.5-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.4-SNAPSHOT
+tree -L 1 padogrid_0.9.5-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.4-SNAPSHOT
+padogrid_0.9.5-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -136,12 +141,12 @@ padogrid_0.9.4-SNAPSHOT
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.4-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.5-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid on Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.4-SNAPSHOT-7` image has the build number 7. The SNAPSHOT versions are for testing only and subject to removal without notice.
+PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.5-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 ```bash
 # docker
@@ -236,3 +241,15 @@ The PadoGrid Manual describes product concepts and provides complete instruction
 PadoGrid has been built with use cases in mind. It aims to deliver out-of-the-box turnkey solutions on top of data grid products. The bundle catalogs provide compiled lists of readily available solutions. Just install and run.
 
 [Bundle (Use Case) Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+
+### Creating Your Own Bundles
+
+You can also create online bundles hosted by your repos. The following link provides how-to instructions.
+
+[Understanding Bundles](https://github.com/padogrid/padogrid/wiki/Understanding-Bundles)
+
+### Bundle Templates
+
+Creating your own online bundles is made easy by using the bundle templates. The following link povides template links.
+
+[Using Bundle Templates](https://github.com/padogrid/padogrid/wiki/Using-Bundle-Templates)

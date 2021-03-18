@@ -41,7 +41,7 @@ public class CustomerFactoryImpl extends AbstractDataObjectFactory {
 	}
 	
 	/**
-	 * @return an entry with the specified idNum as part of the primary key
+	 * Returns an entry with the specified idNum as part of the primary key
 	 */
 	@Override
 	public DataObjectFactory.Entry createEntry(int idNum, Object erKey) {

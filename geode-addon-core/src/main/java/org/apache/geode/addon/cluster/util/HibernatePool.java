@@ -98,6 +98,7 @@ public class HibernatePool {
 				poolSize = Integer
 						.valueOf(sessionFactory.getProperties().getOrDefault("connection.pool_size", "1").toString());
 			} catch (Exception e) {
+				e.printStackTrace();
 				logger.error("Hibernate initialization error.", e);
 				if (registry != null) {
 					StandardServiceRegistryBuilder.destroy(registry);

@@ -13,9 +13,16 @@ NAME
 SYNOPSIS
    ./$EXECUTABLE [-coherence] [-?]
 
-   Creates Unix man files in the padogrid distribution. This command
-   is executed by the 'build_*.sh' commands. Do not execute it directly.
+   Creates Unix man files in the padogrid distribution. This command is executed by the
+   'build_*.sh' commands. Do not execute it directly.
 
+NOTES
+   The man pages are generated using the command usage outputs obtained by executing each
+   command with the '-?' option. The '-?' option may output error messages for those commands
+   that run Java executables if they are not in the class path. You can ignore the error
+   messages and build an incomplete list of man pages or you can set CLASSPATH.
+
+OPTIONS
    -coherence
              If specified, then in addition to other modules it also builds
              Coherence man pages. Note that you may need to install Coherence
@@ -93,6 +100,10 @@ for PRODUCT in $PRODUCTS; do
    fi
    for i in $COMMANDS; do 
       COMMAND_NAME="`basename $i`"
+      # Skip pado executable. Requires PADO_HOME and man format.
+      if [ "$COMMAND_NAME" == "pado" ]; then
+        continue;
+      fi
       $i -? -man > $TMP_DIR/${COMMAND_NAME}.txt
       MAN_FILE=$MAN_DIR/${COMMAND_NAME}.1
    

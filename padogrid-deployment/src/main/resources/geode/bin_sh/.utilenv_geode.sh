@@ -58,30 +58,6 @@ function getLocatorPid
 }
 
 #
-# Returns the member PID if it is running. Empty value otherwise.
-# @required NODE_LOCAL     Node name with the local extenstion. For remote call only.
-# @param    memberName     Unique member name
-# @param    workspaceName  Workspace name
-#
-function getMemberPid
-{
-   __MEMBER=$1
-   __WORKSPACE=$2
-   __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
-   if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   else
-      members=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MEMBER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   fi
-   spids=""
-   for j in $members; do
-      spids="$j $spids"
-   done
-   spids=`trimString $spids`
-   echo $spids
-}
-
-#
 # Returns the locator PID of VM if it is running. Empty value otherwise.
 # This function is for clusters running on VMs whereas the getLocatorPid
 # is for pods running on the same machine.
@@ -99,30 +75,6 @@ function getVmLocatorPid
    local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $locators; do
-      spids="$j $spids"
-   done
-   spids=`trimString $spids`
-   echo $spids
-}
-
-#
-# Returns the member PID of VM if it is running. Empty value otherwise.
-# This function is for clusters running on VMs whereas the getMemberPid
-# is for pods running on the same machine.
-# @required VM_USER        VM ssh user name
-# @optional VM_KEY         VM private key file path with -i prefix, e.g., "-i file.pem"
-# @param    host           VM host name or address
-# @param    memberName     Unique member name
-# @param    workspaceName  Workspace name
-#
-function getVmMemberPid
-{
-   __HOST=$1
-   __MEMBER=$2
-   __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   spids=""
-   for j in $members; do
       spids="$j $spids"
    done
    spids=`trimString $spids`
@@ -296,20 +248,6 @@ function getVmLocatorName
    local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
    echo "${CLUSTER}-locator-${__HOSTNAME}-01"
 }
-
-#
-# Returns the member name of the specified VM host (address).
-# @required VM_USER VM ssh user name
-# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
-# @param    host    VM host name or address
-#
-function getVmMemberName
-{
-   __HOST=$1
-   __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-member-${__HOSTNAME}-01"
-}
-
 
 #
 # Returns merged comma-separated list of VM locator and member hosts

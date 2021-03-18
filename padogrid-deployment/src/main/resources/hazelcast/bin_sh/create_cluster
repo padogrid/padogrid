@@ -182,7 +182,11 @@ function writeCluster()
       done
       sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
    else
-      cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
+         cp $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
+      else
+         cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+       fi
    fi
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
@@ -598,6 +602,20 @@ else
       NODE_NAME_PRIMARY="localhost"
    fi
    MC_HOST=$NODE_NAME_PRIMARY
+
+   # Vagrant pod VMs
+   VM_ENABLED="true"
+   VM_HOSTS=""
+   for i in $(seq 1 $NODE_COUNT); do
+     __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+     NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+     if [ $i -eq 1 ]; then
+        VM_HOSTS="$NODE_LOCAL"
+     else
+        VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
+     fi
+   done
+   VM_USER="vagrant"
 fi
 
 writeCluster

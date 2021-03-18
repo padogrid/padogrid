@@ -29,7 +29,8 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 		Company company = faker.company();
 		order.setCustomerId(faker.idNumber().invalidSvSeSsn());
 		order.setEmployeeId(faker.idNumber().invalidSvSeSsn());
-		order.setFreight(200 * random.nextDouble());
+		// Round to 2 digits after the decimal point
+		order.setFreight(Math.round(10000 * random.nextDouble())/100d);
 		order.setOrderDate(faker.date().past(7, TimeUnit.DAYS));
 		order.setOrderId(faker.idNumber().invalidSvSeSsn());
 		order.setRequiredDate(faker.date().future(10, TimeUnit.DAYS, order.getOrderDate()));
@@ -38,7 +39,7 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 		order.setShipCity(address.city());
 		order.setShipCountry(address.country());
 		order.setShipName(company.name());
-		order.setShippedDate(faker.date().future(14, TimeUnit.DAYS, order.getOrderDate()));
+		order.setShippedDate(faker.date().future(5, TimeUnit.DAYS, order.getOrderDate()));
 		order.setShipPostalCode(address.zipCode());
 		order.setShipRegion(address.stateAbbr());
 		order.setShipVia(Integer.toString(random.nextInt(5) + 1));
@@ -57,12 +58,18 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 	 * Returns an entry with the specified idNum as part of the primary key
 	 */
 	@Override
-	public DataObjectFactory.Entry createEntry(int idNum) {
+	public DataObjectFactory.Entry createEntry(int idNum, Object erKey) {
 		Order order = createOrder();
 		if (isKeyRandom == false) {
 			order.setOrderId(createKey(idNum));
 		}
-		order.setCustomerId(createForeignKey(customerIdPrefix, customerIdMax));
+		
+		// parent ER
+		if (erKey != null) {
+			order.setCustomerId(erKey.toString());
+		} else {
+			order.setCustomerId(createForeignKey(customerIdPrefix, customerIdMax));
+		}
 		String key = order.getOrderId() + "." + order.getCustomerId();
 		return new DataObjectFactory.Entry(key, order);
 	}

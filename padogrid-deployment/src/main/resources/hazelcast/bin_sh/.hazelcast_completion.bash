@@ -60,21 +60,31 @@ __padogrid_complete()
    # COMP_WORDS is an array of words in the current command line.
    # COMP_CWORD is the index of the current word (the one the cursor is
    # in). So COMP_WORDS[COMP_CWORD] is the current word.
-   second_word="${COMP_WORDS[1]}"
-   third_word="${COMP_WORDS[2]}"
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
-   prev_word="${COMP_WORDS[COMP_CWORD-1]}"
-   len=${#COMP_WORDS[@]}
+   local second_word="${COMP_WORDS[1]}"
+   local third_word="${COMP_WORDS[2]}"
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+   local len=${#COMP_WORDS[@]}
+   local command=$second_word
+   local is_product="false"
       
-   type_list=""
+   local type_list=""
 
    case "$prev_word" in
    -?)
       type_list=""
       ;;
+
+   -name)
+      if [ "$command" == "create_workspace" ]; then
+         type_list=`getWorkspaces`
+      fi
+      ;;
       
    -pod)
-      type_list=`getPods`
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getPods`
+      fi
       ;;
 
    -count)
@@ -82,60 +92,80 @@ __padogrid_complete()
       ;;
    
    -app)
-      if [ "$second_word" == "create_app" ]; then
+      if [ "$command" == "create_app" ]; then
          type_list=`getAddonApps $CLUSTER_TYPE`
-      else
+      elif [ "$command" != "find_padogrid" ]; then
          type_list=`getApps`
       fi
       ;;
 
    -port)
-      if [ "$second_word" == "create_cluster" ] || [ "$second_word" == "create_docker" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
       fi
       ;;
 
    -cluster)
-      if [ "$second_word" == "create_k8s" ] || [ "$second_word" == "remove_k8s" ]; then
+      if [ "$command" == "create_k8s" ] || [ "$command" == "remove_k8s" ]; then
          __ENV="k8s"
-      elif [ "$second_word" == "create_docker" ] || [ "$second_word" == "remove_docker" ]; then
+      elif [ "$command" == "create_docker" ] || [ "$command" == "remove_docker" ]; then
          __ENV="docker"
       else
          __ENV="clusters"
       fi
-      type_list=`getClusters $__ENV`
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getClusters $__ENV`
+      fi
+      ;;
+
+   -prefix)
+      if [ "$command" == "create_grid" ]; then
+         type_list="grid"
+      fi
+     ;;
+
+   -type)
+      if [ "$command" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
+         type_list="default pado"
+      fi
       ;;
 
    -k8s) 
-      if [ "$second_word" == "create_k8s" ]; then
-         type_list="minikube gke minishift openshift"
-      else
+      if [ "$command" == "create_k8s" ]; then
+         type_list="minikube"
+      elif [ "$command" != "find_padogrid" ]; then
          type_list=`getClusters k8s`
       fi
       ;;
 
    -docker) 
-      if [ "$second_word" == "create_bundle" ]; then
+      if [ "$command" == "create_bundle" ]; then
          type_list=`getClusters docker`
-      else
+      elif [ "$command" != "find_padogrid" ]; then
          type_list="compose"
       fi
       ;;
 
    -product)
-      if [ "$sconde_word" == "show_bundle" ]; then
+      if [ "$command" == "show_bundle" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
+      else
+         is_path="true"
       fi
       ;;
 
    -rwe)
-      type_list=`getRweList`
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getRweList`
+      fi
       ;;
       
    -workspace)
-      if [ "$second_word" == "install_bundle" ]; then
-         type_list=`$second_word -options`
-      else
+      if [ "$command" == "install_bundle" ]; then
+         type_list="default "`getWorkspaces`
+      elif [ "$command" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
       fi
       ;;
@@ -158,6 +188,10 @@ __padogrid_complete()
       type_list="github gitea"
       ;;
 
+  -branch)
+      type_list="master"
+      ;;
+
    -connect)
       type_list="https ssh"
       ;;
@@ -177,7 +211,7 @@ __padogrid_complete()
       RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
       MEMBER=${MEMBER_PREFIX}${MEMBER_NUMBER}
       member_nums="`getMemberNumList`"
-      case "$second_word" in add_member)
+      case "$command" in add_member)
          type_list="1 2 3 4 5 6 7 8 9"
          ;;
       remove_member|show_log)
@@ -198,63 +232,47 @@ __padogrid_complete()
          ;;
       esac
       ;;
-   -path | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast)
+
+   -vm-user)
+      type_list="$(whoami)"
+      ;;
+
+   -path | -java | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+      is_path="true"
      ;;
+
    *)
-      if [ "$second_word" == "cp_sub" ] || [ "$second_word" == "tools" ]; then
+      if [ "$command" == "cp_sub" ] || [ "$command" == "tools" ]; then
          if [ $len -gt 3 ]; then
             type_list=`$third_word -options`
          else
-            type_list=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$second_word`
+            type_list=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$command`
          fi
-      elif [ "$second_word" == "switch_rwe" ] || [ "$second_word" == "cd_rwe" ]; then
-            if [ $len -lt 4 ]; then
-               type_list=`list_rwes`
-            elif [ $len -lt 5 ]; then
-               local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
-               if [ ! -d "$RWE_HOME/$prev_word" ]; then
-                  echo "No such RWE: $prev_word"
-               else
-                  type_list=`ls $RWE_HOME/$prev_word`
-                  type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
-               fi
-            fi
-      elif [ "$second_word" == "switch_workspace" ] || [ "$second_word" == "cd_workspace" ]; then
-            if [ $len -lt 4 ]; then
-               type_list=`ls $PADOGRID_WORKSPACES_HOME`
-               type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
-            fi
-      elif [ "$second_word" == "switch_cluster" ] || [ "$second_word" == "cd_cluster" ]; then
-            if [ $len -lt 4 ]; then
-               type_list=`ls $PADOGRID_WORKSPACE/clusters`
-            fi
-      elif [ "$second_word" == "cd_pod" ]; then
-            if [ $len -lt 4 ]; then
-               type_list=`ls $PADOGRID_WORKSPACE/pods`
-            fi
-      elif [ "$second_word" == "cd_k8s" ]; then
-            if [ $len -lt 4 ]; then
-               type_list=`ls $PADOGRID_WORKSPACE/k8s`
-            fi
-      elif [ "$second_word" == "cd_docker" ]; then
-            if [ $len -lt 4 ]; then
-               type_list=`ls $PADOGRID_WORKSPACE/docker`
-            fi
-      elif [ "$second_word" == "cd_app" ]; then
-            if [ $len -lt 4 ]; then
-               type_list=`ls $PADOGRID_WORKSPACE/apps`
-            fi
+      elif [ "$command" == "switch_rwe" ] || [ "$command" == "cd_rwe" ]; then
+            type_list=$(__rwe_complete_arg 2)
+      elif [ "$command" == "switch_workspace" ] || [ "$command" == "cd_workspace" ]; then
+            type_list=$(__workspace_complete_arg 2)
+      elif [ "$command" == "switch_cluster" ] || [ "$command" == "cd_cluster" ]; then
+            type_list=$(__cd_complete_arg "clusters" 2)
+      elif [ "$command" == "cd_pod" ]; then
+            type_list=$(__cd_complete_arg "pods" 2)
+      elif [ "$command" == "cd_docker" ]; then
+            type_list=$(__cd_complete_arg "docker" 2)
+      elif [ "$command" == "cd_app" ]; then
+          type_list=$(__cd_complete_arg "apps" 2)
+      elif [ "$command" == "cd_k8s" ]; then
+          type_list=$(__cd_complete_arg "k8s" 2)
       else
-         if [ "$second_word" == "-version" ]; then
+         if [ "$command" == "-version" ]; then
             type_list=""
-         elif [ "$second_word" == "-product" ]; then
+         elif [ "$command" == "-product" ]; then
             type_list=""
          elif [ $len -gt 2 ]; then
-            type_list=`$second_word -options`
+            type_list=`$command -options`
          else
             type_list=`ls $SCRIPT_DIR`
             type_list=$(removeTokens "$type_list" "setenv.sh")
-            type_list="-version -product $type_list"
+            type_list="-product -rwe -version $type_list"
          fi
       fi
       ;;
@@ -276,22 +294,36 @@ __padogrid_complete()
       done
    fi
 
-
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   if [ "${type_list}" != "" ] || [ "$is_path" == "true" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
    return 0
 }
 
-__rwe_complete()
+# 
+# Completes cd_rwe command.
+# @param argStartIndex Argument start index. 1 for straight command, 2 for padogrid command.
+# @return String value of type_list
+#
+__rwe_complete_arg()
 {
+   local start_index=$1
+   if [ "$start_index" == "" ]; then
+      start_index=1
+   fi
    local len cur_word type_list
-   len=${#COMP_WORDS[@]}
-   prev_word=${COMP_WORDS[COMP_CWORD-1]}
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local len=${#COMP_WORDS[@]}
+   local prev_word=${COMP_WORDS[COMP_CWORD-1]}
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+   
+   let i1=start_index+2
+   let i2=start_index+3
+   let i3=start_index+4
 
-   if [ $len -lt 3 ]; then
+   if [ $len -lt $i1 ]; then
       type_list=`list_rwes`
-   elif [ $len -lt 4 ]; then
-      local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+   elif [ $len -lt $i2 ]; then
       if [ ! -d "$RWE_HOME/$prev_word" ]; then
          echo "No such RWE: $prev_word"
       else
@@ -299,107 +331,380 @@ __rwe_complete()
          type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
       fi
    else
-      type_list=""
+      local COMPONENT_DIR="$RWE_HOME/${COMP_WORDS[start_index]}/${COMP_WORDS[start_index+1]}"
+      local DIR=""
+      local PARENT_DIR=""
+      local count=0
+      for i in ${COMP_WORDS[@]}; do
+        let count=count+1
+        if [ $count -gt 3 ]; then
+           DIR="$DIR/$i"
+        fi
+        if [ $count -lt $len ]; then
+           PARENT_DIR=$DIR
+        fi
+      done
+      if [ -d "${COMPONENT_DIR}${DIR}" ]; then
+         type_list=$(__get_dir_list "${COMPONENT_DIR}${DIR}")
+      elif [ -d "${COMPONENT_DIR}${PARENT_DIR}" ]; then
+         type_list=$(__get_dir_list "${COMPONENT_DIR}${PARENT_DIR}")
+      else
+         type_list=""
+      fi
    fi
+   echo $type_list
+}
 
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+__rwe_complete()
+{
+   cur_word="${COMP_WORDS[COMP_CWORD]}"
+   type_list=$(__rwe_complete_arg 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
    return 0
 }
 
-__workspaces_complete()
+# 
+# Completes cd_workspace and switch_workspace commands.
+# @param argStartIndex Argument start index. 1 for straight command, 2 for padogrid command.
+# @return String value of type_list
+#
+__workspace_complete_arg()
 {
+   local start_index=$1
+   if [ "$start_index" == "" ]; then
+      start_index=1
+   fi
    local len cur_word type_list
    len=${#COMP_WORDS[@]}
    cur_word="${COMP_WORDS[COMP_CWORD]}"
+
+   let i1=start_index
+   let i2=start_index+1
+   let i3=start_index+2
       
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
+   if [ $len -lt $i3 ]; then
       type_list=`ls $PADOGRID_WORKSPACES_HOME`
       type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
+   else
+      local COMPONENT_DIR="$PADOGRID_WORKSPACES_HOME/${COMP_WORDS[start_index]}"
+      local DIR=""
+      local PARENT_DIR=""
+      local count=0
+      for i in ${COMP_WORDS[@]}; do
+        let count=count+1
+        if [ $count -gt $i2 ]; then
+           DIR="$DIR/$i"
+        fi
+        if [ $count -lt $len ]; then
+           PARENT_DIR=$DIR
+        fi
+      done
+      if [ -d "${COMPONENT_DIR}${DIR}" ]; then
+         type_list=$(__get_dir_list "${COMPONENT_DIR}${DIR}")
+      elif [ -d "${COMPONENT_DIR}${PARENT_DIR}" ]; then
+         type_list=$(__get_dir_list "${COMPONENT_DIR}${PARENT_DIR}")
+      else
+         type_list=""
+      fi
    fi
+   echo $type_list
+}
 
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+__workspace_complete()
+{
+   cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local type_list=$(__workspace_complete_arg 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
    return 0
+}
+
+#
+# Returns a list of sub-directories in the specified directory.
+# @parm parentDir  Parent directory path. If not specified then the current directory
+#                  is assigned.
+#
+__get_dir_list()
+{
+  local parent_dir=$1
+  if [ "$parent_dir" == "" ]; then
+     parent_dir="."
+  fi
+  local __dir_list=$(echo $parent_dir/*/)
+  local __command="$parent_dir/*/"
+  local dir_list=""
+  # echo returns the same input string if sub-directories do not exist
+  if [ "$__dir_list" != "$__command" ]; then
+     for i in $__dir_list; do
+        dir_list="$dir_list $(basename $i)/"
+     done
+  fi
+  echo $dir_list
+}
+
+# 
+# Completes cd command.
+# @parm dirName        Directory name, i.e., apps, docker, k8s, pods.
+# @param argStartIndex Argument start index. 1 for straight command, 2 for padogrid command.
+# @return String value of type_list
+#
+__cd_complete_arg()
+{
+   local dir_name="$1"
+   local start_index=$2
+   if [ "$start_index" == "" ]; then
+      start_index=1
+   fi
+   local len cur_word type_list
+   local len=${#COMP_WORDS[@]}
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local COMPONENT_DIR="$PADOGRID_WORKSPACE/$dir_name"
+
+   let i1=start_index
+   let i2=start_index+1
+   let i3=start_index+2
+      
+   if [ $len -lt $i2 ]; then
+      type_list=""
+   elif [ $len -lt $i3 ]; then
+      type_list=$(__get_dir_list "${COMPONENT_DIR}")
+   else
+      local DIR=""
+      local PARENT_DIR=""
+      local count=0
+      for i in ${COMP_WORDS[@]}; do
+        let count=count+1
+        if [ $count -gt $i1 ]; then
+           DIR="$DIR/$i"
+        fi
+        if [ $count -lt $len ]; then
+           PARENT_DIR=$DIR
+        fi
+      done
+      if [ -d "${COMPONENT_DIR}${DIR}" ]; then
+         type_list=$(__get_dir_list "${COMPONENT_DIR}${DIR}")
+      elif [ -d "${COMPONENT_DIR}${PARENT_DIR}" ]; then
+         type_list=$(__get_dir_list "${COMPONENT_DIR}${PARENT_DIR}")
+      else
+         type_list=""
+      fi
+   fi
+   echo $type_list
 }
 
 __clusters_complete()
 {
-   local len cur_word type_list
-   len=${#COMP_WORDS[@]}
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
-      
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
-      type_list=`ls $PADOGRID_WORKSPACE/clusters`
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local type_list=$(__cd_complete_arg "clusters" 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
-   
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    return 0
 }
 
 __pods_complete()
 {
-   local len cur_word type_list
-   len=${#COMP_WORDS[@]}
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
-
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
-      type_list=`ls $PADOGRID_WORKSPACE/pods`
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local type_list=$(__cd_complete_arg "pods" 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
-
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    return 0
 }
 
 __k8s_complete()
 {
-   local len cur_word type_list
-   len=${#COMP_WORDS[@]}
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
-
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
-      type_list=`ls $PADOGRID_WORKSPACE/k8s`
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local type_list=$(__cd_complete_arg "k8s" 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
-
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    return 0
 }
 
 __docker_complete()
 {
-   local len cur_word type_list
-   len=${#COMP_WORDS[@]}
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
-
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
-      type_list=`ls $PADOGRID_WORKSPACE/docker`
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local type_list=$(__cd_complete_arg "docker" 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
-
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    return 0
 }
 
 __apps_complete()
 {
-   local len cur_word type_list
-   len=${#COMP_WORDS[@]}
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
-      
-   if [ $len -ge 3 ]; then
-     type_list=""
-   else
-     type_list=`ls $PADOGRID_WORKSPACE/apps`
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local type_list=$(__cd_complete_arg "apps" 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
+   return 0
+}
 
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+__get_str_position()
+{ 
+  x="${1%%$2*}"
+  [[ "$x" = "$1" ]] && echo -1 || echo "${#x}"
+}
+
+__command_complete()
+{
+   local command cur_word prev_word type_list
+
+   # COMP_WORDS is an array of words in the current command line.
+   # COMP_CWORD is the index of the current word (the one the cursor is
+   # in). So COMP_WORDS[COMP_CWORD] is the current word.
+   local command="${COMP_WORDS[0]}"
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+   local len=${#COMP_WORDS[@]}
+   local is_path="false"
+
+   case $prev_word in
+   -?)
+      type_list=""
+      ;;
+   -name)
+      if [ "$command" == "create_workspace" ]; then
+         type_list=`getWorkspaces`
+      fi
+      ;;
+   -pod)
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getPods`
+      fi
+      ;;
+   -count)
+      type_list="1 2 3 4 5 6 7 8 9"
+      ;;
+   -app)
+      if [ "$command" == "create_app" ]; then
+         type_list=`getAddonApps $CLUSTER_TYPE`
+      elif [ "$command" != "find_padogrid" ]; then
+         type_list=`getApps`
+      fi
+      ;;
+   -cluster)
+      if [ "$command" == "create_k8s" ] || [ "$command" == "remove_k8s" ]; then
+         __ENV="k8s"
+      elif [ "$command" == "create_docker" ] || [ "$command" == "remove_docker" ]; then
+         __ENV="docker"
+      else
+         __ENV="clusters"
+      fi
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getClusters $__ENV`
+      fi
+      ;;
+   -prefix)
+      if [ "$command" == "create_grid" ]; then
+         type_list="grid"
+      fi
+      ;;
+   -type)
+      if [ "$command" == "create_pod" ]; then
+         type_list="local vagrant"
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
+         type_list="default pado"
+      fi
+      ;;
+   -product)
+      if [ "$command" == "show_bundle" ]; then
+         type_list="$BUNDLE_PRODUCT_LIST"
+      else
+         is_path=""
+      fi
+      ;;
+   -rwe)
+      if [ "$command" != "find_padogrid" ]; then
+         type_list=`getRweList`
+      fi
+      ;;
+   -workspace)
+      if [ "$command" == "install_bundle" ]; then
+         type_list="default "`getWorkspaces`
+      elif [ "$command" != "find_padogrid" ]; then
+         type_list=`getWorkspaces`
+      fi
+      ;;
+   -k8s)
+      if [ "$command" != "create_workspace" ]; then
+         type_list="minikube gke minishift openshift"
+      elif [ "$command" != "find_padogrid" ]; then
+         type_list=`getClusters k8s`
+      fi
+      ;;
+   -docker)
+      if [ "$command" == "create_bundle" ]; then
+         type_list=`getClusters docker`
+      elif [ "$command" != "find_padogrid" ]; then
+         type_list="compose"
+      fi
+      ;;
+   -host)
+      if [ "$command" == "create_docker" ]; then
+         type_list="$(getHostIPv4List) host.docker.internal"
+      fi
+      ;;
+   -user)
+      GITHUB_USERS=""
+      if [ -f "$HOME/.padogrid/setenv.sh" ]; then
+         . $HOME/.padogrid/setenv.sh
+      fi
+      type_list="padogrid $GITHUB_USERS"
+      ;;
+   -githost)
+      type_list="github gitea"
+      ;;
+  -branch)
+      type_list="master"
+      ;;
+   -connect)
+      type_list="https ssh"
+      ;;
+   -log)
+      type_list="data gc diag mc"
+     ;;
+   -num)
+      type_list="1 2 3 4 5 6 7 8 9"
+     ;;
+   -port)
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
+         type_list="$DEFAULT_MEMBER_START_PORT"
+      fi
+     ;;
+   -vm-user)
+      type_list="$(whoami)"
+      ;;
+
+   -path | -java | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+     is_path="true"
+     ;;
+   *)
+      # Command options
+      type_list=`$command -options`
+     ;;
+   esac
+
+   # Remove the help option if one or more options are already specified
+   if [ $len -gt 2 ]; then
+      type_list=${type_list/\-\?/}
+   fi
+   # Remove typed options from the list
+   for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
+      __WORD="${COMP_WORDS[$i]}"
+      if [ "$__WORD" != "$cur_word" ]; then
+         type_list=${type_list/$__WORD/}
+      fi
+   done
+
+   if [ "${type_list}" != "" ] || [ "$is_path" == "true" ] ; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
    return 0
 }
 
@@ -434,12 +739,6 @@ __get_jet_jobs()
       __JOBS=$(echo "$__JOBS" | sed -e 's/ID.*NAME//' | sed -e 's/ .*$//')
    fi
    echo "$__JOBS"
-}
-
-__get_str_position()
-{ 
-  x="${1%%$2*}"
-  [[ "$x" = "$1" ]] && echo -1 || echo "${#x}"
 }
 
 #
@@ -583,7 +882,9 @@ __cluster_complete()
       ;;
    esac
 
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
    return 0
 }
 
@@ -697,128 +998,9 @@ __jet_complete()
       ;;
    esac
 
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
-   return 0
-}
-
-__command_complete()
-{
-   local command cur_word prev_word type_list
-
-   # COMP_WORDS is an array of words in the current command line.
-   # COMP_CWORD is the index of the current word (the one the cursor is
-   # in). So COMP_WORDS[COMP_CWORD] is the current word.
-   command="${COMP_WORDS[0]}"
-   cur_word="${COMP_WORDS[COMP_CWORD]}"
-   prev_word="${COMP_WORDS[COMP_CWORD-1]}"
-   len=${#COMP_WORDS[@]}
-
-   case $prev_word in
-   -?)
-      type_list=""
-      ;;
-   -pod)
-      type_list=`getPods`
-      ;;
-   -count)
-      type_list="1 2 3 4 5 6 7 8 9"
-      ;;
-   -app)
-      if [ "$command" == "create_app" ]; then
-         type_list=`getAddonApps $CLUSTER_TYPE`
-      else
-         type_list=`getApps`
-      fi
-      ;;
-   -cluster)
-      if [ "$command" == "create_k8s" ] || [ "$command" == "remove_k8s" ]; then
-         __ENV="k8s"
-      elif [ "$command" == "create_docker" ] || [ "$command" == "remove_docker" ]; then
-         __ENV="docker"
-      else
-         __ENV="clusters"
-      fi
-      type_list=`getClusters $__ENV`
-      ;;
-   -product)
-      if [ "$command" == "show_bundle" ]; then
-         type_list="$BUNDLE_PRODUCT_LIST"
-      fi
-      ;;
-   -rwe)
-      type_list=`getRweList`
-      ;;
-   -workspace)
-      if [ "$command" == "install_bundle" ]; then
-         type_list=`$command -options`
-      else
-         type_list=`getWorkspaces`
-      fi
-      ;;
-   -k8s)
-      if [ "$command" != "create_workspace" ]; then
-         type_list="minikube gke minishift openshift"
-      else
-         type_list=`getClusters k8s`
-      fi
-      ;;
-   -docker)
-      if [ "$command" == "create_bundle" ]; then
-         type_list=`getClusters docker`
-      else
-         type_list="compose"
-      fi
-      ;;
-   -host)
-      if [ "$command" == "create_docker" ]; then
-         type_list="$(getHostIPv4List) host.docker.internal"
-      fi
-      ;;
-   -user)
-      GITHUB_USERS=""
-      if [ -f "$HOME/.padogrid/setenv.sh" ]; then
-         . $HOME/.padogrid/setenv.sh
-      fi
-      type_list="padogrid $GITHUB_USERS"
-      ;;
-   -githost)
-      type_list="github gitea"
-      ;;
-   -connect)
-      type_list="https ssh"
-      ;;
-   -log)
-      type_list="data gc diag mc"
-     ;;
-   -num)
-      type_list="1 2 3 4 5 6 7 8 9"
-     ;;
-   -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ]; then
-         type_list="$DEFAULT_MEMBER_START_PORT"
-      fi
-     ;;
-   -path | -datagrid | -java | -geode | -hazelcast | -jet | -vm-java | -vm-geode | -vm-hazelcast) 
-     ;;
-   *)
-      # Command options
-      type_list=`$command -options`
-     ;;
-   esac
-
-   # Remove the help option if one or more options are already specified
-   if [ $len -gt 2 ]; then
-      type_list=${type_list/\-\?/}
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
-   # Remove typed options from the list
-   for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
-      __WORD="${COMP_WORDS[$i]}"
-      if [ "$__WORD" != "$cur_word" ]; then
-         type_list=${type_list/$__WORD/}
-      fi
-   done
-
-   COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    return 0
 }
 
@@ -829,45 +1011,45 @@ for i in $commands; do
       if [ "$i" == "cp_sub" ] || [ "$i" == "tools" ]; then
          sub_commands=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$i`
          for j in $sub_commands; do
-            complete -F __command_complete -o bashdefault -o default $j
+            complete -F __command_complete -o bashdefault $j
          done
-         complete -F __command_complete -o bashdefault -o default $i
+         complete -F __command_complete -o bashdefault $i
       else
-         complete -F __command_complete -o bashdefault -o default $i
+         complete -F __command_complete -o bashdefault $i
       fi
    fi
 done
 
 # Register padogrid
-complete -F __padogrid_complete -o bashdefault -o default padogrid
+complete -F __padogrid_complete -o bashdefault padogrid
 
 # Register switch_rwe, cd_rwe
-complete -F __rwe_complete -o bashdefault -o default switch_rwe
-complete -F __rwe_complete -o bashdefault -o default cd_rwe
+complete -F __rwe_complete -o bashdefault switch_rwe
+complete -F __rwe_complete -o bashdefault cd_rwe
 
 # Register switch_workspace, cd_workspace
-complete -F __workspaces_complete -o bashdefault -o default switch_workspace
-complete -F __workspaces_complete -o bashdefault -o default cd_workspace
+complete -F __workspace_complete -o bashdefault switch_workspace
+complete -F __workspace_complete -o bashdefault cd_workspace
 
 # Register switch_cluster, cd_cluster
-complete -F __clusters_complete -o bashdefault -o default switch_cluster
-complete -F __clusters_complete -o bashdefault -o default cd_cluster
+complete -F __clusters_complete -o bashdefault switch_cluster
+complete -F __clusters_complete -o bashdefault  cd_cluster
 
 # Register cd_pod
-complete -F __pods_complete -o bashdefault -o default cd_pod
+complete -F __pods_complete -o bashdefault cd_pod
 
 # Register cd_k8s
-complete -F __k8s_complete -o bashdefault -o default cd_k8s
+complete -F __k8s_complete -o bashdefault cd_k8s
 
 # Register cd_docker
-complete -F __docker_complete -o bashdefault -o default cd_docker
+complete -F __docker_complete -o bashdefault cd_docker
 
 # Register cd_app
-complete -F __apps_complete -o bashdefault -o default cd_app
+complete -F __apps_complete -o bashdefault cd_app
 
 # Register cluster.sh
-complete -F __cluster_complete -o bashdefault -o default cluster.sh
+complete -F __cluster_complete -o bashdefault cluster.sh
 
 # Register jet.sh
-complete -F __jet_complete -o bashdefault -o default jet.sh
-complete -F __jet_complete -o bashdefault -o default jet
+complete -F __jet_complete -o bashdefault jet.sh
+complete -F __jet_complete -o bashdefault jet

@@ -941,20 +941,9 @@ public class GroupTest implements Constants {
 				writeLine("group: " + group.name);
 				for (Operation operation : group.operations) {
 					switch (operation.ds) {
-					case map:
-						operation.imap = hazelcastInstance.getMap(operation.dsName);
-						int size = operation.imap.size();
-						if (delete) {
-							operation.imap.destroy();
-						}
-						writeLine("  - name: " + operation.dsName);
-						writeLine("    data: IMap");
-						writeLine("    size: " + size);
-						writeLine("    deleted: " + delete);
-						break;
 					case rmap:
 						operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
-						size = operation.rmap.size();
+						int size = operation.rmap.size();
 						if (delete) {
 							operation.rmap.destroy();
 						}
@@ -1003,6 +992,18 @@ public class GroupTest implements Constants {
 						writeLine("    data: ReliableTopic");
 						writeLine("    deleted: " + delete);
 						break;
+					case map:
+					default:
+						operation.imap = hazelcastInstance.getMap(operation.dsName);
+						size = operation.imap.size();
+						if (delete) {
+							operation.imap.destroy();
+						}
+						writeLine("  - name: " + operation.dsName);
+						writeLine("    data: IMap");
+						writeLine("    size: " + size);
+						writeLine("    deleted: " + delete);
+						break;
 					}
 				}
 			}
@@ -1035,7 +1036,7 @@ public class GroupTest implements Constants {
 		writeLine("   " + executableName + " [-run|-list] [-db|-delete] [-prop <properties-file>] [-?]");
 		writeLine();
 		writeLine("   Displays or runs group test cases specified in the properties file.");
-		writeLine("   A group represents a function that executes one or more Hazelcast IMap");
+		writeLine("   A group represents a function that executes one or more Hazelcast dat s");
 		writeLine("   operations. This program measures average latencies and throughputs");
 		writeLine("   of group (or function) executions.");
 		writeLine("   The default properties file is");

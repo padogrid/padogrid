@@ -316,6 +316,7 @@ function isValidRwe
 # If the workspaces path is not specified then it returns the workspaces in 
 # PADOGRID_WORKSPACES_HOME.
 # @required PADOGRID_WORKSPACES_HOME
+# @param workspacePath Workspace path.
 #
 function getWorkspaces
 {
@@ -713,6 +714,76 @@ function getMemberName
 }
 
 #
+# Returns the member name of the specified VM host (address).
+# @required POD     Pod name.
+# @required VM_USER VM ssh user name
+# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
+# @param    host    VM host name or address. If not specified then the current VM's host name is applied.
+#
+function getVmMemberName
+{
+   __HOST="$1"
+   if [ "$__HOST" == "" ]; then
+      __HOSTNAME=`hostname`
+   else
+      __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
+   fi
+   if [ "$POD" != "local" ]; then
+      echo "${CLUSTER}-${__HOSTNAME}"
+   else
+      echo "${CLUSTER}-${__HOSTNAME}-01"
+   fi
+}
+
+#
+# Returns the member PID if it is running. Empty value otherwise.
+# @required NODE_LOCAL     Node name with the local extenstion. For remote call only.
+# @param    memberName     Unique member name
+# @param    workspaceName  Workspace name
+#
+function getMemberPid
+{
+   __MEMBER=$1
+   __WORKSPACE=$2
+   __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
+   if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   else
+      members=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MEMBER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   fi
+   spids=""
+   for j in $members; do
+      spids="$j $spids"
+   done
+   spids=`trimString $spids`
+   echo $spids
+}
+
+#
+# Returns the member PID of VM if it is running. Empty value otherwise.
+# This function is for clusters running on VMs whereas the getMemberPid
+# is for pods running on the same machine.
+# @required VM_USER        VM ssh user name
+# @optional VM_KEY         VM private key file path with -i prefix, e.g., "-i file.pem"
+# @param    host           VM host name or address
+# @param    memberName     Unique member name
+# @param    workspaceName  Workspace name
+#
+function getVmMemberPid
+{
+   __HOST=$1
+   __MEMBER=$2
+   __WORKSPACE=$3
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   spids=""
+   for j in $members; do
+      spids="$j $spids"
+   done
+   spids=`trimString $spids`
+   echo $spids
+}
+
+#
 # Returns a string list with all duplicate words removed from the specified string list.
 # @param stringList String list of words separated by spaces
 #
@@ -1099,10 +1170,22 @@ function switch_rwe
       echo "   $EXECUTABLE - Switch to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [rwe_name [workspace_name]] [-?]"
+      echo "   $EXECUTABLE [rwe_name [workspace_name [directory_name ...]]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Switches to the specified root workspaces environment."
+      echo "   Switches to the specified root workspaces environment and changes directory to"
+      echo "   the specified nested directory. To specify the nested directory names, use the"
+      echo "   tab key to drill down the directory structure. If the specified nested directory"
+      echo "   is a workspace or cluster, then it also automatically switches to their respective"
+      echo "   context."
+      echo ""
+      echo "   If the workspace directory is not specified and the current workspace name exists in"
+      echo "   the target RWE, then it switches into that workspace. Otherwise, it switches to"
+      echo "   the target RWE's default workspace."
+      echo ""
+      echo "   If the cluster directory is not specified and the current cluster name exists in"
+      echo "   the target workspace, then it switches into that cluster. Otherwise, it switches to"
+      echo "   the target workspace's default cluster."
       echo ""
       echo "OPTIONS"
       echo "   rwe_name"
@@ -1113,8 +1196,29 @@ function switch_rwe
       echo "             Workspace to switch to. If not specified, then switches"
       echo "             to the default workspace of the specified RWE."
       echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory. If the leaf directory is a workspace"
+      echo "             directory, then it automatically switches into that workspace. Similary,"
+      echo "             if the leaf directory is a cluster directory then it automatically switches"
+      echo "             into that cluster."  
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Swith RWE to 'myrwe', wwitch workspace to 'myws', switch cluster to 'mycluster', and"
+      echo "     change direoctory to that cluster's 'etc' directory. The slash character is optional."
+      echo ""
+      echo "        switch_rwe myrwe myws clusters/ mycluster/ etc/"
+      echo ""
+      echo "   - Switch RWE to 'myrwe', wwitch workspace to 'myws', change directory to the perf_test's"
+      echo "     'bin_sh' directory."
+      echo ""
+      echo "        switch_rwe myrwe myws apps/ perf_test/ bin_sh/"
       echo ""
       echo "SEE ALSO"
       printSeeAlsoList "*rwe*" $EXECUTABLE
@@ -1132,6 +1236,7 @@ function switch_rwe
          export CLUSTER=""
       fi
       . $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet
+      cd_rwe $@
    else
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       if [ ! -d "$PARENT_DIR/$1" ]; then
@@ -1142,16 +1247,19 @@ function switch_rwe
             echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
             return 1
          fi
+         . $PARENT_DIR/$1/$2/initenv.sh -quiet
+         local __COMPONENT_DIR_NAME=$(echo "$3" | sed 's/\///')
+         if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$4" != "" ]; then
+             if [ -d "$PARENT_DIR/$1/$2/clusters/$4" ]; then
+                export CLUSTER=$(echo "$4" | sed 's/\///')
+             fi
+         fi
+         shift 1
+         cd_workspace $@
+      else
+         . $PARENT_DIR/$1/initenv.sh -quiet
+         cd_rwe $@
       fi
-      if [ ! -d "$PARENT_DIR/$1/clusters/$CLUSTER" ]; then
-         export CLUSTER=""
-      fi
-      . $PARENT_DIR/$1/initenv.sh -quiet
-   fi
-   if [ "$2" != "" ]; then
-      switch_workspace $2
-   else
-      cd_rwe $1
    fi
 }
 
@@ -1174,18 +1282,43 @@ function switch_workspace
       echo "   $EXECUTABLE - Switch to the specified padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [workspace_name] [-?]"
+      echo "   $EXECUTABLE [workspace_name [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Switches to the specified workspace."
+      echo "   Switches to the specified workspace and changes directory to the specified nested"
+      echo "   directory. To specify the nested directory names, use the tab key to drill down"
+      echo "   the directory structure. If the specified nested directory is a cluster directory"
+      echo "   then it also switches cluster."
+      echo ""
+      echo "   If the cluster directory is not specified and the current cluster name exists in"
+      echo "   the target workspace, then it switches into that cluster. Otherwise, it switches to"
+      echo "   the target workspace's default cluster."
       echo ""
       echo "OPTIONS"
       echo "   workspace_name"
-      echo "             Workspace to switch to. If not specified, then switches"
-      echo "             to the current workspace."
+      echo "             Workspace to switch to. If not specified, then switches to the current"
+      echo "             workspace."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory. If the leaf directory is a cluster"
+      echo "             directory then it automatically switches into that cluster."  
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Switch workspace to 'myws', switch cluster to 'mycluster', and change direoctory"
+      echo "     to that cluster's 'etc' directory. The slash character is optional."
+      echo ""
+      echo "        switch_workspace myws clusters/ mycluster/ etc/"
+      echo ""
+      echo "   - Switch workspace to 'myws', change directory to the perf_test's 'bin_sh' directory."
+      echo ""
+      echo "        switch_workspace myws apps/ perf_test/ bin_sh/"
       echo ""
       echo "SEE ALSO"
       printSeeAlsoList "*workspace*" $EXECUTABLE
@@ -1204,14 +1337,14 @@ function switch_workspace
       fi
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then
          __WORKSPACES=$(list_workspaces)
-    for i in $__WORKSPACES; do
+         for i in $__WORKSPACES; do
             __WORKSPACE=$i
-       break;
+            break;
          done
-    if [ "$__WORKSPACE" == "" ]; then
+         if [ "$__WORKSPACE" == "" ]; then
             echo >&2 "ERROR: Workspace does not exist. Command aborted."
-       return 1
-    fi
+            return 1
+         fi
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
          updateDefaultEnv
       fi
@@ -1223,13 +1356,20 @@ function switch_workspace
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
          echo >&2 "ERROR: Invalid workspace. Workspace does not exist. Command aborted."
          return 1
+      elif [ "$2" != "" ]; then
+         local __COMPONENT_DIR_NAME=$(echo "$2" | sed 's/\///')
+         if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$3" != "" ]; then
+             if [ -d "$PADOGRID_WORKSPACES_HOME/$1/clusters/$3" ]; then
+                export CLUSTER=$(echo "$3" | sed 's/\///')
+             fi
+         fi
       fi
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1/clusters/$CLUSTER" ]; then
          export CLUSTER=""
       fi
       . $PADOGRID_WORKSPACES_HOME/$1/initenv.sh -quiet
    fi
-   cd_workspace $1
+   cd_workspace $@
 }
 
 # 
@@ -1252,17 +1392,32 @@ function switch_cluster
       echo "                 padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name [directory_name ...]] [-?]"
       echo ""
-      echo "  Switches to the specified cluster."
+      echo "   Switches to the specified cluster and chagnes directory to the specified nested."
+      echo "   directory. To specify the nested directory names, use the tab key to drill down"
+      echo "   the directory structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name"
       echo "             Cluster to switch to. If not specified, then switches"
       echo "             to the current cluster."
       echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Switch cluster to 'mycluster', and change direoctory to that cluster's 'etc' directory."
+      echo "     The slash character is optional."
+      echo ""
+      echo "        switch mycluster/ etc/"
       echo ""
       echo "SEE ALSO"
       printSeeAlsoList "*cluster*" $EXECUTABLE
@@ -1273,9 +1428,9 @@ function switch_cluster
    fi
 
    if [ "$1" != "" ]; then
-      export CLUSTER=$1
+      export CLUSTER=$(echo "$1" | sed 's/\///')
    fi
-   cd_cluster $CLUSTER
+   cd_cluster $@
 }
 
 #
@@ -1294,10 +1449,13 @@ function cd_rwe
       echo "   $EXECUTABLE - Change directory to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [rwe_name [workspace_name]] [-?]"
+      echo "   $EXECUTABLE [rwe_name [workspace_name [directory_name ...]]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified root workspaces environment."
+      echo "   Changes directory to the specified nested directory in the specified RWE"
+      echo "   environment. To specify the nested directory names, use the tab key to drill"
+      echo "   down the directory structure."
+      echo "   context."
       echo ""
       echo "OPTIONS"
       echo "   rwe_name"
@@ -1307,7 +1465,19 @@ function cd_rwe
       echo "   workspace_name"
       echo "             Workspace name. If not specified then changes to the"
       echo "             default workspace directory of the specified RWE."
+      eho ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
       echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'myrwe/myws/clusters/mycluster/etc'. The slash character is"
+      echo "     optional."
+      echo ""
+      echo "        cd_rwe myrwe myws clusters/ mycluster/ etc/"
       echo "DEFAULT"
       echo "   $EXECUTABLE"
       echo ""
@@ -1326,14 +1496,17 @@ function cd_rwe
       if [ ! -d "$PARENT_DIR/$1" ]; then
          echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
          return 1
-      elif [ "$2" != "" ]; then
-         if [ ! -d "$PARENT_DIR/$1/$2" ]; then
-            echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
-         cd $PARENT_DIR/$1/$2
-      else
-         cd $PARENT_DIR/$1
+         cd "$DIR"
       fi
    fi
    pwd
@@ -1356,15 +1529,29 @@ function cd_workspace
       echo "   $EXECUTABLE - Change directory to the specified padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [workspace_name] [-?]"
+      echo "   $EXECUTABLE [workspace_name [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified workspace."
+      echo "   Chagnes directory to the specified workspace's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   workspace_name"
       echo "             Workspace name. If not specified then changes to the"
       echo "             current workspace directory."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'myws/clusters/mycluster/etc'. The slash character is optional."
+      echo ""
+      echo "        cd_workspace myws clusters/ mycluster/ etc/"
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
@@ -1380,7 +1567,22 @@ function cd_workspace
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE
    else
-      cd $PADOGRID_WORKSPACES_HOME/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACES_HOME"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1405,15 +1607,28 @@ function cd_pod
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [pod_name] [-?]"
+      echo "   $EXECUTABLE [pad_name] [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified pod."
+      echo "   Chagnes directory to the specified pod's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   pod_name" 
-      echo "             Pod name. If not specified then changes to the"
-      echo "             current pod directory."
+      echo "             Pod name. If not specified then changes to the current pod directory."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'mypod/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_pod mypod bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1429,18 +1644,23 @@ function cd_pod
    fi
 
    if [ "$1" == "" ]; then
-      if [ -d $PADOGRID_WORKSPACE/pods/$POD ]; then
-         cd $PADOGRID_WORKSPACE/pods/$POD
-         pwd
-      else
-         echo >&2 "ERROR: Pod does not exist [$POD]. Command aborted."
-      fi
+      cd $PADOGRID_WORKSPACE/pods/$POD
    else
-      if [ -d $PADOGRID_WORKSPACE/pods/$1 ]; then
-         cd $PADOGRID_WORKSPACE/pods/$1
-         pwd
+      local PARENT_DIR="$PADOGRID_WORKSPACE/pods"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         return 1
       else
-         echo >&2 "ERROR: Pod does not exist [$1]. Command aborted."
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
       fi
    fi
 }
@@ -1478,15 +1698,29 @@ function cd_cluster
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified cluster."
+      echo "   Chagnes directory to the specified cluster's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name" 
       echo "             Cluster name. If not specified then changes to the"
       echo "             current cluster directory."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'mycluster/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_cluster mycluster bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1504,7 +1738,22 @@ function cd_cluster
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/clusters/$CLUSTER
    else
-      cd $PADOGRID_WORKSPACE/clusters/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/clusters"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1529,15 +1778,29 @@ function cd_k8s
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name] [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified Kubernetes directory."
+      echo "   Chagnes directory to the specified Kubernetes cluster's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name"
       echo "             Kubernetes cluster name. If not specified then changes to the"
       echo "             current Kubernetes cluster directory."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'myk8s/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_pod myk8s bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1555,7 +1818,22 @@ function cd_k8s
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/k8s/$K8S
    else
-      cd $PADOGRID_WORKSPACE/k8s/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/k8s"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1580,15 +1858,29 @@ function cd_docker
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name] [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified Docker cluster."
+      echo "   Chagnes directory to the specified Docker cluster's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name"
-      echo "             Docker cluster name. If not specified then changes to the"
-      echo "             current Docker cluster directory."
+      echo "             Docker cluster name. If not specified then changes to the current Docker"
+      echo "             cluster directory."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'mydocker/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_docker mydocker bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1606,7 +1898,22 @@ function cd_docker
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/docker/$DOCKER
    else
-      cd $PADOGRID_WORKSPACE/docker/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/docker"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid docker name. Docker name does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1632,15 +1939,18 @@ function cd_app
       echo "                 padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [app_name] [-?]"
+      echo "   $EXECUTABLE [app_name [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Changes directory to the specified app."
       echo ""
       echo "OPTIONS"
       echo "   app_name"
-      echo "             App name. If not specified then changes to the"
-      echo "             current app directory."
+      echo "             App name. If not specified then changes to the current app directory."
+      echo ""
+      echo "   directory"
+      echo "             Directory name. One or more nested directory names within the specified app."
+
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1658,7 +1968,22 @@ function cd_app
    if [ "$1" == "" ]; then
       cd $PADOGRID_WORKSPACE/apps/$APP
    else
-      cd $PADOGRID_WORKSPACE/apps/$1
+      local PARENT_DIR="$PADOGRID_WORKSPACE/apps"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid app name. App name does not exist. Command aborted."
+         return 1
+      else 
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
    fi
    pwd
 }
@@ -1683,21 +2008,25 @@ function padogrid
       echo "   $EXECUTABLE - Execute the specified padogrid command"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [<padogrid-command>] [-version] [-?]"
+      echo "   $EXECUTABLE [-product|-rwe|-version] [padogrid_command command] [-?]"
       echo ""
       echo "DESCRIPTION"
       echo "   Executes the specified padogrid command. If no options are specified then it displays"
       echo "   the current workspace information."
       echo ""
       echo "OPTIONS"
-      echo "   padogrid_command"
-      echo "             Padogrid command to execute."
+      echo "   -rwe"
+      echo "             If specified, then displays only RWEs in tree view. To display a space sparated"
+      echo "             list of RWEs, run 'list_rwes' instead."
+      echo ""
+      echo "   -product"
+      echo "             If specified, then displays the current workspace product version."
       echo ""
       echo "   -version"
       echo "             If specified, then displays the current workspace padogrid version."
       echo ""
-      echo "   -product"
-      echo "             If specified, then displays the current workspace product version."
+      echo "   padogrid_command"
+      echo "             One of the PadoGrid commands listed below."
       echo ""
       echo "COMMANDS"
       ls $SCRIPT_DIR
@@ -1706,19 +2035,21 @@ function padogrid
    fi
 
    if [ "$1" == "cp_sub" ] || [ "$1" == "tools" ]; then
-      COMMAND=$2
-      SHIFT_NUM=2
-   elif [ "$1" == "-version" ]; then
-      echo "$PADOGRID_VERSION"
-      return 0
+      local COMMAND=$2
+      local SHIFT_NUM=2
+   elif [ "$1" == "-rwe" ]; then
+      local COMMAND=""
+      local RWE_SPECIFIED="true"
    elif [ "$1" == "-product" ]; then
       echo "$PRODUCT"
       return 0
+   elif [ "$1" == "-version" ]; then
+      echo "$PADOGRID_VERSION"
+      return 0
    else
-      COMMAND=$1
-      SHIFT_NUM=1
+      local COMMAND=$1
+      local SHIFT_NUM=1
    fi
-
 
    if [ "$COMMAND" == "" ]; then
 cat <<EOF
@@ -1730,9 +2061,9 @@ cat <<EOF
 | _|    /__/     \__\ |_______/ \______/   \______| | _| '._____||__| |_______/ 
 Copyright 2020 Netcrest Technologies, LLC. All rights reserved.
 v$PADOGRID_VERSION
-Manual: https://github.com/padogrid/padogrid/wiki
-
 EOF
+echo -e "Manual: ${CUrl}https://github.com/padogrid/padogrid/wiki${CNone}"
+echo ""
 
       RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       echo "Root Workspaces Environments (RWEs)"
@@ -1750,15 +2081,18 @@ EOF
                echo -e "├── ${CLightGreen}$RWE${CNone}"
             else
                echo "├── $RWE"
-	    fi
+            fi
             LEADING_BAR="│   "
          else
             if [ "$RWE" == "$CURRENT_RWE" ]; then
                echo -e "└── ${CLightGreen}$RWE${CNone}"
             else
                echo "└── $RWE"
-	    fi
+            fi
             LEADING_BAR="    "
+         fi
+         if [ "$RWE_SPECIFIED" == "true" ]; then
+            continue;
          fi
          local WORKSPACES=`ls $RWE_HOME/$RWE`
          WORKSPACES=$(removeTokens "$WORKSPACES" "initenv.sh setenv.sh")
@@ -1766,19 +2100,22 @@ EOF
          let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
          for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
             local WORKSPACE=${WORKSPACES[$j]}
+            if [ ! -f $RWE_HOME/$RWE/$WORKSPACE/.addonenv.sh ]; then
+               continue;
+            fi
             local WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$RWE_HOME/$RWE")
             if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
                   echo -e "${LEADING_BAR}├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
                   echo "${LEADING_BAR}├── $WORKSPACE [$WORKSPACE_INFO]"
-	       fi
+            fi
             else
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
                   echo -e "${LEADING_BAR}└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
                   echo "${LEADING_BAR}└── $WORKSPACE [$WORKSPACE_INFO]"
-	       fi
+               fi
             fi
          done
       done
@@ -1825,7 +2162,8 @@ function getWorkspaceInfoList
 
    local CLUSTER_TYPE=$(grep "CLUSTER_TYPE" $WORKSPACE_PATH/.addonenv.sh)
    CLUSTER_TYPE=$(echo "$CLUSTER_TYPE" | sed 's/^.*=//')
-   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh")
+   # Remove blank lines from grep results. Pattern includes space and tab.
+   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
    local PRODUCT_VERSION
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//')
@@ -1867,7 +2205,9 @@ function getWorkspaceInfoList
       VM_WORKSPACE=""
    fi
    PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
-   PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/^.*padogrid_//' -e 's/"//')
+   # Remove blank lines from grep results. Pattern includes space and tab.
+   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
+   PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
    echo "${VM_WORKSPACE}${CLUSTER_TYPE}_${PRODUCT_VERSION}, padogrid_$PADOGRID_VERSION"
 }
 

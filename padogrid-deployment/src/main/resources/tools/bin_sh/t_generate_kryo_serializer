@@ -24,4 +24,12 @@ fi
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"
 fi
-"$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.KryoGenerator $@
+
+if [ "$PRODUCT" == "geode" ]; then
+   "$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.GeodeKryoGenerator $@
+elif [ "$PRODUCT" == "hazelcast" ]; then
+   "$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.HazelcastKryoGenerator $@
+else
+   echo >&2 "ERROR: Kryo grenerator is not available for this product: [$PRODUCT]. Command aborted."
+fi
+

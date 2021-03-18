@@ -1,6 +1,6 @@
 # Hazelcast `jet_demo` App
 
-The `jet_demo` app provides Jet demo jobs in the form of jar files that can readily be submitted to Jet using the `jet.sh` executable. You must first build the jar files by running `bin_sh/build_app` as described below.
+The `jet_demo` app provides Jet demo jobs in the form of jar files that can readily be submitted to Jet using the `jet` executable. You must first build the jar files by running `bin_sh/build_app` as described below.
 
 ## Building jet_demo
 
@@ -13,18 +13,18 @@ cd bin_sh
 
 ## Running jet_demo
 
-Upon successful build, you can submit any of the jar files in the `lib` directory to Jet using the `jet.sh` executable. You must have a Jet cluster running before you can run `jet.sh`. For `padogrid`, you can simply create a Jet workspace and start a cluster from there as described in the [Jet Workspace](padogrid#jet-workspace) section.
+Upon successful build, you can submit any of the jar files in the `lib` directory to Jet using the `jet` executable. You must have a Jet cluster running before you can run `jet`. For `padogrid`, you can simply create a Jet workspace and start a cluster from there as described in the [Jet Workspace](padogrid#jet-workspace) section.
 
 :exclamation: Note that the default ports for Jet clusters in PadoGrid starts from 6701.
 
 ```console
 cd_app jet_demo
 
-# Submit WordCountJob to localhost:6701
-jet.sh -a localhost:6701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+# Submit WordCountJob to localhost:6701 (run jet.sh if 3.x or 4.0)
+jet -a localhost:6701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 
-# Submit WordCountJob to localhost:5701
-jet.sh submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+# Submit WordCountJob to localhost:5701 (run jet.sh if 3.x or 4.0)
+jet submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 ```
 
 ## Monitoring Jobs
@@ -54,8 +54,8 @@ show_log -cluster myjet -num 1
 export JAVA_OPTS=-DoutputWords=true
 
 # Submit books for counting most frequent words on localhost:5701
-jet.sh -v submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+jet -v submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 
 # Submit books for counting most frequent words on localhost:6701
-jet.sh -v -a localhost:6701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+jet -v -a localhost:6701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 ```

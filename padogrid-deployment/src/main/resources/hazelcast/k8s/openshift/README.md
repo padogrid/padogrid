@@ -125,7 +125,7 @@ oc adm policy who-can use scc nonroot
 oc adm policy add-scc-to-user nonroot system:serviceaccount:myocp:default
 ```
 
-:exclamation: Note that as of **oc v4.5.9**, `oc get scc nonroot -o yaml` will not show the user you added using CLI. This is also true for the user added using the editor, which will not be shown in the output of `oc adm policy who-can use scc nonroot`.
+:exclamation: Note that depending on the `oc` version, e.g., **v4.5.9**, `oc get scc nonroot -o yaml` may not show the user you added using CLI. This also true for the user added using the editor, which may not be shown in the output of `oc adm policy who-can use scc nonroot`.
 
 ## 4. Create Hazelcast Enterprise RHEL regitry secret
 
