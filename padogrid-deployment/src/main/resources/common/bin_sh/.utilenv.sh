@@ -1170,10 +1170,22 @@ function switch_rwe
       echo "   $EXECUTABLE - Switch to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [rwe_name [workspace_name]] [-?]"
+      echo "   $EXECUTABLE [rwe_name [workspace_name [directory_name ...]]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Switches to the specified root workspaces environment."
+      echo "   Switches to the specified root workspaces environment and changes directory to"
+      echo "   the specified nested directory. To specify the nested directory names, use the"
+      echo "   tab key to drill down the directory structure. If the specified nested directory"
+      echo "   is a workspace or cluster, then it also automatically switches to their respective"
+      echo "   context."
+      echo ""
+      echo "   If the workspace directory is not specified and the current workspace name exists in"
+      echo "   the target RWE, then it switches into that workspace. Otherwise, it switches to"
+      echo "   the target RWE's default workspace."
+      echo ""
+      echo "   If the cluster directory is not specified and the current cluster name exists in"
+      echo "   the target workspace, then it switches into that cluster. Otherwise, it switches to"
+      echo "   the target workspace's default cluster."
       echo ""
       echo "OPTIONS"
       echo "   rwe_name"
@@ -1184,8 +1196,29 @@ function switch_rwe
       echo "             Workspace to switch to. If not specified, then switches"
       echo "             to the default workspace of the specified RWE."
       echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory. If the leaf directory is a workspace"
+      echo "             directory, then it automatically switches into that workspace. Similary,"
+      echo "             if the leaf directory is a cluster directory then it automatically switches"
+      echo "             into that cluster."  
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Swith RWE to 'myrwe', wwitch workspace to 'myws', switch cluster to 'mycluster', and"
+      echo "     change direoctory to that cluster's 'etc' directory. The slash character is optional."
+      echo ""
+      echo "        switch_rwe myrwe myws clusters/ mycluster/ etc/"
+      echo ""
+      echo "   - Switch RWE to 'myrwe', wwitch workspace to 'myws', change directory to the perf_test's"
+      echo "     'bin_sh' directory."
+      echo ""
+      echo "        switch_rwe myrwe myws apps/ perf_test/ bin_sh/"
       echo ""
       echo "SEE ALSO"
       printSeeAlsoList "*rwe*" $EXECUTABLE
@@ -1203,6 +1236,7 @@ function switch_rwe
          export CLUSTER=""
       fi
       . $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet
+      cd_rwe $@
    else
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       if [ ! -d "$PARENT_DIR/$1" ]; then
@@ -1213,17 +1247,19 @@ function switch_rwe
             echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
             return 1
          fi
+         . $PARENT_DIR/$1/$2/initenv.sh -quiet
+         local __COMPONENT_DIR_NAME=$(echo "$3" | sed 's/\///')
+         if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$4" != "" ]; then
+             if [ -d "$PARENT_DIR/$1/$2/clusters/$4" ]; then
+                export CLUSTER=$(echo "$4" | sed 's/\///')
+             fi
+         fi
+         shift 1
+         cd_workspace $@
+      else
+         . $PARENT_DIR/$1/initenv.sh -quiet
+         cd_rwe $@
       fi
-      if [ ! -d "$PARENT_DIR/$1/clusters/$CLUSTER" ]; then
-         export CLUSTER=""
-      fi
-      . $PARENT_DIR/$1/initenv.sh -quiet
-   fi
-   if [ "$2" != "" ]; then
-      shift 1
-      switch_workspace $@
-   else
-      cd_rwe $@
    fi
 }
 
@@ -1246,18 +1282,43 @@ function switch_workspace
       echo "   $EXECUTABLE - Switch to the specified padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [workspace_name] [-?]"
+      echo "   $EXECUTABLE [workspace_name [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Switches to the specified workspace."
+      echo "   Switches to the specified workspace and changes directory to the specified nested"
+      echo "   directory. To specify the nested directory names, use the tab key to drill down"
+      echo "   the directory structure. If the specified nested directory is a cluster directory"
+      echo "   then it also switches cluster."
+      echo ""
+      echo "   If the cluster directory is not specified and the current cluster name exists in"
+      echo "   the target workspace, then it switches into that cluster. Otherwise, it switches to"
+      echo "   the target workspace's default cluster."
       echo ""
       echo "OPTIONS"
       echo "   workspace_name"
-      echo "             Workspace to switch to. If not specified, then switches"
-      echo "             to the current workspace."
+      echo "             Workspace to switch to. If not specified, then switches to the current"
+      echo "             workspace."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory. If the leaf directory is a cluster"
+      echo "             directory then it automatically switches into that cluster."  
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Switch workspace to 'myws', switch cluster to 'mycluster', and change direoctory"
+      echo "     to that cluster's 'etc' directory. The slash character is optional."
+      echo ""
+      echo "        switch_workspace myws clusters/ mycluster/ etc/"
+      echo ""
+      echo "   - Switch workspace to 'myws', change directory to the perf_test's 'bin_sh' directory."
+      echo ""
+      echo "        switch_workspace myws apps/ perf_test/ bin_sh/"
       echo ""
       echo "SEE ALSO"
       printSeeAlsoList "*workspace*" $EXECUTABLE
@@ -1276,14 +1337,14 @@ function switch_workspace
       fi
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then
          __WORKSPACES=$(list_workspaces)
-    for i in $__WORKSPACES; do
+         for i in $__WORKSPACES; do
             __WORKSPACE=$i
-       break;
+            break;
          done
-    if [ "$__WORKSPACE" == "" ]; then
+         if [ "$__WORKSPACE" == "" ]; then
             echo >&2 "ERROR: Workspace does not exist. Command aborted."
-       return 1
-    fi
+            return 1
+         fi
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
          updateDefaultEnv
       fi
@@ -1295,6 +1356,13 @@ function switch_workspace
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
          echo >&2 "ERROR: Invalid workspace. Workspace does not exist. Command aborted."
          return 1
+      elif [ "$2" != "" ]; then
+         local __COMPONENT_DIR_NAME=$(echo "$2" | sed 's/\///')
+         if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$3" != "" ]; then
+             if [ -d "$PADOGRID_WORKSPACES_HOME/$1/clusters/$3" ]; then
+                export CLUSTER=$(echo "$3" | sed 's/\///')
+             fi
+         fi
       fi
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1/clusters/$CLUSTER" ]; then
          export CLUSTER=""
@@ -1324,17 +1392,32 @@ function switch_cluster
       echo "                 padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [-?]"
+      echo "   $EXECUTABLE [cluster_name [directory_name ...]] [-?]"
       echo ""
-      echo "  Switches to the specified cluster."
+      echo "   Switches to the specified cluster and chagnes directory to the specified nested."
+      echo "   directory. To specify the nested directory names, use the tab key to drill down"
+      echo "   the directory structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name"
       echo "             Cluster to switch to. If not specified, then switches"
       echo "             to the current cluster."
       echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Switch cluster to 'mycluster', and change direoctory to that cluster's 'etc' directory."
+      echo "     The slash character is optional."
+      echo ""
+      echo "        switch mycluster/ etc/"
       echo ""
       echo "SEE ALSO"
       printSeeAlsoList "*cluster*" $EXECUTABLE
@@ -1345,7 +1428,7 @@ function switch_cluster
    fi
 
    if [ "$1" != "" ]; then
-      export CLUSTER=$1
+      export CLUSTER=$(echo "$1" | sed 's/\///')
    fi
    cd_cluster $@
 }
@@ -1366,10 +1449,13 @@ function cd_rwe
       echo "   $EXECUTABLE - Change directory to the specified root workspaces environment"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [rwe_name [workspace_name]] [-?]"
+      echo "   $EXECUTABLE [rwe_name [workspace_name [directory_name ...]]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified root workspaces environment."
+      echo "   Changes directory to the specified nested directory in the specified RWE"
+      echo "   environment. To specify the nested directory names, use the tab key to drill"
+      echo "   down the directory structure."
+      echo "   context."
       echo ""
       echo "OPTIONS"
       echo "   rwe_name"
@@ -1379,7 +1465,19 @@ function cd_rwe
       echo "   workspace_name"
       echo "             Workspace name. If not specified then changes to the"
       echo "             default workspace directory of the specified RWE."
+      eho ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
       echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'myrwe/myws/clusters/mycluster/etc'. The slash character is"
+      echo "     optional."
+      echo ""
+      echo "        cd_rwe myrwe myws clusters/ mycluster/ etc/"
       echo "DEFAULT"
       echo "   $EXECUTABLE"
       echo ""
@@ -1431,15 +1529,29 @@ function cd_workspace
       echo "   $EXECUTABLE - Change directory to the specified padogrid workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [workspace_name] [-?]"
+      echo "   $EXECUTABLE [workspace_name [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified workspace."
+      echo "   Chagnes directory to the specified workspace's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   workspace_name"
       echo "             Workspace name. If not specified then changes to the"
       echo "             current workspace directory."
+      echo ""
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'myws/clusters/mycluster/etc'. The slash character is optional."
+      echo ""
+      echo "        cd_workspace myws clusters/ mycluster/ etc/"
       echo ""
       echo "DEFAULT"
       echo "   $EXECUTABLE"
@@ -1495,18 +1607,28 @@ function cd_pod
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [pad_name] [directory ...]] [-?]"
+      echo "   $EXECUTABLE [pad_name] [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified pod."
+      echo "   Chagnes directory to the specified pod's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   pod_name" 
-      echo "             Pod name. If not specified then changes to the"
-      echo "             current pod directory."
+      echo "             Pod name. If not specified then changes to the current pod directory."
       echo ""
-      echo "   directory"
-      echo "             Directory name. One or more nested directory names within the specified app."
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'mypod/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_pod mypod bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1579,15 +1701,26 @@ function cd_cluster
       echo "   $EXECUTABLE [cluster_name [directory ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified cluster."
+      echo "   Chagnes directory to the specified cluster's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name" 
       echo "             Cluster name. If not specified then changes to the"
       echo "             current cluster directory."
       echo ""
-      echo "   directory"
-      echo "             Directory name. One or more nested directory names within the specified app."
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'mycluster/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_cluster mycluster bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1645,18 +1778,29 @@ function cd_k8s
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name [directory ...]] [-?]"
+      echo "   $EXECUTABLE [cluster_name] [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified Kubernetes directory."
+      echo "   Chagnes directory to the specified Kubernetes cluster's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name"
       echo "             Kubernetes cluster name. If not specified then changes to the"
       echo "             current Kubernetes cluster directory."
       echo ""
-      echo "   directory"
-      echo "             Directory name. One or more nested directory names within the specified app."
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'myk8s/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_pod myk8s bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -1714,18 +1858,29 @@ function cd_docker
       echo "                 in the current workspace"
       echo ""
       echo "SYNOPSIS"
-      echo "   $EXECUTABLE [cluster_name] [directory ...]] [-?]"
+      echo "   $EXECUTABLE [cluster_name] [directory_name ...]] [-?]"
       echo ""
       echo "DESCRIPTION"
-      echo "   Changes directory to the specified Docker cluster."
+      echo "   Chagnes directory to the specified Docker cluster's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
       echo ""
       echo "OPTIONS"
       echo "   cluster_name"
-      echo "             Docker cluster name. If not specified then changes to the"
-      echo "             current Docker cluster directory."
+      echo "             Docker cluster name. If not specified then changes to the current Docker"
+      echo "             cluster directory."
       echo ""
-      echo "   directory"
-      echo "             Directory name. One or more nested directory names within the specified app."
+      echo "   directory_name ..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'mydocker/bin_sh'. The slash character is optional."
+      echo ""
+      echo "        cd_docker mydocker bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
