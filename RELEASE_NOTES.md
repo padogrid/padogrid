@@ -2,9 +2,9 @@
 
 ----
 
-## Version 0.9.5-SNAPSHOT
+## Version 0.9.6
 
-### Release Date: 03/13/21
+### Release Date: 03/18/21
 
 - Changed local settings of Vagrant pods to run as VMs.
 - Fixed the command completion ending issue. The command completion now blocks if all options have been exhausted.
