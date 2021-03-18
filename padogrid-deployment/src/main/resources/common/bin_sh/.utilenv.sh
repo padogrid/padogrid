@@ -1465,7 +1465,7 @@ function cd_rwe
       echo "   workspace_name"
       echo "             Workspace name. If not specified then changes to the"
       echo "             default workspace directory of the specified RWE."
-      eho ""
+      echo ""
       echo "   directory_name ..."
       echo "             One or names of nested directories. The $EXECUTABLE command constructs"
       echo "             the leaf directory path using the specified directory names and then"
