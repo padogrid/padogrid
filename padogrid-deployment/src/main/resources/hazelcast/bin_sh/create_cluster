@@ -58,7 +58,8 @@ OPTIONS
              to all member names.
 
    -pod pod_name
-             Pod name. The 'local' pod is the local machine.
+             Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
+             option. 
              Default: local
 
    -vm [comma_separated_hosts]
@@ -66,6 +67,8 @@ OPTIONS
              contains spaces then enclosed it in quotes. If this option is not
              specified, then the host list defined by VM_HOSTS in the workspace
              'setenv.sh' file is applied.
+             
+             If the '-pod' option is specified then this option is suppressed.
              
    -mc management_center_host
              Management center host name. This option is meaningful only
@@ -86,7 +89,7 @@ DEFAULT
 
 FILES
    $PADOGRID_WORKSPACE/setenv.sh
-             The current workspace coniguration file.
+             The current workspace configuration file.
 
 EOF
 fi
@@ -115,9 +118,10 @@ if [ -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ "$VM_SPECIFIED" == "true" ]; then
-   POD="local"
-fi
+# Suppress pod if VM specified
+#if [ "$VM_SPECIFIED" == "true" ]; then
+#   POD="local"
+#fi
 
 if [ "`isPodExist $POD`" == "false" ]; then
    echo >&2 "----------------------------------------------------------------"
@@ -340,7 +344,7 @@ function writeCluster()
 # 
 # VM cluster
 #
-if [ $"VM_SPECIFIED" == "true" ]; then
+if [ "$VM_SPECIFIED" == "true" ] && [ "$POD" == "local" ]; then
    VM_ENABLED="true"
 fi
 if [ "$VM_USER" == "" ]; then
@@ -655,7 +659,7 @@ echo ""
 echo "The default hazelcast.xml file has been placed in the CONFIG_DIR directory."
 echo "Modify it or replace it with the appropriate file."
 echo ""
-if [ "$VM_ENABLED" == "true" ]; then
+if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ]; then
    echo "One (1) member has been configured (added) to run in this cluster as follows:"
    echo ""
    echo "      Member: $MEMBER_1"
@@ -676,7 +680,7 @@ else
        MEMBER=`getMemberName $i`
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
       echo "      Member: $MEMBER"
-      echo " Working Dir: $MEMBER"
+      echo " Working Dir: $MEMBER_DIR"
    done
    echo ""
 fi
