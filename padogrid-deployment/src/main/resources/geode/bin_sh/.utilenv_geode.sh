@@ -222,6 +222,9 @@ function getMemberPrefix
 
 #
 # Returns the unique locator name (ID) for the specified locator number.
+# @required POD               Pod name.
+# @required NODE_NAME_PREFIX  Node name prefix.
+# @required CLUSTER           Cluster name.
 # @param locatorNumber
 #
 function getLocatorName

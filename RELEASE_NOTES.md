@@ -4,9 +4,10 @@
 
 ## Version 0.9.6-SNAPSHOT
 
-### Release Date: 03/18/21
+### Release Date: 03/21/21
 
-- Stay tuned...
+- Vagrant VMs can now be logged in without password. Examples: 'ssh vagrant@pnode.local', 'ssh vagrant@node-01.local', etc.
+- Vagrant pods are now configured as VMs.
 
 ----
 

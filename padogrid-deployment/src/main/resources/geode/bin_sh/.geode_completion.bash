@@ -683,6 +683,11 @@ __command_complete()
          type_list="$DEFAULT_LOCATOR_START_PORT"
       fi
      ;;
+   -vm | -locator)
+     if [ "$command" == "create_cluster" ]; then
+        type_list="" 
+     fi
+     ;;
    -vm-user)
       type_list="$(whoami)"
       ;;

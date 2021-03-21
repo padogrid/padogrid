@@ -65,7 +65,8 @@ OPTIONS
              without any Pado dependencies.
   
    -pod pod_name
-             Pod name. The 'local' pod is the local machine.
+             Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
+             option. 
              Default: local
 
    -vm [comma_separated_hosts]
@@ -74,12 +75,18 @@ OPTIONS
              specified, then the host list defined by VM_HOSTS in the workspace
              'setenv.sh' file is applied.
 
+             If the '-pod' option is specified then this option is suppressed.
+
    -locator comma_separated_locator_hosts
              A list of locator hosts or addresses separated by comma. If the list
              contains spaces then enclosed it in quotes. This option is meaningful
-             only if the '-vm' option is specified. If this option is not specified
-             but the '-vm' option is specified, then the first host from the '-vm'
-             host list is selected for the locator.
+             only if the '-vm' option is specified. 
+
+             If this option is not specified and the '-pod' option is specified then
+             the primary node is used for the locator.
+
+             If this option is not specified but the '-vm' option is specified, then
+             the first host from the '-vm' host list is selected for the locator.
 
    -port first_locator_port_number
              First locator's port number. Port number is incremented
@@ -91,6 +98,10 @@ OPTIONS
              is added to the member's default port number of $DEFAULT_MEMBER_START_PORT
              to obtain the port number 40406 for the member's first port number.
              Similarly, the JMX Manager's first HTTP port number would be 7072 ($DEFAULT_JMX_MANAGER_HTTP_START_PORT+2).
+
+             This option applies only for a cluster running locally. It is ignored
+             for creating non-local pod and VM clusters.
+
              Default: $DEFAULT_LOCATOR_START_PORT 
 
 EOF
@@ -130,9 +141,10 @@ if [ -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ "$VM_SPECIFIED" == "true" ]; then
-   POD="local"
-fi
+# Suppress pod if VM specified
+#if [ "$VM_SPECIFIED" == "true" ]; then
+#   POD="local"
+#fi
 
 if [ "`isPodExist $POD`" == "false" ]; then
    echo >&2 "----------------------------------------------------------------"
@@ -383,7 +395,7 @@ function writeCluster()
 # 
 # VM cluster
 #
-if [ $"VM_SPECIFIED" == "true" ]; then
+if [ "$VM_SPECIFIED" == "true" ] && [ "$POD" == "local" ]; then
    VM_ENABLED="true"
 fi
 if [ "$VM_USER" == "" ]; then
@@ -534,6 +546,12 @@ else
         VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
      fi
    done
+   if [ "$LOCATOR_SPECIFIED" == "true" ]; then
+      VM_LOCATOR_HOSTS=$LOCATOR
+   else
+      # pnode
+      VM_LOCATOR_HOSTS=$PRIMARY_NODE_LOCAL
+   fi
    VM_USER="vagrant"
 fi
 
@@ -566,7 +584,7 @@ echo ""
 echo "The default config.xml file has been placed in the CONFIG_DIR directory."
 echo "Modify it or replace it with the appropriate file."
 echo ""
-if [ "$VM_ENABLED" == "true" ]; then
+if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ]; then
    echo "One (1) member has been configured (added) to run in this cluster as follows:"
    echo ""
    echo "      Member: $MEMBER_1"
@@ -585,11 +603,23 @@ elif [ "$POD" == "local" ]; then
 else
    echo "$NODE_COUNT members have been configured (added) to run in this cluster as follows:"
    echo ""
+   NUM=0
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+   for i in $VM_LOCATOR_HOSTS; do
+       let NUM=NUM+1
+       NODE_NAME_PREFIX=$i
+       LOCATOR=`getLocatorName $NUM`
+       LOCATOR_DIR=$CLUSTER_DIR/run/$LOCATOR
+       echo "     Locator: $LOCATOR"
+       echo " Working Dir: $LOCATOR_DIR"
+   done
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    for i in $(seq 1 $NODE_COUNT); do
        MEMBER=`getMemberName $i`
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
       echo "      Member: $MEMBER"
-      echo " Working Dir: $MEMBER"
+      echo " Working Dir: $MEMBER_DIR"
    done
    echo ""
 fi
