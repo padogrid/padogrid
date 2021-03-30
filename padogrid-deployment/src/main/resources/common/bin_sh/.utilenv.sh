@@ -698,6 +698,22 @@ function getActiveMemberCount
 }
 
 #
+# Returns the member name prefix that is used in constructing the unique member
+# name for a given member number. See getMemberName.
+# @required POD               Pod name.
+# @required NODE_NAME_PREFIX  Node name prefix.
+# @required CLUSTER           Cluster name.
+#
+function getMemberPrefix
+{
+   if [ "$POD" != "local" ]; then
+      echo "${CLUSTER}-${NODE_NAME_PREFIX}-"
+   else
+      echo "${CLUSTER}-`hostname`-"
+   fi
+}
+
+#
 # Returns the unique member name (ID) for the specified member number.
 # @param memberNumber
 #
@@ -1072,9 +1088,9 @@ function getPrivateNetworkAddresses
             vb_found="true"
          elif [ $vb_found == "true" ]; then
             if [[ $line == *"IPv4 Address"* ]]; then
-          ip_address=${line#*:}
-          __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
-          vb_found="false"
+               ip_address=${line#*:}
+               __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
+               vb_found="false"
             fi
          fi  
       done < "$__TMP_FILE"
@@ -1086,9 +1102,9 @@ function getPrivateNetworkAddresses
             vb_found="true"
          elif [ $vb_found == "true" ]; then
             if [[ $line == *"inet"* ]]; then
-            ip_address=`echo $line | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'`
-          __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
-          vb_found="false"
+               ip_address=`echo $line | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'`
+               __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
+               vb_found="false"
             fi
          fi  
       done < "$__TMP_FILE"

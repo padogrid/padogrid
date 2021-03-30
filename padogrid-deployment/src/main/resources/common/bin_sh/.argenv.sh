@@ -53,6 +53,7 @@ NAME_ARG=
 PORT_ARG=
 CREATE_SCRIPT=false
 POD_SPECIFIED=false
+AVAHI_SPECIFIED=false
 POD_TYPE=
 TYPE_ARG=
 REFID=
@@ -336,6 +337,8 @@ do
       MEMBER_NUM_SPECIFIED=true
    elif [ "$i" == "-pod" ]; then
       POD_SPECIFIED=true
+   elif [ "$i" == "-avahi" ]; then
+      AVAHI_SPECIFIED=true
    elif [ "$i" == "-cluster" ]; then
       CLUSTER_SPECIFIED=true
    elif [ "$i" == "-k8s" ]; then

@@ -36,7 +36,7 @@ fi
 
 __options()
 {
-   echo "-pod -primary -prefix -ip -pm -nm -count -box -dir -type -quiet -?"
+   echo "-pod -primary -prefix -ip -pm -nm -count -box -dir -avahi -type -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -63,6 +63,7 @@ SYNOPSIS
                [-box vagrant_box_image]
                [-dir host_OS_products_directory_path]
                [-type $HELP_VALID_POD_TYPE_LIST]
+               [-avahi]
                [-quiet] [-?]
 
 DESCRIPTION
@@ -161,6 +162,14 @@ cat <<EOF
    -type $HELP_VALID_POD_TYPE_LIST
              Pod type.
 
+   -avahi
+             If sepecified, then Avahi is installed on each VM to enable local network discovery service,
+             allowing hostname lookup of *.local hostnames via mDNS. By enabling Avahi, for example,
+             you can ssh into VMs using host names such as pnode.local or node-01.local instead of using
+             their IP addresses.
+
+             Default: Avahi is disabled and all communications are done using IP addresses.
+
    -quiet
              Quiet mode. Supresses the interactive prompt.
 
@@ -229,6 +238,8 @@ if [ "$DIR" != "" ]; then
    HOST_PRODUCTS_DIR=$DIR
 fi
 
+# Avahi
+AVAHI_ENABLED=$AVAHI_SPECIFIED
 
 # Interactive mode - collect options inputted by the user.
 if [ "$QUIET" == "false" ]; then
@@ -438,6 +449,24 @@ if [ "$QUIET" == "false" ]; then
          fi
       done
 
+      # AVAHI
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         echo "Install Avahi? This allows VMs to enable local network discovery service via"
+         echo "the mDNS/DNS-SD protocol. All VM host names can be looked up with the suffix"
+         echo "'.local', i.e., pnode.local, node-01.local, etc."
+         read -p "Enter 'true' or 'false' [$AVAHI_ENABLED]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" == "" ]; then
+            INPUT=$AVAHI_ENABLED
+         fi
+         if [ "$INPUT" == "true" ] || [ "$INPUT" == "false" ]; then
+            AVAHI_ENABLED=$INPUT
+            __REDO=false;
+         fi
+      done
+
       # POD_BOX_IMAGE
       read -p "Vagrant box image [$POD_BOX_IMAGE]: " INPUT
       # trim string
@@ -458,6 +487,7 @@ if [ "$QUIET" == "false" ]; then
       echo "    Data node memory size (MiB): $NODE_MEMORY_SIZE"
       echo "                Data node count: $DATA_NODE_COUNT"
       echo "             Products directory: $HOST_PRODUCTS_DIR"
+      echo "                   Avai enabled: $AVAHI_ENABLED"
       echo "              Vagrant box image: $POD_BOX_IMAGE"
 
       REDO=true
@@ -542,10 +572,11 @@ echo "# Pod Creation Date: `date`" >> $ETC_DIR/pod.properties
 echo "" >> $ETC_DIR/pod.properties
 
 # Pod
-echo "# Pod name" >> $ETC_DIR/pod.properties
+echo "# Pod properties" >> $ETC_DIR/pod.properties
 echo "pod.name=$POD" >> $ETC_DIR/pod.properties
 echo "pod.type=$POD_TYPE" >> $ETC_DIR/pod.properties
 echo "pod.box.image=$POD_BOX_IMAGE" >> $ETC_DIR/pod.properties
+echo "pod.avahi.enabled=$AVAHI_ENABLED" >> $ETC_DIR/pod.properties
 echo "" >> $ETC_DIR/pod.properties
 
 # Node (Guest)

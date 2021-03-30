@@ -78,6 +78,7 @@ fi
 
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
+POD=`getClusterProperty "pod.name" "local"`
 
 # Set FG_OPT
 if [ "$SIMULATE" == "true" ]; then
@@ -152,7 +153,12 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          let __MEMBER_NUMBER=__MEMBER_NUMBER+1
          if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
             __FOUND="true"
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+            if [ "$POD" == "local" ]; then
+               NUM=1
+            else
+               let NUM=__MEMBER_NUMBER
+            fi
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
             break;
          fi
       done
@@ -168,13 +174,10 @@ fi
 #
 # Local cluster
 #
-POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 if [ "$VM_ENABLED" == "true" ]; then
-   # POD needed to get the correct node name
-   POD=`getClusterProperty "pod.name" "local"`
    MEMBER=`getVmMemberName`
 else
    MEMBER=`getMemberName $MEMBER_NUMBER`
@@ -425,12 +428,12 @@ SNAPPY_OPTS="-dir=$MEMBER_DIR \
       -spark.ui.port=$SPARK_UI_PORT \
       -log-file=$LOG_FILE \
       -statistic-archive-file=$STATS_FILE"
-#if [ "$BIND_ADDRESS" != "" ]; then
-#   SNAPPY_OPTS="$SNAPPY_OPTS -bind-address=$BIND_ADDRESS"
-#fi
-#if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
-#   SNAPPY_OPTS="$SNAPPY_OPTS -client-bind-address=$HOSTNAME_FOR_CLIENTS -hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
-#fi
+if [ "$BIND_ADDRESS" != "" ]; then
+   SNAPPY_OPTS="$SNAPPY_OPTS -bind-address=$BIND_ADDRESS -server-bind-address=$BIND_ADDRESS"
+fi
+if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
+   SNAPPY_OPTS="$SNAPPY_OPTS -client-bind-address=$HOSTNAME_FOR_CLIENTS -hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
+fi
 if [ "$MEMBER_OPTS" != "" ]; then
    SNAPPY_OPTS=$(removeEqualToOpts "$MEMBER_OPTS" "$SNAPPY_OPTS")
    SNAPPY_OPTS="$SNAPPY_OPTS $MEMBER_OPTS"
@@ -441,6 +444,7 @@ JAVA_OPTS="$JAVA_OPTS \
       -J-XX:+UseParNewGC \
       -J-XX:+UseConcMarkSweepGC \
       -J-XX:CMSInitiatingOccupancyFraction=75 \
+      -J-Dgemfire.server-bind-address=$BIND_ADDRESS \
       -J-DgemfirePropertyFile=$GEMFIRE_PROPERTY_FILE"
 
 if [ "$REDUNDANCY_ZONE" != "" ]; then
@@ -459,7 +463,6 @@ export JAVA_OPTS
 export CLASSPATH
 export JAVA
 
-POD=`getClusterProperty "pod.name" $POD`
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"

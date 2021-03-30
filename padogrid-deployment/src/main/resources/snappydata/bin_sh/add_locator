@@ -92,6 +92,8 @@ EOF
    exit
 fi
 
+POD=`getClusterProperty "pod.name" "local"`
+
 #
 # VM cluster
 #
@@ -100,7 +102,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
    if [ "$VM_ENABLED" == "true" ]; then
       VM_HOSTS=`getClusterProperty "vm.locator.hosts"`
       if [ "$VM_HOSTS" == "" ]; then
-         echo "ERROR: VM hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
+         echo "ERROR: VM locator hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
          echo "       $ETC_DIR/cluster.properties"
          echo "       Command aborted."
          exit 1
@@ -126,7 +128,12 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
             let __LOCATOR_NUMBER=__LOCATOR_NUMBER+1
             if [ $__LOCATOR_NUMBER -eq $LOCATOR_NUM_NO_LEADING_ZERO ]; then
                __FOUND="true"
-               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/add_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE -num 1"
+               if [ "$POD" == "local" ]; then
+                  NUM=1
+               else
+                  let NUM=__LOCATOR_NUMBER
+               fi
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/add_locator -cluster $CLUSTER -remote $VM_HOST -wor      kspace $PADOGRID_WORKSPACE -num $NUM"
                break;
             fi
          done
@@ -143,8 +150,9 @@ fi
 #
 # Local cluster
 #
-POD=`getClusterProperty "pod.name" $POD`
-NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
 
 LOCATOR_PREFIX=`getLocatorPrefix`
 LOCATOR_PREFIX_LEN=${#LOCATOR_PREFIX}
@@ -160,7 +168,6 @@ if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
    exit 1
 fi
-
 
 if [ "$REMOTE_SPECIFIED" == "true" ]; then
    NEW_LOCATOR_NUMBER=1

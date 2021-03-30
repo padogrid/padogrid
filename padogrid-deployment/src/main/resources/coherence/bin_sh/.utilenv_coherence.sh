@@ -205,22 +205,6 @@ function getLocatorPrefix
 }
 
 #
-# Returns the member name prefix that is used in constructing the unique member
-# name for a given member number. See getMemberName.
-# @required POD               Pod name.
-# @required NODE_NAME_PREFIX  Node name prefix.
-# @required CLUSTER           Cluster name.
-#
-function getMemberPrefix
-{
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-member-${NODE_NAME_PREFIX}-"
-   else
-      echo "${CLUSTER}-member-`hostname`-"
-   fi
-}
-
-#
 # Returns the unique locator name (ID) for the specified locator number.
 # @param locatorNumber
 #

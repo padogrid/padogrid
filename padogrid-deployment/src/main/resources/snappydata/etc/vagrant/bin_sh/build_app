@@ -1,6 +1,5 @@
 #!/bin/bash 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-#. $SCRIPT_DIR/.addonenv.sh > /dev/null
 . $SCRIPT_DIR/.addonenv.sh 
 
 EXECUTABLE="`basename $0`"
@@ -19,6 +18,7 @@ fi
 # Assume the pod type is vagrant for now unitl other types are supported.
 POD_TYPE=`getPodProperty "pod.type"`
 POD_BOX_IMAGE=`getPodProperty "pod.box.image"`
+POD_AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" $HOST_PRODUCTS_DIR`
 
 HOST_NAME=`hostname`
 
@@ -67,24 +67,16 @@ PODS_DIR=$GUEST_PADOGRID_WORKSPACE/pods
 
 # Find all installed products in the host product dir and
 # set the guest environment variables with them.
-GEODE_HOME=""
-JET_HOME=""
+SNAPPYDATA_HOME=""
 JAVA_HOME=""
 VM_JAVA_HOME=""
 PROMETHEUS_HOME=""
 GRAFANA_HOME=""
 JQ_HOME=""
-
-# For GEODE_HOME, note that if both apache-geode and pivotal-gemfire exist
-# then pivotal-gemfire overrides apache-geode.
 pushd $HOST_PRODUCTS_DIR > /dev/null 2>&1
 for i in *; do
-   if [[ $i == apache-geode* ]]; then
-      GEODE_HOME="$GUEST_HOME_DIR/products/$i"  
-   elif [[ $i == pivotal-gemfire* ]]; then
-      GEODE_HOME="$GUEST_HOME_DIR/products/$i"  
-   elif [[ $i == geode-jet-enterprise* ]]; then
-      JET_HOME="$GUEST_HOME_DIR/products/$i"  
+   if [[ $i == snappydata* ]]; then
+      SNAPPYDATA_HOME="$GUEST_HOME_DIR/products/$i"  
    elif [[ $i == java* ]] || [[ $i == jdk* ]] || [[ $i == openjdk* ]]; then
       JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
       VM_JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
@@ -104,7 +96,7 @@ echo "#!/bin/bash" > $NODEENV_FILE
 echo "" >> $NODEENV_FILE
 echo "export PRODUCT=$PRODUCT" >> $NODEENV_FILE
 echo "export HOST_OS_HOSTNAME=`hostname`" >> $NODEENV_FILE
-echo "export GEODE_HOME=$GEODE_HOME" >> $NODEENV_FILE
+echo "export SNAPPYDATA_HOME=$SNAPPYDATA_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_HOME=$VAGRANT_PADOGRID_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_WORKSPACES_HOME=$GUEST_PADOGRID_WORKSPACES_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_WORKSPACE=$GUEST_PADOGRID_WORKSPACE" >> $NODEENV_FILE
@@ -116,12 +108,8 @@ echo "export VM_JAVA_HOME=$JAVA_HOME" >> $NODEENV_FILE
 echo "export PROMETHEUS_HOME=$PROMETHEUS_HOME" >> $NODEENV_FILE
 echo "export GRAFANA_HOME=$GRAFANA_HOME" >> $NODEENV_FILE
 echo "export JQ_HOME=$JQ_HOME" >> $NODEENV_FILE
-if [ "$CLUSTER_TYPE" == "imdg" ]; then
-   echo "export PATH=\$JAVA_HOME/bin:\$GEODE_HOME/bin:\$VAGRANT_PADOGRID_HOME/\$PRODUCT/bin_sh:\$VAGRANT_PADOGRID_HOME/bin_sh\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
-else
-   echo "export PATH=\$JAVA_HOME/bin:\$JET_HOME/bin:\$VAGRANT_PADOGRID_HOME/\$PRODUCT/bin_sh:\$VAGRANT_PADOGRID_HOME/bin_sh:\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
-fi
-
+echo "export PATH=\$JAVA_HOME/bin:\$SNAPPYDATA_HOME/bin:\$VAGRANT_PADOGRID_HOME/\$PRODUCT/bin_sh:\$VAGRANT_PADOGRID_HOME/bin_sh\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
+   
 # Create the bootstrap file. This file is executed when the user
 # logs in.
 echo "#!/bin/bash" > $BOOTSTRAP_FILE
@@ -163,6 +151,7 @@ BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCT
 # Substitute the variables in the template file with the actual values.
 sed -e 's/\${POD}/'${POD}'/g' \
     -e 's/\${POD_BOX_IMAGE}/'${POD_BOX_IMAGE}'/g' \
+    -e 's/\${POD_AVAHI_ENABLED}/'${POD_AVAHI_ENABLED}'/g' \
     -e 's/\${NODE_NAME_PRIMARY}/'${NODE_NAME_PRIMARY}'/g' \
     -e 's/\${NODE_COUNT}/'${NODE_COUNT}'/g' \
     -e 's/\${BASE_PRIVATE_IP}/'${BASE_PRIVATE_IP}'/g' \

@@ -60,22 +60,6 @@ function getVmMcPid
    echo $spids
 }
 
-#
-# Returns the member name prefix that is used in constructing the unique member
-# name for a given member number. See getMemberName.
-# @required POD               Pod name.
-# @required NODE_NAME_PREFIX  Node name prefix.
-# @required CLUSTER           Cluster name.
-#
-function getMemberPrefix
-{
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-${NODE_NAME_PREFIX}-"
-   else
-      echo "${CLUSTER}-`hostname`-"
-   fi
-}
-
 # 
 # Returns a complete list of apps found in PADOGRID_HOME/$PRODUCT/apps
 # @required PADOGRID_HOME

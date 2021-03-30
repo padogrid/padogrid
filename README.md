@@ -43,7 +43,7 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [Grafana App](https://github.com/padogrid/padogrid/wiki/Geode-Grafana-App)
 - [Kubernetes Autoscaler](https://github.com/padogrid/padogrid/wiki/Kubernetes)
 - [Docker Clusters](https://github.com/padogrid/padogrid/wiki/Docker)
-- [Vagrant Pods](https://github.com/padogrid/padogrid/wiki/Understanding-Vagrant-Pods)
+- [PadoGrid (Vagrant) Pods](https://github.com/padogrid/padogrid/wiki/Understanding-PadoGrid-Pods)
 - [Hazelcast Query Language (HQL)](https://github.com/padogrid/padogrid/wiki/HQL-Query)
 - [Use Cases in Online Bundles](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 
@@ -223,7 +223,7 @@ PadoGrid currently supports the following data grid products.
   <a href="https://www.tibco.com/products/tibco-computedb">
   <img src="images/computedb.jpg" width="300"  hspace="10" alt="ComputeDB" />
   </a>
-  <a href="https://snappydatainc.github.io/snappydata/">
+  <a href="https://github.com/TIBCOSoftware/snappydata">
   <img src="images/snappydata.jpg" width="280" hspace="10" alt="SnappyData" />
   </a> 
 </p>

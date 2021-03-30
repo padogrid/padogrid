@@ -86,6 +86,7 @@ fi
 
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
+POD=`getClusterProperty "pod.name" "local"`
 
 #
 # VM cluster
@@ -126,7 +127,12 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
             let __MEMBER_NUMBER=__MEMBER_NUMBER+1
             if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
                __FOUND="true"
-               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_member -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
+               if [ "$POD" == "local" ]; then
+                  NUM=1
+               else
+                  let NUM=__MEMBER_NUMBER
+               fi
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_member -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE -num $NUM"
                break;
             fi
          done
@@ -143,7 +149,6 @@ fi
 #
 # Local cluster
 #
-POD=`getClusterProperty "pod.name" $POD`
 NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_PREFIX=`getMemberPrefix`

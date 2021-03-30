@@ -65,6 +65,10 @@ EOF
    exit
 fi
 
+# Source in Hazelcast specific env
+if [ -f $PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh ]; then
+   . $PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh
+fi
 
 #
 # VM cluster
@@ -84,7 +88,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
-         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/hazelcast/bin_sh/start_mc -remote -workspace $VM_PADOGRID_WORKSPACE $*"
+         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/hazelcast/bin_sh/start_mc -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
          exit
       fi
    fi
@@ -243,7 +247,19 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
 fi
 
-JAVA_OPTS="-Dhazelcast.mc.name=$MC_NAME -Dpadogrid.workspace=$WORKSPACE -Dhazelcast.mc.home=$WORKING_DIR -Dhazelcast.mc.jmx.enabled=true -Dhazelcast.mc.jmx.port=$MC_JMX_PORT -Dhazelcast.mc.jmx.rmi.port=$MC_JMX_RMI_PORT -Dcom.sun.management.jmxremote.ssl=false -Dhazelcast.mc.allowMultipleLogin=true -Dhazelcast.mc.license=$IMDG_LICENSE_KEY $MC_JAVA_OPTS"
+JAVA_OPTS="-Dhazelcast.mc.name=$MC_NAME -Dpadogrid.workspace=$WORKSPACE -Dhazelcast.mc.jmx.enabled=true -Dhazelcast.mc.jmx.port=$MC_JMX_PORT -Dhazelcast.mc.jmx.rmi.port=$MC_JMX_RMI_PORT -Dcom.sun.management.jmxremote.ssl=false -Dhazelcast.mc.allowMultipleLogin=true -Dhazelcast.mc.license=$IMDG_LICENSE_KEY"
+
+# Hazelcast Management Center bug introduced in 4.x:
+# A workaround to the following file corruption error when running in a non-local pod:
+#  "Could not initialize metrics storage: Failed to open metrics store run/pi-mc-8080/metrics/registry
+#   because it is corrupted. Please remove this file and restart the application"
+# If non-local then take the default working directory (~/hazelcast-mc)
+if [ "$POD" == "local" ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.home=$WORKING_DIR"
+fi
+
+JAVA_OPTS="$JAVA_OPTS $MC_JAVA_OPT" 
+
 #JAVA_OPTS="$JAVA_OPTS -Djet.licenseKey=$JET_LICENSE_KEY" 
 if [ "$CLUSTER_TYPE" == "jet" ]; then
    ARGS="--port=$MC_HTTP_PORT --application-config=$JET_MC_APPLICATION_PROPERTIES_FILE --client-config=$CLIENT_CONFIG_FILE"

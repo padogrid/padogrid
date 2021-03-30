@@ -407,6 +407,7 @@ if [ "$VM_ENABLED" == "true" ]; then
       VM_HOSTS="$VM_HOSTS_ARG"
    fi
 
+   # Default locator host
    if [ "$LOCATOR" == "" ]; then
       # Extract the first host from the VM host list
       VM_LOCATOR_HOSTS=${VM_HOSTS%%,*}
@@ -494,7 +495,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    MEMBER_1=`getMemberName 1`
    MEMBER_1_DIR=$CLUSTER_DIR/run/$MEMBER_1
    mkdir -p $MEMBER_1_DIR
-   POD_TYPE="local"
+   if [ "POD" == "local" ]; then
+      POD_TYPE="local"
+   fi
 elif [ "$POD" == "local" ]; then
    LOCATOR_1=`getLocatorName 1`
    LOCATOR_1_DIR=$CLUSTER_DIR/run/$LOCATOR_1
@@ -505,12 +508,22 @@ elif [ "$POD" == "local" ]; then
    MEMBER_2_DIR=$CLUSTER_DIR/run/$MEMBER_2
    mkdir -p $MEMBER_1_DIR
    mkdir -p $MEMBER_2_DIR
-   POD_TYPE="local"
-else 
+   POD_TYPE="local" 
+fi
+
+if [ "$POD" != "local" ]; then
+
+   VM_ENABLED="true"
+   AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" false`
+   NODE_COUNT=`getPodProperty "node.count" "0"`
+   VM_USER="vagrant"
+   POD_TYPE="vagrant"
+   VM_HOSTS=""
+   
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
    BIND_ADDRESS=$PRIMARY_NODE_LOCAL
-   HOSTNAME_FOR_CLIENTS=$NPRIMARY_ODE_LOCAL
+   HOSTNAME_FOR_CLIENTS=$PRIMARY_NODE_LOCAL
 
    # Create locator run directory
    NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
@@ -520,39 +533,78 @@ else
 
    # Create member run directories
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
-   NODE_COUNT=`getPodProperty "node.count" "0"`
    for i in $(seq 1 $NODE_COUNT); do
        MEMBER=`getMemberName $i`
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
        mkdir -p $MEMBER_DIR
    done
-   POD_TYPE="vagrant"
-   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
-   if [ "$NODE_NAME_PRIMARY" != "" ]; then
-      NODE_NAME_PRIMARY=${NODE_NAME_PRIMARY}.local
-   else
-      NODE_NAME_PRIMARY="localhost"
-   fi
    
-   # Vagrant pod VMs
-   VM_ENABLED="true"
-   VM_HOSTS=""
-   for i in $(seq 1 $NODE_COUNT); do
-     __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
-     NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
-     if [ $i -eq 1 ]; then
-        VM_HOSTS="$NODE_LOCAL"
-     else
-        VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
-     fi
-   done
-   if [ "$LOCATOR_SPECIFIED" == "true" ]; then
-      VM_LOCATOR_HOSTS=$LOCATOR
+   # Vagrant pod VMs   
+   if [ "$AVAHI_ENABLED" == "true" ]; then
+      NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
+      if [ "$NODE_NAME_PRIMARY" != "" ]; then
+         NODE_NAME_PRIMARY=${NODE_NAME_PRIMARY}.local
+      else
+         NODE_NAME_PRIMARY="localhost"
+      fi
+      for i in $(seq 1 $NODE_COUNT); do
+        __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+        NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+        if [ $i -eq 1 ]; then
+           VM_HOSTS="$NODE_LOCAL"
+        else
+           VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
+        fi
+      done
+      if [ "$LOCATOR_SPECIFIED" == "true" ]; then
+         VM_LOCATOR_HOSTS=$LOCATOR
+      else
+         # pnode
+         VM_LOCATOR_HOSTS=$PRIMARY_NODE_LOCAL
+      fi
    else
-      # pnode
-      VM_LOCATOR_HOSTS=$PRIMARY_NODE_LOCAL
+      POD_DIR="$PADOGRID_WORKSPACE/pods/$POD"
+      POD_SETENV="$POD_DIR/bin_sh/setenv.sh"
+      HOST_PRIVATE_IP=""
+      if [ -f "$POD_SETENV" ]; then
+         . $POD_SETENV
+      fi
+      if [ "$HOST_PRIVATE_IP" == "" ]; then
+         AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
+         if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
+            echo >&2 "ERROR: Private IP address not specified and unable to determine. Please add"
+            echo >&2 "       a host-only ethernet adapter to VirtualBox. Command aborted."
+            exit 1
+         fi
+         # Pick the first one in the list
+         for i in $AVAILABLE_IP_ADDRESSES; do
+            HOST_PRIVATE_IP=$i
+            break;
+         done
+      fi
+      IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
+      # Extract the first three octets from the primary IP.
+      BASE_PRIVATE_IP_FIRST_THREE_OCTETS=${HOST_PRIVATE_IP%.*}
+      BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
+      BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
+      NODE_NAME_PRIMARY=${BASE_PRIVATE_IP}
+      for i in $(seq 1 $NODE_COUNT); do
+         let NODE_OCTET=i+BASE_PRIVATE_IP_LAST_OCTET
+         NODE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${NODE_OCTET}
+         if [ $i -eq 1 ]; then
+            VM_HOSTS="$NODE_IP"
+         else
+            VM_HOSTS="$VM_HOSTS,$NODE_IP"
+         fi
+      done   
+      if [ "$LOCATOR_SPECIFIED" == "true" ]; then
+         VM_LOCATOR_HOSTS=$LOCATOR
+      else
+         # pnode
+         VM_LOCATOR_HOSTS=$NODE_NAME_PRIMARY
+      fi
    fi
-   VM_USER="vagrant"
+
 fi
 
 # Write cluster files
@@ -666,11 +718,10 @@ else
    echo "      build_pod -pod $POD"
    echo "6. To get the pod details, run the following:"
    echo "      show_pod -pod $POD"
-   echo "7. Login to one of the nodes and start the cluster. For example, to login to the primary node:"
-   echo "      cd $POD_DIR"
-   echo "      vagrant ssh $NODE_NAME_PRIMARY"
-   echo "      password: vagrant"
-   echo "      start_cluster -pod $POD" 
-   echo "8. Execute 'show_cluster' to verify the cluster state."
+   echo "7. To use this pod, attach it to a cluster. For example,"
+   echo "      create_cluster -cluster mycluster -pod $POD"
+   echo "      start_cluster -cluster mycluster"
+   echo "8. You can login to the primary node as follows."
+   echo "      ssh vagrant@$NODE_NAME_PRIMARY"
 fi
 echo "----------------------------------------------------------------"

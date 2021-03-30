@@ -65,7 +65,7 @@ function getLocatorPid
 #
 function getLeaderPid
 {
-   getMemberPid $@
+   getLocatorPid $@
 }
 
 #
@@ -104,7 +104,16 @@ function getVmLocatorPid
 #
 function getVmLeaderPid
 {
-   getVmMemberPid $@
+   local __HOST=$1
+   local __MEMBER=$2
+   local __WORKSPACE=$3
+   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   spids=""
+   for j in $locators; do
+      spids="$j $spids"
+   done
+   spids=`trimString $spids`
+   echo $spids
 }
 
 #
@@ -247,23 +256,10 @@ function getLeaderPrefix
 }
 
 #
-# Returns the member name prefix that is used in constructing the unique member
-# name for a given member number. See getMemberName.
+# Returns the unique locator name (ID) for the specified locator number.
 # @required POD               Pod name.
 # @required NODE_NAME_PREFIX  Node name prefix.
 # @required CLUSTER           Cluster name.
-#
-function getMemberPrefix
-{
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-member-${NODE_NAME_PREFIX}-"
-   else
-      echo "${CLUSTER}-member-`hostname`-"
-   fi
-}
-
-#
-# Returns the unique locator name (ID) for the specified locator number.
 # @param locatorNumber
 #
 function getLocatorName

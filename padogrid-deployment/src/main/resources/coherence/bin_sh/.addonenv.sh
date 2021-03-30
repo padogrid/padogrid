@@ -405,7 +405,11 @@ if [ -z $CLUSTER ]; then
 fi
 
 if [ -z $CLUSTERS_DIR ]; then
-   CLUSTERS_DIR=$BASE_DIR/clusters
+   if [ "$PADOGRID_WORKSPACE" == "" ]; then
+      CLUSTERS_DIR=$BASE_DIR/clusters
+   else
+      CLUSTERS_DIR=$PADOGRID_WORKSPACE/clusters
+   fi
 fi
 
 CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER

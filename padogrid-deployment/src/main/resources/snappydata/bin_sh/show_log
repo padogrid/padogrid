@@ -140,8 +140,6 @@ fi
 #
 
 POD=`getClusterProperty "pod.name" "local"`
-NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
-
 
 case "$LOG" in 
 locator)
@@ -155,12 +153,15 @@ locator)
 
 leader)
    # For pod clusters. If non-pod, the following variables are ignored.
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
    MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
-   MEMBER=`getLeaderName $MEMBER_NUMBER`
-   MEMBER_DIR=$RUN_DIR/$MEMBER
+   LEADER=`getLeaderName $MEMBER_NUMBER`
+   MEMBER_DIR=$RUN_DIR/$LEADER
    ;;
 
 *)
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
    MEMBER=`getMemberName $MEMBER_NUMBER`
    MEMBER_DIR=$RUN_DIR/$MEMBER
@@ -183,13 +184,17 @@ if [ ! -d $MEMBER_DIR ]; then
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
    echo "  Cluster: $CLUSTER"
    if [ "$LOG" == "locator" ]; then
-   echo "  Locator: $MEMBER"
-   echo "   Status: This locator has not been configured. Please run the add_locator command to configure"
-   echo "           new locators."
+      echo "  Locator: $MEMBER"
+      echo "   Status: This locator has not been configured. Please run the add_locator command to configure"
+      echo "           new locators."
+   elif [ "$LOG" == "leader" ]; then
+      echo "   Leader: $MEMBER"
+      echo "   Status: This leader has not been configured. Please run the add_leader command to configure"
+      echo "           new leaders."
    else
-   echo "   Member: $MEMBER"
-   echo "   Status: This member has not been configured. Please run the add_member command to configure"
-   echo "           new members."
+      echo "   Member: $MEMBER"
+      echo "   Status: This member has not been configured. Please run the add_member command to configure"
+      echo "           new members."
    fi
    echo "----------------------------------------------------------------"
    exit 1
@@ -198,6 +203,10 @@ fi
 case "$LOG" in 
 locator)
    LOG_FILE=$LOG_DIR/${LOCATOR}.log
+   ;;
+
+leader)
+   LOG_FILE=$LOG_DIR/${LEADER}.log
    ;;
 
 gc)
