@@ -127,6 +127,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
             else
                let NUM=__MEMBER_NUMBER
             fi
+            echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
             ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
             break;
          fi
@@ -399,12 +400,8 @@ fi
 if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
    GFSH_OPTS="$GFSH_OPTS --hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
 fi
-
 POD=`getClusterProperty "pod.name" $POD`
-if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
-   exit
-elif [ "$SIMULATE" == "true" ]; then
+if [ "$SIMULATE" == "true" ]; then
    PID="Simulated"
 elif [ "$CREATE_SCRIPT" == "true" ]; then
    PID="Script"
@@ -419,11 +416,9 @@ else
    if [ "$RUN_SCRIPT" != "" ]; then
       $RUN_SCRIPT >> $LOG_FILE &
    else
-
-   echo gfsh start locator $GFSH_OPTS $JAVA_OPTS
-   gfsh start locator $GFSH_OPTS $JAVA_OPTS
-
-   PID=`getLocatorPid $LOCATOR $WORKSPACE`
+      echo gfsh start locator $GFSH_OPTS $JAVA_OPTS
+      gfsh start locator $GFSH_OPTS $JAVA_OPTS
+      PID=`getLocatorPid $LOCATOR $WORKSPACE`
    fi
 fi
 

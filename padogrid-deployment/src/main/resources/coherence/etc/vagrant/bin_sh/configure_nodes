@@ -30,17 +30,18 @@ NODE_COUNT=`getPodProperty "node.count" $NODE_COUNT`
 
 HOSTS="${NODE_NAME_PRIMARY}"
 HOSTS_LOCAL="${NODE_NAME_PRIMARY}.local"
-for i in $(seq 1 $NODE_COUNT); do
-   if [ $i -lt 10 ]; then
-      NODE=${NODE_NAME_PREFIX}-0$i
-   else
-      NODE=${NODE_NAME_PREFIX}-$i
-   fi
-   NODE_LOCAL=${NODE}.local
-   HOSTS_LOCAL="$HOSTS_LOCAL $NODE_LOCAL" 
-   HOSTS="$HOSTS $NODE" 
-done
-
+if [ $NODE_COUNT -gt 0 ]; then
+   for i in $(seq 1 $NODE_COUNT); do
+      if [ $i -lt 10 ]; then
+         NODE=${NODE_NAME_PREFIX}-0$i
+      else
+         NODE=${NODE_NAME_PREFIX}-$i
+      fi
+      NODE_LOCAL=${NODE}.local
+      HOSTS_LOCAL="$HOSTS_LOCAL $NODE_LOCAL" 
+      HOSTS="$HOSTS $NODE" 
+   done
+fi
 
 # Concat the public keys to authorized_keys
 pushd $POD_DIR/tmp/ssh > /dev/null 2>&1
@@ -62,6 +63,19 @@ for i in *; do
    `cat $i >> ../authorized_keys`
 done
 popd > /dev/null 2>&1
+
+# Concat the vagrant public keys
+ssh-keygen -y -f $POD_DIR/.vagrant/machines/$NODE_NAME_PRIMARY/virtualbox/private_key >> $POD_DIR/tmp/authorized_keys
+if [ $NODE_COUNT -gt 0 ]; then
+   for i in $(seq 1 $NODE_COUNT); do
+      if [ $i -lt 10 ]; then
+         NODE=${NODE_NAME_PREFIX}-0$i
+      else
+         NODE=${NODE_NAME_PREFIX}-$i
+      fi
+      ssh-keygen -y -f $POD_DIR/.vagrant/machines/$NODE/virtualbox/private_key >> $POD_DIR/tmp/authorized_keys
+   done
+fi
 
 # Deploy the authorized_keys to all nodes.
 pushd $POD_DIR > /dev/null 2>&1
