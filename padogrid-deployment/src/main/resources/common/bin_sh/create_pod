@@ -137,16 +137,34 @@ fi
 cat <<EOF
 
    -box vagrant-box-image
-             Vagrant box image name. Search a Vagrant box from the link shown below.
+             Vagrant box image name.  Default: $POD_BOX_IMAGE
+
+             Note that only a few boxes have been tested and supported. For a complete list
+             of tested boxes, follow the link below.
+
+EOF
+echo -e "             ${CUrl}https://github.com/padogrid/padogrid/wiki/Tested-Vagrant-Boxes${CNone}"
+cat <<EOF
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
-             Default: $POD_BOX_IMAGE
+
 EOF
 fi
+echo "             To search a Vagrant box, follow the link below."
+echo ""
+echo -e "             ${CUrl}https://app.vagrantup.com/boxes/search${CNone}"
 cat <<EOF
 
-             https://app.vagrantup.com/boxes/search
+             Some of tested boxes are listed below.
+
+             | Box                  | Version    | Size   | Description                              |
+             | -------------------- | ---------- | ------ | ---------------------------------------- |
+             | ubuntu/trusty64      | 14.04 LTS  | 428 MB | Official Ubuntu Server Trusty Tahr build |
+             | ubuntu/bionic64      | 18.04 LTS  | 323 MB | Official Ubuntu Bionic Beaver build      |
+             | hashicorp/bionic64   | 18.04 LTS  | 494 MB | A standard Ubuntu 64-bit box             |
+             | ARTACK/debian-jessie | 8.11.1     | 692 MB | A generic Debeian Jessie image 64-bit    |
+             | generic/centos8      | 8.3        | 975 MB | A generic CentOS image                   |
 
    -dir host_OS_products_directory_path
              Host OS products directory where all of the required software
@@ -163,10 +181,13 @@ cat <<EOF
              Pod type.
 
    -avahi
-             If sepecified, then Avahi is installed on each VM to enable local network discovery service,
-             allowing hostname lookup of *.local hostnames via mDNS. By enabling Avahi, for example,
-             you can ssh into VMs using host names such as pnode.local or node-01.local instead of using
-             their IP addresses.
+             If sepecified, then Avahi is installed on each VM to enable local network discovery
+             service, allowing hostname lookup of *.local hostnames via mDNS. By enabling Avahi,
+             for example, you can ssh into VMs using host names such as pnode.local or node-01.local
+             instead of using their IP addresses.
+
+             Note that Avahi installation may take a long time to complete, CentOS in particular,
+             and may not work for untested boxes.
 
              Default: Avahi is disabled and all communications are done using IP addresses.
 
@@ -557,6 +578,7 @@ LOG_DIR=$POD_DIR/log
 mkdir -p $LOG_DIR
 
 # Copy the Vagrant files
+cp -rf $PADOGRID_HOME/etc/vagrant/* $POD_DIR/
 cp -rf $BASE_DIR/etc/vagrant/* $POD_DIR/
 chmod 755 $POD_DIR/bin_sh/*
 
