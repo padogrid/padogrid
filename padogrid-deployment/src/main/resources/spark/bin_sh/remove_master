@@ -38,31 +38,42 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Remove the specified member from the specified cluster in the
+   $EXECUTABLE - Remove the specified master from the specified cluster in the
                  current padogrid workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-all] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-num master_number] [-all] [-?]
 
 DESCRIPTION
-   Removes the specified member. If the member number is not specified then it
-   removes the last member in the list, i.e., the member with the highest member
-   number. Note that this command aborts if the specified member is running.
+   Removes the specified master. If the master number is not specified then it
+   removes the last master in the list, i.e., the master with the highest master
+   number. Note that this command aborts if the specified master is running.
 
-   For VM clusters, the member number reflects the host in the order it is
-   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
-   (Run 'show_cluster -long' to see the VM member numbers that map to hosts.)
+   For VM clusters, the master number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the file shown below.
+   (Run 'show_cluster -long' to see the VM master numbers that map to hosts.)
+EOF
+if [ "$MAN_SPECIFIED" == "true" ]; then
+cat <<EOF
+   $CLUSTER_DIR/etc/cluster.properties
+EOF
+else
+cat <<EOF
+   etc/cluster.properties
+EOF
+fi
+cat <<EOF
 
 OPTIONS
    -cluster cluster_name
              Cluster name.
 
-   -num member_number
-             Member number 1-$LAST_MEMBER_NUM
+   -num master_number
+             Master number 1-$LAST_MASTER_NUM
 
    -all
              This option applies to VM clusters only. If specified,
-             it removes from all VMs in the cluster and member_number
+             it removes from all VMs in the cluster and master_number
              is ignored.
 
 EOF
@@ -71,22 +82,17 @@ cat <<EOF
 DEFAULT
    $EXECUTABLE -cluster $CLUSTER
 
-FILES
-   $CLUSTER_DIR/etc/cluster.properties
-             The current cluster configuration file.
-
 EOF
 fi
 cat <<EOF
 SEE ALSO
 EOF
-   printSeeAlsoList "*member* *worker*" $EXECUTABLE
+   printSeeAlsoList "*master*" $EXECUTABLE
    exit
 fi
 
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
-POD=`getClusterProperty "pod.name" "local"`
 
 #
 # VM cluster
@@ -111,35 +117,28 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
       if [ "$VM_KEY" != "" ]; then 
          VM_KEY="-i $VM_KEY"
-      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
-         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
       fi
       if [ "$ALL" == "true" ]; then
          for VM_HOST in $__VM_HOSTS; do
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_member -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_master -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
          done
       else
          # Determine the host
-         __MEMBER_NUMBER=0
+         __MASTER_NUMBER=0
          __FOUND="false"
          
          for VM_HOST in $__VM_HOSTS; do
-            let __MEMBER_NUMBER=__MEMBER_NUMBER+1
-            if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+            let __MASTER_NUMBER=__MASTER_NUMBER+1
+            if [ $__MASTER_NUMBER -eq $MASTER_NUM_NO_LEADING_ZERO ]; then
                __FOUND="true"
-               if [ "$POD" == "local" ]; then
-                  NUM=1
-               else
-                  let NUM=__MEMBER_NUMBER
-               fi
-               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_member -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE -num $NUM"
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_master -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
                break;
             fi
          done
          FIRST_NUMBER=1
-         LAST_NUMBER=$__MEMBER_NUMBER
+         LAST_NUMBER=$__MASTER_NUMBER
          if [ "$__FOUND" == "false" ]; then
-            echo "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+            echo "ERROR: Invalid master number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
          fi
       fi
       exit
@@ -149,55 +148,55 @@ fi
 #
 # Local cluster
 #
+POD=`getClusterProperty "pod.name" $POD`
 NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
-MEMBER_PREFIX=`getMemberPrefix`
-MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
-MEMBER_NUMBER=$MEMBER_NUM
-
+MASTER_PREFIX=`getMasterPrefix`
+MASTER_PREFIX_LEN=${#MASTER_PREFIX}
+MASTER_NUMBER=$MEMBER_NUM
 if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
-   # Find the last member
+   # Find the last master
    pushd $RUN_DIR > /dev/null 2>&1
-   for i in ${MEMBER_PREFIX}*; do
+   for i in ${MASTER_PREFIX}*; do
       if [ -d "$i" ]; then
-        MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+        MASTER_NUMBER=${i:$MASTER_PREFIX_LEN}
       fi
    done
    popd > /dev/null 2>&1
 fi
 
-if  [ -z $MEMBER_NUMBER ]; then
-   echo "No members configured for the cluster $CLUSTER. Command aborted." 
+if  [ -z $MASTER_NUMBER ]; then
+   echo "No masters configured for the cluster $CLUSTER. Command aborted." 
    exit 1
 fi
 
-NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
-MEMBER=${MEMBER_PREFIX}${MEMBER_NUMBER}
-MEMBER_DIR=$RUN_DIR/$MEMBER
-PID=`getMemberPid $MEMBER $WORKSPACE`
+NODE_LOCAL=${NODE_NAME_PREFIX}-${MASTER_NUMBER}.local
+MASTER=${MASTER_PREFIX}${MASTER_NUMBER}
+MASTER_DIR=$RUN_DIR/$MASTER
+PID=`getMasterPid $MASTER $WORKSPACE`
 
 if [ -n "$PID" ]; then
    echo "----------------------------------------------------------------"
-   echo "      ERROR: The last member ($MEMBER) is running. Command aborted."
-   echo "             Please stop the member first before executing this command." 
-   echo "     Member: $MEMBER"
-   echo "Working Dir: $MEMBER_DIR"
+   echo "      ERROR: The last master ($MASTER) is running. Command aborted."
+   echo "             Please stop the master first before executing this command." 
+   echo "     Master: $MASTER"
+   echo "Working Dir: $MASTER_DIR"
    echo "----------------------------------------------------------------"
    exit 0
 fi
 
-MEMBER_DIR_EXISTS="false"
-if [ -d $MEMBER_DIR ]; then
-   MEMBER_DIR_EXISTS="true"
-   rm -rf $MEMBER_DIR
+MASTER_DIR_EXISTS="false"
+if [ -d $MASTER_DIR ]; then
+   MASTER_DIR_EXISTS="true"
+   rm -rf $MASTER_DIR
 fi
 
 echo "----------------------------------------------------------------"
 echo "       WORKSPACE $PADOGRID_WORKSPACE"
-if [ "$MEMBER_DIR_EXISTS" == "true" ]; then
-echo "  Member Removed: $MEMBER"
+if [ "$MASTER_DIR_EXISTS" == "true" ]; then
+echo "  Master Removed: $MASTER"
 else
-echo "Member Not Found: $MEMBER"
+echo "Master Not Found: $MASTER"
 fi
-echo "     Working Dir: $MEMBER_DIR"
+echo "     Working Dir: $MASTER_DIR"
 echo "----------------------------------------------------------------"

@@ -199,7 +199,7 @@ cd_app perf_test; cd bin_sh
 
 ## Data Grid Products
 
-PadoGrid currently supports the following data grid products.
+PadoGrid natively supports the following data grid and analytics products.
 
 ---
 
@@ -231,6 +231,9 @@ PadoGrid currently supports the following data grid products.
   <a href="https://www.oracle.com/middleware/technologies/coherence.html">
   <img src="images/coherence.jpg" width="200"  hspace="10" alt="Oracle Coherence" />
   </a>
+  <a href="https://spark.apache.org/">
+  <img src="images/spark.png" width="200" hspace="10" alt="Spark" />
+  </a> 
 </p>
 
 ---

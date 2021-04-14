@@ -684,7 +684,7 @@ function getActiveMemberCount
       for i in ${MEMBER_PREFIX}*; do
          if [ -d "$i" ]; then
             MEMBER=$i
-            MEMBER_NUM=${MEMBER##$LOCATOR_PREFIX}
+            MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
             let MEMBER_COUNT=MEMBER_COUNT+1
             pid=`getMemberPid $MEMBER $WORKSPACE`
             if [ "$pid" != "" ]; then
@@ -708,6 +708,8 @@ function getMemberPrefix
 {
    if [ "$POD" != "local" ]; then
       echo "${CLUSTER}-${NODE_NAME_PREFIX}-"
+   elif [ "$PRODUCT" == "spark" ]; then
+      echo "${CLUSTER}-worker-`hostname`-"
    else
       echo "${CLUSTER}-`hostname`-"
    fi
@@ -830,6 +832,46 @@ function unique_words
       #echo `trimString "$__resultvar"`
    else
      echo `trimString "$__unique_words"`
+   fi
+}
+
+#
+# Sets all the properties read from the specified properties file to the
+# specifiied array. The array must be declared before invoking this function,
+# otherwise, it will fail with an error.
+#
+# Example:
+#    declare -a propArray
+#    getPropertiesArray "$ETC_DIR/cluster.properties" propArray
+#    len=${#propArray[@]}-1
+#    if [ $size -gt 0 ]; then
+#       let last_index=len-1
+#       for i in $(seq 0 $last_index); do
+#          echo "[$i] ${props[$i]}"
+#       done
+#    fi
+#    
+# @param propFilePath  Properties file path 
+# @param propArray     Associative array containing properties in the form of
+#                      "key=value". It must be declared before invoking this
+#                      function, e.g., declear -a propArray.
+#
+function getPropertiesArray
+{
+   local __PROPERTIES_FILE=$1
+   local array=$2
+   declare -a | grep -q "declare -a ${array}" || echo >&2 "ERROR: getPropertiesArray - no ${array} associative array declared"
+   local index=0
+   if [ -f $__PROPERTIES_FILE ]; then
+      while IFS= read -r line; do
+         local line=`trimString $line`
+         if [ "$line" != "" ] && [[ $line != "#"* ]]; then
+            local key=${line%%=*}
+            local value=${line#*=}
+            eval "${array}[\"${index}\"]=${key}=${value}"
+            let index=index+1
+         fi
+      done < "$__PROPERTIES_FILE"
    fi
 }
 
@@ -2181,6 +2223,7 @@ function getWorkspaceInfoList
    # Remove blank lines from grep results. Pattern includes space and tab.
    local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
    local PRODUCT_VERSION
+   local PRODUCT_INFO
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//')
       if [ "$PRODUCT_VERSION" == "$__PRODUCT_HOME" ]; then
@@ -2188,6 +2231,7 @@ function getWorkspaceInfoList
       else
          PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
       fi
+      PRODUCT_INFO="jet_${PRODUCT_VERSION}"
    elif [ "$CLUSTER_TYPE" == "imdg" ]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//' -e 's/"//')
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//')
@@ -2196,22 +2240,27 @@ function getWorkspaceInfoList
       else
          PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
       fi
+      PRODUCT_INFO="imdg_${PRODUCT_VERSION}"
    elif [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
-      CLUSTER_TYPE="gemfire"
+      PRODUCT_INFO="gemfire_${PRODUCT_VERSION}"
    elif [[ "$__PRODUCT_HOME" == *"geode"* ]]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*apache-geode-//' -e 's/"//')
-      CLUSTER_TYPE="geode"
+      PRODUCT_INFO="geode_${PRODUCT_VERSION}"
    elif [[ "$__PRODUCT_HOME" == *"snappydata"* ]]; then
       PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*snappydata-//' -e 's/"//')
       PRODUCT_VERSION=${PRODUCT_VERSION%-bin}
-      CLUSTER_TYPE="snappydata"
+      PRODUCT_INFO="snappydata_${PRODUCT_VERSION}"
    elif [[ "$__PRODUCT_HOME" == *"coherence"* ]]; then
       __PRODUCT_HOME=$(echo $__PRODUCT_HOME | sed -e 's/.*=//' -e 's/"//g')
       if [ -f "$__PRODUCT_HOME/product.xml" ]; then
          PRODUCT_VERSION=$(grep "version value" "$__PRODUCT_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
       fi
-      CLUSTER_TYPE="coherence"
+      PRODUCT_INFO="coherence_${PRODUCT_VERSION}"
+   elif [[ "$__PRODUCT_HOME" == *"spark"* ]]; then
+      local file=${__PRODUCT_HOME#*spark\-}
+      PRODUCT_VERSION=${file%-bin*}
+      PRODUCT_INFO="spark_${PRODUCT_VERSION}, standalone"
    fi
 
    local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
@@ -2224,7 +2273,7 @@ function getWorkspaceInfoList
    # Remove blank lines from grep results. Pattern includes space and tab.
    local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
-   echo "${VM_WORKSPACE}${CLUSTER_TYPE}_${PRODUCT_VERSION}, padogrid_$PADOGRID_VERSION"
+   echo "${VM_WORKSPACE}${PRODUCT_INFO}, padogrid_$PADOGRID_VERSION"
 }
 
 #
@@ -2429,7 +2478,7 @@ function getHostIPv4List
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, hazelcast, or snappydata
+#   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
 #   CLUSTER_TYPE    This is set to imdg or jet only if PRODUCT is hazelcast.
 #   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy
 #                   only if CLUSTER is not set.
@@ -2437,6 +2486,8 @@ function getHostIPv4List
 #   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast.
 #   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
+#   SPARK_HOME      Set to PRODUCT_HOME if PRODUCT is spark.
+#
 # @required PRODUCT_HOME Product home path (installation path)
 #
 function determineProduct
@@ -2480,17 +2531,24 @@ function determineProduct
       COHERENCE_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="coherence"
       CLUSTER=$DEFAULT_COHERENCE_CLUSTER
+   elif [[ "$PRODUCT_HOME" == *"spark"* ]]; then
+      PRODUCT="spark"
+      PRODUCT_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="standalone"
+      CLUSTER=$DEFAULT_SPARK_CLUSTER
    else
       PRODUCT=""
    fi
 }
 
 #
-# Creates the product env file, i.e., .geodeenv.sh or .hazelcastenv.sh, in the specified
-# RWE directory if it does not exist.
+# Creates the product env file, i.e., .geodeenv.sh, .hazelcastenv.sh, .snappydataenv.sh,
+# .coherenceenv.sh, or .sparkenv.sh in the specified RWE directory if it does not exist.
+#
 # @optional PADOGRID_WORKSPACES_HOME
-# @param productName      Valid value are 'geode' or 'hazelcast'.
-# @param workspacesHome   RWE directory path. If not specified then it creates .hazelcastenv.sh in
+# @param productName      Valid value are 'geode', 'hazelcast', 'snappydata', 'coherence', or 'spark'.
+# @param workspacesHome   RWE directory path. If not specified then it creates .geodeenv.sh, 
+#                         .hazelcastenv.sh, .snappydataenv.sh, .coherenceenv.sh, or .sparkenv.sh in
 #                         PADOGRID_WORKSPACES_HOME.
 #
 function createProductEnvFile
@@ -2529,10 +2587,24 @@ function createProductEnvFile
       fi
    elif [ "$PRODUCT_NAME" == "snappydata" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
-         echo "#" > $WORKSPACES_HOME/.geodeenv.sh
-         echo "# Enter SnappyData product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
-         echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "#" > $WORKSPACES_HOME/.snappydataenv.sh
+         echo "# Enter SnappyData product specific environment variables and initialization" >> $WORKSPACES_HOME/.snappydataenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.snappydataenv.sh
+         echo "#" >> $WORKSPACES_HOME/.snappydataenv.sh
+      fi
+   elif [ "$PRODUCT_NAME" == "coherence" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.coherenceenv.sh
+         echo "# Enter Coherence product specific environment variables and initialization" >> $WORKSPACES_HOME/.coherenceenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.coherenceenv.sh
+         echo "#" >> $WORKSPACES_HOME/.coherenceenv.sh
+      fi
+   elif [ "$PRODUCT_NAME" == "spark" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.sparkenv.sh
+         echo "# Enter Spark product specific environment variables and initialization" >> $WORKSPACES_HOME/.sparkenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.sparkenv.sh
+         echo "#" >> $WORKSPACES_HOME/.sparkenv.sh
       fi
    fi
 }

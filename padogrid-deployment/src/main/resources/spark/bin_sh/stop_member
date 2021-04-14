@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-num -?"
+   echo "-cluster -num -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,40 +38,34 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Kill the specified member in the current padogrid cluster
+   $EXECUTABLE - Stop the specified member in the specified padogrid cluster
 
 SYNOPSIS
-   $EXECUTABLE -num member_number [-?]
+   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-?]
 
-DESCRIPTION
-   Kills the specified cluster member.
+   Stops the specified member.
 
    For VM clusters, the member number reflects the host in the order it is
    defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
    (Run 'show_cluster -long' to see the VM member numbers that map to hosts.)
 
-EOF
-if [ "$MAN_SPECIFIED" == "true" ]; then
-cat <<EOF
-   etc/cluster.properties
-EOF
-else
-cat <<EOF
-   $CLUSTER_DIR/etc/cluster.properties
-EOF
-fi
-cat <<EOF
+   -cluster cluster_name
+             Cluster name.
 
-OPTIONS
    -num member_number
-             Member number 1-$LAST_MEMBER_NUM
+             Member number 1-99.
 
-DEFAULT
-   $EXECUTABLE -num member_number
+NOTES
+   'stop_member' gracefully terminates the worker. However, you must wait
+   till the cluster is safe or migration operations to complete before
+   stopping another member.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MEMBER_NUM
+
 FILES
    $CLUSTER_DIR/etc/cluster.properties
              The current cluster configuration file.
@@ -85,24 +79,6 @@ EOF
    exit
 fi
 
-if  [ ! -d $CLUSTER_DIR ]; then
-   echo "----------------------------------------------------------------"
-   echo "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "  Cluster: $CLUSTER"
-   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
-   echo "           to create the cluster before running this command."
-   echo "----------------------------------------------------------------"
-   exit 1
-fi
-
-if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
-   echo "----------------------------------------------------------------"
-   echo "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "    ERROR: Member number not specified. Run 'kill_member -?' to see usage. Command aborted."
-   echo "----------------------------------------------------------------"
-   exit
-fi
-
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
 POD=`getClusterProperty "pod.name" "local"`
@@ -110,8 +86,8 @@ POD=`getClusterProperty "pod.name" "local"`
 #
 # VM cluster
 #
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
-   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
    if [ "$VM_ENABLED" == "true" ]; then
       VM_HOSTS=`getClusterProperty "vm.hosts"`
       if [ "$VM_HOSTS" == "" ]; then
@@ -127,8 +103,6 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
       if [ "$VM_KEY" != "" ]; then 
          VM_KEY="-i $VM_KEY"
-      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
-         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
       fi
 
       # Determine the host
@@ -144,7 +118,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
             else
                let NUM=__MEMBER_NUMBER
             fi
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
             break;
          fi
       done
@@ -160,32 +134,79 @@ fi
 #
 # Local cluster
 #
+
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM
-MEMBER_PREFIX=`getMemberPrefix`
-MEMBER=${MEMBER_PREFIX}$MEMBER_NUMBER
+if [ "$VM_ENABLED" == "true" ]; then
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
+   MEMBER=`getVmMemberName`
+else
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+fi
 MEMBER_DIR=$RUN_DIR/$MEMBER
 
-PID=`getMemberPid $MEMBER $WORKSPACE`
-if [ -z $PID ]; then
-   echo "Member not running [$MEMBER]. Command aborted."
-   exit
-else
-   if [[ ${OS_NAME} == CYGWIN* ]]; then
-      taskkill /f /pid "${PID}"
-   else
-      kill -9 "${PID}"
-   fi
+if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
-   echo "    WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "Member Killed: $MEMBER"
+   echo "Cluster: $CLUSTER"
+   echo " Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "         to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
+   echo "ERROR: Member number not specified. Run 'stop_member -?' to see usage. Command aborted."
+   exit 1
+fi
+
+#if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+#   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+#   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+#   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "cd $REMOTE_BASE_DIR/$PRODUCT/bin_sh; $COMMAND_PREFIX ./stop_member -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*;"
+#   exit
+#fi
+
+PID=`getMemberPid $MEMBER $WORKSPACE`
+
+if [ -z "${PID}" ]; then
+   echo "----------------------------------------------------------------"
+   echo " WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "   Cluster: $CLUSTER"
    if [ "$VM_ENABLED" == "true" ]; then
-   echo "         Type: VM"
+   echo "Deployment: VM"
    else
-   echo "          Pod: $POD"
+   echo "       Pod: $POD"
    fi
-   echo "          PID: $PID"
-   echo "  Working Dir: $MEMBER_DIR"
+   echo "    Member: $MEMBER"
+   echo "    Status: Member is already stopped [Member: $MEMBER]. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 0
+else
+
+   echo SPARK_CONF_DIR=$ETC_DIR \
+   SPARK_WORKER_DIR=$RUN_DIR/$MEMBER \
+   SPARK_PID_DIR=$RUN_DIR/pids \
+   spark-daemon.sh stop org.apache.spark.deploy.member.Member $MEMBER_NUM_NO_LEADING_ZERO
+
+   SPARK_CONF_DIR=$ETC_DIR \
+   SPARK_WORKER_DIR=$RUN_DIR/$MEMBER \
+   SPARK_PID_DIR=$RUN_DIR/pids \
+   ${SPARK_HOME}/sbin/spark-daemon.sh stop org.apache.spark.deploy.worker.Worker $MEMBER_NUM_NO_LEADING_ZERO
+
+   echo "----------------------------------------------------------------"
+   echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    Cluster: $CLUSTER"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo " Deployment: VM"
+   else
+   echo "        Pod: $POD"
+   fi
+   echo "        Pod: $POD"
+   echo "     Member: $MEMBER"
+   echo "        PID: $PID"
+   echo "     Status: Stopped"
+   echo "Working Dir: $MEMBER_DIR"
    echo "----------------------------------------------------------------"
 fi

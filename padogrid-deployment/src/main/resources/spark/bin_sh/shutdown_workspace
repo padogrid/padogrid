@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$WORKSPACE_ARG" != "" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+else
+   WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Shutdown all clusters in the specified workspace
+
+SYNOPSIS
+   $EXECUTABLE [-workspace workspace_name] [-quiet] [-?]
+
+DESCRIPTION
+   Gracefully shuts down all active clusters by executing 'shutdown_cluster -all'
+   in the workspace. Note that it shuts down members of all clusters.
+
+OPTIONS
+   -workspace workspace_name
+             Workspace name. If not specified, then shuts down the current workspace.
+             
+   -all
+             Shuts down all workspaces. The '-all' option overrides the '-workspace' option.
+             
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -workspace $WORKSPACE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$QUIET" == "false" ]; then
+   if [ "$ALL" == "true" ]; then
+      echo "This command gracefully shuts down all workspaces."
+   else
+      echo "Workspace: $WORKSPACE"
+      echo "   This command gracefully shuts down all clusters in the workspace."
+   fi
+   echo "Do you want to continue?"
+   echo "(Enter 'continue' + Enter to continue to shutdown all clusters, other keys to abort.)"
+   read INPUT
+   if [ "$INPUT" != "continue" ]; then
+      echo "Command aborted."
+      exit
+   fi
+fi
+
+CURRENT_DIR="`pwd`"
+CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+CURRENT_CLUSTER=$CLUSTER
+
+if [ "$ALL" == "true" ]; then
+   __WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
+   __WORKSPACES=$(removeTokens "$__WORKSPACES" "initenv.sh setenv.sh")
+   __WORKSPACES=( $__WORKSPACES )
+else
+   __WORKSPACES=( $WORKSPACE )
+fi
+
+let NUM_WORKSPACES=${#__WORKSPACES[@]};
+for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
+   __WORKSPACE="${__WORKSPACES[$__i]}"
+   if [ $NUM_WORKSPACES -eq 1 ]; then
+      if [ "$__WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+         switch_workspace $__WORKSPACE
+      fi
+   else
+      switch_workspace $__WORKSPACE
+   fi
+   echo ""
+   echo -e "${CLightRed}Shutting down workspace $__WORKSPACE...${CNone}"
+   for j in $PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/*; do
+      CLUSTER="`basename $j`"
+      echo ""
+      echo -e "${CLightRed}Shutting down cluster $CLUSTER...${CNone}"
+      shutdown_cluster -cluster $CLUSTER
+   done
+done
+if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+   switch_workspace $CURRENT_WORKSPACE
+   switch_cluster $CLUSTER
+   cd $CURRENT_DIR
+fi

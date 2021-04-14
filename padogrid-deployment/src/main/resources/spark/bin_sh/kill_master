@@ -38,36 +38,24 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Kill the specified member in the current padogrid cluster
+   $EXECUTABLE - Kill the specified master in the current padogrid cluster
 
 SYNOPSIS
-   $EXECUTABLE -num member_number [-?]
+   $EXECUTABLE -num master_number [-?]
 
 DESCRIPTION
-   Kills the specified cluster member.
+   Kills the specified master.
 
-   For VM clusters, the member number reflects the host in the order it is
+   For VM clusters, the master number reflects the host in the order it is
    defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
-   (Run 'show_cluster -long' to see the VM member numbers that map to hosts.)
-
-EOF
-if [ "$MAN_SPECIFIED" == "true" ]; then
-cat <<EOF
-   etc/cluster.properties
-EOF
-else
-cat <<EOF
-   $CLUSTER_DIR/etc/cluster.properties
-EOF
-fi
-cat <<EOF
+   (Run 'show_cluster -long' to see the VM master numbers that map to hosts.)
 
 OPTIONS
-   -num member_number
-             Member number 1-$LAST_MEMBER_NUM
+   -num master_number
+             Master number 1-$LAST_MASTER_NUM
 
 DEFAULT
-   $EXECUTABLE -num member_number
+   $EXECUTABLE -num 1
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -81,7 +69,7 @@ fi
 cat <<EOF
 SEE ALSO
 EOF
-   printSeeAlsoList "*member* *worker*" $EXECUTABLE
+   printSeeAlsoList "*master*" $EXECUTABLE
    exit
 fi
 
@@ -95,17 +83,16 @@ if  [ ! -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
+if [ "$MASTER_NUM_SPECIFIED" == "false" ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "    ERROR: Member number not specified. Run 'kill_member -?' to see usage. Command aborted."
+   echo "    ERROR: Master number not specified. Run 'kill_master -?' to see usage. Command aborted."
    echo "----------------------------------------------------------------"
    exit
 fi
 
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
-POD=`getClusterProperty "pod.name" "local"`
 
 #
 # VM cluster
@@ -113,45 +100,38 @@ POD=`getClusterProperty "pod.name" "local"`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
    VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
    if [ "$VM_ENABLED" == "true" ]; then
-      VM_HOSTS=`getClusterProperty "vm.hosts"`
-      if [ "$VM_HOSTS" == "" ]; then
-         echo "ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      VM_MASTER_HOSTS=`getClusterProperty "vm.master.hosts"`
+      if [ "$VM_MASTER_HOSTS" == "" ]; then
+         echo "ERROR: VM master hosts undefined. Set 'vm.master.hosts' in the following cluster.properties file."  
          echo "       $ETC_DIR/cluster.properties"
          echo "       Command aborted."
          exit 1
       fi
       # Replace , with space
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      __VM_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
       DEFAULT_USER=$(whoami)
       VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
       if [ "$VM_KEY" != "" ]; then 
          VM_KEY="-i $VM_KEY"
-      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
-         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
       fi
 
       # Determine the host
-      __MEMBER_NUMBER=0
+      __MASTER_NUMBER=0
       __FOUND="false"
       
       for VM_HOST in $__VM_HOSTS; do
-         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
-         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+         let __MASTER_NUMBER=__MASTER_NUMBER+1
+         if [ $__MASTER_NUMBER -eq $MASTER_NUM_NO_LEADING_ZERO ]; then
             __FOUND="true"
-            if [ "$POD" == "local" ]; then
-               NUM=1
-            else
-               let NUM=__MEMBER_NUMBER
-            fi
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_master -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
             break;
          fi
       done
       FIRST_NUMBER=1
-      LAST_NUMBER=$__MEMBER_NUMBER
+      LAST_NUMBER=$__MASTER_NUMBER
       if [ "$__FOUND" == "false" ]; then
-         echo "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+         echo "ERROR: Invalid master number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
       fi
       exit
    fi
@@ -160,16 +140,26 @@ fi
 #
 # Local cluster
 #
-NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+POD=`getClusterProperty "pod.name" "local"`
+NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
 
-MEMBER_NUMBER=$MEMBER_NUM
-MEMBER_PREFIX=`getMemberPrefix`
-MEMBER=${MEMBER_PREFIX}$MEMBER_NUMBER
-MEMBER_DIR=$RUN_DIR/$MEMBER
+if [ "$POD" != "local" ]; then
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   if [ "$REMOTE_SPECIFIED" == "false" ]; then
+      ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "cd $REMOTE_BASE_DIR/$PRODUCT/bin_sh; $COMMAND_PREFIX ./kill_master -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE $*;"
+      exit
+   fi
+fi
 
-PID=`getMemberPid $MEMBER $WORKSPACE`
+MASTER_NUMBER=$MEMBER_NUM
+MASTER=`getMasterName $MASTER_NUMBER`
+MASTER_DIR=$RUN_DIR/$MASTER
+
+PID=`getMasterPid $MASTER $WORKSPACE`
 if [ -z $PID ]; then
-   echo "Member not running [$MEMBER]. Command aborted."
+   echo "Master not running [$MASTER]. Command aborted."
    exit
 else
    if [[ ${OS_NAME} == CYGWIN* ]]; then
@@ -178,14 +168,14 @@ else
       kill -9 "${PID}"
    fi
    echo "----------------------------------------------------------------"
-   echo "    WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "Member Killed: $MEMBER"
+   echo "     WORKSPACE: $PADOGRID_WORKSPACE"
+   echo " Master Killed: $MASTER"
    if [ "$VM_ENABLED" == "true" ]; then
-   echo "         Type: VM"
+   echo "          Type: VM"
    else
-   echo "          Pod: $POD"
+   echo "           Pod: $POD"
    fi
-   echo "          PID: $PID"
-   echo "  Working Dir: $MEMBER_DIR"
+   echo "           PID: $PID"
+   echo "   Working Dir: $MASTER_DIR"
    echo "----------------------------------------------------------------"
 fi

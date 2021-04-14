@@ -65,7 +65,7 @@ VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 export VERSION
 
-PRODUCTS="geode hazelcast snappydata"
+PRODUCTS="geode hazelcast snappydata spark"
 
 if [ "$COHERENCE_SPECIFIED" == "true" ]; then
    PRODUCTS="$PRODUCTS coherence"
@@ -148,6 +148,10 @@ for PRODUCT in $PRODUCTS; do
             continue
          elif [ "$line" == "SEE ALSO" ]; then
             section="SEE ALSO"
+            echo ".SH $section" >> $MAN_FILE
+            continue
+         elif [ "$line" == "ALIASES" ]; then
+            section="ALIASES"
             echo ".SH $section" >> $MAN_FILE
             continue
          elif [ "$line" == "COMMANDS" ]; then

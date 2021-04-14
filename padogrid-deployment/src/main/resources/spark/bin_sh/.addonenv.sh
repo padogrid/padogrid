@@ -32,7 +32,7 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # Required:
 # ---------
 # PADOGRID_HOME   The padogrid root directory path.
-# COHERENCE_HOME         Coherence root directory path
+# SPARK_HOME         Spark root directory path
 #
 # Optional:
 # ---------
@@ -47,7 +47,10 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
 # DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
-#                        specifying the '-cluster' command option. Default: mycoherence
+#                        specifying the '-cluster' command option. Default: myspark
+# DEFAULT_MASTER_MIN_HEAP_SIZE  Default master minimum heap size. Used initially when the cluster
+#                        is created.
+# DEFAULT_MASTER_MAX_HEAP_SIZE  Default master maximum heap size.
 # DEFAULT_MIN_HEAP_SIZE  Default minimum heap size. Used initially when the cluster is created.
 #                        The heap sizes can be changed in clusters/<cluster>/etc/cluster.properties.
 # DEFAULT_MAX_HEAP_SIZE  Maximum heap size. Used initially when the cluster is created.  
@@ -67,9 +70,9 @@ if [ -z $PADOGRID_WORKSPACE ]; then
 fi
 
 # 
-# Coherence/GemFire home directory
+# Spark/GemFire home directory
 #
-#COHERENCE_HOME=
+#SPARK_HOME=
 
 #
 # JAVA_HOME
@@ -97,7 +100,7 @@ DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
 DEFAULT_SPARK_CLUSTER="myspark"
-DEFAULT_CLUSTER="$DEFAULT_COHERENCE_CLUSTER"
+DEFAULT_CLUSTER="$DEFAULT_GEODE_CLUSTER"
 
 #
 # Default pod type. The pod type determines the node envirionment in which
@@ -178,6 +181,8 @@ DEFAULT_DOCKER="compose"
 # the cluster share the same sizes. You can change them later in the cluster.properties
 # file.
 #
+DEFAULT_MASTER_MIN_HEAP_SIZE=512m
+DEFAULT_MASTER_MAX_HEAP_SIZE=512m
 DEFAULT_MIN_HEAP_SIZE=1g
 DEFAULT_MAX_HEAP_SIZE=1g
 
@@ -202,58 +207,71 @@ DEFAULT_GC_LOG_FILE_ENABLED="true"
 CLASSPATH=""
 
 #
+# Default master TCP start port. The value of ($MASTER_NUM-1) is added to the start port number to
+# determine the master's TCP port number.
+#
+DEFAULT_MASTER_START_PORT=7077
+
+#
 # Default member TCP start port. The value of ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's TCP port number.
 #
-DEFAULT_MEMBER_START_PORT=9000
+DEFAULT_MEMBER_START_PORT=60000
 
 #
 # Enable/disable Java remote debugging
 # The port number is incremented by 1 starting from $DEBUG_START_PORT
 #
+DEFAULT_MASTER_DEBUG_ENABLED=false
 DEFAULT_DEBUG_ENABLED=true
 
 #
 # Enable/disable JMX
 #
+DEFAULT_MASTER_JMX_ENABLED=false
 DEFAULT_JMX_ENABLED=true
 
 #
-# Default Pulse port numbers. These values are initially set in $ETC_DIR/cluster.properties
+# Default Web UI port numbers. This values are initially set in $ETC_DIR/cluster.properties
 # when a new cluster is created using the 'create_cluster' command. You can change them later
 # in the cluster.properties file.
 #
-DEFAULT_JMX_MANAGER_HTTP_START_PORT=7070
-DEFAULT_JMX_MANAGER_START_PORT=9051
-
-#
-# Default REST API port for members
-#
-DEFAULT_MEMBER_HTTP_ENABLED=true
-DEFAULT_MEMBER_HTTP_START_PORT=7080
+DEFAULT_MASTER_WEBUI_START_PORT=8080
+DEFAULT_MEMBER_WEBUI_START_PORT=8081
 
 # 
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
+DEFAULT_MASTER_DEBUG_START_PORT=9201
 DEFAULT_DEBUG_START_PORT=9101
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the JMX start port number to
 # determine the member's JMX port number.
 #
+DEFAULT_MASTER_JMX_START_PORT=12101
 DEFAULT_JMX_START_PORT=12001
 
 #
 # Default PROMETHEUS enable/disable flag.
 #
+DEFAULT_MASTER_PROMETHEUS_ENABLED=false
 DEFAULT_PROMETHEUS_ENABLED=true
 
 # 
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the Prometheus start port number to
 # determine the member's Prometheus port number.
 #
+DEFAULT_MASTER_PROMETHEUS_START_PORT=8191
 DEFAULT_PROMETHEUS_START_PORT=8091
+
+#
+# The max number of masters per cluster. The port number ranges are determined by this value.
+# by this value. Defalut master port numbers begin from DEFAULT_MASTER_START_PORT and end at 
+# DEFAULT_MASTER_START_PORT+MAX_MASTER_COUNT-1.
+#
+MAX_MASTER_COUNT=5
 
 #
 # The max number of members per cluster. The port number ranges are determined
@@ -267,7 +285,7 @@ MAX_MEMBER_COUNT=20
 # IMPORTANT: Do NOT remove this call.
 # -------------------------------------------------------------------------------
 . $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_coherence.sh "$@"
+. $SCRIPT_DIR/.utilenv_spark.sh "$@"
 
 # -----------------------------------------------------
 # IMPORTANT: Do NOT modify below this line
@@ -345,7 +363,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
+BUNDLE_PRODUCT_LIST="gemfire spark hazelcast jet snappydata coherence spark"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
@@ -424,22 +442,13 @@ ETC_DIR=$CLUSTERS_DIR/$CLUSTER/etc
 # LOG_DIR
 LOG_DIR=$CLUSTERS_DIR/$CLUSTER/log
 
-# STATS_DIR
-STATS_DIR=$CLUSTERS_DIR/$CLUSTER/stats
-
-# Coherence config file paths
-CONFIG_FILE=$ETC_DIR/cache.xml
-CLIENT_CONFIG_FILE=$ETC_DIR/cache-client.xml
+# Spark config file paths
+CONFIG_FILE=$ETC_DIR/conf-env.sh
 
 #
-# log4j2 logging
+# log4j logging
 #
-#if [[ ${OS_NAME} == CYGWIN* ]]; then
-#   __ETC_DIR="$(cygpath -wp "$ETC_DIR")"
-#else
-#   __ETC_DIR=$ETC_DIR
-#fi
-LOG4J_FILE="$ETC_DIR/log4j2.properties"
+LOG4J_FILE="$ETC_DIR/log4j.properties"
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    LOG4J_FILE="$(cygpath -wp "$LOG4J_FILE")"
 fi
@@ -451,7 +460,7 @@ LOG_PROPERTIES="-Dlog4j.configurationFile=$LOG4J_FILE"
 if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$COHERENCE_HOME/bin:$PATH"
+export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$SPARK_HOME/sbin:$SPARK_HOME/bin:$PATH"
 
 #
 # Java executable
@@ -470,27 +479,24 @@ JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
 JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 
 #
-# COHERENCE_VERSION/PRODUCT_VERSION: Determine the Coherence version
+# SPARK_VERSION/PRODUCT_VERSION: Determine the Spark version
 #
-COHERENCE_VERSION=""
-IS_COHERENCE_ENTERPRISE=false
-CLUSTER_TYPE="coherence"
-if [ "$COHERENCE_HOME" == "" ]; then
-   CLUSTER_TYPE="coherence"
-else
-   if [ -f "$COHERENCE_HOME/product.xml" ]; then
-      COHERENCE_VERSION=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
-   fi
-fi
-COHERENCE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
-PRODUCT_VERSION=$COHERENCE_VERSION
-PRODUCT_MAJOR_VERSION=$COHERENCE_MAJOR_VERSION_NUMBER
+SPARK_VERSION=""
+IS_SPARK_ENTERPRISE=false
+CLUSTER_TYPE="standalone"
+
+file=$(basename $SPARK_HOME)
+file=${file#*spark\-}
+SPARK_VERSION=${file%-bin*}
+SPARK_MAJOR_VERSION_NUMBER=`expr "$SPARK_VERSION" : '\([0-9]*\)'`
+PRODUCT_VERSION=$SPARK_VERSION
+PRODUCT_MAJOR_VERSION=$SPARK_MAJOR_VERSION_NUMBER
 
 #
 # PADOGRID_VERSION: Determine the padogrid version
 #
-for file in $BASE_DIR/lib/coherence-addon-core-*; do
-   file=${file#*coherence\-addon\-core\-}
+for file in $BASE_DIR/lib/spark-addon-core-*; do
+   file=${file#*spark\-addon\-core\-}
    PADOGRID_VERSION=${file%.jar}
 done
 
@@ -501,19 +507,17 @@ __CLASSPATH=""
 if [ "$CLASSPATH" != "" ]; then
    __CLASSPATH="$CLASSPATH"
 fi
-# include the etc dir in the class path (required by coherence for picking up the config files)
 if [ "$__CLASSPATH" == "" ]; then
-  __CLASSPATH="$ETC_DIR:$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
+__CLASSPATH="$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
 else
-  __CLASSPATH="$__CLASSPATH:$ETC_DIR:$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
+__CLASSPATH="$__CLASSPATH:$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
 fi
 if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; then
    __CLASSPATH="$__CLASSPATH:$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*"
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-#__CLASSPATH="$__CLASSPATH:$COHERENCE_HOME/lib/coherence.jar:$COHERENCE_HOME/lib/jline.jar"
-__CLASSPATH="$__CLASSPATH:$COHERENCE_HOME/lib/*"
+__CLASSPATH="$__CLASSPATH:$SPARK_HOME/lib/*"
 export CLASSPATH="$__CLASSPATH"
 
 #

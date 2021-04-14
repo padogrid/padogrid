@@ -4,8 +4,9 @@
 
 ## Version 0.9.6-SNAPSHOT
 
-### Release Date: 03/29/21
+### Release Date: 04/14/21
 
+- Added lifecycle management support for Spark which joins the growing list of clustering products natively supported by PadoGrid out of the box. This release supports the Spark's "standalone" deployment option.
 - The pod VMs are now configured without the Avahi network discovery service by default. To enable Avahi, specify the `-avahi` option when executing the `create_pod` command.
 - Clusters created in the VM-enabled workspaces can now seamlessly run with or without pods. If a cluster is attached to a pod, then it automatcially inherits the workspace's VM configuration, allowing you to manage clusters from either the host OS or any of the guest OS VMs.
 - Vagrant VMs can now be logged in without password. Examples: 'ssh vagrant@pnode.local', 'ssh vagrant@node-01.local', etc.

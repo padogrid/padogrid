@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Add a new master to the specified cluster in the current
+                 padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num master_number] [-all] [-?]
+
+DESCRIPTION
+   Adds a new Spark master to the specified cluster. If masters already exist,
+   then it adds a master with the next available master number.
+
+   If the cluster is a VM cluster, then only one (1) master is allowed per VM.
+   Please note that this is a padogrid restriction, not a Spark product
+   limitation.
+ 
+   For VM clusters, the master number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
+   (Run 'show_cluster -long' to see the VM master numbers that map to hosts.)
+
+OPTIONS
+   -cluster cluster_name
+             If the -cluster option is present, it starts the master in the specified
+             cluster; otherwise, it starts the master in the default cluster.
+
+   -num master_number
+             Master number starting from 1.
+
+   -all      
+             This option applies to VM clusters only. If specified, it adds a master
+             to all master VMs in the cluster. master_number is ignored.
+
+NOTES
+   For Vagrant, the master number is assigned to the node (VM) number. This
+   means you can create multiple clusters, each with their own set of nodes
+   identified by the master numbers.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*master*" $EXECUTABLE
+   exit
+fi
+
+#
+# VM cluster
+#
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_HOSTS=`getClusterProperty "vm.master.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         echo "ERROR: VM hosts undefined. Set 'vm.master.hosts' in the following cluster.properties file."  
+         echo "       $ETC_DIR/cluster.properties"
+         echo "       Command aborted."
+         exit 1
+      fi
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+      if [ "$ALL" == "true" ]; then
+         for VM_HOST in $__VM_HOSTS; do
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/add_master -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE -num 1"
+         done
+      else
+         # Determine the host
+         __MASTER_NUMBER=0
+         __FOUND="false"
+         
+         for VM_HOST in $__VM_HOSTS; do
+            let __MASTER_NUMBER=__MASTER_NUMBER+1
+            if [ $__MASTER_NUMBER -eq $MASTER_NUM_NO_LEADING_ZERO ]; then
+               __FOUND="true"
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/add_master -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE -num 1"
+               break;
+            fi
+         done
+         FIRST_NUMBER=1
+         LAST_NUMBER=$__MASTER_NUMBER
+         if [ "$__FOUND" == "false" ]; then
+            echo "ERROR: Invalid master number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+         fi
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" $POD`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MASTER_PREFIX=`getMasterPrefix`
+MASTER_PREFIX_LEN=${#MASTER_PREFIX}
+CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+RUN_DIR=$CLUSTER_DIR/run
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "    ERROR: This cluster has not been created. Please run the create_cluster command"
+   echo "           to create the cluster before running this command. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+
+if [ "$REMOTE_SPECIFIED" == "true" ]; then
+   NEW_MASTER_NUMBER=1
+else
+   pushd $RUN_DIR > /dev/null 2>&1
+   PREV_MASTER_NUMBER=0
+   for i in ${MASTER_PREFIX}*; do
+      if [ -d "$i" ]; then
+        MASTER_NUMBER=${i:$MASTER_PREFIX_LEN}
+        MASTER_NUMBER=$(trimLeadingZero $MASTER_NUMBER)
+        let __NUM=PREV_MASTER_NUMBER+1
+        if [ $MASTER_NUMBER -gt $__NUM ]; then
+           MASTER_NUMBER=$PREV_MASTER_NUMBER
+           break;
+        else
+           PREV_MASTER_NUMBER=$MASTER_NUMBER
+        fi
+      fi
+   done
+   popd > /dev/null 2>&1
+   if [ "$MASTER_NUM_SPECIFIED" == "true" ]; then
+      let NEW_MASTER_NUMBER=$MASTER_NUM_NO_LEADING_ZERO
+   else
+      let NEW_MASTER_NUMBER=MASTER_NUMBER+1
+   fi
+fi
+NEW_MASTER=`getMasterName $NEW_MASTER_NUMBER`
+NEW_MASTER_DIR=$RUN_DIR/$NEW_MASTER
+
+MASTER_EXISTS="false"
+if [ -d $NEW_MASTER_DIR ]; then
+   MASTER_EXISTS="true"
+else
+   mkdir -p $NEW_MASTER_DIR
+fi
+
+# Copy the template properties file into the cluster etc directory if the
+# cluster is missing the gemfire.properties file. This may occur for those
+# clusters that are bundled in the padogrid distribution.
+if [ ! -f $ETC_DIR/gemfire.properties ]; then
+   cp $BASE_DIR/etc/template-gemfire.properties $ETC_DIR/gemfire.properties
+fi
+
+echo "----------------------------------------------------------------"
+echo "     WORKSPACE: $PADOGRID_WORKSPACE"
+echo "       Cluster: $CLUSTER"
+if [ "$MASTER_EXISTS" == "true" ]; then
+echo "Master Exists: $NEW_MASTER"
+else
+echo " Master Added: $NEW_MASTER"
+fi
+echo "   Working Dir: $NEW_MASTER_DIR"
+echo "----------------------------------------------------------------"
