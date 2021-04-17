@@ -485,12 +485,14 @@ SPARK_VERSION=""
 IS_SPARK_ENTERPRISE=false
 CLUSTER_TYPE="standalone"
 
-file=$(basename $SPARK_HOME)
-file=${file#*spark\-}
-SPARK_VERSION=${file%-bin*}
-SPARK_MAJOR_VERSION_NUMBER=`expr "$SPARK_VERSION" : '\([0-9]*\)'`
-PRODUCT_VERSION=$SPARK_VERSION
-PRODUCT_MAJOR_VERSION=$SPARK_MAJOR_VERSION_NUMBER
+if [ "$SPARK_HOME" != "" ]; then
+   file=$(basename $SPARK_HOME)
+   file=${file#*spark\-}
+   SPARK_VERSION=${file%-bin*}
+   SPARK_MAJOR_VERSION_NUMBER=`expr "$SPARK_VERSION" : '\([0-9]*\)'`
+   PRODUCT_VERSION=$SPARK_VERSION
+   PRODUCT_MAJOR_VERSION=$SPARK_MAJOR_VERSION_NUMBER
+fi
 
 #
 # PADOGRID_VERSION: Determine the padogrid version
