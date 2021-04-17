@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-workspace -quiet -?"
+   echo "-workspace -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -44,26 +44,27 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Stop all running Coherence clusters including members in the specified workspace
+   $EXECUTABLE - Stop all running clusters in the specified workspace
 
 WARNING
-   This command does not wait for migration operations to complete before
+   This command may not wait for migration operations to complete before
    terminating members. For graceful shutdown, use 'shutdown_workspace' instead.
 
 SYNOPSIS
-   $EXECUTABLE [-workspace workspace_name] [-?]
+   $EXECUTABLE [-workspace workspace_name | -all] [-?]
 
 DESCRIPTION
-   Stops all running Coherence clusters by executing 'stop_cluster' on each cluster
-   in the workspace. Note that it kills members of all clusters.
+   Stops all running clusters by executing 'stop_cluster' on each cluster in the
+   specified workspace.
 
 OPTIONS
    -workspace workspace_name
              Workspace name. If not specified, then stops the current workspace.
 
-   -quiet
-             Quiet mode. Supresses the interactive prompt.
-
+   -all
+             Stops all running processes in each cluster. This options is passed on to each
+             cluster, i.e., 'stop_cluster -all'.
+             
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
@@ -79,52 +80,20 @@ EOF
    exit
 fi
 
-if [ "$QUIET" == "false" ]; then
-   if [ "$ALL" == "true" ]; then
-      echo "This command stops all workspaces."
-   else
-      echo "Workspace: $WORKSPACE"
-      echo "   This command stops all clusters in the workspace."
-   fi
-   echo "Do you want to continue?"
-   echo "(Enter 'continue' + Enter to continue to stop all clusters, other keys to abort.)"
-   read INPUT
-   if [ "$INPUT" != "continue" ]; then
-      echo "Command aborted."
-      exit
-   fi
-fi
-
 CURRENT_DIR="`pwd`"
 CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
 CURRENT_CLUSTER=$CLUSTER
 
-if [ "$ALL" == "true" ]; then
-   __WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
-   __WORKSPACES=$(removeTokens "$__WORKSPACES" "initenv.sh setenv.sh")
-   __WORKSPACES=( $__WORKSPACES )
-else
-   __WORKSPACES=( $WORKSPACE )
+if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+   switch_workspace $WORKSPACE
 fi
-
-let NUM_WORKSPACES=${#__WORKSPACES[@]};
-for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
-   __WORKSPACE="${__WORKSPACES[$__i]}"
-   if [ $NUM_WORKSPACES -eq 1 ]; then
-      if [ "$__WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
-         switch_workspace $__WORKSPACE
-      fi
-   else
-      switch_workspace $__WORKSPACE
-   fi
+echo ""
+echo -e "${CLightRed}Stopping workspace${CNone} $WORKSPACE..."
+for j in $PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/*; do
+   CLUSTER="`basename $j`"
    echo ""
-   echo -e "${CLightRed}Stopping workspace $__WORKSPACE...${CNone}"
-   for j in $PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/*; do
-      CLUSTER="`basename $j`"
-      echo ""
-      echo -e "${CLightRed}Stopping cluster $CLUSTER...${CNone}"
-      stop_cluster -cluster $CLUSTER -all
-   done
+   echo -e "${CLightRed}Stopping cluster${CNone} $CLUSTER..."
+   stop_cluster -cluster $CLUSTER "$@"
 done
 if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
    switch_workspace $CURRENT_WORKSPACE

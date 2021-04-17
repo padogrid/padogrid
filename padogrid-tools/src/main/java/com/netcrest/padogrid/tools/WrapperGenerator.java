@@ -29,7 +29,7 @@ public class WrapperGenerator {
 	public final static String DEFAULT_SRC_DIR = "src/main/java";
 	public final static boolean DEFAULT_IS_OVERWRITE = false;
 
-	public final static String PDX_WRAPPER_CLASS_TEMPLAGE = "PdxWrapperClassTemplate.txt";
+	public final static String PDX_WRAPPER_CLASS_TEMPLATE = "PdxWrapperClassTemplate.txt";
 	public final static String SIMPLE_WRAPPER_CLASS_TEMPLATE = "WrapperClassTemplate.txt";
 
 	public enum WrapperType {
@@ -54,7 +54,7 @@ public class WrapperGenerator {
 		this.isOverwrite = isOverwrite;
 		switch (wrapperType) {
 		case pdx:
-			wrapperTemplateFile = PDX_WRAPPER_CLASS_TEMPLAGE;
+			wrapperTemplateFile = PDX_WRAPPER_CLASS_TEMPLATE;
 			break;
 		case simple:
 		default:

@@ -504,6 +504,10 @@ if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
 fi
 export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$SNAPPYDATA_HOME/bin:$SNAPPYDATA_HOME/sbin:$PATH"
 
+# SPARK_HOME
+# This must be set to prevent it from conflicting with a separate instnace of Spark.
+SPARK_HOME=$SNAPPYDATA_HOME
+
 #
 # Java executable
 #

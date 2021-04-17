@@ -62,7 +62,7 @@ OPTIONS
              A new RWE name.
 
    -product product_home_path
-             Hazelcast ImDG or Jet installation directory path.
+             Hazelcast IMDG or Jet installation directory path.
 
    -java JAVA_HOME_path
              JDK home path.
@@ -459,33 +459,47 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "#    \$PADOGRID_WORKSPACE/clusters/<cluster>/bin_sh/setenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
+
+   # Product home paths
    echo "#" >> $WORKSPACES_HOME/setenv.sh
-   echo "# The following environment variables are set to the default values. You can override them" >> $WORKSPACES_HOME/setenv.sh
-   echo "# when you create workspaces. Note that for non-local pods, they are set separately" >> $WORKSPACES_HOME/setenv.sh
-   echo "# in the node initialization file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACES_HOME/setenv.sh
+   echo "# Set default product home paths. All workspaces belonging to this RWE inherit" >> $WORKSPACES_HOME/setenv.sh
+   echo "# these values as their default values. Each workspace can override them in" >> $WORKSPACES_HOME/setenv.sh
+   echo "# their respective setenv.sh file. Note that for non-local pods, they are set" >> $WORKSPACES_HOME/setenv.sh
+   echo "# separately in the node initialization file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "if [ \"\$POD\" == \"\" ] || [ \"\$POD\" == \"local\" ]; then" >> $WORKSPACES_HOME/setenv.sh
+   PARENT_DIR="$(dirname "$BASE_DIR")"
+   echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACES_HOME/setenv.sh
    if [ "$JAVA_HOME" != "" ]; then
       echo "   export JAVA_HOME=\"$JAVA_HOME\"" >> $WORKSPACES_HOME/setenv.sh
    else
       echo "   #export JAVA_HOME=" >> $WORKSPACES_HOME/setenv.sh
    fi
-   echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export COHERENCE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export GEMFIRE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export GEODE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-      echo "   export JET_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+      echo "   export JET_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
    else
-      echo "   export HAZELCAST_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+      echo "   export HAZELCAST_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
       echo "   export JET_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
    fi
-   PARENT_DIR="$(dirname "$BASE_DIR")"
-   echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export SNAPPYDATA_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export SPARK_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      echo "   export PRODUCT_HOME=\"\$JET_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   else
+      echo "   export PRODUCT_HOME=\"\$HAZELCAST_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   fi
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
+
+   # Default product
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "# Set the default product." >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
-   echo "PRODUCT=$PRODUCT" >> $WORKSPACES_HOME/setenv.sh
+   echo "PRODUCT=hazelcast" >> $WORKSPACES_HOME/setenv.sh
 
    # .geodeenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
@@ -513,7 +527,7 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "# Source in SnappyData/ComputeDB specific environment variables. Set your SnappyData/ComputeDB specifics" >> $WORKSPACES_HOME/setenv.sh
-   echo "# such as license keys in .snappydateenv.sh. The environment variables set in .snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .snappydataenv.sh. The environment variables set in .snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
    echo "if [ -f \$SCRIPT_DIR/.snappydataenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
@@ -527,8 +541,19 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "# such as license keys in .coherenceenv.sh. The environment variables set in .coherenceenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
-   echo "if [ -f \$SCRIPT_DIR/.coherencenve.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
-   echo "   . \$SCRIPT_DIR/.coherencenve.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.coherenceenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.coherenceenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "fi" >> $WORKSPACES_HOME/setenv.sh
+
+   # .sparkenv.sh
+   echo "" >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in Spark specific environment variables. Set your Spark specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .sparkenv.sh. The environment variables set in .sparkenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.sparkenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.sparkenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
 
    echo "" >> $WORKSPACES_HOME/setenv.sh

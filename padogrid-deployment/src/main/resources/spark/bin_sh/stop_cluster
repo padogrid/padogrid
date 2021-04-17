@@ -48,9 +48,8 @@ SYNOPSIS
    $EXECUTABLE [-cluster cluster_name] [-all] [-?]
 
 DESCRIPTION
-   Stops all running Spark members by executing 'stop_member' on each
-   member in the cluster. To stop both members and masters, specify
-   the '-all' option.
+   Stops all running members by executing 'stop_member' on each member in the
+   cluster. To stop both members and masters, specify the '-all' option.
 
 OPTIONS
    -cluster cluster_name
@@ -72,6 +71,19 @@ SEE ALSO
 EOF
    printSeeAlsoList "*cluster*" $EXECUTABLE
    exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+# Determin the cluster product
+THIS_PRODUCT=$PRODUCT
+determineClusterProduct
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
 fi
 
 # 

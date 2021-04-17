@@ -321,6 +321,9 @@ else
          if [ "$GEODE_HOME" != "" ]; then
             echo "   $GEODE_HOME"
          fi 
+         if [ "$GEMFIRE_HOME" != "" ]; then
+            echo "   $GEMFIRE_HOME"
+         fi 
          if [ "$COHERENCE_HOME" != "" ]; then
             echo "   $COHERENCE_HOME"
          fi
@@ -565,29 +568,39 @@ echo ". \$SCRIPT_DIR/.addonenv.sh \$@" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
 echo "# The following environment variables are required. Without them, padogrid may not" >> $WORKSPACE_DIR/setenv.sh
-echo "# function properly. Note that for non-local pods, they are set separately in the" >> $WORKSPACE_DIR/setenv.sh
-echo "# node initialization file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACE_DIR/setenv.sh
+echo "# function properly." >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
+
+# Product home paths
+echo "# At least one (1) product home must be set and PRODUCT_HOME must be set to one" >> $WORKSPACE_DIR/setenv.sh
+echo "# of the product homes. PRODUCT_HOME represents the default product." >> $WORKSPACE_DIR/setenv.sh
+echo "# Unspecified product homes default to the values set in the RWE's setenv.sh file." >> $WORKSPACE_DIR/setenv.sh
+echo "# Note that for non-local pods, they are set separately in the node initialization" >> $WORKSPACE_DIR/setenv.sh
+echo "# file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
 echo "if [ \"\$POD\" == \"\" ] || [ \"\$POD\" == \"local\" ]; then" >> $WORKSPACE_DIR/setenv.sh
+echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACE_DIR/setenv.sh
 if [ "$JAVA_HOME" != "" ]; then
    echo "   export JAVA_HOME=\"$JAVA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
    echo "   #export JAVA_HOME=" >> $WORKSPACE_DIR/setenv.sh
 fi
-echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 
 if [ "$PRODUCT" == "geode" ]; then
-   echo "   export GEODE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   export GEODE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
+      echo "   export GEMFIRE_HOME=\"$PRDUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   fi
    echo "   export PADO_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "coherence" ]; then
-   echo "   export COHERENCE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   export COHERENCE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "snappydata" ]; then
-   echo "   export SNAPPYDATA_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   export SNAPPYDATA_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "spark" ]; then
-   echo "   export SPARK_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   export SPARK_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$CLUSTER_TYPE" == "jet" ]; then
-      echo "   export JET_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export JET_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       if [ "$JET_HOME" != "" ]; then
          if [ -d "$JET_HOME/hazelcast-jet-management-center" ]; then
             echo "   export HAZELCAST_MC_HOME=\"\$JET_HOME/hazelcast-jet-management-center\"" >> $WORKSPACE_DIR/setenv.sh
@@ -599,7 +612,7 @@ else
          echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       fi
    else
-      echo "   export HAZELCAST_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export HAZELCAST_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       if [ "$HAZELCAST_HOME" != "" ]; then
          if [ -d "$HAZELCAST_HOME/management-center" ]; then
             echo "   export HAZELCAST_MC_HOME=\"\$HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
@@ -612,7 +625,38 @@ else
       fi
    fi
 fi
-echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACE_DIR/setenv.sh
+if [ "$PRODUCT" != "coherence" ]; then
+   echo "   #export COHERENCE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "geode" ]; then
+   echo "   #export GEMFIRE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   #export GEODE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "hazelcast" ]; then
+   echo "   #export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   #export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "snappydata" ]; then
+   echo "   #export SNAPPYDATA_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "spark" ]; then
+   echo "   #export SPARK_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" == "coherence" ]; then
+   echo "   export PRODUCT_HOME=\"\$COHERENCE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "geode" ]; then
+   echo "   export PRODUCT_HOME=\"\$GEODE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "hazelcast" ]; then
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      echo "   export PRODUCT_HOME=\"\$JET_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "   export PRODUCT_HOME=\"\$HAZELCAST_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   fi
+elif [ "$PRODUCT" == "snappydata" ]; then
+   echo "   export PRODUCT_HOME=\"\$SNAPPYDATA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "spark" ]; then
+   echo "   export PRODUCT_HOME=\"\$SPARK_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+fi
 echo "fi" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh

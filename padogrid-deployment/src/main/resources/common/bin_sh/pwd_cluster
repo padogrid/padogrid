@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-?"
+   echo "-all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -42,10 +42,15 @@ NAME
                  padogrid workspace
 
 SYNOPSIS
-   $EXECUTABLE [-?]
+   $EXECUTABLE [-all] [-?]
 
 DESCRIPTION
-   Displays the name of the present (current) working cluster.
+   Displays the name of the present (current) working cluster. If the '-all' option
+   is present then it displays current environment details.
+
+OPTIONS
+   -all
+             If specified then it displays the current environment details.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -62,4 +67,18 @@ EOF
    exit
 fi
 
-echo $CLUSTER
+WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+
+if [ "$ALL" = "true" ]; then
+   echo "                 CLUSTER: $CLUSTER"
+   echo "            CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "       Current Workspace: $WORKSPACE"
+   echo "      PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "PADOGRID_WORKSPACES_HOME: $PADOGRID_WORKSPACES_HOME"
+   echo "                 PRODUCT: $PRODUCT"
+   echo "            PRODUCT_HOME: $PRODUCT_HOME"
+   echo "           PADOGRID_HOME: $PADOGRID_HOME"
+else
+   echo $CLUSTER
+fi
+

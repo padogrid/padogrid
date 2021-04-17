@@ -166,6 +166,55 @@ function getActiveLocatorCount
 }
 
 #
+# Returns the number of active (or running) leaders in the specified cluster.
+# Returns 0 if the workspace name or cluster name is unspecified or invalid.
+# This function works for both VM and non-VM workspaces.
+# @param workspaceName Workspace name.
+# @param clusterName   Cluster name.
+#
+function getActiveLeaderCount
+{
+   # Locators
+   local __WORKSPACE=$1
+   local __CLUSTER=$2
+   if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
+      echo 0
+   fi
+   local LEADER
+   local let LEADER_COUNT=0
+   local let LEADER_RUNNING_COUNT=0
+   local VM_ENABLED=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.enabled")
+   if [ "$VM_ENABLED" == "truen" ]; then
+      local VM_HOSTS=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.locator.hosts")
+      for VM_HOST in ${VM_HOSTS}; do
+         let LEADER_COUNT=LEADER_COUNT+1
+         LEADER=`getVmLeaderName $VM_HOST`
+         pid=`getVmLeaderPid $VM_HOST $LEADER $__WORKSPACE`
+         if [ "$pid" != "" ]; then
+             let LEADER_RUNNING_COUNT=LEADER_RUNNING_COUNT+1
+         fi
+      done
+   else
+      local RUN_DIR=$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/$__CLUSTER/run
+      pushd $RUN_DIR > /dev/null 2>&1
+      LEADER_PREFIX=$(getLeaderPrefix)
+      for i in ${LEADER_PREFIX}*; do
+         if [ -d "$i" ]; then
+            LEADER=$i
+            LEADER_NUM=${LEADER##$LEADER_PREFIX}
+            let LEADER_COUNT=LEADER_COUNT+1
+            pid=`getLeaderPid $LEADER $WORKSPACE`
+            if [ "$pid" != "" ]; then
+               let LEADER_RUNNING_COUNT=LEADER_RUNNING_COUNT+1
+	    fi
+         fi
+      done
+      popd > /dev/null 2>&1
+   fi
+   echo $LEADER_RUNNING_COUNT
+}
+
+#
 # Returns the number of active (or running) locators in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # @param workspaceName Workspace name.

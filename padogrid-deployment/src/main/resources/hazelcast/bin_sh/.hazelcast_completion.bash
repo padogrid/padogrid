@@ -149,7 +149,7 @@ __padogrid_complete()
       ;;
 
    -product)
-      if [ "$command" == "show_bundle" ]; then
+      if [ "$command" == "show_bundle" ] || [ "$command" == "make_cluster" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
       else
          is_path="true"
@@ -613,7 +613,7 @@ __command_complete()
       fi
       ;;
    -product)
-      if [ "$command" == "show_bundle" ]; then
+      if [ "$command" == "show_bundle" ] || [ "$command" == "make_cluster" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
       else
          is_path=""

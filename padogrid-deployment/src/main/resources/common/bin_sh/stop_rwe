@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-workspace -quiet -?"
+   echo "-rwe -all -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -31,10 +31,10 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
-if [ "$WORKSPACE_ARG" != "" ]; then
-   WORKSPACE=$WORKSPACE_ARG
+if [ "$RWE_ARG" != "" ]; then
+   RWE=$RWE_ARG
 else
-   WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+   RWE=$(basename $PADOGRID_WORKSPACES_HOME)
 fi
 
 if [ "$HELP" == "true" ]; then
@@ -44,23 +44,26 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Start all SnappyData clusters including members and locators in the specified workspace
+   $EXECUTABLE - Stop all workspaces in the specified RWE
 
 WARNING
-   This command assumes that the clusters have properly been configured to prevent port conflicts.
-   Only one (1) cluster will start if there are more than one cluster configured with the same
-   port number(s).
+   This command does not wait for migration operations to complete before
+   terminating members. For graceful shutdown, use 'shutdown_rwe' instead.
 
 SYNOPSIS
-   $EXECUTABLE [-workspace workspace_name] [-quiet] [-?]
+   $EXECUTABLE [-rwe rwe_name | -all] [-quiet] [-?]
 
 DESCRIPTION
-   Starts all SnappyData clusters by executing 'start_cluster' on each cluster in the workspace.
+   Stops all workspaces by executing 'stop_workspace' on each workspace in the specified RWE.
 
 OPTIONS
-   -workspace workspace_name
-             Workspace name. If not specified, then stops the current workspace.
+   -rwe rwe_name
+             RWE name. If not specified, then stops the current RWE.
 
+   -all
+             Stops all running processes in each cluster. This options is passed on to each
+             cluster, i.e., 'stop_cluster -all'.
+             
    -quiet
              Quiet mode. Supresses the interactive prompt.
 
@@ -68,24 +71,23 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -workspace $WORKSPACE
+   $EXECUTABLE -rwe $RWE
 
 EOF
 fi
 cat <<EOF
 SEE ALSO
 EOF
-   printSeeAlsoList "*workspace*" $EXECUTABLE
+   printSeeAlsoList "*rwe*" $EXECUTABLE
    exit
 fi
 
 if [ "$QUIET" == "false" ]; then
-   echo "Workspace: $WORKSPACE"
-   echo "   This command starts all clusters in the workspace. Local clusters configured with the ame"
-   echo "   port numbers may not start properly. Make sure the clusters have been properly configured"
-   echo "   to prevent port conflicts."
-   echo "Do you want to continue?"
-   echo "(Enter 'continue' + Enter to continue to start all clusters, other keys to abort.)"
+   echo ""
+   echo "RWE: $RWE"
+   echo ""
+   echo -e "${CBrownOrange}WARNING:${CNone} This command stops all workspaces in the RWE. Do you want to continue?"
+   echo "(Enter 'continue' + Enter to continue to stop all workspaces, or other keys to abort.)"
    read INPUT
    if [ "$INPUT" != "continue" ]; then
       echo "Command aborted."
@@ -97,7 +99,9 @@ CURRENT_DIR="`pwd`"
 CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
 CURRENT_CLUSTER=$CLUSTER
 
-__WORKSPACES=( $WORKSPACE )
+__WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
+__WORKSPACES=$(removeTokens "$__WORKSPACES" "initenv.sh setenv.sh")
+__WORKSPACES=( $__WORKSPACES )
 
 let NUM_WORKSPACES=${#__WORKSPACES[@]};
 for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
@@ -110,12 +114,12 @@ for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
       switch_workspace $__WORKSPACE
    fi
    echo ""
-   echo -e "${CLightGreen}Starting workspace $__WORKSPACE...${CNone}"
+   echo -e "${CLightRed}Stopping workspace${CNone} $__WORKSPACE..."
    for j in $PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/*; do
       CLUSTER="`basename $j`"
       echo ""
-      echo -e "${CLightGreen}Starting cluster $CLUSTER...${CNone}"
-      start_cluster -cluster $CLUSTER
+      echo -e "${CLightRed}Stopping cluster${CNone} $CLUSTER..."
+      stop_cluster -cluster $CLUSTER "$@"
    done
 done
 if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then

@@ -68,6 +68,8 @@ MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
 REMOTE=
 REMOTE_SPECIFIED=false
+PRODUCT_CLUSTER=
+PRODUCT_CLUSTER_SPECIFIED=false
 MIRROR_SPECIFIED=false
 VM_SPECIFIED=false
 VM_HOSTS_ARG=
@@ -142,6 +144,8 @@ do
    if [ "$PREV" == "-product" ]; then
       PRODUCT_ARG=$i
       PRODUCT_HOME_ARG=$i
+   elif [ "$PREV" == "-product-cluster" ]; then
+      PRODUCT_CLUSTER_ARG=$i
    elif [ "$PREV" == "-rwe" ]; then
       RWE_ARG=$i
    elif [ "$PREV" == "-env" ]; then
@@ -352,6 +356,8 @@ do
       MIRROR_SPECIFIED=true
    elif [ "$i" == "-remote" ]; then
       REMOTE_SPECIFIED=true
+   elif [ "$i" == "-product-cluster" ]; then
+      PRODUCT_CLUSTER_SPECIFIED=true
    elif [ "$i" == "-tree" ]; then
       TREE=true
    elif [ "$i" == "-overwrite" ]; then

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -?"
+   echo "-cluster -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,14 +38,14 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Stop all running members in the current padogrid workspace
+   $EXECUTABLE - Stop all running members in the specified cluster
 
 WARNING
    This command does not wait for migration operations to complete before
    terminating members. For graceful shutdown, use 'shutdown_cluster' instead.
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
 
 DESCRIPTION
    Stops all running Hazelcast members by executing 'stop_member' on each
@@ -54,6 +54,9 @@ DESCRIPTION
 OPTIONS
    -cluster cluster_name
              Cluster name.
+
+   -all
+             If specified, then it stops both members and management center.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -68,6 +71,19 @@ SEE ALSO
 EOF
    printSeeAlsoList "*cluster*" $EXECUTABLE
    exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+# Determin the cluster product
+THIS_PRODUCT=$PRODUCT
+determineClusterProduct
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
 fi
 
 # 
@@ -119,4 +135,10 @@ for i in ${MEMBER_PREFIX}*; do
       popd > /dev/null 2>&1
    fi
 done
+
+# Stop management center if -all specified.
+if [ "$ALL" == "true" ]; then
+   stop_mc "$@"
+fi
+
 popd > /dev/null 2>&1

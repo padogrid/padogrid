@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -?"
+   echo "-cluster -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,10 +38,10 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Start all inactive members in the specified padogrid cluster
+   $EXECUTABLE - Start all inactive members in the specified cluster
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name]
+   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
 
 DESCRIPTION
    Starts all inactive (or stopped) members in the specified cluster.
@@ -49,6 +49,9 @@ DESCRIPTION
 OPTIONS
    -cluster cluster_name
              Cluster name.
+
+   -all
+             If specified, then it starts both members and management center.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -63,6 +66,19 @@ SEE ALSO
 EOF
    printSeeAlsoList "*cluster*" $EXECUTABLE
    exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+# Determin the cluster product
+THIS_PRODUCT=$PRODUCT
+determineClusterProduct
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
 fi
 
 # 
@@ -145,6 +161,11 @@ for i in ${MEMBER_PREFIX}*; do
    fi
 done
 popd > /dev/null 2>&1
+
+# Start management center if -all specified.
+if [ "$ALL" == "true" ]; then
+   start_mc "$@"
+fi
 
 if [ "$MEMBER_NUMBER" == "" ]; then
    echo "----------------------------------------------------------------"

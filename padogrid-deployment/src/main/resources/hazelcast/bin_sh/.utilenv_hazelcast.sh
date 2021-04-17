@@ -60,6 +60,72 @@ function getVmMcPid
    echo $spids
 }
 
+#
+# Returns the number of active (or running) management centers in the specified cluster.
+# Returns 0 if the workspace name or cluster name is unspecified or invalid.
+# This function works for both VM and non-VM workspaces.
+# @param workspaceName Workspace name.
+# @param clusterName   Cluster name.
+#
+function getActiveMcCount
+{
+   # MC
+   local __WORKSPACE=$1
+   local __CLUSTER=$2
+   if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
+      echo 0
+   fi
+   local MC
+   local let MC_COUNT=0
+   local let MC_RUNNING_COUNT=0
+   local VM_ENABLED=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.enabled")
+   if [ "$VM_ENABLED" == "truen" ]; then
+      local VM_HOSTS=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.locator.hosts")
+      for VM_HOST in ${VM_HOSTS}; do
+         let MC_COUNT=MC_COUNT+1
+         MC=$(getMcName)
+         pid=`getVmMcPid $VM_HOST $MC $__WORKSPACE`
+         if [ "$pid" != "" ]; then
+             let MC_RUNNING_COUNT=MC_RUNNING_COUNT+1
+         fi
+      done
+   else
+      local RUN_DIR=$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/$__CLUSTER/run
+      pushd $RUN_DIR > /dev/null 2>&1
+      MC_NAME=$(getMcName)
+      for i in ${MC_NAME}*; do
+         if [ -d "$i" ]; then
+            MC=$i
+            MC_NUM=${MC##$MC_NAME}
+            let MC_COUNT=MC_COUNT+1
+            pid=`getMcPid $MC $WORKSPACE`
+            if [ "$pid" != "" ]; then
+               let MC_RUNNING_COUNT=MC_RUNNING_COUNT+1
+	    fi
+         fi
+      done
+      popd > /dev/null 2>&1
+   fi
+   echo $MC_RUNNING_COUNT
+}
+
+#
+# Returns the management center name.
+# @required CLUSTER           Cluster name.
+#
+function getMcName
+{
+   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" "false"`
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
+   echo $MC_NAME
+}
+
 # 
 # Returns a complete list of apps found in PADOGRID_HOME/$PRODUCT/apps
 # @required PADOGRID_HOME

@@ -2222,6 +2222,11 @@ function getWorkspaceInfoList
    CLUSTER_TYPE=$(echo "$CLUSTER_TYPE" | sed 's/^.*=//')
    # Remove blank lines from grep results. Pattern includes space and tab.
    local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
+   if [[ "$__PRODUCT_HOME" == *"\$"* ]]; then
+      __PRODUCT_HOME=${__PRODUCT_HOME#*\$}
+      __PRODUCT_HOME=${__PRODUCT_HOME%\"*}
+      __PRODUCT_HOME=$(grep "export $__PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
+   fi
    local PRODUCT_VERSION
    local PRODUCT_INFO
    if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -2479,7 +2484,9 @@ function getHostIPv4List
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
 #   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
-#   CLUSTER_TYPE    This is set to imdg or jet only if PRODUCT is hazelcast.
+#   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
+#                   set to standalone if PRODUCT is spark,
+#                   set to PRODUCT for all others.
 #   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy
 #                   only if CLUSTER is not set.
 #   GEODE_HOME      Set to PRODUCT_HOME if PRODUCT is geode.
@@ -2542,6 +2549,77 @@ function determineProduct
 }
 
 #
+# Determines the product by examining cluster files. The following environment variables
+# are set after invoking this function.
+#   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
+#   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
+#                   set to standalone if PRODUCT is spark,
+#                   set to PRODUCT for all others.
+#
+# @param clusterName    Cluster name. If unspecified, then defaults to $CLUSTER.
+#
+function determineClusterProduct
+{
+   local __CLUSTER=$1
+   if [ "$__CLUSTER" == "" ]; then
+      __CLUSTER=$CLUSTER
+   fi
+   local CLUSTER_DIR=$CLUSTERS_DIR/$__CLUSTER
+   if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then   
+      PRODUCT="geode"
+      CLUSTER_TYPE=$PRODUCT
+   elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then   
+      PRODUCT="hazelcast"
+      CLUSTER_TYPE="jet"
+   elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then   
+      PRODUCT="hazelcast"
+      CLUSTER_TYPE="imdg"
+   elif [ -f "$CLUSTER_DIR/etc/gemfirexd.properties" ]; then   
+      PRODUCT="snappydata"
+      CLUSTER_TYPE=$PRODUCT
+   elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then   
+      PRODUCT="coherence"
+      CLUSTER_TYPE=$PRODUCT
+   elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
+      PRODUCT="spark"
+      CLUSTER_TYPE="standalone"
+   fi
+}
+
+#
+# Determines the product by examining cluster files. The following environment variables
+# are set after invoking this function.
+#   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
+#   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
+#                   set to standalone if PRODUCT is spark,
+#                   set to PRODUCT for all others.
+#
+# @required CLUSTER_DIR Cluster directory path
+#
+function determineClusterProduct2
+{
+   if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then   
+      PRODUCT="geode"
+      CLUSTER_TYPE=$PRODUCT
+   elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then   
+      PRODUCT="hazelcast"
+      CLUSTER_TYPE="imdg"
+   elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then   
+      PRODUCT="hazelcast"
+      CLUSTER_TYPE="jet"
+   elif [ -f "$CLUSTER_DIR/etc/gemfirexd.properties" ]; then   
+      PRODUCT="snappydata"
+      CLUSTER_TYPE=$PRODUCT
+   elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then   
+      PRODUCT="coherence"
+      CLUSTER_TYPE=$PRODUCT
+   elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
+      PRODUCT="spark"
+      CLUSTER_TYPE="standalone"
+   fi
+}
+
+#
 # Creates the product env file, i.e., .geodeenv.sh, .hazelcastenv.sh, .snappydataenv.sh,
 # .coherenceenv.sh, or .sparkenv.sh in the specified RWE directory if it does not exist.
 #
@@ -2593,14 +2671,14 @@ function createProductEnvFile
          echo "#" >> $WORKSPACES_HOME/.snappydataenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "coherence" ]; then
-      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.coherenceenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.coherenceenv.sh
          echo "# Enter Coherence product specific environment variables and initialization" >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "#" >> $WORKSPACES_HOME/.coherenceenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "spark" ]; then
-      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.sparkenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.sparkenv.sh
          echo "# Enter Spark product specific environment variables and initialization" >> $WORKSPACES_HOME/.sparkenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.sparkenv.sh

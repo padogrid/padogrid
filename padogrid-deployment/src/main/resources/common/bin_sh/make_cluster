@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-product -cluster -pod -vm -port -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Make a new product cluster in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name]
+               [-pod pod_name]
+               [-vm [comma_separated_hosts]]
+               [-port first_port_number] [-?]
+
+DESCRIPTION
+   Makes a new product cluster in the current workspace. Once the cluster is made,
+   you can change the settings in the following file:
+
+   etc/cluster.properties
+
+   Unlike 'create_cluster' which is specific to the default product, this command
+   allows creation of clusters for any supported products in the same workspace.
+
+OPTIONS
+   -cluster cluster_name
+             Unique cluster name. The cluster name is prepended
+             to all member names.
+
+   -pod pod_name
+             Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
+             option. 
+             Default: local
+
+   -vm [comma_separated_hosts]
+             A list of VM hosts or addresses separated by comma. If the list
+             contains spaces then enclosed it in quotes. If this option is not
+             specified, then the host list defined by VM_HOSTS in the workspace
+             'setenv.sh' file is applied.
+             
+             If the '-pod' option is specified then this option is suppressed.
+             
+   -port first_port_number
+             First member's port number. Port number is incremented
+             starting from this port number for the subsquent members.
+             
+             This option applies only for a cluster running locally. It is ignored
+             for creating non-local pod and VM clusters.
+             
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -pod $POD -port $DEFAULT_MEMBER_START_PORT
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+if [ "$PRODUCT_ARG" == "" ]; then
+   PRODUCT_ARG=$PRODUCT
+fi
+
+if [ "$PRODUCT_ARG" == "geode" ] || [ "$PRODUCT_ARG" == "gemfire" ]; then
+   $PADOGRID_HOME/geode/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+elif [ "$PRODUCT_ARG" == "hazelcast" ]; then
+   $PADOGRID_HOME/hazelcast/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+elif [ "$PRODUCT_ARG" == "snappydata" ]; then
+   $PADOGRID_HOME/snappydata/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+elif [ "$PRODUCT_ARG" == "spark" ]; then
+   $PADOGRID_HOME/spark/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+elif [ "$PRODUCT_ARG" == "coherence" ]; then
+   $PADOGRID_HOME/coherence/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+fi

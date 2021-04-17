@@ -66,7 +66,7 @@ OPTIONS
 
    -simulate
              If specified, then it only simulates the workspace removal steps without
-             actually removing the workspace. Always use this option fist to verify
+             actually removing the workspace. Always use this option first to verify
              the removal steps before comitting the workspace removal. This option
              sets in the quiet mode.
 
@@ -182,18 +182,56 @@ if [ "$CLUSTERS" != "" ]; then
    for CLUSTER in $CLUSTERS; do
       echo ""
       echo "Cluster: $CLUSTER"
+      determineClusterProduct
+      . $PADOGRID_HOME/$PRODUCT/bin_sh/.utilenv_$PRODUCT.sh
+      TOTAL_COUNT=0
+      if [ "$PRODUCT" == "geode" ]; then
+         LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$WORKSPACE_ARG" "$CLUSTER")
+         let TOTAL_COUNT=TOTAL_COUNT+LOCATORS_RUNNING_COUNT
+         echo "   Locators running: $LOCATORS_RUNNING_COUNT"
+      elif [ "$PRODUCT" == "hazelcast" ]; then
+         MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+         MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
+         MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" $DEFAULT_MC_HTTPS_ENABLED`
+         if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+            MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+         else
+            MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+         fi
+         PID=`getMcPid $MC_NAME $WORKSPACE`
+         if [ "$PID" != "" ]; then
+            MC_RUNNING_COUNT=1
+         else
+            MC_RUNNING_COUNT=0
+         fi
+
+         let TOTAL_COUNT=TOTAL_COUNT+LOCATORS_RUNNING_COUNT
+         echo "  ManCenter running: $MC_RUNNING_COUNT"
+      elif [ "$PRODUCT" == "snappydata" ]; then
+         LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$WORKSPACE_ARG" "$CLUSTER")
+         LEADERS_RUNNING_COUNT=$(getActiveLeaderCount "$WORKSPACE_ARG" "$CLUSTER")
+         let TOTAL_COUNT=TOTAL_COUNT+LOCATORS_RUNNING_COUNT
+         echo "   Locators running: $LOCATORS_RUNNING_COUNT"
+         echo "    Leaders running: $LEADERS_RUNNING_COUNT"
+      elif [ "$PRODUCT" == "spark" ]; then
+         MASTER_RUNNING_COUNT=$(getActiveMasterCount "$WORKSPACE_ARG" "$CLUSTER")
+         let TOTAL_COUNT=TOTAL_COUNT+MASTER_RUNNING_COUNT+LEADERS_RUNNING_COUNT
+         echo "    Masters running: $MASTER_RUNNING_COUNT"
+      fi
+      # Only members for coherence
       MEMBER_RUNNING_COUNT=$(getActiveMemberCount "$WORKSPACE_ARG" "$CLUSTER")
+      let TOTAL_COUNT=TOTAL_COUNT+MEMBER_RUNNING_COUNT
       echo "    Members running: $MEMBER_RUNNING_COUNT"
-      if [ $MEMBER_RUNNING_COUNT -gt 0 ]; then
+      if [ $TOTAL_RUNNING_COUNT ]; then
          echo ""
-         echo -e "${CLightRed}ERROR:${CNone} The cluster has active members. Please stop the cluster before"
-	 echo "       executing this command again. No actions were taken."
-	 echo "       Command aborted."
-	 echo ""
+         echo -e "${CLightRed}ERROR:${CNone} The ${CBrownOrange}$CLUSTER{$CNone} cluster has active members. Please stop the cluster before"
+         echo "       executing this command again. Command aborted ."
+         echo ""
          exit 
       fi
    done
 fi
+exit
 
 # Back up workspace in the workspaces/bundles directory.
 WORKSPACE_ARCHIVE_FILE="$PADOGRID_WORKSPACES_HOME/.archive/$WORKSPACE_ARG.tar.gz"

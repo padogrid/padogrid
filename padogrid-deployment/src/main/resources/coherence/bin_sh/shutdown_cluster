@@ -70,6 +70,19 @@ if [ ! -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
+#
+# Run the target cluster command if the product is different.
+#
+# Determin the cluster product
+THIS_PRODUCT=$PRODUCT
+determineClusterProduct
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
 stop_cluster "$@"
 
 echo "Shudown may take a long time to complete. Execute 'show_cluster' to check the cluster status."

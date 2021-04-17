@@ -75,6 +75,33 @@ EOF
    exit
 fi
 
+#
+# Run the target cluster command if the product is different.
+#
+# Determin the cluster product
+THIS_PRODUCT=$PRODUCT
+determineClusterProduct
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   determineClusterProduct
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+# Determin the cluster product
+THIS_PRODUCT=$PRODUCT
+determineClusterProduct
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
 RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
 WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
 SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
@@ -908,15 +935,26 @@ if [ "$ALL" == "true" ]; then
    echo "----------------------------------------------------------------"
    echo ""
 
+   THIS_PRODUCT=$PRODUCT
    if [ "$LONG" == "false" ]; then 
       # Short display -all
       for CLUSTER in ${CLUSTERS}; do
-         displayClusterShort
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterShort
+         else
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -cluster $CLUSTER
+         fi
       done
    else
       # Long display -all
       for CLUSTER in ${CLUSTERS}; do
-         displayClusterLong
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterLong
+         else
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -long -cluster $CLUSTER
+         fi
       done
    fi
 
