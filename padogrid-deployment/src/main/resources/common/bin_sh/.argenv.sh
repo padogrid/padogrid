@@ -127,6 +127,7 @@ DIR=
 CLEAN=
 LOCAL=false
 QUIET=false
+SHORT=false
 LONG=false
 DATASOURCE=
 FOLDER=
@@ -189,6 +190,8 @@ do
       COUNT=$i
    elif [ "$PREV" == "-cluster" ]; then
       CLUSTER=$i
+   elif [ "$PREV" == "-cluster-type" ]; then
+      CLUSTER_TYPE=$i
    elif [ "$PREV" == "-num" ]; then
       MEMBER_NUM=$i
    elif [ "$PREV" == "-password" ]; then
@@ -322,6 +325,8 @@ do
       LOCAL=true
    elif [ "$i" == "-quiet" ]; then
       QUIET=true
+   elif [ "$i" == "-short" ]; then
+      SHORT=true
    elif [ "$i" == "-long" ]; then
       LONG=true
    elif [ "$i" == "-num" ]; then

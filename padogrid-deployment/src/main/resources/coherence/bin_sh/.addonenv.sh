@@ -236,13 +236,13 @@ DEFAULT_MEMBER_HTTP_START_PORT=7080
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-DEFAULT_DEBUG_START_PORT=9101
+DEFAULT_DEBUG_START_PORT=9601
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the JMX start port number to
 # determine the member's JMX port number.
 #
-DEFAULT_JMX_START_PORT=12001
+DEFAULT_JMX_START_PORT=12401
 
 #
 # Default PROMETHEUS enable/disable flag.
@@ -253,7 +253,7 @@ DEFAULT_PROMETHEUS_ENABLED=true
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the Prometheus start port number to
 # determine the member's Prometheus port number.
 #
-DEFAULT_PROMETHEUS_START_PORT=8091
+DEFAULT_PROMETHEUS_START_PORT=8391
 
 #
 # The max number of members per cluster. The port number ranges are determined

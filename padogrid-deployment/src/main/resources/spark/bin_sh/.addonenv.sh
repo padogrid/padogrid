@@ -250,8 +250,8 @@ DEFAULT_DEBUG_START_PORT=9101
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the JMX start port number to
 # determine the member's JMX port number.
 #
-DEFAULT_MASTER_JMX_START_PORT=12101
-DEFAULT_JMX_START_PORT=12001
+DEFAULT_MASTER_JMX_START_PORT=12601
+DEFAULT_JMX_START_PORT=12501
 
 #
 # Default PROMETHEUS enable/disable flag.

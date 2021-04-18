@@ -1486,7 +1486,34 @@ function switch_cluster
    fi
 
    if [ "$1" != "" ]; then
+      . $PADOGRID_WORKSPACE/initenv.sh -quiet
       export CLUSTER=$(echo "$1" | sed 's/\///')
+      if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
+         sed -i${__SED_BACKUP} '/CLUSTER=/d' "$PADOGRID_WORKSPACE/.workspace"
+      fi
+      echo "export CLUSTER=$CLUSTER" >> "$PADOGRID_WORKSPACE/.workspace"
+      determineClusterProduct
+      if [ "$PRODUCT" == "geode" ]; then
+         export PRODUCT_HOME=$GEODE_HOME
+      elif [ "$PRODUCT" == "hazelcast" ]; then
+         if [ "CLUSTER_TYPE" == "jet" ]; then
+            export PRODUCT_HOME=$JET_HOME
+         else
+            export PRODUCT_HOME=$HAZELCAST_HOME
+         fi
+      elif [ "$PRODUCT" == "snappydata" ]; then
+         export PRODUCT_HOME=$SNAPPYDATA_HOME
+      elif [ "$PRODUCT" == "spark" ]; then
+          export PRODUCT_HOME=$SPARK_HOME
+      elif [ "$PRODUCT" == "coherence" ]; then
+          export PRODUCT_HOME=$COHERENCE_HOME
+      fi
+      local NEW_PRODUCT=$PRODUCT
+      local NEW_PRODUCT_HOME=$PRODUCT_HOME
+      . $PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash
+      # Must set the new product values again to overwrite the values set by completion
+      export PRODUCT=$NEW_PRODUCT
+      export PRODUCT_HOME=$NEW_PRODUCT_HOME
    fi
    cd_cluster $@
 }
@@ -2483,15 +2510,16 @@ function getHostIPv4List
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
+#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, spark
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   set to standalone if PRODUCT is spark,
 #                   set to PRODUCT for all others.
-#   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy
+#   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy, myspark
 #                   only if CLUSTER is not set.
-#   GEODE_HOME      Set to PRODUCT_HOME if PRODUCT is geode.
-#   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast.
-#   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast.
+#   GEODE_HOME      Set to PRODUCT_HOME if PRODUCT is geode and CLSUTER_TYPE is geode.
+#   GEMFIRE_HOME    Set to PRODUCT_HOME if PRODUCT is geode and CLUSTER_TYPE is gemfire.
+#   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is imdg.
+#   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is jet.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 #   SPARK_HOME      Set to PRODUCT_HOME if PRODUCT is spark.
 #
@@ -2617,6 +2645,55 @@ function determineClusterProduct2
       PRODUCT="spark"
       CLUSTER_TYPE="standalone"
    fi
+}
+
+#
+# Returns space separated list of installed products in the specified
+# workspace.
+#
+# @param workspaceName Workspace name. If unspecified, then the current workspace is used.
+#
+function getInstalledProducts
+{
+  local __WORKSPACE_DIR
+  if [ "$1" == "" ]; then
+     __WORKSPACE_DIR="$PADOGRID_WORKSPACE"
+  else
+     __WORKSPACE_DIR="$PADOGRID_WORKSPACES_HOME/$1"
+  fi
+
+  local THIS_PRODUCT=$PRODUCT
+  local THIS_PRODUCT_HOME=$PRODUCT_HOME
+
+  . "$__WORKSPACE_DIR/setenv.sh"
+
+  # Must reinstate the product values of the current cluster
+  export PRODUCT=$THIS_PRODUCT
+  export PRODUCT_HOME=$THIS_PRODUCT_HOME
+
+  local PRODUCTS=""
+  if [ "$GEODE_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS geode"
+  fi
+  if [ "$GEMFIRE_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS gemfire"
+  fi
+  if [ "$HAZELCAST_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS hazelcast"
+  fi
+  if [ "$JET_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS jet"
+  fi
+  if [ "$SNAPPYDATA_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS snappydata"
+  fi
+  if [ "$SPARK_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS spark"
+  fi
+  if [ "$COHERENCE_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS coherence"
+  fi
+  echo "$PRODUCTS"
 }
 
 #

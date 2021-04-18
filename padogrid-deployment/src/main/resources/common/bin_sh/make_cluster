@@ -42,6 +42,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name]
+               [-product product_name]
                [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-port first_port_number] [-?]
@@ -59,6 +60,13 @@ OPTIONS
    -cluster cluster_name
              Unique cluster name. The cluster name is prepended
              to all member names.
+
+   -product product_name
+             Cluser product name. If unspecified then the current cluster's product is assigned.
+             This command will abort, if the specified product is not installed for the current
+             workspace. To add or update product installations, set the appropriate '*_HOME'
+             environment varibles in the RWE or workspace 'setenv.sh' file. Note that workspace
+             'setenv.sh' inherits RWE 'setenv.sh'.
 
    -pod pod_name
              Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
@@ -103,14 +111,67 @@ if [ "$PRODUCT_ARG" == "" ]; then
    PRODUCT_ARG=$PRODUCT
 fi
 
-if [ "$PRODUCT_ARG" == "geode" ] || [ "$PRODUCT_ARG" == "gemfire" ]; then
-   $PADOGRID_HOME/geode/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+PRODUCT_EXISTS="false"
+if [ "$PRODUCT_ARG" == "geode" ]; then
+   if "$GEODE_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="mygeode"
+      fi
+      $PADOGRID_HOME/geode/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "gemfire" ]; then
+   if "$GEMFIRE_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="mygemfire"
+      fi
+      $PADOGRID_HOME/geode/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type gemfire "$@"
+   fi
 elif [ "$PRODUCT_ARG" == "hazelcast" ]; then
-   $PADOGRID_HOME/hazelcast/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   if [ "$HAZELCAST_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="myhz"
+      fi
+      $PADOGRID_HOME/hazelcast/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "jet" ]; then
+   if [ "$JET_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="myjet"
+      fi
+      $PADOGRID_HOME/hazelcast/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type jet "$@"
+   fi
 elif [ "$PRODUCT_ARG" == "snappydata" ]; then
-   $PADOGRID_HOME/snappydata/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   if [ "$SNAPPYDATA_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="mysnappy"
+      fi
+      $PADOGRID_HOME/snappydata/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   fi
 elif [ "$PRODUCT_ARG" == "spark" ]; then
-   $PADOGRID_HOME/spark/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   if [ "$SPARK_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="myspark"
+      fi
+      $PADOGRID_HOME/spark/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   fi
 elif [ "$PRODUCT_ARG" == "coherence" ]; then
-   $PADOGRID_HOME/coherence/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   if [ "$COHERENCE_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="mycoherence"
+      fi
+      $PADOGRID_HOME/coherence/bin_sh/create_cluster -product-cluster $CLUSTER "$@"
+   fi
+fi
+
+if [ "$PRODUCT_EXISTS" == "false" ]; then
+   echo >&2 "ERROR: The specified product has not been installed: [$PRODUCT_ARG]"
+   echo >&2 "       Command aborted."
+   exit 1
 fi

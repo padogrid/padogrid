@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -long -all -?"
+   echo "-cluster -short -long -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -42,7 +42,7 @@ NAME
                  padogrid workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-long] [-all] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-short | -long] [-all] [-?]
 
 DESCRIPTION
    Displays cluster status.
@@ -52,10 +52,13 @@ OPTIONS
              Cluster name.
 
    -long
-             Display detailed information.
+             Displays detailed information.
+
+   -short
+             Displays running status only.
 
    -all
-              Display all clusters
+             Displays all clusters
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -109,19 +112,38 @@ function displayVmClusterShort()
           let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
       fi
    done
-   echo "      WORKSPACE: $PADOGRID_WORKSPACE"
+
+   # Determine MC
+   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" $DEFAULT_MC_HTTPS_ENABLED`
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
+   MC_PID=`getMcPid $MC_NAME $WORKSPACE`
+
    echo "        CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "   CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "        PRODUCT: $PRODUCT"
    echo "   CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "     Deployment: VM"
    echo "   MEMBER_COUNT: $MEMBER_COUNT" 
+   fi
    if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
    echo -e "Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
    echo -e "Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
+   if [ "$MC_PID" != "" ]; then
+   echo -e "     MC Running: ${CLightGreen}1/1${CNone}"
+   else
+   echo -e "     MC Running: ${CLightRed}1/1${CNone}"
+   fi
+   if [ "$SHORT" == "false" ]; then
    echo "        Version: $HAZELCAST_VERSION"
    echo " Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
    echo ""
 } # displayVmClusterShort
 
@@ -166,12 +188,12 @@ function displayVmClusterLong()
    pushd $RUN_DIR > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "      WORKSPACE: $PADOGRID_WORKSPACE"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
-      echo "        CLUSTER: $CLUSTER (default)"
+      echo "       CLUSTER: $CLUSTER (default)"
    else
-      echo "        CLUSTER: $CLUSTER"
+      echo "       CLUSTER: $CLUSTER"
    fi
+   echo "   CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "        PRODUCT: $PRODUCT"
    echo "     Deployment: VM"
    echo ""
@@ -280,12 +302,24 @@ function displayClusterShort()
       done
       popd > /dev/null 2>&1
    fi
-   echo "      WORKSPACE: $PADOGRID_WORKSPACE"
+
+   # Determine MC
+   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" $DEFAULT_MC_HTTPS_ENABLED`
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
+   MC_PID=`getMcPid $MC_NAME $WORKSPACE`
+
    echo "        CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "    CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "        PRODUCT: $PRODUCT"
    echo "   CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "            POD: $POD"
    echo "       POD_TYPE: $POD_TYPE"
+   fi
    if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
    echo -e "Members Running: ${CYellow}Unknown${CNone}"
    elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
@@ -293,8 +327,15 @@ function displayClusterShort()
    else
    echo -e "Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
+   if [ "$MC_PID" != "" ]; then
+   echo -e "     MC Running: ${CLightGreen}1/1${CNone}"
+   else
+   echo -e "     MC Running: ${CLightRed}0/1${CNone}"
+   fi
+   if [ "$SHORT" == "false" ]; then
    echo "        Version: $HAZELCAST_VERSION"
    echo " Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
 }
 
 # Displays long status of a local/pod cluster.
@@ -341,12 +382,12 @@ function displayClusterLong()
    pushd $RUN_DIR > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "      WORKSPACE: $PADOGRID_WORKSPACE"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
       echo "        CLUSTER: $CLUSTER (default)"
    else
       echo "        CLUSTER: $CLUSTER"
    fi
+   echo "    CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "        PRODUCT: $PRODUCT"
    echo "   CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "            POD: $POD"
@@ -468,10 +509,10 @@ if [ "$VM_ENABLED" == "true" ]; then
    VM_HOSTS=`getClusterProperty "vm.hosts"`
    if [ "$VM_HOSTS" == "" ]; then
       echo "----------------------------------------------------------------"
-      echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
-      echo "           $ETC_DIR/cluster.properties"
-      echo "           Command aborted."
+      echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      echo "      ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "             $ETC_DIR/cluster.properties"
+      echo "             Command aborted."
       echo "----------------------------------------------------------------"
       exit 1
    fi
@@ -538,7 +579,12 @@ if [ "$ALL" == "true" ]; then
             displayClusterShort
             echo ""
          else
-            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -cluster $CLUSTER
+           if [ "$SHORT" == "true" ]; then
+              SHORT_OPT="-short"
+           else
+              SHORT_OPT=""
+           fi
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -cluster $CLUSTER $SHORT_OPT
          fi
       done
    else
