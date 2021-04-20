@@ -184,10 +184,10 @@ if [ "$CLUSTERS" != "" ]; then
       echo "Cluster: $CLUSTER"
       determineClusterProduct
       . $PADOGRID_HOME/$PRODUCT/bin_sh/.utilenv_$PRODUCT.sh
-      TOTAL_COUNT=0
+      TOTAL_RUNNING_COUNT=0
       if [ "$PRODUCT" == "geode" ]; then
          LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$WORKSPACE_ARG" "$CLUSTER")
-         let TOTAL_COUNT=TOTAL_COUNT+LOCATORS_RUNNING_COUNT
+         let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+LOCATORS_RUNNING_COUNT
          echo "   Locators running: $LOCATORS_RUNNING_COUNT"
       elif [ "$PRODUCT" == "hazelcast" ]; then
          MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
@@ -205,33 +205,32 @@ if [ "$CLUSTERS" != "" ]; then
             MC_RUNNING_COUNT=0
          fi
 
-         let TOTAL_COUNT=TOTAL_COUNT+LOCATORS_RUNNING_COUNT
+         let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+LOCATORS_RUNNING_COUNT
          echo "  ManCenter running: $MC_RUNNING_COUNT"
       elif [ "$PRODUCT" == "snappydata" ]; then
          LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$WORKSPACE_ARG" "$CLUSTER")
          LEADERS_RUNNING_COUNT=$(getActiveLeaderCount "$WORKSPACE_ARG" "$CLUSTER")
-         let TOTAL_COUNT=TOTAL_COUNT+LOCATORS_RUNNING_COUNT
+         let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+LOCATORS_RUNNING_COUNT
          echo "   Locators running: $LOCATORS_RUNNING_COUNT"
          echo "    Leaders running: $LEADERS_RUNNING_COUNT"
       elif [ "$PRODUCT" == "spark" ]; then
          MASTER_RUNNING_COUNT=$(getActiveMasterCount "$WORKSPACE_ARG" "$CLUSTER")
-         let TOTAL_COUNT=TOTAL_COUNT+MASTER_RUNNING_COUNT+LEADERS_RUNNING_COUNT
+         let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+MASTER_RUNNING_COUNT+LEADERS_RUNNING_COUNT
          echo "    Masters running: $MASTER_RUNNING_COUNT"
       fi
-      # Only members for coherence
+      # There are only members for coherence
       MEMBER_RUNNING_COUNT=$(getActiveMemberCount "$WORKSPACE_ARG" "$CLUSTER")
-      let TOTAL_COUNT=TOTAL_COUNT+MEMBER_RUNNING_COUNT
+      let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+MEMBER_RUNNING_COUNT
       echo "    Members running: $MEMBER_RUNNING_COUNT"
-      if [ $TOTAL_RUNNING_COUNT ]; then
+      if [ $TOTAL_RUNNING_COUNT -gt 0 ]; then
          echo ""
-         echo -e "${CLightRed}ERROR:${CNone} The ${CBrownOrange}$CLUSTER{$CNone} cluster has active members. Please stop the cluster before"
+         echo -e "${CLightRed}ERROR:${CNone} The ${CLightGreen}$CLUSTER${CNone} cluster has active members. Please stop the cluster before"
          echo "       executing this command again. Command aborted ."
          echo ""
          exit 
       fi
    done
 fi
-exit
 
 # Back up workspace in the workspaces/bundles directory.
 WORKSPACE_ARCHIVE_FILE="$PADOGRID_WORKSPACES_HOME/.archive/$WORKSPACE_ARG.tar.gz"
@@ -306,8 +305,10 @@ if [ "$SIMULATE" == "true" ]; then
    echo rm -rf $WORKSPACE_DIR
 else
    CURRENT_DIR=`pwd`
+   pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
    rm -rf $WORKSPACE_DIR
    retrieveDefaultEnv
+   echo "PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE"
    DEFAULT_WORKSPACE="$(basename "$CURRENT_PADOGRID_WORKSPACE")"
    if [ "$WORKSPACE" == "$DEFAULT_WORKSPACE" ]; then
       __WORKSPACES=$(list_workspaces)
@@ -345,7 +346,11 @@ else
 fi
 echo "----------------------------------------------------------------"
 
-if [ "$CURRENT_DIR" != "" ] && [ ! -d "$CURRENT_DIR" ]; then
-   echo "You are currently in the removed directory."
-   echo "Please change directory to a valid directory before executing any commands."
+if [ "$CURRENT_DIR" != "" ]; then
+   if [ -d "$CURRENT_DIR" ]; then
+      popd > /dev/null 2>&1
+    else
+      echo "You are currently in the removed directory."
+      echo "Please change directory to a valid directory before executing any commands."
+   fi
 fi
