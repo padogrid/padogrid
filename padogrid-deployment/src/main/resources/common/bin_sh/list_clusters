@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-?"
+   echo "-workspace -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -35,13 +35,17 @@ if [ "$HELP" == "true" ]; then
 cat <<EOF
 
 NAME
-   $EXECUTABLE - List all the clusters in the current padogrid workspace
+   $EXECUTABLE - List all the clusters in the specified workspace
 
 SYNOPSIS
-   $EXECUTABLE [-?]
+   $EXECUTABLE [-workspace] [-?]
 
 DESCRIPTION
-   Lists all the clusters in the current workspace.
+   Lists all the clusters in the specified workspace.
+
+OPTIONS
+   -workspace
+             Workspace name. If not specified, then it displays clusters in the current workspace.
 
 DEFAULT
    $EXECUTABLE
@@ -63,16 +67,23 @@ if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
    exit 1
 fi
 
-if [ "$PADOGRID_WORKSPACE" == "" ]; then
+if [ "$WORKSPACE_ARG" != "" ]; then
+   __WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG
+else
+   __WORKSPACE_PATH=$PADOGRID_WORKSPACE
+fi
+
+
+if [ "$__WORKSPACE_PATH" == "" ]; then
    >&2 echo "ERROR: Workspace undefined. Please first create a workspace."
    >&2 echo "       Command aborted."
    exit 1
 fi
-if [ ! -d "$PADOGRID_WORKSPACE" ]; then
+if [ ! -d "$__WORKSPACE_PATH" ]; then
    >&2 echo "ERROR: Invalid workspace. Directory does not exist."
-   >&2 echo "       $PADOGRID_WORKSPACE"
+   >&2 echo "       $__WORKSPACE_PATH"
    >&2 echo "       Command aborted."
    exit 1
 fi
 
-ls $PADOGRID_WORKSPACE/clusters
+ls $__WORKSPACE_PATH/clusters

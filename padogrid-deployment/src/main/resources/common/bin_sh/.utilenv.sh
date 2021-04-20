@@ -1391,9 +1391,6 @@ function switch_workspace
 
    if [ "$1" == "" ]; then
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then
-         retrieveDefaultEnv
-      fi
-      if [ ! -d "$PADOGRID_WORKSPACE" ]; then
          __WORKSPACES=$(list_workspaces)
          for i in $__WORKSPACES; do
             __WORKSPACE=$i
@@ -1404,17 +1401,35 @@ function switch_workspace
             return 1
          fi
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
-         updateDefaultEnv
+         if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
+            . "$PADOGRID_WORKSPACE/.workspace"
+         fi
       fi
+
+      # Determine the current cluster. If it is not set in .workspace or .cluster then
+      # pick the first one in the clusters directory.
       if [ ! -d "$PADOGRID_WORKSPACE/clusters/$CLUSTER" ]; then
-         export CLUSTER=""
+         local __CLUSTERS=$(list_clusters)
+         local __CLUSTER=""
+         for i in $__CLUSTERS; do
+            __CLUSTER=$i
+            break;
+         done
+         export CLUSTER="$__CLUSTER"
+         if [ "$CLUSTER" != "" ] && [ -f "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster" ]; then
+            . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster"
+         fi
       fi
-      . $PADOGRID_WORKSPACE/initenv.sh -quiet
+      #. $PADOGRID_WORKSPACE/initenv.sh -quiet
    else
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
          echo >&2 "ERROR: Invalid workspace. Workspace does not exist. Command aborted."
          return 1
-      elif [ "$2" != "" ]; then
+      fi
+      if [ -f "$PADOGRID_WORKSPACES_HOME/$1/.workspace" ]; then
+         . "$PADOGRID_WORKSPACES_HOME/$1/.workspace"
+      fi
+      if [ "$2" != "" ]; then
          local __COMPONENT_DIR_NAME=$(echo "$2" | sed 's/\///')
          if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$3" != "" ]; then
              if [ -d "$PADOGRID_WORKSPACES_HOME/$1/clusters/$3" ]; then
@@ -1422,11 +1437,28 @@ function switch_workspace
              fi
          fi
       fi
+
+      # Determine the current cluster. If it is not set in .workspace or .cluster then
+      # pick the first one in the clusters directory.
+      if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1/clusters/$CLUSTER" ]; then
+         local __CLUSTERS=$(list_clusters -workspace $1)
+         local __CLUSTER=""
+         for i in $__CLUSTERS; do
+            __CLUSTER=$i
+            break;
+         done
+         export CLUSTER="$__CLUSTER"
+         if [ "$CLUSTER" != "" ] && [ -f "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster" ]; then
+            . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster"
+         fi
+      fi
+
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1/clusters/$CLUSTER" ]; then
          export CLUSTER=""
       fi
-      . $PADOGRID_WORKSPACES_HOME/$1/initenv.sh -quiet
+      #. $PADOGRID_WORKSPACES_HOME/$1/initenv.sh -quiet
    fi
+   export PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$1"
    cd_workspace $@
 }
 
