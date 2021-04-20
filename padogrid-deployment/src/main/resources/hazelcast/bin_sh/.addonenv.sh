@@ -209,11 +209,7 @@ CLASSPATH=""
 # Default member TCP start port. The value of ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's TCP port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_MEMBER_START_PORT=6701
-else
-   DEFAULT_MEMBER_START_PORT=5701
-fi
+DEFAULT_MEMBER_START_PORT=5701
 
 #
 # Enable/disable Java remote debugging
@@ -237,37 +233,22 @@ DEFAULT_MC_HTTPS_ENABLED=false
 # command. You can change them later in the cluster.properties file.
 #
 DEFAULT_MC_HOST=localhost
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_MC_HTTP_PORT=8180
-   DEFAULT_MC_HTTPS_PORT=8543
-   DEFAULT_MC_JMX_PORT=9501
-   DEFAULT_MC_JMX_RMI_PORT=9451
-else
-   DEFAULT_MC_HTTP_PORT=8080
-   DEFAULT_MC_HTTPS_PORT=8443
-   DEFAULT_MC_JMX_PORT=9301
-   DEFAULT_MC_JMX_RMI_PORT=9351
-fi
+DEFAULT_MC_HTTP_PORT=8080
+DEFAULT_MC_HTTPS_PORT=8443
+DEFAULT_MC_JMX_PORT=9301
+DEFAULT_MC_JMX_RMI_PORT=9351
 
 # 
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-  DEFAULT_DEBUG_START_PORT=9601
-else
-  DEFAULT_DEBUG_START_PORT=9401
-fi
+DEFAULT_DEBUG_START_PORT=9401
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_JMX_START_PORT=12301
-else
-   DEFAULT_JMX_START_PORT=12201
-fi
+DEFAULT_JMX_START_PORT=12201
 
 #
 # Default PROMETHEUS enable/disable flag.
@@ -278,11 +259,8 @@ DEFAULT_PROMETHEUS_ENABLED=true
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_PROMETHEUS_START_PORT=8391
-else
-   DEFAULT_PROMETHEUS_START_PORT=8291
-fi
+DEFAULT_PROMETHEUS_START_PORT=8291
+
 #
 # The max number of members per cluster. The port number ranges are determined by this value.
 # All port numbers begin from DEFAULT_*_START_PORT and end at DEFAULT_*_START_PORT+MAX_MEMBER_COUNT-1.
