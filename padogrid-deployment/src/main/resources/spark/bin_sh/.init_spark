@@ -62,7 +62,7 @@ OPTIONS
              A new RWE name.
 
    -product product_home_path
-             Geode or GemFire installation directory path.
+             Spark installation directory path.
 
    -java JAVA_HOME_path
              JDK home path.
@@ -80,7 +80,7 @@ cat <<EOF
 
    -cluster default_cluster
              Default cluster name.
-             Default: $DEFAULT_GEODE_CLUSTER for Geode, $DEFAULT_GEMFIRE_CLUSTER for GemFire
+             Default: $DEFAULT_SPARK_CLUSTER
 
    -vm
              Specify '-vm' to enable VM cluster.
@@ -159,7 +159,7 @@ if [ "$JAVA_HOME_ARG" == "" ]; then
    JAVA_HOME_ARG="$JAVA_HOME"
 fi
 if [ "$PRODUCT_ARG" == "" ]; then
-   PRODUCT_ARG="$GEODE_HOME"
+   PRODUCT_ARG="$SPARK_HOME"
 else
    PRODUCT_HOME="$PRODUCT_ARG"
 fi
@@ -311,7 +311,7 @@ else
       __REDO=true
       while [ "$__REDO" == "true" ]; do
 
-         echo "Enter Geode IMDG home directory path."
+         echo "Enter Spark home directory path."
          if [[ $OS_NAME == CYGWIN* ]]; then
        echo "Enter only Unix absoulte path. Windows path not allowed."
          fi
@@ -472,18 +472,13 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
       echo "   #export JAVA_HOME=" >> $WORKSPACES_HOME/setenv.sh
    fi
    echo "   export COHERENCE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   if [ "$CLUSTER_TYPE" == "gemfire" ]; then
-      echo "   export GEMFIRE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
-      echo "   export GEODE_HOME=\"\$GEMFIRE_HOME\"" >> $WORKSPACES_HOME/setenv.sh
-   else
-      echo "   export GEMFIRE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-      echo "   export GEODE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
-   fi
+   echo "   export GEMFIRE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export GEODE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
    echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
    echo "   export JET_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
    echo "   export SNAPPYDATA_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export SPARK_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export PRODUCT_HOME=\"\$GEODE_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export SPARK_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export PRODUCT_HOME=\"\$SPARK_HOME\"" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
 
@@ -509,15 +504,15 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "   . \$SCRIPT_DIR/.hazelcastenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
 
-   # .snappydataenv.sh
+   # .sparkenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
-   echo "# Source in SnappyData/ComputeDB specific environment variables. Set your SnappyData/ComputeDB specifics" >> $WORKSPACES_HOME/setenv.sh
-   echo "# such as license keys in .snappydataenv.sh. The environment variables set in .snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Source in Spark specific environment variables. Set your Spark specifics" >> $WORKSPACES_HOME/setenv.sh
+   echo "# such as license keys in .sparkenv.sh. The environment variables set in .sparkenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "# are inherited by all workspaces running under this directory." >> $WORKSPACES_HOME/setenv.sh
    echo "#" >> $WORKSPACES_HOME/setenv.sh
-   echo "if [ -f \$SCRIPT_DIR/.snappydataenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
-   echo "   . \$SCRIPT_DIR/.snappydataenv.sh" >> $WORKSPACES_HOME/setenv.sh
+   echo "if [ -f \$SCRIPT_DIR/.sparkenv.sh ]; then" >> $WORKSPACES_HOME/setenv.sh
+   echo "   . \$SCRIPT_DIR/.sparkenv.sh" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
 
    # .coherenceenv.sh
@@ -551,8 +546,8 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    echo "" >> $WORKSPACES_HOME/setenv.sh
 fi
 
-# Create .geodeenv.sh
-createProductEnvFile "geode" "$WORKSPACES_HOME"
+# Create .sparkenv.sh
+createProductEnvFile "spark" "$WORKSPACES_HOME"
 
 #
 # Copy initenv.sh
@@ -630,7 +625,7 @@ echo "                sourced in from your shell."
 echo ""
 echo "   .addonenv.sh - A hidden file containing the workspaces metadata information."
 echo ""
-if [ "$JAVA_HOME" == "" ] || [ "$GEODE_HOME" == "" ]; then
+if [ "$JAVA_HOME" == "" ] || [ "$SPARK_HOME" == "" ]; then
    echo ""
    echo "The following environment variable(s) are not set. Although they are not"
    echo "required, you should set them in the 'setenv.sh' file so that you don't"
@@ -639,8 +634,8 @@ if [ "$JAVA_HOME" == "" ] || [ "$GEODE_HOME" == "" ]; then
    if [ "$JAVA_HOME" == "" ]; then
       echo "   JAVA_HOME"
    fi
-   if  [ "$GEODE_HOME" == "" ]; then
-      echo "   GEODE_HOME"
+   if  [ "$SPARK_HOME" == "" ]; then
+      echo "   SPARK_HOME"
    fi
 fi
 

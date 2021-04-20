@@ -56,7 +56,6 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # DEFAULT_MAX_HEAP_SIZE  Maximum heap size. Used initially when the cluster is created.  
 # ----------------------------------------------------------------------------------------------------
 
-
 # 
 # Unset variables
 # 
@@ -438,6 +437,13 @@ fi
 
 CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
 
+# Source in cluster file to get the product and cluster type
+THIS_PRODUCT=$PRODUCT
+THIS_CLUSTER_TYPE=$CLUSTER_TYPE
+if [ -f "$CLUSTER_DIR/.cluster" ]; then
+   . $CLUSTER_DIR/.cluster
+fi
+
 # Parent directory of member working directories
 RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
 
@@ -469,12 +475,61 @@ fi
 LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
 
 #
+# Remove the previous paths from PATH to prevent duplicates
+#
+CLEANED_PATH=""
+__IFS=$IFS
+IFS=":"
+PATH_ARRAY=($PATH)
+for i in "${PATH_ARRAY[@]}"; do
+   if [ "$i" == "$JAVA_HOME/bin" ]; then
+      continue;
+   elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
+      continue;
+   elif [ "$PRODUCT_HOME" != "" ] && [[ "$i" == "$PRODUCT_HOME"** ]]; then
+      continue;
+   elif [ "$COHERENCE_HOME" != "" ] && [[ "$i" == "$COHERENCE_HOME"** ]]; then
+      continue;
+   elif [ "$GEODE_HOME" != "" ] && [[ "$i" == "$GEODE_HOME"** ]]; then
+      continue;
+   elif [ "$GEMFIRE_HOME" != "" ] && [[ "$i" == "$GEMFIRE_HOME"** ]]; then
+      continue;
+   elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
+      continue;
+   elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
+      continue;
+   elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
+      continue;
+   elif [ "$SPARK_HOME" != "" ] && [[ "$i" == "$SPARK_HOME"** ]]; then
+      continue;
+   fi
+   if [ "$CLEANED_PATH" == "" ]; then
+      CLEANED_PATH="$i"
+   else
+      CLEANED_PATH="$CLEANED_PATH:$i"
+   fi
+done
+IFS=$__IFS
+
+# Export cleaned PATH
+PATH="$CLEANED_PATH"
+
+#
 # PATH
 #
 if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
+
+if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+   IS_GEODE_ENTERPRISE=true
+   PRODUCT_HOME=$GEMFIRE_HOME
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
+else
+   IS_GEODE_ENTERPRISE=false
+   PRODUCT_HOME=$GEODE_HOME
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
+fi
 
 #
 # Java executable
@@ -493,27 +548,14 @@ JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
 JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 
 #
-# GEODE_VERSION/PRODUCT_VERSION: Determine the Geode version
-#
+# GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
+# Geode and GemFire share the same 'geode' prefix for jar names.
 GEODE_VERSION=""
 IS_GEODE_ENTERPRISE=false
-CLUSTER_TYPE="geode"
-if [ "$GEODE_HOME" == "" ]; then
-   CLUSTER_TYPE="geode"
-else
-   GEMFIRE_CHECK=$(ls $GEODE_HOME/Pivotal* 2> /dev/null | wc -l)
-   if [ "$GEMFIRE_CHECK" -eq 0 ]; then
-      GEMFIRE_CHECK=$(ls $GEODE_HOME/VMware* 2> /dev/null | wc -l)
-   fi
-   if [ "$GEMFIRE_CHECK" -gt 0 ]; then
-      IS_GEODE_ENTERPRISE=true
-      CLUSTER_TYPE="gemfire"
-   fi
-   for file in $GEODE_HOME/lib/geode-core-*; do
-      file=${file##*geode\-core\-}
-      GEODE_VERSION=${file%.jar}
-   done
-fi
+for file in $GEODE_HOME/lib/geode-core-*; do
+   file=${file##*geode\-core\-}
+   GEODE_VERSION=${file%.jar}
+done
 if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then
    RUN_TYPE="pado"
 else
@@ -540,6 +582,7 @@ if [ "$CLASSPATH" != "" ]; then
 fi
 if [ "$__CLASSPATH" == "" ]; then
 __CLASSPATH="$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
+
 else
 __CLASSPATH="$__CLASSPATH:$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
 fi
@@ -548,7 +591,11 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-__CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/*"
+if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+   __CLASSPATH="$__CLASSPATH:$GEMFIRE_HOME/lib/*"
+else
+   __CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/*"
+fi
 export CLASSPATH="$__CLASSPATH"
 
 #
@@ -558,24 +605,3 @@ RUN_SCRIPT=
 if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
    . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
 fi
-
-# Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'
-CUnderline='\033[4m'
-CUrl=$CBlue$CUnderline

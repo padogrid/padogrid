@@ -587,9 +587,12 @@ else
 fi
 
 if [ "$PRODUCT" == "geode" ]; then
-   echo "   export GEODE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
-      echo "   export GEMFIRE_HOME=\"$PRDUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export GEMFIRE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export GEODE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "   export GEODE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export GEMFIRE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    fi
    echo "   export PADO_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "coherence" ]; then
@@ -611,6 +614,7 @@ else
          echo "   export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
          echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       fi
+      echo "   #export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "   export HAZELCAST_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       if [ "$HAZELCAST_HOME" != "" ]; then
@@ -623,6 +627,7 @@ else
          echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
          echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
       fi
+      echo "   #export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    fi
 fi
 if [ "$PRODUCT" != "coherence" ]; then
@@ -645,7 +650,11 @@ fi
 if [ "$PRODUCT" == "coherence" ]; then
    echo "   export PRODUCT_HOME=\"\$COHERENCE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "geode" ]; then
-   echo "   export PRODUCT_HOME=\"\$GEODE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+      echo "   export PRODUCT_HOME=\"\$GEMFIRE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "   export PRODUCT_HOME=\"\$GEODE_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   fi
 elif [ "$PRODUCT" == "hazelcast" ]; then
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       echo "   export PRODUCT_HOME=\"\$JET_HOME\"" >> $WORKSPACE_DIR/setenv.sh
@@ -762,12 +771,6 @@ echo "# The environment variables set in this file are used for all clusters run
 echo "# in this workspace. Cluster specifics should be added in clusters/<cluster>/setenv.sh." >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
-echo "# Set default cluster name. This cluster name is used if the '-cluster' option is not specified" >> $WORKSPACE_DIR/setenv.sh
-echo "# when running padogrid commands." >> $WORKSPACE_DIR/setenv.sh
-echo "if [ \"\$CLUSTER\" == \"\" ]; then" >> $WORKSPACE_DIR/setenv.sh
-echo "   export CLUSTER=\"$CLUSTER\"" >> $WORKSPACE_DIR/setenv.sh
-echo "fi" >> $WORKSPACE_DIR/setenv.sh
-echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# Set default pod name. This pod name is used if the '-pod' option is not specified" >> $WORKSPACE_DIR/setenv.sh
 echo "# when running padogrid commands" >> $WORKSPACE_DIR/setenv.sh
 echo "#export POD=" >> $WORKSPACE_DIR/setenv.sh
@@ -824,19 +827,6 @@ echo "export PADOGRID_WORKSPACE=\$SCRIPT_DIR" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export CLUSTERS_DIR=\$PADOGRID_WORKSPACE/clusters" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export PODS_DIR=\$PADOGRID_WORKSPACE/pods" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
-if [ "$PRODUCT" == "geode" ]; then
-   echo "export PRODUCT=geode" >> $WORKSPACE_DIR/.addonenv.sh
-elif [ "$PRODUCT" == "coherence" ]; then
-   echo "export PRODUCT=coherence" >> $WORKSPACE_DIR/.addonenv.sh
-elif [ "$PRODUCT" == "snappydata" ]; then
-   echo "export PRODUCT=snappydata" >> $WORKSPACE_DIR/.addonenv.sh
-elif [ "$PRODUCT" == "spark" ]; then
-   echo "export CLUSTER_TYPE=$CLUSTER_TYPE" >> $WORKSPACE_DIR/.addonenv.sh
-   echo "export PRODUCT=spark" >> $WORKSPACE_DIR/.addonenv.sh
-else
-   echo "export CLUSTER_TYPE=$CLUSTER_TYPE" >> $WORKSPACE_DIR/.addonenv.sh
-   echo "export PRODUCT=hazelcast" >> $WORKSPACE_DIR/.addonenv.sh
-fi
 
 #
 # Switch workspace and create cluster. This is done is sub-shell and hence

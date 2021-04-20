@@ -471,6 +471,13 @@ fi
 
 CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
 
+# Source in cluster file to get the product and cluster type
+THIS_PRODUCT=$PRODUCT
+THIS_CLUSTER_TYPE=$CLUSTER_TYPE
+if [ -f "$CLUSTER_DIR/.cluster" ]; then
+   . $CLUSTER_DIR/.cluster
+fi
+
 # Parent directory of member working directories
 RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
 
@@ -497,6 +504,46 @@ fi
 LOG_PROPERTIES="-J-Dlog4j.configurationFile=$LOG4J_FILE"
 
 #
+# Remove the previous paths from PATH to prevent duplicates
+#
+CLEANED_PATH=""
+__IFS=$IFS
+IFS=":"
+PATH_ARRAY=($PATH)
+for i in "${PATH_ARRAY[@]}"; do
+   if [ "$i" == "$JAVA_HOME/bin" ]; then
+      continue;
+   elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
+      continue;
+   elif [ "$PRODUCT_HOME" != "" ] && [[ "$i" == "$PRODUCT_HOME"** ]]; then
+      continue;
+   elif [ "$COHERENCE_HOME" != "" ] && [[ "$i" == "$COHERENCE_HOME"** ]]; then
+      continue;
+   elif [ "$GEODE_HOME" != "" ] && [[ "$i" == "$GEODE_HOME"** ]]; then
+      continue;
+   elif [ "$GEMFIRE_HOME" != "" ] && [[ "$i" == "$GEMFIRE_HOME"** ]]; then
+      continue;
+   elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
+      continue;
+   elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
+      continue;
+   elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
+      continue;
+   elif [ "$SPARK_HOME" != "" ] && [[ "$i" == "$SPARK_HOME"** ]]; then
+      continue;
+   fi
+   if [ "$CLEANED_PATH" == "" ]; then
+      CLEANED_PATH="$i"
+   else
+      CLEANED_PATH="$CLEANED_PATH:$i"
+   fi
+done
+IFS=$__IFS
+
+# Export cleaned PATH
+PATH="$CLEANED_PATH"
+
+#
 # PATH
 #
 if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
@@ -505,7 +552,7 @@ fi
 export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$SNAPPYDATA_HOME/bin:$SNAPPYDATA_HOME/sbin:$PATH"
 
 # SPARK_HOME
-# This must be set to prevent it from conflicting with a separate instnace of Spark.
+# This must be set to prevent it from conflicting with a separate instance of Spark.
 SPARK_HOME=$SNAPPYDATA_HOME
 
 #
@@ -525,19 +572,14 @@ JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
 JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 
 #
-# SNAPPYDATA_VERSION/PROUDCT_VERSION: Determine the Hazelcast version
+# SNAPPYDATA_VERSION/PROUDCT_VERSION: Determine the SnappyData version
 #
 SNAPPYDATA_VERSION=""
 IS_ENTERPRISE=false
-CLUSTER_TYPE="snappydata"
-if [ "$SNAPPYDATA_HOME" == "" ]; then
-   CLUSTER_TYPE="snappydata"
-else
-   for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
-      file=${file##*snappydata\-core*\-}
-      SNAPPYDATA_VERSION=${file%.jar}
-   done
-fi
+for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
+   file=${file##*snappydata\-core*\-}
+   SNAPPYDATA_VERSION=${file%.jar}
+done
 SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
 PRODUCT_VERSION=$SNAPPYDATA_VERSION
 PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
@@ -577,24 +619,3 @@ RUN_SCRIPT=
 if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
    . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
 fi
-
-# Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'
-CUnderline='\033[4m'
-CUrl=$CBlue$CUnderline

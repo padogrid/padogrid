@@ -1486,31 +1486,52 @@ function switch_cluster
    fi
 
    if [ "$1" != "" ]; then
-      . $PADOGRID_WORKSPACE/initenv.sh -quiet
+#      . $PADOGRID_WORKSPACE/initenv.sh -quiet
       export CLUSTER=$(echo "$1" | sed 's/\///')
       if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
          sed -i${__SED_BACKUP} '/CLUSTER=/d' "$PADOGRID_WORKSPACE/.workspace"
       fi
-      echo "export CLUSTER=$CLUSTER" >> "$PADOGRID_WORKSPACE/.workspace"
+      echo "CLUSTER=$CLUSTER" >> "$PADOGRID_WORKSPACE/.workspace"
       determineClusterProduct
+      local __PRODUCT
       if [ "$PRODUCT" == "geode" ]; then
-         export PRODUCT_HOME=$GEODE_HOME
+         if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+            export PRODUCT_HOME=$GEMFIRE_HOME
+         else
+            export PRODUCT_HOME=$GEODE_HOME
+         fi
+         __PRODUCT="geode"
+      elif [ "$PRODUCT" == "gemfire" ]; then
+         export PRODUCT_HOME=$GEMFIRE_HOME
+         __PRODUCT="geode"
       elif [ "$PRODUCT" == "hazelcast" ]; then
          if [ "CLUSTER_TYPE" == "jet" ]; then
             export PRODUCT_HOME=$JET_HOME
          else
             export PRODUCT_HOME=$HAZELCAST_HOME
          fi
+         __PRODUCT="hazelcast"
+      elif [ "$PRODUCT" == "jet" ]; then
+         export PRODUCT_HOME=$JET_HOME
+         __PRODUCT="hazelcast"
       elif [ "$PRODUCT" == "snappydata" ]; then
          export PRODUCT_HOME=$SNAPPYDATA_HOME
+         __PRODUCT="snappydata"
       elif [ "$PRODUCT" == "spark" ]; then
-          export PRODUCT_HOME=$SPARK_HOME
+         export PRODUCT_HOME=$SPARK_HOME
+         __PRODUCT="spark"
       elif [ "$PRODUCT" == "coherence" ]; then
-          export PRODUCT_HOME=$COHERENCE_HOME
+         export PRODUCT_HOME=$COHERENCE_HOME
+         __PRODUCT="coherence"
       fi
       local NEW_PRODUCT=$PRODUCT
       local NEW_PRODUCT_HOME=$PRODUCT_HOME
-      . $PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash
+      if [ -f "$CLUSTERS_DIR/$CLUSTER/.cluster" ]; then
+         . $CLUSTERS_DIR/$CLUSTER/.cluster
+      fi
+      export CLUSTER
+      export CLUSTER_TYPE
+      . $PADOGRID_HOME/$__PRODUCT/bin_sh/.${__PRODUCT}_completion.bash
       # Must set the new product values again to overwrite the values set by completion
       export PRODUCT=$NEW_PRODUCT
       export PRODUCT_HOME=$NEW_PRODUCT_HOME
@@ -2593,24 +2614,28 @@ function determineClusterProduct
       __CLUSTER=$CLUSTER
    fi
    local CLUSTER_DIR=$CLUSTERS_DIR/$__CLUSTER
-   if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then   
-      PRODUCT="geode"
-      CLUSTER_TYPE=$PRODUCT
-   elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then   
-      PRODUCT="hazelcast"
-      CLUSTER_TYPE="jet"
-   elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then   
-      PRODUCT="hazelcast"
-      CLUSTER_TYPE="imdg"
-   elif [ -f "$CLUSTER_DIR/etc/gemfirexd.properties" ]; then   
-      PRODUCT="snappydata"
-      CLUSTER_TYPE=$PRODUCT
-   elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then   
-      PRODUCT="coherence"
-      CLUSTER_TYPE=$PRODUCT
-   elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
-      PRODUCT="spark"
-      CLUSTER_TYPE="standalone"
+   if [ -f "$CLUSTER_DIR/.cluster" ]; then
+      . "$CLUSTER_DIR/.cluster"
+   else
+      if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then   
+         PRODUCT="geode"
+         CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then   
+         PRODUCT="hazelcast"
+         CLUSTER_TYPE="jet"
+      elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then   
+         PRODUCT="hazelcast"
+         CLUSTER_TYPE="imdg"
+      elif [ -f "$CLUSTER_DIR/etc/gemfirexd.properties" ]; then   
+         PRODUCT="snappydata"
+         CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then   
+         PRODUCT="coherence"
+         CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
+         PRODUCT="spark"
+         CLUSTER_TYPE="standalone"
+      fi
    fi
 }
 
