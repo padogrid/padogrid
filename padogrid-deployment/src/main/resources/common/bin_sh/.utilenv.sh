@@ -1400,7 +1400,7 @@ function switch_workspace
             echo >&2 "ERROR: Workspace does not exist. Command aborted."
             return 1
          fi
-         PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
+         export PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
          if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
             . "$PADOGRID_WORKSPACE/.workspace"
          fi
@@ -1457,8 +1457,8 @@ function switch_workspace
          export CLUSTER=""
       fi
       #. $PADOGRID_WORKSPACES_HOME/$1/initenv.sh -quiet
+      export PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$1"
    fi
-   export PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$1"
    cd_workspace $@
 }
 
@@ -2150,7 +2150,12 @@ function padogrid
       echo ""
       echo "DESCRIPTION"
       echo "   Executes the specified padogrid command. If no options are specified then it displays"
-      echo "   the current workspace information."
+      echo "   the entire RWEs in a tree view."
+      echo ""
+      echo "   Note that the product displayed in a workspace node is the default product configured"
+      echo "   for that workspace and does not necessarily represent the how the components in the"
+      echo "   workspace are configured. For example, a workspace may contain a cluster configured"
+      echo "   with the default product and yet another cluster with another product."
       echo ""
       echo "OPTIONS"
       echo "   -rwe"
@@ -2298,8 +2303,6 @@ function getWorkspaceInfoList
       return 0
    fi
 
-   local CLUSTER_TYPE=$(grep "CLUSTER_TYPE" $WORKSPACE_PATH/.addonenv.sh)
-   CLUSTER_TYPE=$(echo "$CLUSTER_TYPE" | sed 's/^.*=//')
    # Remove blank lines from grep results. Pattern includes space and tab.
    local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
    if [[ "$__PRODUCT_HOME" == *"\$"* ]]; then
@@ -2307,6 +2310,24 @@ function getWorkspaceInfoList
       __PRODUCT_HOME=${__PRODUCT_HOME%\"*}
       __PRODUCT_HOME=$(grep "export $__PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
    fi
+
+   # Determine CLUSTER_TYPE based on the product path name.
+   if [[ "$__PRODUCT_HOME" == **"jet"** ]]; then
+      CLUSTER_TYPE=jet
+   elif [[ "$__PRODUCT_HOME" == **"hazelcast"** ]]; then
+      CLUSTER_TYPE=imdg
+   elif [[ "$__PRODUCT_HOME" == **"gemfire"** ]]; then
+      CLUSTER_TYPE=gemfire
+   elif [[ "$__PRODUCT_HOME" == **"geode"** ]]; then
+      CLUSTER_TYPE=geode
+   elif [[ "$__PRODUCT_HOME" == **"snappydata"** ]]; then
+      CLUSTER_TYPE=snappydata
+   elif [[ "$__PRODUCT_HOME" == **"coherence"** ]]; then
+      CLUSTER_TYPE=coherence
+   elif [[ "$__PRODUCT_HOME" == **"spark"** ]]; then
+      CLUSTER_TYPE=standalone
+   fi
+
    local PRODUCT_VERSION
    local PRODUCT_INFO
    if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -2345,7 +2366,7 @@ function getWorkspaceInfoList
    elif [[ "$__PRODUCT_HOME" == *"spark"* ]]; then
       local file=${__PRODUCT_HOME#*spark\-}
       PRODUCT_VERSION=${file%-bin*}
-      PRODUCT_INFO="spark_${PRODUCT_VERSION}, standalone"
+      PRODUCT_INFO="spark_${PRODUCT_VERSION}, $CLUSTER_TYPE"
    fi
 
    local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
