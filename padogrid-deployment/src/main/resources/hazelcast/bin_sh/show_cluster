@@ -466,21 +466,37 @@ function displayClusterLong()
          echo "     DEBUG_PORT: $DEBUG_PORT"
          echo "PROMETHEUS_PORT: $PROMETHEUS_PORT"
          echo "        JMX_URL: $JMX_URL"
-         echo -e "         MC_URL: $CUrl$MC_URL$CNone"
+#         echo -e "         MC_URL: $CUrl$MC_URL$CNone"
          echo "    Working Dir: $MEMBER_DIR"
          echo "       LOG_FILE: $LOG_FILE"
          echo ""
          popd > /dev/null 2>&1
       fi
    done
+
+   # Determine MC
+   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" $DEFAULT_MC_HTTPS_ENABLED`
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
+   MC_PID=`getMcPid $MC_NAME $WORKSPACE`
+
+   show_mc -long
    echo "        CLUSTER: $CLUSTER"
    echo "   CLUSTER_TYPE: $CLUSTER_TYPE"
    if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
    echo -e " Members Running: ${CYellow}Unknown{CNone}"
    elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
-   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
-   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   if [ "$MC_PID" != "" ]; then
+   echo -e "     MC Running: ${CLightGreen}1/1${CNone}"
+   else
+   echo -e "     MC Running: ${CLightRed}1/1${CNone}"
    fi
    echo "        Version: $HAZELCAST_VERSION"
    echo " Switch Cluster: $SWITCH_CLUSTER_COMMAND"
