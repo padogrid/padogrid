@@ -44,15 +44,15 @@ SYNOPSIS
    $EXECUTABLE [-cluster cluster_name]
 
 DESCRIPTION
-   Starts all inactive (or stopped) members in the specified cluster.
+   Starts all inactive (or stopped) locators and members in the specified cluster.
 
 OPTIONS
    -cluster cluster_name
              Cluster name.
 
    -fg
-             Run each member in the foreground serially until each member is fully initialized
-             started. If this options is not specified, then by default, it starts the members
+             Run each member in the foreground serially until each member is fully started and
+             initialized. If this options is not specified, then by default, it starts the members
              in the background. Note that it always starts the locators in the foreground.
 
 EOF
@@ -70,14 +70,18 @@ EOF
    exit
 fi
 
+if [ "$FG_SPECIFIED" == "true" ]; then
+   echo "Starting the members in the foreground..."
+fi
+
 #
 # Run the target cluster command if the product is different.
 #
 if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
-#   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
       $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
-#      exit
-#   fi
+      exit
+   fi
 fi
 
 # 
