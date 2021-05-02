@@ -1399,6 +1399,8 @@ function switch_workspace
    export PADO_HOME=""
 
    if [ "$1" == "" ]; then
+
+      # If the current workspace does not exist then pick the first one in the current rwe.
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then
          __WORKSPACES=$(list_workspaces)
          for i in $__WORKSPACES; do
@@ -1413,7 +1415,13 @@ function switch_workspace
          if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
             . "$PADOGRID_WORKSPACE/.workspace"
          fi
+         # Intialize workspace
+         . "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/initenv.sh" -quiet
+      else
+         # Intialize workspace
+         . "$PADOGRID_WORKSPACE/initenv.sh" -quiet
       fi
+
 
       # Determine the current cluster. If it is not set in .workspace or .cluster then
       # pick the first one in the clusters directory.
@@ -1429,6 +1437,25 @@ function switch_workspace
             . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster"
          fi
       fi
+
+      # Determine the current pod. If it is not set in .workspace or .pod then
+      # set to local
+      if [ ! -d "$PADOGRID_WORKSPACE/pods/$POD" ]; then
+         local __PODS=$(list_pods)
+         local __POD=""
+         for i in $__PODS; do
+            __POD=$i
+            break;
+         done
+         export POD="$__POD"
+         if [ "$POD" != "" ] && [ -f "$PADOGRID_WORKSPACE/pods/$POD/.pod" ]; then
+            . "$PADOGRID_WORKSPACE/pods/$POD/.pod"
+         fi
+      fi
+      if [ ! -d "$PADOGRID_WORKSPACE/pods/$POD" ]; then
+         export POD="local"
+      fi
+
    else
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
          echo >&2 "ERROR: Invalid workspace. Workspace does not exist. Command aborted."
@@ -1457,6 +1484,9 @@ function switch_workspace
             __COMPONENT_NAME=$i
         fi
       done
+
+      # Intialize workspace
+      . "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/initenv.sh" -quiet
 
       if [ -f "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/.workspace" ]; then
          . "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/.workspace"
@@ -1510,6 +1540,9 @@ function switch_workspace
 
       # Export workspace
       export PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
+
+      __switch_cluster $CLUSTER
+      __switch_pod $POD
    fi
    cd_workspace $@
 }
@@ -1566,7 +1599,21 @@ function switch_cluster
       echo "-?"
       return
    fi
+   __switch_cluster $@
+   cd_cluster $@
+ }
 
+# 
+# Switches the cluster to the specified cluster but does not change directory.
+#
+# @required PADOGRID_WORKSPACE Workspace path.
+# @param    clusterName         Optional cluster in the
+#                               $PADOGRID_WORKSPACE/clusters directory.
+#                               If not specified, then switches to the   
+#                               current cluster.
+#
+function __switch_cluster
+{
    if [ "$1" != "" ]; then
       local __PATH=""
       for i in "$@"; do
@@ -1635,9 +1682,7 @@ function switch_cluster
       export PRODUCT=$NEW_PRODUCT
       export PRODUCT_HOME=$NEW_PRODUCT_HOME
    fi
-   cd_cluster $@
 }
-
 # 
 # Switches the pod to the specified pod. This function is provided
 # to be executed in the shell along with other padogrid commands. It
@@ -1689,7 +1734,23 @@ function switch_pod
       echo "-?"
       return
    fi
+   __switch_pod $@
+   cd_pod $@
+}
 
+# 
+# Switches the pod to the specified pod but does not change directory.
+#
+# @required PADOGRID_WORKSPACE Workspace path.
+# @param    podName         Optional pod in the
+#                           $PADOGRID_WORKSPACE/pods directory.
+#                           If not specified, then switches to the   
+#                           current pod and changes directory into 
+#                           that pod. Note that if pod is 'local' then 
+#                           it changes directory to $PADOGRID_WORKSPACE/pods.
+#
+function __switch_pod
+{
    if [ "$1" != "" ]; then
       local __PATH=""
       for i in "$@"; do
@@ -1715,7 +1776,6 @@ function switch_pod
       fi
       echo "POD=$POD" >> "$PADOGRID_WORKSPACE/.workspace"
    fi
-   cd_pod $@
 }
 
 #
@@ -1969,6 +2029,7 @@ function cd_pod
          fi
       fi
    fi
+   pwd
 }
 
 #

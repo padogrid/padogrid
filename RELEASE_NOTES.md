@@ -4,8 +4,9 @@
 
 ## Version 0.9.6-SNAPSHOT
 
-### Release Date: 04/20/21
+### Release Date: 05/02/21
 
+- Added 'switch_pod' and 'pwd_pod' for pod context switching.
 - Added support for running multi-clusters in a single workspace. With this support, you can now create clusters for any products in a local workspace and run them concurrently, provided that there are no port conflicts. Please see the **Default Port Numbers** section in the manual for details.
 - Added lifecycle management support for Spark which joins the growing list of clustering products natively supported by PadoGrid out of the box. This release supports the Spark's "standalone" deployment option.
 - The pod VMs are now configured without the Avahi network discovery service by default. To enable Avahi, specify the `-avahi` option when executing the `create_pod` command.

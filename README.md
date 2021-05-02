@@ -1,6 +1,8 @@
 # PadoGrid
 
-The PadoGrid project aims to deliver a data grid platform with out-of-the-box turnkey solutions to many enterprise architecture use cases. The solutions come in the form of bundles which you simply *install and run*.
+The PadoGrid project aims to deliver a data grid platform with out-of-the-box turnkey solutions to many enterprise architecture use cases. The solutions come in the form of bundles which you simply *install and run*. See the PaodGrid manual for details.
+
+[**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 
 ## Downloads
 
@@ -45,7 +47,7 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [Docker Clusters](https://github.com/padogrid/padogrid/wiki/Docker)
 - [PadoGrid (Vagrant) Pods](https://github.com/padogrid/padogrid/wiki/Understanding-PadoGrid-Pods)
 - [Hazelcast Query Language (HQL)](https://github.com/padogrid/padogrid/wiki/HQL-Query)
-- [Use Cases in Online Bundles](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
+- [Use Cases via Online Bundles](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 
 ## Building `padogrid`
 
@@ -113,15 +115,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.5-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.6-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.5-SNAPSHOT
+tree -L 1 padogrid_0.9.6-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.5-SNAPSHOT
+padogrid_0.9.6-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -141,12 +143,12 @@ padogrid_0.9.5-SNAPSHOT
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.5-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.6-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid on Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.5-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.6-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 ```bash
 # docker
