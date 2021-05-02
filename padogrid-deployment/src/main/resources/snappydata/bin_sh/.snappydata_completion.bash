@@ -172,7 +172,7 @@ __padogrid_complete()
       
    -workspace)
       if [ "$command" == "install_bundle" ]; then
-         type_list=`$command -options`
+         type_list="default "`getWorkspaces`
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
       fi
@@ -324,7 +324,7 @@ __rwe_complete_arg()
    local prev_word=${COMP_WORDS[COMP_CWORD-1]}
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"
-   
+
    let i1=start_index+2
    let i2=start_index+3
    let i3=start_index+4
@@ -339,23 +339,23 @@ __rwe_complete_arg()
          type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
       fi
    else
-      local COMPONENT_DIR="$RWE_HOME/${COMP_WORDS[start_index]}/${COMP_WORDS[start_index+1]}"
+      local WORKSPACE_DIR="$RWE_HOME/${COMP_WORDS[start_index]}/${COMP_WORDS[start_index+1]}"
       local DIR=""
       local PARENT_DIR=""
       local count=0
       for i in ${COMP_WORDS[@]}; do
         let count=count+1
-        if [ $count -gt 3 ]; then
+        if [ $count -gt $i1 ]; then
            DIR="$DIR/$i"
         fi
         if [ $count -lt $len ]; then
            PARENT_DIR=$DIR
         fi
       done
-      if [ -d "${COMPONENT_DIR}${DIR}" ]; then
-         type_list=$(__get_dir_list "${COMPONENT_DIR}${DIR}")
-      elif [ -d "${COMPONENT_DIR}${PARENT_DIR}" ]; then
-         type_list=$(__get_dir_list "${COMPONENT_DIR}${PARENT_DIR}")
+      if [ -d "${WORKSPACE_DIR}${DIR}" ]; then
+         type_list=$(__get_dir_list "${WORKSPACE_DIR}${DIR}")
+      elif [ -d "${WORKSPACE_DIR}${PARENT_DIR}" ]; then
+         type_list=$(__get_dir_list "${WORKSPACE_DIR}${PARENT_DIR}")
       else
          type_list=""
       fi
@@ -363,12 +363,23 @@ __rwe_complete_arg()
    echo $type_list
 }
 
-__rwe_complete()
+__rwe_complete_space()
 {
    cur_word="${COMP_WORDS[COMP_CWORD]}"
    type_list=$(__rwe_complete_arg 1)
    if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
+   return 0
+}
+
+__rwe_complete_nospace()
+{
+   local len=${#COMP_WORDS[@]}
+   if [ $len -eq 2 ]; then
+     if [ "$(dirname $PADOGRID_WORKSPACES_HOME)" != "$(pwd)" ]; then
+       pushd $(dirname $PADOGRID_WORKSPACES_HOME) > /dev/null
+      fi
    fi
    return 0
 }
@@ -420,12 +431,31 @@ __workspace_complete_arg()
    echo $type_list
 }
 
-__workspace_complete()
+__workspace_complete_space()
 {
    cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__workspace_complete_arg 1)
    if [ "${type_list}" != "" ]; then
-      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+      COMPREPLY=( $(compgen -W "${type_list}" ${cur_word}) )
+   fi
+   return 0
+}
+
+# trap ctrl-c and call __ctrl_c()
+#trap __ctrl_c INT
+#
+#function __ctrl_c() {
+#   pushd -0 > /dev/null
+#   dirs -c
+#}
+
+__workspace_complete_nospace()
+{
+   local len=${#COMP_WORDS[@]}
+   if [ $len -eq 2 ]; then
+      if [ "$PADOGRID_WORKSPACES_HOME" != "$(pwd)" ]; then
+         pushd $PADOGRID_WORKSPACES_HOME > /dev/null
+      fi
    fi
    return 0
 }
@@ -503,7 +533,7 @@ __cd_complete_arg()
    echo $type_list
 }
 
-__clusters_complete()
+__clusters_complete_space()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "clusters" 1)
@@ -513,7 +543,18 @@ __clusters_complete()
    return 0
 }
 
-__pods_complete()
+__clusters_complete_nospace()
+{
+   local len=${#COMP_WORDS[@]}
+   if [ $len -eq 2 ]; then
+      if [ "$PADOGRID_WORKSPACE/clusters" != "$(pwd)" ]; then
+         pushd $PADOGRID_WORKSPACE/clusters > /dev/null
+      fi
+   fi
+   return 0
+}
+
+__pods_complete_space()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "pods" 1)
@@ -523,7 +564,18 @@ __pods_complete()
    return 0
 }
 
-__k8s_complete()
+__pods_complete_nospace()
+{
+   local len=${#COMP_WORDS[@]}
+   if [ $len -eq 2 ]; then
+      if [ "$PADOGRID_WORKSPACE/pods" != "$(pwd)" ]; then
+         pushd $PADOGRID_WORKSPACE/pods > /dev/null
+      fi
+   fi
+   return 0
+}
+
+__k8s_complete_space()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "k8s" 1)
@@ -533,7 +585,18 @@ __k8s_complete()
    return 0
 }
 
-__docker_complete()
+__k8s_complete_nospace()
+{
+   local len=${#COMP_WORDS[@]}
+   if [ $len -eq 2 ]; then
+      if [ "$PADOGRID_WORKSPACE/k8s" != "$(pwd)" ]; then
+         pushd $PADOGRID_WORKSPACE/k8s > /dev/null
+      fi
+   fi
+   return 0
+}
+
+__docker_complete_space()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "docker" 1)
@@ -543,12 +606,34 @@ __docker_complete()
    return 0
 }
 
-__apps_complete()
+__docker_complete_nospace()
+{
+   local len=${#COMP_WORDS[@]}
+   if [ $len -eq 2 ]; then
+      if [ "$PADOGRID_WORKSPACE/docker" != "$(pwd)" ]; then
+         pushd $PADOGRID_WORKSPACE/docker > /dev/null
+      fi
+   fi
+   return 0
+}
+
+__apps_complete_space()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
    local type_list=$(__cd_complete_arg "apps" 1)
    if [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
+   return 0
+}
+
+__apps_complete_nospace()
+{
+   local len=${#COMP_WORDS[@]}
+   if [ $len -eq 2 ]; then
+      if [ "$PADOGRID_WORKSPACE/apps" != "$(pwd)" ]; then
+         pushd $PADOGRID_WORKSPACE/apps > /dev/null
+      fi
    fi
    return 0
 }
@@ -636,7 +721,7 @@ __command_complete()
       ;;
    -workspace)
       if [ "$command" == "install_bundle" ]; then
-         type_list=`$command -options`
+         type_list="default "`getWorkspaces`
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
       fi
@@ -738,28 +823,27 @@ done
 complete -F __padogrid_complete -o bashdefault padogrid
 
 # Register switch_rwe, cd_rwe
-complete -F __rwe_complete -o bashdefault switch_rwe
-complete -F __rwe_complete -o bashdefault cd_rwe
+complete -F __rwe_complete_space -o bashdefault switch_rwe
+complete -F __rwe_complete_space -o bashdefault cd_rwe
+#complete -F __rwe_complete_nospace -o bashdefault -o nospace switch_rwe
 
 # Register switch_workspace, cd_workspace
-complete -F __workspace_complete -o bashdefault switch_workspace
-complete -F __workspace_complete -o bashdefault cd_workspace
+complete -F __workspace_complete_space -o bashdefault switch_workspace
+complete -F __workspace_complete_space -o bashdefault cd_workspace
 
 # Register switch_cluster, cd_cluster
-complete -F __clusters_complete -o bashdefault switch_cluster
-complete -F __clusters_complete -o bashdefault cd_cluster
+complete -F __clusters_complete_space -o bashdefault switch_cluster
+complete -F __clusters_complete_space -o bashdefault cd_cluster
 
-# Register cd_pod
-complete -F __pods_complete -o bashdefault cd_pod
+# Register switch_pod, cd_pod
+complete -F __pods_complete_space -o bashdefault switch_pod
+complete -F __pods_complete_space -o bashdefault cd_pod
 
 # Register cd_k8s
-complete -F __k8s_complete -o bashdefault cd_k8s
+complete -F __k8s_complete_space -o bashdefault cd_k8s
 
 # Register cd_docker
-complete -F __docker_complete -o bashdefault cd_docker
+complete -F __docker_complete_space -o bashdefault cd_docker
 
 # Register cd_app
-complete -F __apps_complete -o bashdefault cd_app
-
-# Register cluster.sh
-complete -F __cluster_complete -o bashdefault cluster.sh
+complete -F __apps_complete_space -o bashdefault cd_app
