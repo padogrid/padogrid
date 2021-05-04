@@ -4,14 +4,15 @@
 
 ## Version 0.9.6-SNAPSHOT
 
-### Release Date: 05/02/21
+### Release Date: 05/04/21
 
-- Added 'switch_pod' and 'pwd_pod' for pod context switching.
+- Added the `install_padogrid` command for installing the latest product versions. This command completely automates the PadoGrid installation process. By default, it runs in the interactive mode, allowing you to select the products to install. For hands-free, auto-installtion, run `install_padogrid -quiet`. It automatically installs PadoGrid along with all the downlodable products and creates an RWE if it does not exist.
+- Added `switch_pod` and `pwd_pod` for pod context switching.
 - Added support for running multi-clusters in a single workspace. With this support, you can now create clusters for any products in a local workspace and run them concurrently, provided that there are no port conflicts. Please see the **Default Port Numbers** section in the manual for details.
 - Added lifecycle management support for Spark which joins the growing list of clustering products natively supported by PadoGrid out of the box. This release supports the Spark's "standalone" deployment option.
 - The pod VMs are now configured without the Avahi network discovery service by default. To enable Avahi, specify the `-avahi` option when executing the `create_pod` command.
 - Clusters created in the VM-enabled workspaces can now seamlessly run with or without pods. If a cluster is attached to a pod, then it automatcially inherits the workspace's VM configuration, allowing you to manage clusters from either the host OS or any of the guest OS VMs.
-- Vagrant VMs can now be logged in without password. Examples: 'ssh vagrant@pnode.local', 'ssh vagrant@node-01.local', etc.
+- Vagrant VMs can now be logged in without password. Examples: `ssh vagrant@pnode.local`, `ssh vagrant@node-01.local`, etc.
 - Vagrant pods are now configured as VMs.
 
 ----

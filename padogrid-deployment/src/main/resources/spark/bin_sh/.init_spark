@@ -95,6 +95,13 @@ EOF
    exit
 fi
 
+# If -env file present, then source it in. This is already done in .argenv.sh
+# but it is overwritten by .addonenv.sh which sources in the workspace setenv.sh
+# file.
+if [ "$ENV_ARG" != "" ]; then
+   . $ENV_ARG
+fi
+
 # Set PADOGRID_HOME
 PADOGRID_HOME="$(dirname "$BASE_DIR")"
 
@@ -159,14 +166,15 @@ if [ "$JAVA_HOME_ARG" == "" ]; then
    JAVA_HOME_ARG="$JAVA_HOME"
 fi
 if [ "$PRODUCT_ARG" == "" ]; then
-   PRODUCT_ARG="$SPARK_HOME"
+   PRODUCT_ARG="$SNAPPYDATA_HOME"
 else
    PRODUCT_HOME="$PRODUCT_ARG"
 fi
 
 # Default cluster
 if [ $CLUSTER_SPECIFIED == "false" ]; then
-   CLUSTER="$DEFAULT_CLUSTER"
+   CLUSTER=""
+   determineProduct
 fi
 
 # VM
@@ -192,11 +200,6 @@ if [ "$QUIET" == "true" ]; then
       WORKSPACE="$WORKSPACE_ARG"
    fi
 else
-   echo ""
-   echo "Please answer the prompts that appear below. If you are not able to complete"
-   echo "the prompts at this time then use the '-quiet' option to bypass the prompts."
-   echo "You can complete the requested values later in the generated 'setenv.sh' file"
-   echo "You can abort this command at any time by entering 'Ctrl-C'."
    echo ""
    __WORKSPACES_HOME="$WORKSPACES_HOME"
    __RWE_HOME="$RWE_HOME"
@@ -266,7 +269,7 @@ else
          elif [ -d "$__RWE_HOME/$__RWE_NAME" ] || [ -f "$__RWE_HOME/$__RWE_NAME" ]; then
             __REDO=true
             __RWE_NAME=""
-            echo "The specified RWE already exists. Please enter a RWE name."
+            echo "The specified RWE already exists. Please enter a new RWE name."
          else
             __REDO=false
          fi
@@ -471,12 +474,12 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    else
       echo "   #export JAVA_HOME=" >> $WORKSPACES_HOME/setenv.sh
    fi
-   echo "   export COHERENCE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export GEMFIRE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export GEODE_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export JET_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
-   echo "   export SNAPPYDATA_HOME=\"\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export GEODE_HOME=\"$GEODE_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export JET_HOME=\"$JET_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   echo "   export SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $WORKSPACES_HOME/setenv.sh
    echo "   export SPARK_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACES_HOME/setenv.sh
    echo "   export PRODUCT_HOME=\"\$SPARK_HOME\"" >> $WORKSPACES_HOME/setenv.sh
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
@@ -620,9 +623,10 @@ echo "   $WORKSPACES_HOME"
 echo ""
 echo "The workspaces directory contains the following files."
 echo ""
-echo "   setenv.sh -  Sets workspaces default environment variables. This file must be"
-echo "                sourced in from your shell."
-echo ""
+"
+echo "   setenv.sh -  Sets the default rwe environment variables. You can set your"
+echo "                rwe-wide environment variables in this file this file. All"
+echo "                workspaces and their components inherit the rwe environment variables.echo ""
 echo "   .addonenv.sh - A hidden file containing the workspaces metadata information."
 echo ""
 if [ "$JAVA_HOME" == "" ] || [ "$SPARK_HOME" == "" ]; then
@@ -648,20 +652,20 @@ echo "Default Workspace: $WORKSPACE"
 echo "  Default Cluster: $CLUSTER"
 echo "       VM Cluster: $VM_ENABLED"
 echo ""
-echo "PADOGRID_WORKSPACES_HOME=$PADOGRID_WORKSPACES_HOME"
-echo "      PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE"
-echo "    Default Cluster Dir: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
-echo ""
+"
+echo "PADOGRID_WORKSPACES_HOME: $PADOGRID_WORKSPACES_HOME"
+echo "      PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
+echo "     Default Cluster Dir: $PADOGRID_WORKSPACE/clusters/$CLUSTERecho ""
 
 echo "IMPORTANT:"
 echo "----------"
-echo "To use this workspaces environment, if you haven't done so already with another"
-echo "workspace environment, you must first source in the initenv.sh file as shown below."
-echo "It is recommended that you add this line in your ~/.bashrc (~/.bash_profile, etc)"
-echo "file. If you are adding it in ~/.bashrc, then make sure to include the '-quiet'"
-echo "option, otherwise, VM commands may not work properly."
-echo -e "   ${CLightGreen}. $WORKSPACES_HOME/initenv.sh -quiet${CNone}"
+"
+echo "To use this root workspaces environment (rwe), if you haven't done so already with"
+echo "another rwe, you must first source in the initenv.sh file as shown below. It is"
+echo "recommended that you add this line in your ~/.bashrc (~/.bash_profile, etc) file."
+echo "If you are adding it in ~/.bashrc, then make sure to include the '-quiet' option,"
+echo "otherwise, the VM commands may not work properly.echo -e "   ${CLightGreen}. $WORKSPACES_HOME/initenv.sh -quiet${CNone}"
 echo ""
 echo "To switch to the new workspace you just created, run the following:"
-echo -e "   ${CLightGreen}switch_workspace ${WORKSPACE}${CNone}"
-echo ""
+"
+echo -e "   ${CLightGreen}switch_rwe ${RWE_NAME}; switch_workspace ${WORKSPACE}${CNone}echo ""

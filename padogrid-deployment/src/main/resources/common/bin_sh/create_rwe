@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,6 +27,17 @@ fi
 
 EXECUTABLE="`basename $0`"
 
+# 
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi      
+
 __options()
 {
    echo "-product -path -rwe -workspace -cluster -java -vm -quiet -?"
@@ -43,25 +54,26 @@ cat <<EOF
 PadoGrid Initialization
 
 NAME
-   $EXECUTABLE - Initialize a padogrid workspaces environment
+   $EXECUTABLE - Initialize a padogrid root workspaces environment (RWE)
 
 SYNOPSIS
    $EXECUTABLE [-product product_home_path]
-               [-path workspaces_path]
-               [-rwe rwe_name]
-               [-java JAVA_HOME_path]
-               [-workspace default_workspace]
-               [-cluster default_cluster]
-               [-vm]
-               [-quiet] [-?]
+              [-path workspaces_path]
+              [-rwe rwe_name]
+              [-java JAVA_HOME_path]
+              [-workspace default_workspace]
+              [-cluster default_cluster]
+              [-vm]
+              [-quiet] [-?]
 
 DESCRIPTION
-   Initializes a workspaces environment by setting the default paths to the required
-   software installation directories.
+   Initializes a root  workspaces environment (RWE) by setting the default paths to the
+   required software installation directories.
 
 OPTIONS
    -product product_home_path
-             Geode, GemFire, Hazelcast, Jet, Coherence, or Spark home path.
+             Default product home path. One of Geode, GemFire, Hazelcast, Jet, Coherence,
+             and Spark home paths.
 
    -rwe rwe_name
              A new RWE name.
@@ -120,11 +132,171 @@ function isValidProduct
    echo $FOUND
 }
 
-#if [ "$QUIET" == "true" ] && [ "$PRODUCT_ARG" == "" ]; then
-#   echo >&2 "ERROR: The '-product' option not specified. Supported products are [$PRODUCTS]."
-#   echo >&2 "       Command aborted."
-#   exit 1
-#fi
+function getLatestProductVersion
+{
+   local ALL_VERSIONS="$1"
+   local lmajor=0
+   local lminor=0
+   local lupdate=-1
+   local re='^[0-9]+$'
+   for i in $ALL_VERSIONS; do
+      local periods="${i//[^\.]}"
+      local period_count=${#periods}
+      if [ $period_count -eq 2 ]; then
+         local major=${i%%\.*}
+         local minor=${i%\.*}
+         local minor=${minor#*\.}
+         local update=${i##*\.}
+      else
+         local major=${i%%\.*}
+         local minor=${i#*\.}
+         local update=-1
+      fi
+#      echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
+      if [ $lmajor -lt $major ]; then
+        lmajor=$major
+        lminor=$minor
+        lupdate=$update
+      elif [ $lmajor -eq $major ]; then
+        if [[ $minor =~ $re ]] && [ $lminor -lt $minor ]; then
+           lminor=$minor
+           lupdate=$update
+        elif [[ $minor =~ $re ]] && [ $lminor -eq $minor ]; then
+           if [[ $update =~ $re ]] && [ $lupdate -eq -1 ]; then
+              lupdate=$update
+           elif [[ $update =~ $re ]] && [ $lupdate -lt $update ]; then
+              lupdate=$update
+           fi
+        fi
+      fi
+   done
+   if [ $lupdate -eq -1 ]; then
+      echo "$lmajor.$lminor"
+   else
+      echo "$lmajor.$lminor.$lupdate"
+   fi
+}
+
+function determineInstalledProducts
+{
+   if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
+      pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
+      local __versions
+
+      # Geode
+      if [ "$GEODE_HOME" == "" ]; then
+         __versions=""
+         for i in apache-geode-*; do
+            __version=${i#apache-geode-}
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         GEODE_HOME=$PADOGRID_ENV_BASE_PATH/products/apache-geode-$__version
+      fi
+
+      # Hazelcast OSS, Enterprise, Jet OSS, Jet Enterprise
+      local hossv henterv jossv jenterv
+      for i in hazelcast-*; do
+         if [[ "$i" == "hazelcast-enterprise-"** ]]; then
+            __version=${i#hazelcast-enterprise-}
+            henterv="$henterv $__version"
+         elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
+            __version=${i#hazelcast-jet-enterprise-}
+            jenterv="$jenterv $__version"
+         elif [[ "$i" == "hazelcast-jet-"** ]]; then
+            __version=${i#hazelcast-jet-}
+            jossv="$jossv $__version"
+         elif [[ "$i" == "hazelcast-"** ]]; then
+            __version=${i#hazelcast-}
+            hossv="$hossv $__version"
+         fi
+      done
+      if [ "$HAZELCAST_HOME" == "" ]; then
+         if [ "$henterv" != "" ]; then
+            __version=$(getLatestProductVersion "$henterv")
+            HAZELCAST_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-enterprise-$__version
+         elif [ "$hossv" != "" ]; then
+            __version=$(getLatestProductVersion "$hossv")
+            HAZELCAST_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-$__version
+         fi
+      fi
+      if [ "$JET_HOME" == "" ]; then
+         if [ "$jenterv" != "" ]; then
+            __version=$(getLatestProductVersion "$jenterv")
+            JET_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-jet-enterprise-$__version
+         elif [ "$jossv" != "" ]; then
+            __version=$(getLatestProductVersion "$jossv")
+            JET_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-jet-$__version
+         fi
+      fi
+
+      # SnappyData
+      if [ "$SNAPPYDATA_HOME" == "" ]; then
+         __versions=""
+         for i in snappydata-*; do
+            __version=${i#snappydata-}
+            __version=${__version%-bin}
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         SNAPPYDATA_HOME=$PADOGRID_ENV_BASE_PATH/products/snappydata-$__version-bin
+      fi
+
+      # Spark
+      if [ "$SPARK_HOME" == "" ]; then
+         __versions=""
+         for i in spark-*; do
+            __version=${i#spark-}
+            __version=${__version%-bin}
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         SPARK_HOME=$PADOGRID_ENV_BASE_PATH/products/spark-$__version
+      fi
+
+      # GemFire
+      if [ "$GEMFIRE_HOME" == "" ]; then
+         __versions=""
+         for i in pivotal-gemfire-*; do
+            __version=${i#pivotal-gemfire-}
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         GEMFIRE_HOME=$PADOGRID_ENV_BASE_PATH/products/pivotal-gemfire-$__version
+      fi
+      popd > /dev/null 2>&1
+            
+      if [ ! -d "$GEODE_HOME" ]; then
+         GEODE_HOME=""
+      fi
+      if [ ! -d "$HAZELCAST_HOME" ]; then
+         HAZELCAST_HOME=""
+      fi
+      if [ ! -d "$JET_HOME" ]; then
+         JET_HOME=""
+      fi
+      if [ ! -d "$SNAPPYDATA_HOME" ]; then
+         SNAPPYDATA_HOME=""
+      fi
+      if [ ! -d "$SPARK_HOME" ]; then
+         SPARK_HOME=""
+      fi
+      if [ ! -d "$GEMFIRE_HOME" ]; then
+         GEMFIRE_HOME=""
+      fi
+
+      #echo ""
+      #echo GEODE_HOME=$GEODE_HOME
+      #echo HAZELCAST_HOME=$HAZELCAST_HOME
+      #echo JET_HOME=$JET_HOME
+      #echo SNAPPYDATA_HOME=$SNAPPYDATA_HOME
+      #echo SPARK_HOME=$SPARK_HOME
+      #echo GEMFIRE_HOME=$GEMFIRE_HOME
+   fi
+}
+
+# Determinet products by scanning the products directory
+determineInstalledProducts
 
 # Determin the default product
 if [ "$__PRODUCT_HOME" == "" ]; then
@@ -148,7 +320,7 @@ fi
 if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
    REDO=true
    while [ "$REDO" == "true" ]; do
-      echo "Enter the product home path. The supported products are"
+      echo "Enter the default product home path. The supported products are"
       echo "Geode, GemFire, Hazelcast IMDG, Hazelcast Jet, Coherence, Spark."
       if [[ $OS_NAME == CYGWIN* ]]; then
           echo "Enter only Unix absoulte path. Windows path not allowed."
@@ -225,7 +397,15 @@ echo "CLUSTER=\"$CLUSTER\"" >> $TMP_ENV_FILE
 echo "VM_SPECIFIED=\"$VM_SPECIFIED\"" >> $TMP_ENV_FILE
 echo "QUIET=\"$QUIET\"" >> $TMP_ENV_FILE
 
+# product homes
+echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
+echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
+echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
+echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
+echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
+echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
+echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
+
 # Initialize the product RWE environment.
 $BASE_DIR/${PRODUCT}/bin_sh/.init_${PRODUCT} -env $TMP_ENV_FILE
 rm $TMP_ENV_FILE
-
