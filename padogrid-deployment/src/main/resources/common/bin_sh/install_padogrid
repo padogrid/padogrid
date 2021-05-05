@@ -125,10 +125,12 @@ This command installs only downlodable products listed below."
 [1] Apache Geode
 [2] Hazelcst OSS
 [3] Hazelcast Enterprise
-[4] Hazelcast Jet OSS
-[5] Hazelcast Jet Enterprise
-[6] SnappyData
-[7] Apache Spark
+[4] Hazelcast Management Center
+[5] Hazelcast Jet OSS
+[6] Hazelcast Jet Enterprise
+[7] Hazelcast Jet Management Center
+[8] SnappyData
+[9] Apache Spark
 
 The following products are not included in this installation due to their download
 sign-in requirements. To install them, you must download them manually.
@@ -142,35 +144,6 @@ EOF
 function getPadogridLatestVersion
 {
   echo $(curl -s https://github.com/padogrid/padogrid/releases/latest |grep padogrid_ | grep -v grep | sed -e 's/.*padogrid_//' -e 's/".*//')
-}
-
-function getLatestProductVersion_3_nums
-{
-   ALL_VERSIONS="$1"
-   local lmajor=0
-   local lminor=0
-   local lupdate=0
-   for i in $ALL_VERSIONS; do
-      local major=${i%%\.*}
-      local minor=${i%\.*}
-      local minor=${minor#*\.}
-      local update=${i##*\.}
-      if [ $lmajor -lt $major ]; then
-        lmajor=$major
-        lminor=$minor
-        lupdate=$update
-      elif [ $lmajor -eq $major ]; then
-        if [ $lminor -lt $minor ]; then
-           lminor=$minor
-           lupdate=$update
-        elif [ $lminor -eq $minor ]; then
-           if [ $lupdate -lt $update ]; then
-              lupdate=$update
-           fi
-        fi
-      fi
-   done
-   echo "$lmajor.$lminor.$lupdate"
 }
 
 function getLatestProductVersion
@@ -279,6 +252,11 @@ function getHazelcastEnterpriseLatestVersion
   echo $(curl -s https://hazelcast.com/get-started/download/ |grep "IMDG 4" |grep "(latest)" | sed -e 's/.*IMDG 4/4/' -e 's/\<.*//')
 }
 
+function getHazelcastManCenterLatestVersion
+{
+   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Hazelcast IMDG Management Center" | grep latest | sed -e 's/.*Hazelcast IMDG Management Center 4/4/' -e 's/\<span.*//')
+}
+
 function getJetOssLatestVersion
 {
   echo $(curl -s https://github.com/hazelcast/hazelcast-jet/releases/latest | sed -e 's/.*tag\/v//' -e 's/"\>.*//')
@@ -287,6 +265,11 @@ function getJetOssLatestVersion
 function getJetEnterpriseLatestVersion
 {
    echo $(curl -s https://hazelcast.com/get-started/download/ |grep "Jet 4" |grep "(latest)" | sed -e 's/.*Jet 4/4/' -e 's/\<.*//')
+}
+
+function getJetManCenterLatestVersion
+{
+   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Jet Management Center" | grep latest | sed -e 's/.*Hazelcast Jet Management Center 4/4/' -e 's/\<span.*//')
 }
 
 function getSnappyDataLatestVersion
@@ -396,6 +379,29 @@ function installProduct
       fi
       fi
 
+   elif [ "$__PRODUCT" == "hazelcast-management-center" ]; then 
+
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$HAZELCAST_MC_RELEASE" ]; then
+         echo "Already installed"
+      else
+      # --------------
+      # Download Hazelcast Management Center
+      echo "Downloading $HAZELCAST_MC_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      if [ "$__SIMULATE" == "simulate" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL" "https://download.hazelcast.com/management-center/$HAZELCAST_MC_TARBALL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL" "https://download.hazelcast.com/management-center/$HAZELCAST_MC_TARBALL"
+      fi
+      
+      # Install Hazelcast Management Center
+      echo "Installing Hazelcast Management Center in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "simulate" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL
+      fi
+      fi
+
    elif [ "$__PRODUCT" == "jet-oss" ]; then 
       
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$JET_OSS_RELEASE" ]; then
@@ -439,6 +445,29 @@ function installProduct
          echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL"
       else
          tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL"
+      fi
+      fi
+
+   elif [ "$__PRODUCT" == "jet-management-center" ]; then 
+
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$HAZELCAST_MC_RELEASE" ]; then
+         echo "Already installed"
+      else
+      # --------------
+      # Download Hazelcast Management Center
+      echo "Downloading $HAZELCAST_MC_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      if [ "$__SIMULATE" == "simulate" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
+      fi
+      
+      # Install Hazelcast Management Center
+      echo "Installing Hazelcast Management Center in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "simulate" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL
       fi
       fi
 
@@ -497,8 +526,10 @@ function scanProductVersions
    GEODE_VERSION=$(getGeodeLatestVersion)
    HAZELCAST_OSS_VERSION=$(getHazelcastOssLatestVersion)
    HAZELCAST_ENTERPRISE_VERSION=$(getHazelcastEnterpriseLatestVersion)
+   HAZELCAST_MC_VERSION=$(getHazelcastManCenterLatestVersion)
    JET_OSS_VERSION=$(getJetOssLatestVersion)
    JET_ENTERPRISE_VERSION=$(getJetEnterpriseLatestVersion)
+   JET_MC_VERSION=$(getJetManCenterLatestVersion)
    SNAPPYDATA_VERSION=$(getSnappyDataLatestVersion)
    SPARK_VERSION=$(getSparkLatestVersion)
 }
@@ -523,8 +554,10 @@ COMPUTEDB_VERSION=
 #echo GEODE_VERSION=$GEODE_VERSION
 #echo HAZELCAST_OSS_VERSION=$HAZELCAST_OSS_VERSION
 #echo HAZELCAST_ENTERPRISE_VERSION=$HAZELCAST_ENTERPRISE_VERSION
+#echo HAZELCAST_MC_VERSION=$HAZELCAST_MC_VERSION
 #echo JET_OSS_VERSION=$JET_OSS_VERSION
 #echo JET_ENTERPRISE_VERSION=$JET_ENTERPRISE_VERSION
+#echo JET_MC_VERSION=$JET_MC_VERSION
 #echo SNAPPYDATA_VERSION=$SNAPPYDATA_VERSION
 #echo SPARK_VERSION=$SPARK_VERSION
 
@@ -543,11 +576,17 @@ HAZELCAST_OSS_TARBALL="$HAZELCAST_OSS_RELEASE.tar.gz"
 HAZELCAST_ENTERPRISE_RELEASE="hazelcast-enterprise-$HAZELCAST_ENTERPRISE_VERSION"
 HAZELCAST_ENTERPRISE_TARBALL="$HAZELCAST_ENTERPRISE_RELEASE.tar.gz"
 
+HAZELCAST_MC_RELEASE="hazelcast-management-center-$HAZELCAST_MC_VERSION"
+HAZELCAST_MC_TARBALL="$HAZELCAST_MC_RELEASE.tar.gz"
+
 JET_OSS_RELEASE="hazelcast-jet-$JET_OSS_VERSION"
 JET_OSS_TARBALL="$JET_OSS_RELEASE.tar.gz"
 
 JET_ENTERPRISE_RELEASE="hazelcast-jet-enterprise-$JET_ENTERPRISE_VERSION"
 JET_ENTERPRISE_TARBALL="$JET_ENTERPRISE_RELEASE.tar.gz"
+
+JET_MC_RELEASE="hazelcast-jet-management-center-$JET_MC_VERSION"
+JET_MC_TARBALL="$JET_MC_RELEASE.tar.gz"
 
 SNAPPYDATA_RELEASE="snappydata-$SNAPPYDATA_VERSION-bin"
 SNAPPYDATA_TARBALL="$SNAPPYDATA_RELEASE.tar.gz"
@@ -558,8 +597,8 @@ SPARK_TARBALL="$SPARK_RELEASE.tgz"
 #
 # Initialize product arrays
 #
-PRODUCT_NAME_ARRAY=(padogrid geode hazelcast-oss hazelcast-enterprise jet-oss jet-enterprise snappydata spark)
-PRODUCT_ARRAY=($PADOGRID_RELEASE $GEODE_RELEASE $HAZELCAST_OSS_RELEASE $HAZELCAST_ENTERPRISE_RELEASE $JET_OSS_RELEASE $JET_ENTERPRISE_RELEASE $SNAPPYDATA_RELEASE $SPARK_RELEASE)
+PRODUCT_NAME_ARRAY=(padogrid geode hazelcast-oss hazelcast-enterprise hazelcast-management-center jet-oss jet-enterprise jet-management-center snappydata spark)
+PRODUCT_ARRAY=($PADOGRID_RELEASE $GEODE_RELEASE $HAZELCAST_OSS_RELEASE $HAZELCAST_ENTERPRISE_RELEASE $HAZELCAST_MC_RELEASE $JET_OSS_RELEASE $JET_ENTERPRISE_RELEASE $JET_MC_RELEASE $SNAPPYDATA_RELEASE $SPARK_RELEASE)
 let end_index=${#PRODUCT_ARRAY[@]}-1
 __BUFFER=""
 __BUFFER2=""
@@ -572,10 +611,12 @@ index_padogrdi=0
 index_geode=1
 index_hazelcast_oss=2
 index_hazelcast_enterprise=3
-index_jet_oss=4
-index_jet_enterprise=5
-index_snappydata=6
-index_spark=7
+index_hazelcast_man_center=4
+index_jet_oss=5
+index_jet_enterprise=6
+index_jet_man_center=7
+index_snappydata=8
+index_spark=9
 
 #
 # Start interactive shell
@@ -727,27 +768,31 @@ if [ ! -d "$PADOGRID_WORKSPACES_PATH" ]; then
 fi
 
 for i in $(seq 0 $end_index); do
-  if [ "${PRODUCT_INSTALL_ARRAY[$i]}" == "yes" ]; then
+  #if [ "${PRODUCT_INSTALL_ARRAY[$i]}" == "yes" ]; then
      echo [$i] ${PRODUCT_ARRAY[$i]}
-#     installProduct "${PRODUCT_NAME_ARRAY[$i]}" "simulate"
-     installProduct "${PRODUCT_NAME_ARRAY[$i]}"
+     installProduct "${PRODUCT_NAME_ARRAY[$i]}" "simulate"
+#     installProduct "${PRODUCT_NAME_ARRAY[$i]}"
      if [ $i == $index_geode ]; then
         GEODE_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      elif [ $i == $index_hazelcast_oss ]; then
         HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      elif [ $i == $index_hazelcast_enterprise ]; then
         HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
+     elif [ $i == $index_hazelcast_man_center ]; then
+        HAZELCAST_MC_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      elif [ $i == $index_jet_oss ]; then
         JET_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      elif [ $i == $index_jet_enterprise ]; then
         JET_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
+     elif [ $i == $index_jet_man_center ]; then
+        JET_MC_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      elif [ $i == $index_snappydata ]; then
         SNAPPYDATA_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      elif [ $i == $index_spark ]; then
         SPARK_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      fi
      echo ""
-  fi
+  #fi
 done
 
 echo "PadoGrid Installation complete."
@@ -767,6 +812,7 @@ done
 popd > /dev/null 2>&1
 
 # If RWEs do not exist then create one
+RWE_EXISTS="false"
 if [ "$RWE_EXISTS" == "false" ]; then
    __PADOGRID_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[0]}"
    if [ -f "$__PADOGRID_HOME/bin_sh/create_rwe" ]; then
@@ -778,7 +824,9 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
       echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
+      echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
       echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
+      echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
       echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
       echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
 #      echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE

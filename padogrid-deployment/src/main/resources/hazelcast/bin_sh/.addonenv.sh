@@ -48,6 +48,8 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        This will be prepended to the padogrid class paths.
 # HAZELCAST_MC_HOME      Hazelcast Management Center directory path. This needs
 #                        to be set only if you have the MC module separately installed.
+# JET_MC_HOME            Hazelcast Jet Management Center directory path. This needs
+#                        to be set only if you have the MC module separately installed.
 # DEFAULT_CLUSTER        The default IMDG cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: myhz
 # DEFAULT_JET_CLUSTER    The default Jet cluster name. The default cluster can be managed without
@@ -482,8 +484,8 @@ SHUTDOWN_HOOK_PROPERTIES="-Dhazelcast.shutdownhook.enabled=true \
 # Set Hazelcast IMDG Management Center home directory if undefined in setenv.sh
 #
 if [ "$CLUSTER_TYPE" == "jet" ]; then
-   if [ "$HAZELCAST_MC_HOME" == "" ]; then
-      HAZELCAST_MC_HOME=$JET_HOME/hazelcast-jet-management-center
+   if [ "$JET_MC_HOME" == "" ]; then
+      JET_MC_HOME=$JET_HOME/hazelcast-jet-management-center
    fi
 else
    if [ "$HAZELCAST_MC_HOME" == "" ]; then
@@ -571,21 +573,21 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
             file=${file##*hazelcast\-jet\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
             IS_HAZELCAST_ENTERPRISE=true
-	    break;
+            break;
          done
       else
          for file in $JET_HOME/lib/hazelcast-jet-*; do
             file=${file##*hazelcast\-jet\-}
-	    file=${file##*-}
+            file=${file##*-}
             HAZELCAST_VERSION=${file%%.jar}
-	    break;
+            break;
          done
       fi
    fi
 
    # Set Jet MC jar
-   if [ "$HAZELCAST_MC_HOME" != "" ]; then
-      for file in $HAZELCAST_MC_HOME/hazelcast-jet-management-center-*; do
+   if [ "$JET_MC_HOME" != "" ]; then
+      for file in $JET_MC_HOME/hazelcast-jet-management-center-*; do
          file=${file##*hazelcast\-jet\-management\-center\-}
          JET_MC_VERSION=${file%.jar}
       done

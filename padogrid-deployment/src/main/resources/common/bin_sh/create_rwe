@@ -194,15 +194,21 @@ function determineInstalledProducts
          GEODE_HOME=$PADOGRID_ENV_BASE_PATH/products/apache-geode-$__version
       fi
 
-      # Hazelcast OSS, Enterprise, Jet OSS, Jet Enterprise
-      local hossv henterv jossv jenterv
+      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
+      local hossv henterv hmanv jossv jenterv jmanv
       for i in hazelcast-*; do
          if [[ "$i" == "hazelcast-enterprise-"** ]]; then
             __version=${i#hazelcast-enterprise-}
             henterv="$henterv $__version"
+         elif [[ "$i" == "hazelcast-management-center-"** ]]; then
+            __version=${i#hazelcast-management-center-}
+            hmanv="$hmanv $__version"
          elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
             __version=${i#hazelcast-jet-enterprise-}
             jenterv="$jenterv $__version"
+         elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
+            __version=${i#hazelcast-jet-management-center-}
+            jmanv="$jmanv $__version"
          elif [[ "$i" == "hazelcast-jet-"** ]]; then
             __version=${i#hazelcast-jet-}
             jossv="$jossv $__version"
@@ -220,6 +226,12 @@ function determineInstalledProducts
             HAZELCAST_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-$__version
          fi
       fi
+      if [ "$HAZELCAST_MC_HOME" == "" ]; then
+         if [ "$hmanv" != "" ]; then
+            __version=$(getLatestProductVersion "$hmanv")
+            HAZELCAST_MC_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-management-center-$__version
+         fi
+      fi
       if [ "$JET_HOME" == "" ]; then
          if [ "$jenterv" != "" ]; then
             __version=$(getLatestProductVersion "$jenterv")
@@ -227,6 +239,12 @@ function determineInstalledProducts
          elif [ "$jossv" != "" ]; then
             __version=$(getLatestProductVersion "$jossv")
             JET_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-jet-$__version
+         fi
+      fi
+      if [ "$JET_MC_HOME" == "" ]; then
+         if [ "$jmanv" != "" ]; then
+            __version=$(getLatestProductVersion "$jmanv")
+            JET_MC_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-jet-management-center-$__version
          fi
       fi
 
@@ -272,8 +290,14 @@ function determineInstalledProducts
       if [ ! -d "$HAZELCAST_HOME" ]; then
          HAZELCAST_HOME=""
       fi
+      if [ ! -d "$HAZELCAST_MC_HOME" ]; then
+         HAZELCAST_MC_HOME=""
+      fi
       if [ ! -d "$JET_HOME" ]; then
          JET_HOME=""
+      fi
+      if [ ! -d "$JET_MC_HOME" ]; then
+         JET_MC_HOME=""
       fi
       if [ ! -d "$SNAPPYDATA_HOME" ]; then
          SNAPPYDATA_HOME=""
@@ -288,7 +312,9 @@ function determineInstalledProducts
       #echo ""
       #echo GEODE_HOME=$GEODE_HOME
       #echo HAZELCAST_HOME=$HAZELCAST_HOME
+      #echo HAZELCAST_MC_HOME=$HAZELCAST_MC_HOME
       #echo JET_HOME=$JET_HOME
+      #echo JET_MC_HOME=$JET_MC_HOME
       #echo SNAPPYDATA_HOME=$SNAPPYDATA_HOME
       #echo SPARK_HOME=$SPARK_HOME
       #echo GEMFIRE_HOME=$GEMFIRE_HOME
@@ -400,7 +426,9 @@ echo "QUIET=\"$QUIET\"" >> $TMP_ENV_FILE
 # product homes
 echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
 echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
+echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
 echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
+echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
 echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
 echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
 echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE

@@ -95,12 +95,19 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
 fi
 
 # Make sure Management Center is installed
-if [ ! -d "$HAZELCAST_MC_HOME" ]; then
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   MC_HOME="$JET_MC_HOME"
+   MC_ENV_NAME="JET_MC_HOME"
+else
+   MC_HOME="$HAZELCAST_MC_HOME"
+   MC_ENV_NAME="HAZELCAST_MC_HOME"
+fi
+if [ ! -d "$MC_HOME" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
    echo >&2 "    ERROR: The following Management Center home directory does not exist."
-   echo >&2 "              [$HAZELCAST_MC_HOME]"
-   echo >&2 "           Please install Management Center and set HAZELCAST_MC_HOME in the following file."
+   echo >&2 "              [$MC_HOME]"
+   echo >&2 "           Please install Management Center and set $MC_ENV_NAME in the following file."
    echo -e >&2 "              ${CLightGreen}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
    echo >&2 "           Command aborted."
    echo >&2 "----------------------------------------------------------------"
@@ -204,7 +211,7 @@ else
       WAR_FILE_PREFIX="hazelcast-mancenter-"
    fi
    LIB_EXTENSION=""
-   for file in $HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}*; do
+   for file in $MC_HOME/${WAR_FILE_PREFIX}*; do
       file=${file#*$WAR_FILE_PREFIX}
       if [[ $file == *.jar ]]; then
          MC_VERSION=${file%.jar}
@@ -216,9 +223,9 @@ else
       echo MC_VERSION=$MC_VERSION
    done
    if [ -z $CLASSPATH ]; then
-      CLASSPATH="$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
+      CLASSPATH="$MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
    else
-      CLASSPATH="$HAZELCAST_MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
+      CLASSPATH="$MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
    fi
 fi
 
@@ -283,7 +290,7 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
       __PREV="$i"
    done
 
-   "$JAVA" $JAVA_OPTS -jar "$HAZELCAST_MC_HOME"/$JET_MC_JAR $ARGS > $LOG_FILE 2>&1 &
+  "$JAVA" $JAVA_OPTS -jar "$MC_HOME"/$JET_MC_JAR $ARGS > $LOG_FILE 2>&1 &
 
 else
    if [ "$MC_HTTPS_ENABLED" == "true" ]; then
