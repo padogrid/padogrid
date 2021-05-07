@@ -768,10 +768,10 @@ if [ ! -d "$PADOGRID_WORKSPACES_PATH" ]; then
 fi
 
 for i in $(seq 0 $end_index); do
-  #if [ "${PRODUCT_INSTALL_ARRAY[$i]}" == "yes" ]; then
+  if [ "${PRODUCT_INSTALL_ARRAY[$i]}" == "yes" ]; then
      echo [$i] ${PRODUCT_ARRAY[$i]}
-     installProduct "${PRODUCT_NAME_ARRAY[$i]}" "simulate"
-#     installProduct "${PRODUCT_NAME_ARRAY[$i]}"
+#     installProduct "${PRODUCT_NAME_ARRAY[$i]}" "simulate"
+     installProduct "${PRODUCT_NAME_ARRAY[$i]}"
      if [ $i == $index_geode ]; then
         GEODE_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      elif [ $i == $index_hazelcast_oss ]; then
@@ -792,7 +792,7 @@ for i in $(seq 0 $end_index); do
         SPARK_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
      fi
      echo ""
-  #fi
+  fi
 done
 
 echo "PadoGrid Installation complete."
@@ -800,7 +800,6 @@ echo ""
 
 # Check if an RWE exists in the workspaces dir
 pushd $PADOGRID_WORKSPACES_PATH > /dev/null 2>&1
-RWE_EXISTS="false"
 for i in *; do
    if [ -d "$i" ]; then
       if [ -f "$i/initenv.sh" ]; then 
@@ -812,7 +811,6 @@ done
 popd > /dev/null 2>&1
 
 # If RWEs do not exist then create one
-RWE_EXISTS="false"
 if [ "$RWE_EXISTS" == "false" ]; then
    __PADOGRID_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[0]}"
    if [ -f "$__PADOGRID_HOME/bin_sh/create_rwe" ]; then
