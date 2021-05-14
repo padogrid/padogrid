@@ -307,10 +307,9 @@ else
    CURRENT_DIR=`pwd`
    pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
    rm -rf $WORKSPACE_DIR
-   retrieveDefaultEnv
-   echo "PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE"
-   DEFAULT_WORKSPACE="$(basename "$CURRENT_PADOGRID_WORKSPACE")"
-   if [ "$WORKSPACE" == "$DEFAULT_WORKSPACE" ]; then
+   WORKSPACE="$(basename "$PADOGRID_WORKSPACE")"
+   # If the current workspace is removed, then pick the first workspace in the RWE dir.
+   if [ "$WORKSPACE" == "$WORKSPACE_ARG" ]; then
       __WORKSPACES=$(list_workspaces)
       __WORKSPACE=""
       for i in $__WORKSPACES; do
@@ -319,7 +318,7 @@ else
       done
       if [ "$__WORKSPACE" != "" ]; then
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
-         updateDefaultEnv
+         updateRweEnvFile
       fi
    fi
 fi

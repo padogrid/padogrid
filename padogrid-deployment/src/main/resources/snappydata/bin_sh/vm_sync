@@ -285,18 +285,11 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 
    # Configure the workspaces directory if not configured already
-   RWE_DEFAULTENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$RWE_DEFAULTENV_COMMAND")
    INITENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$INITENV_COMMAND")
    ADDONENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$ADDONENV_COMMAND")
    SETENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$SETENV_COMMAND")
    SNAPPYDATAENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$SNAPPYDATAENV_COMMAND")
 
-   if [[ "$RWE_DEFAULTENV_EXISTS" == *"false" ]]; then
-      createTmpDefaultEnv "$PRODUCT" "$VM_PADOGRID_WORKSPACE"
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir $VM_PADOGRID_WORKSPACES_HOME/.rwe" > /dev/null 2>&1
-      scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/defaultenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.rwe/
-      removeTmpDefaultEnv
-   fi
    if [[ "$INITENV_EXISTS" == *"false" ]]; then
       scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
    fi

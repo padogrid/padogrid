@@ -1156,59 +1156,104 @@ function getPrivateNetworkAddresses
 }
 
 #
-# Updates the default workspaces envionment variables with the current values
-# in the .rwe/defaultenv.sh file.
-# @required PRODUCT
+# Updates the RWE workspaces envionment variables with the current values
+# in the .rwe/rweenv.sh file.
+# @param rwePath RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assigned.
 # @required PADOGRID_WORKSPACE
 #
-function updateDefaultEnv
+function updateRweEnvFile
 {
-   local RWE_DIR="$PADOGRID_WORKSPACES_HOME/.rwe"
-   local DEFAULTENV_FILE="$RWE_DIR/defaultenv.sh"
+   local __RWE_PATH="$1"
+   if [ "$__RWE_PATH" == "" ]; then
+      __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   fi
+   local RWE_DIR="$__RWE_PATH/.rwe"
+   local RWEENV_FILE="$RWE_DIR/rweenv.sh"
    if [ ! -d "$RWE_DIR" ]; then
       mkdir "$RWE_DIR"
    fi
-   local WORKSPACE=${PADOGRID_WORKSPACE##*/}
-   echo "export PRODUCT=\"$PRODUCT\"" > $DEFAULTENV_FILE
-   echo "export PADOGRID_WORKSPACE=\"\$PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $DEFAULTENV_FILE
+   local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+   echo "WORKSPACE=\"$WORKSPACE\"" > $RWEENV_FILE
 }
 
 #
-# Creates a temporary defaultenv.sh file containing the specified parameters.
-# @param product       Product name
-# @param workspacePath Workspace path
+# Retrieves the RWE environment variables set in the .rwe/rweenv.sh file.
+# @param rwePath RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assigned.
 #
-function createTmpDefaultEnv
+function retrieveRweEnvFile
 {
-   local __PRODUCT="$1"
-   local __WORKSPACE_PATH="$2"
-   local DEFAULTENV_FILE="/tmp/defaultenv.sh"
-   local WORKSPACE=${PADOGRID_WORKSPACE##*/}
-   echo "export PRODUCT=\"$__PRODUCT\"" > $DEFAULTENV_FILE
-   echo "export PADOGRID_WORKSPACE=\"\$PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $DEFAULTENV_FILE
-}
-
-#
-# Removes the temporary defaultenv.sh file create by the 'createTmpDefaultEnv function
-# if exists.
-#
-function removeTmpDefaultEnv
-{
-   if [ -f "/tmp/defaultenv.sh" ]; then
-      rm "/tmp/defaultenv.sh"
+   local __RWE_PATH="$1"
+   if [ "$__RWE_PATH" == "" ]; then
+      __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   fi
+   local RWE_DIR="$__RWE_PATH/.rwe"
+   local RWEENV_FILE="$RWE_DIR/rweenv.sh"
+   if [ -f "$RWEENV_FILE" ]; then
+      . "$RWEENV_FILE"
+      if [ "$WORKSPACE" != "" ]; then
+         PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$WORKSPACE"
+      fi
+   fi
+   # If the workspace does not exist then pick the first workspace in the RWE dir
+   if [ ! -d "$PADOGRID_WORKSPACE" ]; then
+      local __WORKSPACES=$(list_workspaces)
+      for i in $__WORKSPACES; do
+         __WORKSPACE=$i
+         PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
+         updateRweEnv break;
+      done
    fi
 }
 
 #
-# Retrieves the default environment variables set in the .rwe/defaultenv.sh file.
-# @required PADOGRID_WORKSPACES_HOME
+# Updates the workspace envionment variables with the current values
+# in the .workspace file.
+# @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
+# @required CLUSTER
+# @required POD
 #
-function retrieveDefaultEnv
+function updateWorkspaceEnvFile
 {
-   local RWE_DIR="$PADOGRID_WORKSPACES_HOME/.rwe"
-   local DEFAULTENV_FILE="$RWE_DIR/defaultenv.sh"
-   if [ -f "$DEFAULTENV_FILE" ]; then
-      . "$DEFAULTENV_FILE"
+   local __WORKSPACE_PATH="$1"
+   if [ "$__WORKSPACE_PATH" == "" ]; then
+      __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
+   fi
+   local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace"
+   if [ ! -d "$__WORKSPACE_PATH" ]; then
+      echo >&2 "Workspace does not exist."
+      return 1
+   fi
+   echo "CLUSTER=$CLUSTER" > "$WORKSPACEENV_FILE"
+   echo "POD=$POD" >> "$WORKSPACEENV_FILE"
+}
+
+#
+# Retrieves the workspace environment variables set in the .workspace file.
+# @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
+#
+function retrieveWorkspaceEnvFile
+{
+   local __WORKSPACE_PATH="$1"
+   if [ "$__WORKSPACE_PATH" == "" ]; then
+      __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
+   fi
+   local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace"
+   if [ -f "$WORKSPACEENV_FILE" ]; then
+      . "$WORKSPACEENV_FILE"
+   fi
+   # If the cluster does not exist then pick the first cluster and pod in the workspace dir
+   if [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
+      local __CLUSTERS=$(list_clusters)
+      for i in $__CLUSTERS; do
+         CLUSTER=$i
+         break;
+      done
+      local __PODS=$(list_pods)
+      for i in $__PODS; do
+         POD=$i
+         break;
+      done
+      updateWorkspaceEnvFile "$__WORKSPACE_PATH"
    fi
 }
 
@@ -1280,11 +1325,19 @@ function switch_rwe
    # Reset Pado home path
    export PADO_HOME=""
 
+   local NEW_RWE_DIR
+   local NEW_WORKSPACE_DIR
+
    if [ "$1" == "" ]; then
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/clusters/$CLUSTER" ]; then
          export CLUSTER=""
       fi
       . $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet
+
+      # Source in the last switched cluster
+      if [ -f "$CLUSTERS_DIR/$CLUSTER/.cluster" ]; then
+         .  "$CLUSTERS_DIR/$CLUSTER/.cluster"
+      fi
       cd_rwe $@
    else
       local __PATH=""
@@ -1313,24 +1366,74 @@ function switch_rwe
             __COMPONENT_NAME=$i
         fi
       done
+      NEW_RWE_DIR="$PARENT_DIR/$__RWE"
       if [ ! -d "$PARENT_DIR/$__RWE" ]; then
          echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
          return 1
       elif [ "$__WORKSPACE" != "" ]; then
-         if [ ! -d "$PARENT_DIR/$__RWE/$__WORKSPACE" ]; then
+         NEW_WORKSPACE_DIR="$NEW_RWE_DIR/$__WORKSPACE"
+         if [ ! -d "$NEW_WORKSPACE_DIR" ]; then
             echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
             return 1
          fi
-         . $PARENT_DIR/$__RWE/$__WORKSPACE/initenv.sh -quiet
+
+         # Retreive last switched cluster/pod
+         retrieveWorkspaceEnvFile
+
          if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$__COMPONENT_NAME" != "" ]; then
-             if [ -d "$PARENT_DIR/$__RWE//$__WORKSPACE/clusters/$__COMPONENT_NAME" ]; then
+             if [ -d "$NEW_WORKSPACE_DIR/clusters/$__COMPONENT_NAME" ]; then
                 export CLUSTER="$__COMPONENT_NAME"
+                updateWorkspaceEnvFile
+             fi
+         elif [ "$__COMPONENT_DIR_NAME" == "pods" ] && [ "$__COMPONENT_NAME" != "" ]; then
+             if [ -d "$NEW_WORKSPACE_DIR/pods/$__COMPONENT_NAME" ]; then
+                export POD="$__COMPONENT_NAME"
+                updateWorkspaceEnvFile
              fi
          fi
+
+         # Source in the last switched cluster and pod
+         if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
+            .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
+         fi
+         if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
+            .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
+         fi
+
+         # Initialze workspace
+         . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
+
          local __SHIFTED="${__PATH#*\/}"
          cd_workspace $__SHIFTED
+
       else
-         . $PARENT_DIR/$__RWE/initenv.sh -quiet
+
+         . "$NEW_RWE_DIR/initenv.sh" -quiet
+
+         # Retrieve the last switched workspace
+         retrieveRweEnvFile
+
+         # PADOGRID_WORKSPACE i retrieved by the above call, retrieveRweEnvFile
+         NEW_WORKSPACE_DIR=$PADOGRID_WORKSPACE
+
+         # Retreive last switched cluster/pod
+         retrieveWorkspaceEnvFile
+
+         # Source in the last switched cluster and pod
+         if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
+            .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
+         fi
+         if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
+            .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
+         fi
+         export PADOGRID_WORKSPACES_HOME
+         export CLUSTER
+         export POD
+         export PRODUCT
+         export CLUSTER_TYPE
+
+         . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
+
          cd_rwe $__RWE
       fi
    fi
@@ -1400,61 +1503,30 @@ function switch_workspace
 
    if [ "$1" == "" ]; then
 
-      # If the current workspace does not exist then pick the first one in the current rwe.
+      # If the current workspace does not exist then retrieve it from the rweenv file.
       if [ ! -d "$PADOGRID_WORKSPACE" ]; then
-         __WORKSPACES=$(list_workspaces)
-         for i in $__WORKSPACES; do
-            __WORKSPACE=$i
-            break;
-         done
-         if [ "$__WORKSPACE" == "" ]; then
-            echo >&2 "ERROR: Workspace does not exist. Command aborted."
-            return 1
-         fi
-         export PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
-         if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
-            . "$PADOGRID_WORKSPACE/.workspace"
-         fi
-         # Intialize workspace
-         . "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/initenv.sh" -quiet
-      else
-         # Intialize workspace
-         . "$PADOGRID_WORKSPACE/initenv.sh" -quiet
+         retrieveRweEnvFile
+         export PADOGRID_WORKSPACE
       fi
 
+      # Retreive last switched cluster/pod
+      retrieveWorkspaceEnvFile
 
-      # Determine the current cluster. If it is not set in .workspace or .cluster then
-      # pick the first one in the clusters directory.
-      if [ ! -d "$PADOGRID_WORKSPACE/clusters/$CLUSTER" ]; then
-         local __CLUSTERS=$(list_clusters)
-         local __CLUSTER=""
-         for i in $__CLUSTERS; do
-            __CLUSTER=$i
-            break;
-         done
-         export CLUSTER="$__CLUSTER"
-         if [ "$CLUSTER" != "" ] && [ -f "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster" ]; then
-            . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster"
-         fi
+      # Source in the last switched cluster and pod
+      if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
+         .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
+      fi
+      if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
+         .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
       fi
 
-      # Determine the current pod. If it is not set in .workspace or .pod then
-      # set to local
-      if [ ! -d "$PADOGRID_WORKSPACE/pods/$POD" ]; then
-         local __PODS=$(list_pods)
-         local __POD=""
-         for i in $__PODS; do
-            __POD=$i
-            break;
-         done
-         export POD="$__POD"
-         if [ "$POD" != "" ] && [ -f "$PADOGRID_WORKSPACE/pods/$POD/.pod" ]; then
-            . "$PADOGRID_WORKSPACE/pods/$POD/.pod"
-         fi
-      fi
-      if [ ! -d "$PADOGRID_WORKSPACE/pods/$POD" ]; then
-         export POD="local"
-      fi
+      # Intialize workspace
+      . "$PADOGRID_WORKSPACE/initenv.sh" -quiet
+
+      export CLUSTER
+      export POD
+      export PRODUCT
+      export CLUSTER_TYPE
 
    else
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
@@ -1485,61 +1557,38 @@ function switch_workspace
         fi
       done
 
-      # Intialize workspace
-      . "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/initenv.sh" -quiet
+      NEW_WORKSPACE_DIR="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
 
-      if [ -f "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/.workspace" ]; then
-         . "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/.workspace"
-      fi
+      # Retreive last switched cluster/pod
+      retrieveWorkspaceEnvFile "$NEW_WORKSPACE_DIR"
+
       if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$__COMPONENT_NAME" != "" ]; then
-          if [ -d "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/$__COMPONENT_NAME" ]; then
+          if [ -d "$NEW_WORKSPACE_DIR/clusters/$__COMPONENT_NAME" ]; then
              export CLUSTER="$__COMPONENT_NAME"
           fi
       fi
       if [ "$__COMPONENT_DIR_NAME" == "pods" ] && [ "$__COMPONENT_NAME" != "" ]; then
-          if [ -d "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/pods/$__COMPONENT_NAME" ]; then
+          if [ -d "$NEW_WORKSPACE_DIR/pods/$__COMPONENT_NAME" ]; then
              export POD="$__COMPONENT_NAME"
           fi
       fi
 
-      # Determine the current cluster. If it is not set in .workspace or .cluster then
-      # pick the first one in the clusters directory.
-      if [ ! -d "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/$CLUSTER" ]; then
-         local __CLUSTERS=$(list_clusters -workspace $__WORKSPACE)
-         local __CLUSTER=""
-         for i in $__CLUSTERS; do
-            __CLUSTER=$i
-            break;
-         done
-         export CLUSTER="$__CLUSTER"
-         if [ "$CLUSTER" != "" ] && [ -f "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster" ]; then
-            . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster"
-         fi
+      # Source in the last switched cluster and pod
+      if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
+         .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
       fi
-      if [ ! -d "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/$CLUSTER" ]; then
-         export CLUSTER=""
+      if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
+         .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
       fi
 
-      # Determine the current pod. If it is not set in .workspace or .pod then
-      # set to local
-      if [ ! -d "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/pods/$POD" ]; then
-         local __PODS=$(list_pods -workspace $__WORKSPACE)
-         local __POD=""
-         for i in $__PODS; do
-            __POD=$i
-            break;
-         done
-         export POD="$__POD"
-         if [ "$POD" != "" ] && [ -f "$PADOGRID_WORKSPACE/pods/$POD/.pod" ]; then
-            . "$PADOGRID_WORKSPACE/pods/$POD/.pod"
-         fi
-      fi
-      if [ ! -d "$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/pods/$POD" ]; then
-         export POD="local"
-      fi
+      # Intialize workspace
+      . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
 
       # Export workspace
-      export PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
+      export PADOGRID_WORKSPACE="$NEW_WORKSPACE_DIR"
+
+      # Update the rweenv.sh file with the new workspace
+      updateRweEnvFile
 
       __switch_cluster $CLUSTER
       __switch_pod $POD
@@ -2536,69 +2585,12 @@ function getWorkspaceInfoList
    fi
 
    # Remove blank lines from grep results. Pattern includes space and tab.
-   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
-   if [[ "$__PRODUCT_HOME" == *"\$"* ]]; then
-      __PRODUCT_HOME=${__PRODUCT_HOME#*\$}
-      __PRODUCT_HOME=${__PRODUCT_HOME%\"*}
-      __PRODUCT_HOME=$(grep "export $__PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
-   fi
-
-   # Determine CLUSTER_TYPE based on the product path name.
-   if [[ "$__PRODUCT_HOME" == **"jet"** ]]; then
-      CLUSTER_TYPE=jet
-   elif [[ "$__PRODUCT_HOME" == **"hazelcast"** ]]; then
-      CLUSTER_TYPE=imdg
-   elif [[ "$__PRODUCT_HOME" == **"gemfire"** ]]; then
-      CLUSTER_TYPE=gemfire
-   elif [[ "$__PRODUCT_HOME" == **"geode"** ]]; then
-      CLUSTER_TYPE=geode
-   elif [[ "$__PRODUCT_HOME" == **"snappydata"** ]]; then
-      CLUSTER_TYPE=snappydata
-   elif [[ "$__PRODUCT_HOME" == **"coherence"** ]]; then
-      CLUSTER_TYPE=coherence
-   elif [[ "$__PRODUCT_HOME" == **"spark"** ]]; then
-      CLUSTER_TYPE=standalone
-   fi
-
-   local PRODUCT_VERSION
-   local PRODUCT_INFO
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-enterprise-//')
-      if [ "$PRODUCT_VERSION" == "$__PRODUCT_HOME" ]; then
-         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*jet-//' -e 's/"//')
-      else
-         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
-      fi
-      PRODUCT_INFO="jet_${PRODUCT_VERSION}"
-   elif [ "$CLUSTER_TYPE" == "imdg" ]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//' -e 's/"//')
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-enterprise-//')
-      if [ "$PRODUCT_VERSION" == "$__PRODUCT_HOME" ]; then
-         PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*hazelcast-//' -e 's/"//')
-      else
-         PRODUCT_VERSION=$(echo "$PRODUCT_VERSION" | sed -e 's/"//')
-      fi
-      PRODUCT_INFO="imdg_${PRODUCT_VERSION}"
-   elif [[ "$__PRODUCT_HOME" == *"gemfire"* ]]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*pivotal-gemfire-//' -e 's/"//')
-      PRODUCT_INFO="gemfire_${PRODUCT_VERSION}"
-   elif [[ "$__PRODUCT_HOME" == *"geode"* ]]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*apache-geode-//' -e 's/"//')
-      PRODUCT_INFO="geode_${PRODUCT_VERSION}"
-   elif [[ "$__PRODUCT_HOME" == *"snappydata"* ]]; then
-      PRODUCT_VERSION=$(echo "$__PRODUCT_HOME" | sed -e 's/^.*snappydata-//' -e 's/"//')
-      PRODUCT_VERSION=${PRODUCT_VERSION%-bin}
-      PRODUCT_INFO="snappydata_${PRODUCT_VERSION}"
-   elif [[ "$__PRODUCT_HOME" == *"coherence"* ]]; then
-      __PRODUCT_HOME=$(echo $__PRODUCT_HOME | sed -e 's/.*=//' -e 's/"//g')
-      if [ -f "$__PRODUCT_HOME/product.xml" ]; then
-         PRODUCT_VERSION=$(grep "version value" "$__PRODUCT_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
-      fi
-      PRODUCT_INFO="coherence_${PRODUCT_VERSION}"
-   elif [[ "$__PRODUCT_HOME" == *"spark"* ]]; then
-      local file=${__PRODUCT_HOME#*spark\-}
-      PRODUCT_VERSION=${file%-bin*}
-      PRODUCT_INFO="spark_${PRODUCT_VERSION}, $CLUSTER_TYPE"
+   local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   local JAVA_VERSION=""
+   local JAVA_INFO=""
+   if [ -f $__JAVA_HOME/bin/java ]; then
+      JAVA_VERSION=$("$__JAVA_HOME/bin/java" -version 2>&1 | grep "version" | sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+      JAVA_INFO="java_$JAVA_VERSION"
    fi
 
    local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
@@ -2607,11 +2599,10 @@ function getWorkspaceInfoList
    else
       VM_WORKSPACE=""
    fi
-   PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
+   local PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
    # Remove blank lines from grep results. Pattern includes space and tab.
-   local __PRODUCT_HOME=$(grep "export PRODUCT_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d')
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
-   echo "${VM_WORKSPACE}${PRODUCT_INFO}, padogrid_$PADOGRID_VERSION"
+   echo "${VM_WORKSPACE}${JAVA_INFO}, padogrid_$PADOGRID_VERSION"
 }
 
 #
@@ -2818,6 +2809,7 @@ function getHostIPv4List
 # The following environment variables are set after invoking this function.
 #   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, spark
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
+#                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
 #                   set to PRODUCT for all others.
 #   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy, myspark

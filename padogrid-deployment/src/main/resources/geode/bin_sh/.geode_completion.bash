@@ -135,6 +135,18 @@ __padogrid_complete()
          type_list="local vagrant"
       elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
          type_list="default pado"
+      elif [ "$command" == "make_cluster" ]; then
+         type_list="default"
+         local product=""
+         for i in $(seq 1 $len); do
+            if [ "${COMP_WORDS[i]}" == "-product" ]; then
+               product="${COMP_WORDS[i+1]}"
+               break;
+            fi
+         done
+         if  [ "$product" == "geode" ] || [ "$product" == "gemfire" ]; then
+            type_list="$type_list pado"
+         fi
       fi
       ;;
 
@@ -703,6 +715,18 @@ __command_complete()
          type_list="local vagrant"
       elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
          type_list="default pado"
+      elif [ "$command" == "make_cluster" ]; then
+         type_list="default"
+         local product=""
+         for i in $(seq 1 $len); do
+            if [ "${COMP_WORDS[i]}" == "-product" ]; then
+               product="${COMP_WORDS[i+1]}"
+               break;
+            fi
+         done
+         if  [ "$product" == "geode" ] || [ "$product" == "gemfire" ]; then
+            type_list="$type_list pado"
+         fi
       fi
       ;;
    -product)

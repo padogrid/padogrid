@@ -521,13 +521,26 @@ if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
 
-if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+# Depends on PRODUCT_HOME due to switch_workspace which does not have cluster info
+# Due to workspace, PRODUCT_HOME is set to the default workspace PRODUCT_HOME
+# We need to change that accordingly here.
+if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
    IS_GEODE_ENTERPRISE=true
-   PRODUCT_HOME=$GEMFIRE_HOME
+   export CLUSTER_TYPE="gemfire"
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
+elif [[ "$PRODUCT_HOME" == *"geode"* ]]; then
+   IS_GEODE_ENTERPRISE=false
+   export CLUSTER_TYPE="geode"
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
+elif [ "$CLUSTER_TYPE" == "gemfire" ]; then
+   IS_GEODE_ENTERPRISE=true
+   export CLUSTER_TYPE="gemfire"
+   export PRODUCT_HOME="$GEMFIRE_HOME"
    export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
 else
    IS_GEODE_ENTERPRISE=false
-   PRODUCT_HOME=$GEODE_HOME
+   export CLUSTER_TYPE="geode"
+   export PRODUCT_HOME="$GEODE_HOME"
    export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
 fi
 
@@ -551,8 +564,7 @@ JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 # GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
 # Geode and GemFire share the same 'geode' prefix for jar names.
 GEODE_VERSION=""
-IS_GEODE_ENTERPRISE=false
-for file in $GEODE_HOME/lib/geode-core-*; do
+for file in $PRODUCT_HOME/lib/geode-core-*; do
    file=${file##*geode\-core\-}
    GEODE_VERSION=${file%.jar}
 done
