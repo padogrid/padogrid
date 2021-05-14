@@ -493,8 +493,19 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    fi
    echo "   export SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $WORKSPACES_HOME/setenv.sh
    echo "   export SPARK_HOME=\"$SPARK_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      echo "   export PRODUCT_HOME=\"\$JET_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   else
+      echo "   export PRODUCT_HOME=\"\$HAZELCAST_HOME\"" >> $WORKSPACES_HOME/setenv.sh
+   fi
    echo "fi" >> $WORKSPACES_HOME/setenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh
+
+   # Default product
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "# Set the default product." >> $WORKSPACES_HOME/setenv.sh
+   echo "#" >> $WORKSPACES_HOME/setenv.sh
+   echo "PRODUCT=$PRODUCT" >> $WORKSPACES_HOME/setenv.sh
 
    # .geodeenv.sh
    echo "" >> $WORKSPACES_HOME/setenv.sh

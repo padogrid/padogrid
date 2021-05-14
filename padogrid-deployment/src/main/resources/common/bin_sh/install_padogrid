@@ -152,7 +152,6 @@ function getLatestProductVersion
    local lmajor=0
    local lminor=0
    local lupdate=-1
-   local re='^[0-9]+$'
    for i in $ALL_VERSIONS; do
       local periods="${i//[^\.]}"
       local period_count=${#periods}
@@ -166,51 +165,7 @@ function getLatestProductVersion
          local minor=${i#*\.}
          local update=-1
       fi
-#      echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
-      if [ $lmajor -lt $major ]; then
-        lmajor=$major
-        lminor=$minor
-        lupdate=$update
-      elif [ $lmajor -eq $major ]; then
-        if [[ $minor =~ $re ]] && [ $lminor -lt $minor ]; then
-           lminor=$minor
-           lupdate=$update
-        elif [[ $minor =~ $re ]] && [ $lminor -eq $minor ]; then
-           if [[ $update =~ $re ]] && [ $lupdate -eq -1 ]; then
-              lupdate=$update
-           elif [[ $update =~ $re ]] && [ $lupdate -lt $update ]; then
-              lupdate=$update
-           fi
-        fi
-      fi
-   done
-   if [ $lupdate -eq -1 ]; then
-      echo "$lmajor.$lminor"
-   else
-      echo "$lmajor.$lminor.$lupdate"
-   fi
-}
-
-function getLatestProductVersion
-{
-   local ALL_VERSIONS="$1"
-   local lmajor=0
-   local lminor=0
-   local lupdate=-1
-   for i in $ALL_VERSIONS; do
-      local periods="${i//[^\.]}"
-      local period_count=${#periods}
-      if [ $period_count -eq 2 ]; then
-         local major=${i%%\.*}
-         local minor=${i%\.*}
-         local minor=${minor#*\.}
-         local update=${i##*\.}
-      else
-         local major=${i%%\.*}
-         local minor=${i#*\.}
-         local update=-1
-      fi
-#      echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
+      #echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
       if [ $lmajor -lt $major ]; then
         lmajor=$major
         lminor=$minor
@@ -237,49 +192,49 @@ function getLatestProductVersion
 
 function getGeodeLatestVersion
 {
-   local ALL_GEODE_VERSIONS=$(curl -sL https://archive.apache.org/dist/geode/ |grep img | grep -v unknown | grep -v incubating | sed -e 's/.*\>1./1./' -e 's/\/.*//' | grep -v img)
+   local ALL_GEODE_VERSIONS=$(curl -sL https://archive.apache.org/dist/geode/ |grep img | grep -v unknown | grep -v incubating | sed -e 's/.*>1./1./' -e 's/\/.*//' | grep -v img)
    getLatestProductVersion "$ALL_GEODE_VERSIONS"
 }
 
 function getHazelcastOssLatestVersion
 {
-  local ALL_HAZELCAST_OSS_VERSIONS=$(curl -s https://hazelcast.org/imdg/download/archives/#hazelcast-imdg | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/\<.*//')
+  local ALL_HAZELCAST_OSS_VERSIONS=$(curl -s https://hazelcast.org/imdg/download/archives/#hazelcast-imdg | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
   getLatestProductVersion "$ALL_HAZELCAST_OSS_VERSIONS"
 }
 
 function getHazelcastEnterpriseLatestVersion
 {
-  echo $(curl -s https://hazelcast.com/get-started/download/ |grep "IMDG 4" |grep "(latest)" | sed -e 's/.*IMDG 4/4/' -e 's/\<.*//')
+  echo $(curl -s https://hazelcast.com/get-started/download/ |grep "IMDG 4" |grep "(latest)" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
 }
 
 function getHazelcastManCenterLatestVersion
 {
-   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Hazelcast IMDG Management Center" | grep latest | sed -e 's/.*Hazelcast IMDG Management Center 4/4/' -e 's/\<span.*//')
+   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Hazelcast IMDG Management Center" | grep latest | sed -e 's/.*Hazelcast IMDG Management Center 4/4/' -e 's/<span.*//')
 }
 
 function getJetOssLatestVersion
 {
-  echo $(curl -s https://github.com/hazelcast/hazelcast-jet/releases/latest | sed -e 's/.*tag\/v//' -e 's/"\>.*//')
+  echo $(curl -s https://github.com/hazelcast/hazelcast-jet/releases/latest | sed -e 's/.*tag\/v//' -e 's/">.*//')
 }
 
 function getJetEnterpriseLatestVersion
 {
-   echo $(curl -s https://hazelcast.com/get-started/download/ |grep "Jet 4" |grep "(latest)" | sed -e 's/.*Jet 4/4/' -e 's/\<.*//')
+   echo $(curl -s https://hazelcast.com/get-started/download/ |grep "Jet 4" |grep "(latest)" | sed -e 's/.*Jet 4/4/' -e 's/<.*//')
 }
 
 function getJetManCenterLatestVersion
 {
-   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Jet Management Center" | grep latest | sed -e 's/.*Hazelcast Jet Management Center 4/4/' -e 's/\<span.*//')
+   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Jet Management Center" | grep latest | sed -e 's/.*Hazelcast Jet Management Center 4/4/' -e 's/<span.*//')
 }
 
 function getSnappyDataLatestVersion
 {
-   echo $(curl -s https://github.com/TIBCOSoftware/snappydata/releases/latest | sed -e 's/.*tag\/v//' -e 's/"\>.*//')
+   echo $(curl -s https://github.com/TIBCOSoftware/snappydata/releases/latest | sed -e 's/.*tag\/v//' -e 's/">.*//')
 }
 
 function getSparkLatestVersion
 {
-   local ALL_SPARK_VERSIONS=$(curl -s https://archive.apache.org/dist/spark/ |grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/\<.*//' -e 's/spark-//' | grep -v img)
+   local ALL_SPARK_VERSIONS=$(curl -s https://archive.apache.org/dist/spark/ |grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/<.*//' -e 's/spark-//' | grep -v img)
    getLatestProductVersion "$ALL_SPARK_VERSIONS"
 }
 
