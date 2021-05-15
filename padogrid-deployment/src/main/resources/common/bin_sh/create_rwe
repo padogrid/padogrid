@@ -138,7 +138,6 @@ function getLatestProductVersion
    local lmajor=0
    local lminor=0
    local lupdate=-1
-   local re='^[0-9]+$'
    for i in $ALL_VERSIONS; do
       local periods="${i//[^\.]}"
       local period_count=${#periods}
@@ -152,19 +151,19 @@ function getLatestProductVersion
          local minor=${i#*\.}
          local update=-1
       fi
-#      echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
+      #echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
       if [ $lmajor -lt $major ]; then
         lmajor=$major
         lminor=$minor
         lupdate=$update
       elif [ $lmajor -eq $major ]; then
-        if [[ $minor =~ $re ]] && [ $lminor -lt $minor ]; then
+        if [ $lminor -lt $minor ]; then
            lminor=$minor
            lupdate=$update
-        elif [[ $minor =~ $re ]] && [ $lminor -eq $minor ]; then
-           if [[ $update =~ $re ]] && [ $lupdate -eq -1 ]; then
+        elif [ $lminor -eq $minor ]; then
+           if [ $lupdate -eq -1 ]; then
               lupdate=$update
-           elif [[ $update =~ $re ]] && [ $lupdate -lt $update ]; then
+           elif [ $lupdate -lt $update ]; then
               lupdate=$update
            fi
         fi
@@ -181,6 +180,10 @@ function determineInstalledProducts
 {
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
+
+      # To prevent wildcard not expanding in for loop if files do not exist
+      shopt -s nullglob
+
       local __versions
 
       # Geode
@@ -276,6 +279,7 @@ function determineInstalledProducts
       if [ "$GEMFIRE_HOME" == "" ]; then
          __versions=""
          for i in pivotal-gemfire-*; do
+            echo i=$i
             __version=${i#pivotal-gemfire-}
             __versions="$__versions $__version "
          done

@@ -409,20 +409,20 @@ function installProduct
          echo "Already installed"
       else
       # --------------
-      # Download Hazelcast Management Center
-      echo "Downloading $HAZELCAST_MC_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      # Download Hazelcast Jet Management Center
+      echo "Downloading $JET_MC_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
       else
          curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
       fi
       
-      # Install Hazelcast Management Center
-      echo "Installing Hazelcast Management Center in $PADOGRID_PRODUCTS_PATH/..."
+      # Install Hazelcast Jet Management Center
+      echo "Installing Hazelcast Jet Management Center in $PADOGRID_PRODUCTS_PATH/..."
       if [ "$__SIMULATE" == "simulate" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL
       else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL
       fi
       fi
 
@@ -755,6 +755,7 @@ echo ""
 
 # Check if an RWE exists in the workspaces dir
 pushd $PADOGRID_WORKSPACES_PATH > /dev/null 2>&1
+RWE_EXISTS="false"
 for i in *; do
    if [ -d "$i" ]; then
       if [ -f "$i/initenv.sh" ]; then 
@@ -772,8 +773,41 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "Creating your first rwe..."
       echo ""
 
+      # Set default workspaces home
+      PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/myrwe"
+
+      # Find all installed products
+      pushd $PADOGRID_PRODUCTS_PATH > /dev/null 2>&1
+      for i in *; do
+        if [[ "$i" == **"geode"** ]]; then
+          GEODE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"hazelcast-enterprise"** ]]; then
+          HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"hazelcast-jet-enterprise"** ]]; then
+          JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"hazelcast-management-center"** ]]; then
+          HAZELCAST_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"hazelcast-jet-management-center"** ]]; then
+          JET_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"hazelcast-jet"** ]]; then
+          JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"hazelcast"** ]]; then
+          HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"snappydata"** ]]; then
+          SNAPPYDATA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        elif [[ "$i" == **"spark"** ]]; then
+          SPARK_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+#        elif [[ "$i" == **"gemfire"** ]]; then
+#          GEMFIRE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+#        elif [[ "$i" == **"coherence"** ]]; then
+#          COHERENCE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+        fi
+      done
+      popd > /dev/null 2>&1
+
       TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
       # product homes
+      echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
       echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
       echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
