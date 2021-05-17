@@ -1,6 +1,7 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
+
 # ========================================================================
-# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,6 +45,27 @@ if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
    fi
 fi      
 
+#
+# NOTE: To make this command independent, some of the functions defined in the file are duplicated
+#       from the .utilenv.sh and .argenv.sh files.
+#
+
+CNone='\033[0m' # No Color
+CLightGreen='\033[1;32m'
+CUnderline='\033[4m'
+CUrl=$CBlue$CUnderline
+
+PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases"
+GEODE_DOWNLOAD_URL="https://archive.apache.org/dist/geode/"
+HAZELCAST_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
+HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.org/imdg/download/archives/#hazelcast-imdg"
+HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
+JET_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
+JET_OSS_DOWNLOAD_URL="https://github.com/hazelcast/hazelcast-jet/releases"
+JET_MANAGEMENT_CENTER_DOWNLOAD_URL="https://jet-start.sh/download"
+SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
+SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
+
 __options()
 {
    echo "-quiet -?"
@@ -69,20 +91,14 @@ SYNOPSIS
    $EXECUTABLE [-?]
 
 DESCRIPTION
-   Installs PadoGrid and downloadable products. This command downloads all supported products including
-   PadoGrid and installs them in the PadoGrid environment base directory. If the base directory is not
-   specified then it defaults to \$HOME/Padogrid.
+   Installs PadoGrid and downloadable products. This command downloads one or more selected products
+   and installs them in the PadoGrid environment base directory. If the base directory is not
+   specified then it defaults to $HOME/Padogrid.
 
-EOF
-if [ "$MAN_SPECIFIED" == "false" ]; then
-cat <<EOF
    Your current PadoGrid environment base directory path is
 
-      $PADOGRID_ENV_BASE_PATH
+      /Users/dpark/Padogrid
 
-EOF
-fi
-cat <<EOF
    The base directory has the following structure and contains all of PadoGrid files including workspaces.
 
       .
@@ -97,54 +113,62 @@ cat <<EOF
       - The 'workspaces' directory contains PadoGrid RWEs and their workspaces.
 
    The following products are downlodable and you can install them using this command.
-      
-      - PadoGrid
-      - Apache Geode
-      - Hazelcst OSS
-      - Hazelcast Enterprise
-      - Hazelcast Jet OSS
-      - Hazelcast Jet Enterprise
-      - SnappyData
-      - Apache Spark
+
+EOF
+
+echo -e "      - PadoGrid                    ${CUrl}$PADOGRID_DOWNLOAD_URL${CNone}"
+echo -e "      - Apache Geode                ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
+echo -e "      - Hazelcast Enterprise        ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
+echo -e "      - Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
+echo -e "      - Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+echo -e "      - Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
+echo -e "      - Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
+echo -e "      - Jet Management Center       ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+echo -e "      - TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+echo -e "      - Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+
+cat <<EOF
 
    The following products are not downlodable due to their sign-in requirements. You must manually
    download and install them. See the PadoGrid manual for instructions.
-  
-      - Oracle Coherence
-      - TIBCO ComputeDB
-      - VMware GemFire
 
 EOF
-exit
+echo -e "      - Oracle Coherence ${CUrl}https://www.oracle.com/middleware/technologies/coherence-downloads.html${CNone}"
+echo -e "      - TIBCO ComputeDB  ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
+echo -e "      - VMware GemFire   ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
+echo ""
+
+   exit
 fi
 
 cat <<EOF
 
-This command installs only downlodable products listed below."
-[0] PadoGrid"
-[1] Apache Geode
-[2] Hazelcst OSS
-[3] Hazelcast Enterprise
-[4] Hazelcast Management Center
-[5] Hazelcast Jet OSS
-[6] Hazelcast Jet Enterprise
-[7] Hazelcast Jet Management Center
-[8] SnappyData
-[9] Apache Spark
-
-The following products are not included in this installation due to their download
-sign-in requirements. To install them, you must download them manually.
-
-[0] Oracle Coherence (https://www.oracle.com/middleware/technologies/coherence-downloads.html)
-[1] TIBCO ComputeDB (https://edelivery.tibco.com/storefront/index.ep)
-[2] VMware GemFire (https://network.pivotal.io/products/pivotal-gemfire)
+This command installs the following downlodable products:
 
 EOF
 
-function getPadogridLatestVersion
-{
-  echo $(curl -s https://github.com/padogrid/padogrid/releases/latest |grep padogrid_ | grep -v grep | sed -e 's/.*padogrid_//' -e 's/".*//')
-}
+echo -e "[0] PadoGrid                    ${CUrl}$PADOGRID_DOWNLOAD_URL${CNone}"
+echo -e "[1] Apache Geode                ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
+echo -e "[3] Hazelcast Enterprise        ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
+echo -e "[2] Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
+echo -e "[4] Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+echo -e "[6] Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
+echo -e "[5] Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
+echo -e "[7] Jet Management Center       ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+echo -e "[8] TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+echo -e "[9] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+
+cat <<EOF
+
+The following products are not included in this command to their download sign-in requirements.
+To install them, you must download them manually. Make sure to install them in the PadoGrid
+products directory. See the PadoGrid manual for instructions.
+
+EOF
+echo -e "[0] Oracle Coherence ${CUrl}https://www.oracle.com/middleware/technologies/coherence-downloads.html${CNone}"
+echo -e "[1] TIBCO ComputeDB  ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
+echo -e "[2] VMware GemFire   ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
+echo ""
 
 function getLatestProductVersion
 {
@@ -190,54 +214,654 @@ function getLatestProductVersion
    fi
 }
 
-function getGeodeLatestVersion
+
+#
+# Returns trimmed string
+# @param String to trim
+#
+function trimString
 {
-   local ALL_GEODE_VERSIONS=$(curl -sL https://archive.apache.org/dist/geode/ |grep img | grep -v unknown | grep -v incubating | sed -e 's/.*>1./1./' -e 's/\/.*//' | grep -v img)
-   getLatestProductVersion "$ALL_GEODE_VERSIONS"
+    local var="$1"
+    # remove leading whitespace characters
+    var="${var#"${var%%[![:space:]]*}"}"
+    # remove trailing whitespace characters
+    var="${var%"${var##*[![:space:]]}"}"   
+    echo -n "$var"
 }
 
-function getHazelcastOssLatestVersion
+#
+# Returns a string list with all duplicate words removed from the specified string list.
+# @param stringList String list of words separated by spaces
+#
+function unique_words
 {
-  local ALL_HAZELCAST_OSS_VERSIONS=$(curl -s https://hazelcast.org/imdg/download/archives/#hazelcast-imdg | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
-  getLatestProductVersion "$ALL_HAZELCAST_OSS_VERSIONS"
+   local __words=$1
+   local  __resultvar=$2
+   local __visited
+   local __unique_words
+   local __i
+   local __j
+
+   # remove all repeating hosts
+   for __i in $__words; do
+      __visited=false
+      for __j in $__unique_words; do
+         if [ "$__i" == "$__j" ]; then
+            __visited=true
+         fi
+      done
+      if [ "$__visited" == "false" ]; then
+         __unique_words="$__unique_words $__i"
+      fi
+   done
+
+   if [[ "$__resultvar" ]]; then
+      eval $__resultvar="'$__unique_words'"
+      #echo `trimString "$__resultvar"`
+   else
+     echo `trimString "$__unique_words"`
+   fi
 }
 
-function getHazelcastEnterpriseLatestVersion
+function getDownloadablePadogridVersions
 {
-  echo $(curl -s https://hazelcast.com/get-started/download/ |grep "IMDG 4" |grep "(latest)" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
+  local ALL_PADOGRID_VERSIONS=$(curl -s $PADOGRID_DOWNLOAD_URL |grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//')
+  unique_words "$ALL_PADOGRID_VERSIONS"
 }
 
-function getHazelcastManCenterLatestVersion
+function getDownloadableGeodeVersions
 {
-   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Hazelcast IMDG Management Center" | grep latest | sed -e 's/.*Hazelcast IMDG Management Center 4/4/' -e 's/<span.*//')
+   local ALL_GEODE_VERSIONS=$(curl -sL $GEODE_DOWNLOAD_URL |grep img | grep -v unknown | grep -v incubating | sed -e 's/.*>1./1./' -e 's/\/.*//' | grep -v img)
+   unique_words "$ALL_GEODE_VERSIONS"
 }
 
-function getJetOssLatestVersion
+function getDownloadableHazelcastEnterpriseVersions
 {
-  echo $(curl -s https://github.com/hazelcast/hazelcast-jet/releases/latest | sed -e 's/.*tag\/v//' -e 's/">.*//')
+   local ALL_HAZELCAST_ENTERPRISE_VERSIONS=$(curl -s $HAZELCAST_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-enterprise-//' -e 's/\.tar\.gz.*//')
+   unique_words "$ALL_HAZELCAST_ENTERPRISE_VERSIONS"
 }
 
-function getJetEnterpriseLatestVersion
+function getDownloadableHazelcastOssVersions
 {
-   echo $(curl -s https://hazelcast.com/get-started/download/ |grep "Jet 4" |grep "(latest)" | sed -e 's/.*Jet 4/4/' -e 's/<.*//')
+  local ALL_HAZELCAST_OSS_VERSIONS=$(curl -s $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
+  unique_words "$ALL_HAZELCAST_OSS_VERSIONS"
 }
 
-function getJetManCenterLatestVersion
+function getDownloadableHazelcastManCenterVersions
 {
-   echo $(curl -s https://hazelcast.com/get-started/download/ | grep "Jet Management Center" | grep latest | sed -e 's/.*Hazelcast Jet Management Center 4/4/' -e 's/<span.*//')
+  local ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(curl -s $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL | grep hazelcast-management-center | grep "tar.gz" |  sed -e 's/.*hazelcast-management-center-//' -e 's/\.tar\.gz.*//')
+  unique_words "$ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS"
 }
 
-function getSnappyDataLatestVersion
+function getDownloadableJetEnterpriseVersions
 {
-   echo $(curl -s https://github.com/TIBCOSoftware/snappydata/releases/latest | sed -e 's/.*tag\/v//' -e 's/">.*//')
+   local ALL_JET_ENTERPRISE_VERSIONS=$(curl -s $JET_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-jet-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-jet-enterprise-//' -e 's/\.tar\.gz.*//')
+   unique_words "$ALL_JET_ENTERPRISE_VERSIONS"
 }
 
-function getSparkLatestVersion
+function getDownloadableJetOssVersions
 {
-   local ALL_SPARK_VERSIONS=$(curl -s https://archive.apache.org/dist/spark/ |grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/<.*//' -e 's/spark-//' | grep -v img)
-   getLatestProductVersion "$ALL_SPARK_VERSIONS"
+   local ALL_JET_OSS_VERSIONS=$(curl -s $JET_OSS_DOWNLOAD_URL |grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
+   unique_words "$ALL_JET_OSS_VERSIONS"
 }
 
+function getDownloadableJetManCenterVersions
+{
+   local V1=$(curl -s $JET_MANAGEMENT_CENTER_DOWNLOAD_URL | grep "hazelcast/hazelcast-jet/releases/download" | sed -e 's/hazelcast-jet-management-center-/\'$'\n/g' |grep tar.gz | sed -e 's/\.tar\.gz.*//' | grep -v span)
+   local V2=$(curl -s $JET_MANAGEMENT_CENTER_DOWNLOAD_URL| grep "hazelcast/hazelcast-jet/releases/download" | sed -e 's/hazelcast-management-center-/\'$'\n/g' |grep tar.gz | sed -e 's/\.tar\.gz.*//' | grep -v span)
+   local ALL_JET_MANAGEMENT_CENTER_VERSIONS="$V2 $V1"
+   unique_words "$ALL_JET_MANAGEMENT_CENTER_VERSIONS"
+}
+
+function getDownloadableSnappyDataVersions
+{
+   local ALL_SNAPPYDATA_VERSIONS=$(curl -s $SNAPPYDATA_DOWNLOAD_URL | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
+   unique_words "$ALL_SNAPPYDATA_VERSIONS"
+}
+
+function getDownloadableSparkVersions
+{
+   local ALL_SPARK_VERSIONS=$(curl -s $SPARK_DOWNLOAD_URL |grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/<.*//' -e 's/spark-//' | grep -v img)
+   unique_words "$ALL_SPARK_VERSIONS"
+}
+
+#
+# Returns the sorted list of the specified list that contains product versions
+# @param versionList
+#
+function sortVersionList
+{
+   local VERSION_LIST="$1"
+   local TMP_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").txt
+   echo 
+   echo "" > $TMP_FILE
+   if [ -f $TMP_FILE ]; then
+      rm $TMP_FILE
+   fi
+   touch $TMP_FILE
+   for i in $VERSION_LIST; do
+      echo "$i" >> $TMP_FILE
+   done
+   SORTED_VERSIONS=$(sort -rV $TMP_FILE)
+   rm $TMP_FILE
+   echo $SORTED_VERSIONS
+}
+
+#
+# Determines versions of all installed products by scanning the products base directory.
+# This function sets the following arrays.
+#    PADOGRID_VERSIONS
+#    GEMFIRE_VERSIONS
+#    GEODE_VERSIONS
+#    HAZELCAST_ENTERPRISE_VERSIONS
+#    HAZELCAST_OSS_VERSIONS
+#    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+#    JET_ENTERPRISE_VERSIONS
+#    JET_OSS_VERSIONS
+#    JET_MANAGEMENT_CENTER_VERSIONS
+#    SNAPPYDATA_VERSIONS
+#    SPARK_VERSIONS
+#
+# @required PADOGRID_ENV_BASE_PATH 
+#
+function determineInstalledProductVersions
+{
+   PADOGRID_VERSIONS=""
+   GEMFIRE_VERSIONS=""
+   GEODE_VERSIONS=""
+   HAZELCAST_ENTERPRISE_VERSIONS=""
+   HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
+   JET_ENTERPRISE_VERSIONS=""
+   JET_OSS_VERSIONS=""
+   HAZELCAST_OSS_VERSIONS=""
+   JET_MANAGEMENT_CENTER_VERSIONS=""
+   SNAPPYDATA_VERSIONS=""
+   SPARK_VERSIONS=""
+
+   if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
+      pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
+
+      # To prevent wildcard not expanding in a for-loop if files do not exist
+      shopt -s nullglob
+
+      local __versions
+      local henterv hmanv jenterv jmanv jossv hossv
+
+      # PadoGrid
+      __versions=""
+      for i in padogrid_*; do
+         __version=${i#padogrid_}
+         __versions="$__versions $__version "
+      done
+      PADOGRID_VERSIONS=$(sortVersionList "$__versions")
+
+      # GemFire
+      __versions=""
+      for i in pivotal-gemfire-*; do
+         __version=${i#pivotal-gemfire-}
+         __versions="$__versions $__version "
+      done
+      GEMFIRE_VERSIONS=$(sortVersionList "$__versions")
+
+      # Geode
+      __versions=""
+      for i in apache-geode-*; do
+         __version=${i#apache-geode-}
+         __versions="$__versions $__version "
+      done
+      GEODE_VERSIONS=$(sortVersionList "$__versions")
+
+      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
+      local hossv henterv hmanv jossv jenterv jmanv
+      for i in hazelcast-*; do
+         if [[ "$i" == "hazelcast-enterprise-"** ]]; then
+            __version=${i#hazelcast-enterprise-}
+            henterv="$henterv $__version"
+         elif [[ "$i" == "hazelcast-management-center-"** ]]; then
+            __version=${i#hazelcast-management-center-}
+            hmanv="$hmanv $__version"
+         elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
+            __version=${i#hazelcast-jet-enterprise-}
+            jenterv="$jenterv $__version"
+         elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
+            __version=${i#hazelcast-jet-management-center-}
+            jmanv="$jmanv $__version"
+         elif [[ "$i" == "hazelcast-jet-"** ]]; then
+            __version=${i#hazelcast-jet-}
+            jossv="$jossv $__version"
+         elif [[ "$i" == "hazelcast-"** ]]; then
+            __version=${i#hazelcast-}
+            hossv="$hossv $__version"
+         fi
+      done
+
+      HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
+      HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
+      JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
+      JET_OSS_VERSIONS=$(sortVersionList "$jossv")
+      HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
+
+      # Hazelcast/Jet  management center merged starting 4.2021.02
+      for i in ${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}; do
+         if [[ "$i" == "4.2021"* ]]; then
+            jmanv="$i $jmanv"
+         fi
+      done
+      JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
+
+      # SnappyData
+      __versions=""
+      for i in snappydata-*; do
+         __version=${i#snappydata-}
+         #__version=${__version%-bin}
+         __versions="$__versions $__version "
+      done
+      SNAPPYDATA_VERSIONS=$(sortVersionList "$__versions")
+
+      # Spark
+      __versions=""
+      for i in spark-*; do
+         __version=${i#spark-}
+         __version=${__version%-bin}
+         __versions="$__versions $__version "
+      done
+      SPARK_VERSIONS=$(sortVersionList "$__versions")
+
+      popd > /dev/null 2>&1
+            
+   fi
+}
+
+# 
+# Returns "true" if number, else "false"
+# @param number
+#
+function isNumber
+{
+   num=$1
+   [ ! -z "${num##*[!0-9]*}" ] && echo "true" || echo "false";
+}
+
+#
+# Prompts user for the product version to install.
+#
+# @required PRODUCT_DOWNLOAD_VERSIONS Downlodable product versions
+# @required INSTALLED_VERSIONS        Installed product versions
+# @return INSTALL_VERSION             Returns the user-entered version to install. If this variable value is empty then the
+#                                     user decided not to install.
+#
+function doUserInput
+{
+   INSTALL_VERSION=""
+
+   local __INDEX=0
+   local __LEN=${#PRODUCT_DOWNLOAD_VERSIONS[@]}
+   let __LAST_INDEX=__LEN-1
+   for i in ${PRODUCT_DOWNLOAD_VERSIONS[@]}; do
+      __INSTALLED="false"
+      for j in ${INSTALLED_VERSIONS[@]}; do
+         if [ "$i" == "$j" ]; then
+            __INSTALLED="true"
+            break;
+         fi
+      done
+      if [ "$__INSTALLED" == "true" ]; then
+         echo "   [$__INDEX] $i [installed]"
+      else
+         echo "   [$__INDEX] $i"
+      fi
+      let __INDEX=__INDEX+1
+   done
+
+   local __INNER_LOOP=true
+   local __INSTALLED="false"
+   while [ "$__INNER_LOOP" == "true" ]; do
+      read -p "Enter a version to install or leave blank to skip: " INPUT
+      if [ "$INPUT" == "" ]; then
+         break;
+      else
+         if [ "$(isNumber $INPUT)" == "true" ]; then
+            if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
+               echo "Invalid number. Enter [0, $__LAST_INDEX]."
+               continue;
+            fi
+         fi
+         __INSTALLED="false"
+         if [ "$(isNumber $INPUT)" == "true" ]; then
+            INSTALL_VERSION=${PRODUCT_DOWNLOAD_VERSIONS[$INPUT]}
+         else
+            INSTALL_VERSION=$INPUT
+         fi
+         for j in ${INSTALLED_VERSIONS[@]}; do
+            if [ "$INSTALL_VERSION" == "$j" ]; then
+               __INSTALLED="true"
+               break;
+            fi
+         done
+         if [ "$__INSTALLED" == "true" ]; then
+            local __REDO="true"
+            while [ "$__REDO" == "true" ]; do
+               read -p "$INSTALL_VERSION is already installed. Do you want to reinstall (y/[n])? " INPUT
+               case $INPUT in
+                  [Yy]* ) __REDO="false"; __INNER_LOOP="false";;
+                  [Nn]* ) __REDO="false"; INSTALL_VERSION="";;
+               esac
+            done
+         else
+            if [ "$INSTALL_VERSION" != "" ]; then
+               local __VALID_VERSION="false"
+               for i in ${PRODUCT_DOWNLOAD_VERSIONS[@]}; do
+                  if [ "$i" == $INSTALL_VERSION ]; then
+                     __VALID_VERSION="true"
+                     break;
+                  fi
+               done
+
+               if [ "$__VALID_VERSION" == "false" ]; then
+                  echo "$INSTALL_VERSION is invalid."
+                  __INNER_LOOP="true"
+               else
+                  __INNER_LOOP="false"
+               fi
+            fi
+         fi
+      fi
+   done
+}
+
+#
+# Scan downloadable product versions
+#
+echo ""
+echo "Scanning donwloadable products... Please wait."
+echo ""
+
+# Turn off the enter key while waiting
+stty igncr
+
+PADOGRID_DOWNLOAD_VERSIONS=$(sortVersionList "$(getDownloadablePadogridVersions)")
+GEODE_DOWNLOAD_VERSIONS=$(sortVersionList "$(getDownloadableGeodeVersions)")
+HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=$(getDownloadableHazelcastEnterpriseVersions)
+HAZELCAST_OSS_DOWNLOAD_VERSIONS=$(getDownloadableHazelcastOssVersions)
+HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=$(getDownloadableHazelcastManCenterVersions)
+JET_ENTERPRISE_DOWNLOAD_VERSIONS=$(getDownloadableJetEnterpriseVersions)
+JET_OSS_DOWNLOAD_VERSIONS=$(getDownloadableJetOssVersions)
+SNAPPYDATA_DOWNLOAD_VERSIONS=$(getDownloadableSnappyDataVersions)
+SPARK_DOWNLOAD_VERSIONS=$(sortVersionList "$(getDownloadableSparkVersions)")
+
+# Hazelcast/Jet  management center merged starting 4.2021.02
+JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=$(getDownloadableJetManCenterVersions)
+for i in $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS; do
+   if [[ "$i" == "4.2021"* ]]; then
+      JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS="$i $JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS"
+   fi
+done
+JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=$(sortVersionList "$JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS")
+
+# Enable the enter key
+stty -igncr
+
+# Version variables set by user inputs
+PADOGRID_VERSION=""
+GEODE_VERSION=""
+HAZELAST_ENTERPRISE_VERSION=""
+HAZELAST_MANAGEMENT_CENTER_VERSION=""
+JET_ENTERPRISE_VERSION=""
+JET_OSS_VERSION=""
+JET_MANAGEMENT_CENTER_VERSION=""
+SNAPPYDATA_VERSION=""
+SPARK_VERSION=""
+
+
+# Get user inputs
+REDO="true"
+while [ "$REDO" == "true" ]; do
+
+   INSTALL_COUNT=0
+
+   REDO=true
+   INNER_LOOP=true
+   while [ "$INNER_LOOP" == "true" ]; do
+      echo "Enter the PadoGrid environment base directory path. All of the products will be installed in this directory."
+      echo "[$PADOGRID_ENV_BASE_PATH]":
+      read -p "" INPUT
+      if [ "$INPUT" == "" ]; then
+         __BASE_PATH="$PADOGRID_ENV_BASE_PATH"
+      else
+         __BASE_PATH="$INPUT"
+      fi
+      if [ ! -d "$__BASE_PATH" ]; then
+         if [ -f "$__BASE_PATH" ]; then
+            echo "Invalid path. The specified path exists and is not a directory."
+            continue;
+         fi
+      fi
+      INNER_LOOP=false
+      PADOGRID_ENV_BASE_PATH="$__BASE_PATH"
+   done
+
+   echo ""
+   echo -e "PadoGrid environment base directory: ${CLightGreen}$PADOGRID_ENV_BASE_PATH${CNone}"
+   echo ""
+
+   # Get local installations
+   determineInstalledProductVersions
+
+   # PadoGrid
+   PRODUCT_DOWNLOAD_VERSIONS=$PADOGRID_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$PADOGRID_VERSIONS
+   echo -e "PadoGrid ${CUrl}$PADOGRID_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   PADOGRID_VERSION=$INSTALL_VERSION
+   echo -e "PadoGrid version selected to install: ${CLightGreen}$PADOGRID_VERSION${CNone}"
+   echo ""
+
+   # Geode
+   PRODUCT_DOWNLOAD_VERSIONS=$GEODE_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$GEODE_VERSIONS
+   echo -e "Geode ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   GEODE_VERSION=$INSTALL_VERSION
+   echo -e "Geode version selected to install: ${CLightGreen}$GEODE_VERSION${CNone}"
+   echo ""
+
+   # Hazelcast Enterprise
+   PRODUCT_DOWNLOAD_VERSIONS=$HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$HAZELCAST_ENTERPRISE_VERSIONS
+   echo -e "Hazelcast Enterprise ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   HAZELAST_ENTERPRISE_VERSION=$INSTALL_VERSION
+   echo -e "Hazelcast Enterprise version selected to install: ${CLightGreen}$HAZELAST_ENTERPRISE_VERSION${CNone}"
+   echo ""
+
+   # Hazelcast OSS
+   PRODUCT_DOWNLOAD_VERSIONS=$HAZELCAST_OSS_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$HAZELCAST_OSS_VERSIONS
+   echo -e "Hazelcast OSS ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   HAZELAST_OSS_VERSION=$INSTALL_VERSION
+   echo -e "Hazelcast OSS version selected to install: ${CLightGreen}$HAZELAST_OSS_VERSION${CNone}"
+   echo ""
+
+   # Hazelcast Management Center
+   PRODUCT_DOWNLOAD_VERSIONS=$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+   echo -e "Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   HAZELAST_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
+   echo -e "Hazelcast Management Center version selected to install: ${CLightGreen}$HAZELAST_MANAGEMENT_CENTER_VERSION${CNone}"
+   echo ""
+
+   # Jet Enterprise
+   PRODUCT_DOWNLOAD_VERSIONS=$JET_ENTERPRISE_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$JET_ENTERPRISE_VERSIONS
+   echo -e "Jet Enterprise ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   JET_ENTERPRISE_VERSION=$INSTALL_VERSION
+   echo -e "Jet Enterprise version selected to install: ${CLightGreen}$JET_ENTERPRISE_VERSION${CNone}"
+   echo ""
+
+   # Jet OSS
+   PRODUCT_DOWNLOAD_VERSIONS=$JET_OSS_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$JET_OSS_VERSIONS
+   echo -e "Jet OSS ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   JET_OSS_VERSION=$INSTALL_VERSION
+   echo -e "Jet OSS version selected to install: ${CLightGreen}$JET_OSS_VERSION${CNone}"
+   echo ""
+
+   # Jet Management Center
+   PRODUCT_DOWNLOAD_VERSIONS=$JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$JET_MANAGEMENT_CENTER_VERSIONS
+   echo -e "Jet Management Center ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   JET_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
+   echo -e "Jet Management Center version selected to install: ${CLightGreen}$JET_MANAGEMENT_CENTER_VERSION${CNone}"
+   echo ""
+
+   # SnappyData
+   PRODUCT_DOWNLOAD_VERSIONS=$SNAPPYDATA_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$SNAPPYDATA_VERSIONS
+   echo -e "SnappyData ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   SNAPPYDATA_VERSION=$INSTALL_VERSION
+   echo -e "SnappyData version selected to install: ${CLightGreen}$SNAPPYDATA_VERSION${CNone}"
+   echo ""
+
+   # Spark
+   PRODUCT_DOWNLOAD_VERSIONS=$SPARK_DOWNLOAD_VERSIONS
+   PRODUCT_DOWNLOAD_VERSIONS=($PRODUCT_DOWNLOAD_VERSIONS)
+   INSTALLED_VERSIONS=$SPARK_VERSIONS
+   echo -e "Spark ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   SPARK_VERSION=$INSTALL_VERSION
+   echo -e "Spark version selected to install: ${CLightGreen}$SPARK_VERSION${CNone}"
+   echo ""
+
+   if [ $INSTALL_COUNT -eq 0 ]; then
+      echo "You have not selected any products to install."
+   else
+      echo "You have selected the following versions to install:"
+   fi
+
+   if [ "$PADOGRID_VERSION" != "" ]; then
+      echo -e "Padogrid: ${CLightGreen}$PADOGRID_VERSION${CNone}"
+   fi
+   if [ "$GEODE_VERSION" != "" ]; then
+      echo -e "Geode: ${CLightGreen}$GEODE_VERSION${CNone}"
+   fi
+   if [ "$HAZELAST_ENTERPRISE_VERSION" != "" ]; then
+      echo -e "Hazelcast Enterprise: ${CLightGreen}$HAZELAST_ENTERPRISE_VERSION${CNone}"
+   fi
+   if [ "$HAZELAST_OSS_VERSION" != "" ]; then
+      echo -e "Hazelcast OSS: ${CLightGreen}$HAZELAST_OSS_VERSION${CNone}"
+   fi
+   if [ "$HAZELAST_MANAGEMENT_CENTER_VERSION" != "" ]; then
+      echo -e "Hazelcast Management Center: ${CLightGreen}$HAZELAST_MANAGEMENT_CENTER_VERSION${CNone}"
+   fi
+   if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
+      echo -e "Jet Enterprise: ${CLightGreen}$JET_ENTERPRISE_VERSION${CNone}"
+   fi
+   if [ "$JET_OSS_VERSION" != "" ]; then
+      echo -e "Jet OSS: ${CLightGreen}$JET_OSS_VERSION${CNone}"
+   fi
+   if [ "$JET_MANAGEMENT_CENTER_VERSION" != "" ]; then
+      echo -e "Jet Management Center: ${CLightGreen}$JET_MANAGEMENT_CENTER_VERSION${CNone}"
+   fi
+   if [ "$SNAPPYDATA_VERSION" != "" ]; then
+      echo -e "SnappyData: ${CLightGreen}$SNAPPYDATA_VERSION${CNone}"
+   fi
+   if [ "$SPARK_VERSION" != "" ]; then
+      echo -e "Spark: ${CLightGreen}$SPARK_VERSION${CNone}"
+   fi
+   echo ""
+
+   REDO=true
+   INNER_LOOP=true
+   while [ "$INNER_LOOP" == "true" ]; do
+      read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
+      case $INPUT in
+         [Cc]* ) REDO=false; INNER_LOOP=false;;
+         [Rr]* ) REDO=true; INNER_LOOP=false;;
+            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+      esac
+   done
+
+done
+
+#
+# Installs the specified product in the PadoGrid products directory.
+# @param productName Product name, i.e., padogrid, geode, hazelcast-oss, hazelcast-enterprise, hazelcast-management-center, 
+#                    jet-oss, jet-enterprise, jet-management-center, snappydata, spark
+# @param simulate If 'simulate' then outputs the installation commands without actually executing them.
+#
+# @required PADOGRID_PRODUCTS_PATH
+# @required PADOGRID_DOWNLOADS_PATH
+#
+# @required PADOGRID_DOWNLOAD_URL
+# @required PADOGRID_RELEASE
+# @required PADOGRID_TARBALL
+#
+# @required GEODE_VERSION
+# @required GEODE_TARBALL
+#
+# @required HAZELCAST_OSS_RELEASE
+# @required HAZELCAST_OSS_TARBALL
+#
+# @required HAZELCAST_ENTERPRISE_RELEASE
+# @required HAZELCAST_ENTERPRISE_TARBALL
+#
+# @required HAZELCAST_MC_RELEASE
+# @required HAZELCAST_MC_TARBALL
+#
+# @required JET_MC_RELEASE
+# @required JET_MC_TARBALL
+#
+# @required SNAPPYDATA_RELEASE
+# @required SNAPPYDATA_TARBALL
+#
+# @required SPARK_RELEASE
+# @required SPARK_TARBALL
+#
 function installProduct
 {
    local __PRODUCT="$1"
@@ -251,9 +875,9 @@ function installProduct
       # Download PadoGrid
       echo "Downloading $PADOGRID_TAR_BALL to $PADOGRID_DOWNLOADS_PATH/..."
       if [ "$__SIMULATE" == "simulate" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "$PADOGRID_DOWNLOAD_URL/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
       else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "$PADOGRID_DOWNLOAD_URL/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
       fi
       
       # Install PadoGrid
@@ -412,9 +1036,18 @@ function installProduct
       # Download Hazelcast Jet Management Center
       echo "Downloading $JET_MC_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
       if [ "$__SIMULATE" == "simulate" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
+         if [[ "$JET_MC_TARBALL" == *"4.20"* ]]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/management-center/$JET_MC_TARBALL"
+         else
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
+         fi
+
       else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
+         if [[ "$JET_MC_TARBALL" == *"4.20"* ]]; then
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/management-center/$JET_MC_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
+         fi
       fi
       
       # Install Hazelcast Jet Management Center
@@ -473,234 +1106,21 @@ function installProduct
       fi
    fi
 
- }
-
-function scanProductVersions
-{
-   PADOGRID_VERSION=$(getPadogridLatestVersion)
-   GEODE_VERSION=$(getGeodeLatestVersion)
-   HAZELCAST_OSS_VERSION=$(getHazelcastOssLatestVersion)
-   HAZELCAST_ENTERPRISE_VERSION=$(getHazelcastEnterpriseLatestVersion)
-   HAZELCAST_MC_VERSION=$(getHazelcastManCenterLatestVersion)
-   JET_OSS_VERSION=$(getJetOssLatestVersion)
-   JET_ENTERPRISE_VERSION=$(getJetEnterpriseLatestVersion)
-   JET_MC_VERSION=$(getJetManCenterLatestVersion)
-   SNAPPYDATA_VERSION=$(getSnappyDataLatestVersion)
-   SPARK_VERSION=$(getSparkLatestVersion)
 }
 
-# 
-# Determine the latest product versions
-#
-echo "Scanning for the latest product versions... Please wait."
-# Turn off the enter key while waiting
-stty igncr
-scanProductVersions
-# Enable the enter key
-stty -igncr
-echo ""
-
-# The following products require sign-on to download
-COHERENCE_VERSION=
-GEMFIRE_VERSION=
-COMPUTEDB_VERSION=
-
-#echo PADOGRID_VERSION=$PADOGRID_VERSION
-#echo GEODE_VERSION=$GEODE_VERSION
-#echo HAZELCAST_OSS_VERSION=$HAZELCAST_OSS_VERSION
-#echo HAZELCAST_ENTERPRISE_VERSION=$HAZELCAST_ENTERPRISE_VERSION
-#echo HAZELCAST_MC_VERSION=$HAZELCAST_MC_VERSION
-#echo JET_OSS_VERSION=$JET_OSS_VERSION
-#echo JET_ENTERPRISE_VERSION=$JET_ENTERPRISE_VERSION
-#echo JET_MC_VERSION=$JET_MC_VERSION
-#echo SNAPPYDATA_VERSION=$SNAPPYDATA_VERSION
-#echo SPARK_VERSION=$SPARK_VERSION
-
-
-# Defaults
-PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases/download"
-PADOGRID_RELEASE=padogrid_$PADOGRID_VERSION
-PADOGRID_TARBALL=$PADOGRID_RELEASE.tar.gz
-
-GEODE_RELEASE="apache-geode-$GEODE_VERSION"
-GEODE_TARBALL="$GEODE_RELEASE.tgz"
-
-HAZELCAST_OSS_RELEASE="hazelcast-$HAZELCAST_OSS_VERSION"
-HAZELCAST_OSS_TARBALL="$HAZELCAST_OSS_RELEASE.tar.gz"
-
-HAZELCAST_ENTERPRISE_RELEASE="hazelcast-enterprise-$HAZELCAST_ENTERPRISE_VERSION"
-HAZELCAST_ENTERPRISE_TARBALL="$HAZELCAST_ENTERPRISE_RELEASE.tar.gz"
-
-HAZELCAST_MC_RELEASE="hazelcast-management-center-$HAZELCAST_MC_VERSION"
-HAZELCAST_MC_TARBALL="$HAZELCAST_MC_RELEASE.tar.gz"
-
-JET_OSS_RELEASE="hazelcast-jet-$JET_OSS_VERSION"
-JET_OSS_TARBALL="$JET_OSS_RELEASE.tar.gz"
-
-JET_ENTERPRISE_RELEASE="hazelcast-jet-enterprise-$JET_ENTERPRISE_VERSION"
-JET_ENTERPRISE_TARBALL="$JET_ENTERPRISE_RELEASE.tar.gz"
-
-JET_MC_RELEASE="hazelcast-jet-management-center-$JET_MC_VERSION"
-JET_MC_TARBALL="$JET_MC_RELEASE.tar.gz"
-
-SNAPPYDATA_RELEASE="snappydata-$SNAPPYDATA_VERSION-bin"
-SNAPPYDATA_TARBALL="$SNAPPYDATA_RELEASE.tar.gz"
-
-SPARK_RELEASE="spark-$SPARK_VERSION"
-SPARK_TARBALL="$SPARK_RELEASE.tgz"
-
-#
-# Initialize product arrays
-#
-PRODUCT_NAME_ARRAY=(padogrid geode hazelcast-oss hazelcast-enterprise hazelcast-management-center jet-oss jet-enterprise jet-management-center snappydata spark)
-PRODUCT_ARRAY=($PADOGRID_RELEASE $GEODE_RELEASE $HAZELCAST_OSS_RELEASE $HAZELCAST_ENTERPRISE_RELEASE $HAZELCAST_MC_RELEASE $JET_OSS_RELEASE $JET_ENTERPRISE_RELEASE $JET_MC_RELEASE $SNAPPYDATA_RELEASE $SPARK_RELEASE)
-let end_index=${#PRODUCT_ARRAY[@]}-1
-__BUFFER=""
-__BUFFER2=""
-for i in $(seq 0 $end_index); do
-   __BUFFER="$__BUFFER yes"   
-done
-PRODUCT_INSTALL_ARRAY=($__BUFFER)
-PRODUCT_INSTALLED_ARRAY=($__BUFFER)
-index_padogrdi=0
-index_geode=1
-index_hazelcast_oss=2
-index_hazelcast_enterprise=3
-index_hazelcast_man_center=4
-index_jet_oss=5
-index_jet_enterprise=6
-index_jet_man_center=7
-index_snappydata=8
-index_spark=9
-
-#
-# Start interactive shell
-#
-function userPrompts
-{
-REDO=true
-while [ "$REDO" == "true" ]; do
-   REDO=true
-   INNER_LOOP=true
-   while [ "$INNER_LOOP" == "true" ]; do
-      echo "Enter the PadoGrid environment base directory path. All of the products will be installed in this directory."
-      echo "[$PADOGRID_ENV_BASE_PATH]":
-      read -p "" INPUT
-      if [ "$INPUT" == "" ]; then
-         __BASE_PATH="$PADOGRID_ENV_BASE_PATH"
-      else
-         __BASE_PATH="$INPUT"
-      fi
-      if [ ! -d "$__BASE_PATH" ]; then
-         if [ -f "$__BASE_PATH" ]; then
-            echo "Invalid path. The specified path exists and is not a directory."
-            continue;
-         fi
-      fi
-      INNER_LOOP=false
-      PADOGRID_ENV_BASE_PATH="$__BASE_PATH"
-   done
-
-   # Installed products
-   for i in $(seq 0 $end_index); do
-     if [ -d "$PADOGRID_ENV_BASE_PATH/products/${PRODUCT_ARRAY[$i]}" ]; then
-        PRODUCT_INSTALLED_ARRAY[$i]="yes"
-        PRODUCT_INSTALL_ARRAY[$i]="no"
-     else
-        PRODUCT_INSTALLED_ARRAY[$i]="no"
-        PRODUCT_INSTALL_ARRAY[$i]="yes"
-     fi
-   done
-
-   # Install products
-   __REDO=true
-   while [ "$__REDO" == "true" ]; do
-      echo ""
-      echo "The latest versions of the supported products available for installation are"
-      echo "listed below. [installed] indicates the product has already been installed."
-      echo "You can reinstall products by entering 'yes'."
-      echo ""
-      for i in $(seq 0 $end_index); do
-        if [ "${PRODUCT_INSTALLED_ARRAY[$i]}" == "yes" ]; then
-           __TAIL="[installed] [${PRODUCT_INSTALL_ARRAY[$i]}]"
-        else
-           __TAIL="[${PRODUCT_INSTALL_ARRAY[$i]}]"
-        fi
-        echo "[$i] ${PRODUCT_ARRAY[$i]} $__TAIL"
-      done
-      echo ""
-
-      for i in $(seq 0 $end_index); do
-         __REDO=true
-         __PRODUCT="${PRODUCT_ARRAY[$i]}"
-         INNER_LOOP=true
-         while [ "$INNER_LOOP" == "true" ]; do
-            __DEFAULT_VALUE=${PRODUCT_INSTALL_ARRAY[$i]}
-            read -p "Install [$i] $__PRODUCT (y/n)? [$__DEFAULT_VALUE]: " INPUT
-            # trim string
-            INPUT=`echo "$INPUT" | xargs`
-            if [ "$INPUT" == "" ]; then
-               INPUT=$__DEFAULT_VALUE
-            fi
-            if [ "$INPUT" == "y" ] || [ "$INPUT" == "yes" ]; then
-               PRODUCT_INSTALL_ARRAY[$i]="yes"
-               INNER_LOOP=false;
-            elif [ "$INPUT" == "n" ] || [ "$INPUT" == "no" ]; then
-               PRODUCT_INSTALL_ARRAY[$i]="no"
-               INNER_LOOP=false;
-            fi
-         done
-      done
-      echo ""
-      echo "You have selected the following products to install."
-      echo ""
-      for i in $(seq 0 $end_index); do
-         if [ "${PRODUCT_INSTALL_ARRAY[$i]}" == "yes" ]; then
-            echo "[$i] ${PRODUCT_ARRAY[$i]}"
-         fi
-      done
-      INNER_LOOP=true
-      while [ "$INNER_LOOP" == "true" ]; do
-         read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
-         case $INPUT in
-            [Cc]* ) __REDO=false; INNER_LOOP=false;;
-            [Rr]* ) __REDO=true; INNER_LOOP=false;;
-            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
-         esac
-      done
-   done
-
-   # Confirm
+if [ $INSTALL_COUNT -eq 0 ]; then
    echo ""
-   echo "The selected products will be downlaoded and installed in the following directories."
+   echo "Product installation canceled. No products selected."
    echo ""
-   echo "$PADOGRID_ENV_BASE_PATH/downlods"
-   echo "$PADOGRID_ENV_BASE_PATH/products"
-   echo ""
-   REDO=true
-   INNER_LOOP=true
-   while [ "$INNER_LOOP" == "true" ]; do
-      read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
-      case $INPUT in
-         [Cc]* ) REDO=false; INNER_LOOP=false;;
-         [Rr]* ) REDO=true; INNER_LOOP=false;;
-         [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
-      esac
-   done
-done
-}
-
-if [ "$QUIET" == "false" ]; then
-   userPrompts
+   exit
 fi
 
-echo ""
-echo "Installing PadoGrid products..."
+#
+# Install user-entered versions
+#
 
 PADOGRID_DOWNLOADS_PATH="$PADOGRID_ENV_BASE_PATH/downloads"
 PADOGRID_PRODUCTS_PATH="$PADOGRID_ENV_BASE_PATH/products"
-PADOGRID_SNAPSHOTS_PATH="$PADOGRID_ENV_BASE_PATH/snapshots"
-PADOGRID_WORKSPACES_PATH="$PADOGRID_ENV_BASE_PATH/workspaces"
 
 # downloads
 if [ ! -d "$PADOGRID_DOWNLOADS_PATH" ]; then
@@ -712,117 +1132,67 @@ if [ ! -d "$PADOGRID_PRODUCTS_PATH" ]; then
    mkdir -p "$PADOGRID_PRODUCTS_PATH"
 fi
 
-# snapshots
-if [ ! -d "$PADOGRID_SNAPSHOTS_PATH" ]; then
-   mkdir -p "$PADOGRID_SNAPSHOTS_PATH"
+if [ "$PADOGRID_VERSION" != "" ]; then
+   PADOGRID_RELEASE="padogrid_$PADOGRID_VERSION"
+   PADOGRID_TARBALL="$PADOGRID_RELEASE.tar.gz"
+   #installProduct "padogrid" "simulate"
+   installProduct "padogrid"
 fi
-
-# workspaces (RWEs)
-if [ ! -d "$PADOGRID_WORKSPACES_PATH" ]; then
-   mkdir -p "$PADOGRID_WORKSPACES_PATH"
+if [ "$GEODE_VERSION" != "" ]; then
+   GEODE_RELEASE="apache-geode-$GEODE_VERSION"
+   GEODE_TARBALL="$GEODE_RELEASE.tgz"
+   # installProduct "geode" "simulate"
+   installProduct "geode"
 fi
-
-for i in $(seq 0 $end_index); do
-  if [ "${PRODUCT_INSTALL_ARRAY[$i]}" == "yes" ]; then
-     echo [$i] ${PRODUCT_ARRAY[$i]}
-#     installProduct "${PRODUCT_NAME_ARRAY[$i]}" "simulate"
-     installProduct "${PRODUCT_NAME_ARRAY[$i]}"
-     if [ $i == $index_geode ]; then
-        GEODE_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_hazelcast_oss ]; then
-        HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_hazelcast_enterprise ]; then
-        HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_hazelcast_man_center ]; then
-        HAZELCAST_MC_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_jet_oss ]; then
-        JET_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_jet_enterprise ]; then
-        JET_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_jet_man_center ]; then
-        JET_MC_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_snappydata ]; then
-        SNAPPYDATA_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     elif [ $i == $index_spark ]; then
-        SPARK_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[$i]}"
-     fi
-     echo ""
-  fi
-done
-
-echo "PadoGrid Installation complete."
-echo ""
-
-# Check if an RWE exists in the workspaces dir
-pushd $PADOGRID_WORKSPACES_PATH > /dev/null 2>&1
-RWE_EXISTS="false"
-for i in *; do
-   if [ -d "$i" ]; then
-      if [ -f "$i/initenv.sh" ]; then 
-         RWE_EXISTS="true"
-         break;
-      fi
+if [ "$HAZELAST_ENTERPRISE_VERSION" != "" ]; then
+   HAZELCAST_ENTERPRISE_RELEASE="hazelcast-enterprise-$HAZELCAST_ENTERPRISE_VERSION"
+   HAZELCAST_ENTERPRISE_TARBALL="$HAZELCAST_ENTERPRISE_RELEASE.tar.gz"
+   # installProduct "hazelcast-enterprise" "simulate"
+   installProduct "hazelcast-enterprise"
+fi
+if [ "$HAZELAST_OSS_VERSION" != "" ]; then
+   HAZELCAST_OSS_RELEASE="hazelcast-$HAZELCAST_OSS_VERSION"
+   HAZELCAST_OSS_TARBALL="$HAZELCAST_OSS_RELEASE.tar.gz"
+   # installProduct "hazelcast-oss" "simulate"
+   installProduct "hazelcast-oss"
+fi
+if [ "$HAZELAST_MANAGEMENT_CENTER_VERSION" != "" ]; then
+   HAZELCAST_MC_RELEASE="hazelcast-management-center-$HAZELCAST_MANAGEMENT_CENTER_VERSION"
+   HAZELCAST_MC_TARBALL="$HAZELCAST_MC_RELEASE.tar.gz"
+   # installProduct "hazelcast-management-center" "simulate"
+   installProduct "hazelcast-management-center"
+fi
+if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
+   JET_ENTERPRISE_RELEASE="hazelcast-jet-enterprise-$JET_ENTERPRISE_VERSION"
+   JET_ENTERPRISE_TARBALL="$JET_ENTERPRISE_RELEASE.tar.gz"
+   # installProduct "jet-enterprise" "simulate"
+   installProduct "jet-enterprise"
+fi
+if [ "$JET_OSS_VERSION" != "" ]; then
+   JET_OSS_RELEASE="hazelcast-jet-$JET_OSS_VERSION"
+   JET_OSS_TARBALL="$JET_OSS_RELEASE.tar.gz"
+   # installProduct "jet-oss" "simulate"
+   installProduct "jet-oss"
+fi
+if [ "$JET_MANAGEMENT_CENTER_VERSION" != "" ]; then
+   if [[ "$JET_MANAGEMENT_CENTER_VERSION" == *"4.20"* ]]; then
+      JET_MC_RELEASE="hazelcast-management-center-$JET_MANAGEMENT_CENTER_VERSION"
+   else
+      JET_MC_RELEASE="hazelcast-jet-management-center-$JET_MANAGEMENT_CENTER_VERSION"
    fi
-done
-popd > /dev/null 2>&1
-
-# If RWEs do not exist then create one
-if [ "$RWE_EXISTS" == "false" ]; then
-   __PADOGRID_HOME="$PADOGRID_PRODUCTS_PATH/${PRODUCT_ARRAY[0]}"
-   if [ -f "$__PADOGRID_HOME/bin_sh/create_rwe" ]; then
-      echo "Creating your first rwe..."
-      echo ""
-
-      # Set default workspaces home
-      PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/myrwe"
-
-      # Find all installed products
-      pushd $PADOGRID_PRODUCTS_PATH > /dev/null 2>&1
-      for i in *; do
-        if [[ "$i" == **"geode"** ]]; then
-          GEODE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"hazelcast-enterprise"** ]]; then
-          HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"hazelcast-jet-enterprise"** ]]; then
-          JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"hazelcast-management-center"** ]]; then
-          HAZELCAST_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"hazelcast-jet-management-center"** ]]; then
-          JET_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"hazelcast-jet"** ]]; then
-          JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"hazelcast"** ]]; then
-          HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"snappydata"** ]]; then
-          SNAPPYDATA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        elif [[ "$i" == **"spark"** ]]; then
-          SPARK_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-#        elif [[ "$i" == **"gemfire"** ]]; then
-#          GEMFIRE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-#        elif [[ "$i" == **"coherence"** ]]; then
-#          COHERENCE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-        fi
-      done
-      popd > /dev/null 2>&1
-
-      TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
-      # product homes
-      echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
-      echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
-      echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
-      echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
-      echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
-      echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
-      echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
-      echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
-      echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
-#      echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
-#      echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
-      if [ "$QUIET" == "false" ]; then
-         $__PADOGRID_HOME/bin_sh/create_rwe -env $TMP_ENV_FILE
-      else
-         $__PADOGRID_HOME/bin_sh/create_rwe -quiet -rwe myrwe -product "$HAZELCAST_HOME" -env $TMP_ENV_FILE
-      fi
-      rm $TMP_ENV_FILE
-   fi
+   JET_MC_TARBALL="$JET_MC_RELEASE.tar.gz"
+   # installProduct "jet-management-center" "simulate"
+   installProduct "jet-management-center"
+fi
+if [ "$SNAPPYDATA_VERSION" != "" ]; then
+   SNAPPYDATA_RELEASE="snappydata-$SNAPPYDATA_VERSION-bin"
+   SNAPPYDATA_TARBALL="$SNAPPYDATA_RELEASE.tar.gz"
+   # installProduct "snappydata" "simulate"
+   installProduct "snappydata"
+fi
+if [ "$SPARK_VERSION" != "" ]; then
+   SPARK_RELEASE="spark-$SPARK_VERSION"
+   SPARK_TARBALL="$SPARK_RELEASE.tgz"
+   # installProduct "spark" "simulate"
+   installProduct "spark"
 fi

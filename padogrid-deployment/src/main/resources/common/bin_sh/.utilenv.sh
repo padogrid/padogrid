@@ -2805,6 +2805,153 @@ function getHostIPv4List
 }
 
 #
+# Returns the sorted list of the specified list that contains product versions
+# @param versionList
+#
+function sortVersionList
+{
+   local VERSION_LIST="$1"
+   local TMP_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").txt
+   echo 
+   echo "" > $TMP_FILE
+   if [ -f $TMP_FILE ]; then
+      rm $TMP_FILE
+   fi
+   touch $TMP_FILE
+   for i in $VERSION_LIST; do
+      echo "$i" >> $TMP_FILE
+   done
+   SORTED_VERSIONS=$(sort -rV $TMP_FILE)
+   rm $TMP_FILE
+   echo $SORTED_VERSIONS
+}
+
+#
+# Determines versions of all installed products by scanning the products base directory.
+# This function sets the following arrays.
+#    PADOGRID_VERSIONS
+#    GEMFIRE_VERSIONS
+#    GEODE_VERSIONS
+#    HAZELCAST_ENTERPRISE_VERSIONS
+#    HAZELCAST_OSS_VERSIONS
+#    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+#    JET_ENTERPRISE_VERSIONS
+#    JET_OSS_VERSIONS
+#    JET_MANAGEMENT_CENTER_VERSIONS
+#    SNAPPYDATA_VERSIONS
+#    SPARK_VERSIONS
+#
+# @required PADOGRID_ENV_BASE_PATH 
+#
+function determineInstalledProductVersions
+{
+   PADOGRID_VERSIONS=""
+   GEMFIRE_VERSIONS=""
+   GEODE_VERSIONS=""
+   HAZELCAST_ENTERPRISE_VERSIONS=""
+   HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
+   JET_ENTERPRISE_VERSIONS=""
+   JET_OSS_VERSIONS=""
+   HAZELCAST_OSS_VERSIONS=""
+   JET_MANAGEMENT_CENTER_VERSIONS=""
+   SNAPPYDATA_VERSIONS=""
+   SPARK_VERSIONS=""
+
+   if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
+      pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
+
+      # To prevent wildcard not expanding in a for-loop if files do not exist
+      shopt -s nullglob
+
+      local __versions
+      local henterv hmanv jenterv jmanv jossv hossv
+
+      # PadoGrid
+      __versions=""
+      for i in padogrid_*; do
+         __version=${i#padogrid_}
+         __versions="$__versions $__version "
+      done
+      PADOGRID_VERSIONS=$(sortVersionList "$__versions")
+
+      # GemFire
+      __versions=""
+      for i in pivotal-gemfire-*; do
+         __version=${i#pivotal-gemfire-}
+         __versions="$__versions $__version "
+      done
+      GEMFIRE_VERSIONS=$(sortVersionList "$__versions")
+
+      # Geode
+      __versions=""
+      for i in apache-geode-*; do
+         __version=${i#apache-geode-}
+         __versions="$__versions $__version "
+      done
+      GEODE_VERSIONS=$(sortVersionList "$__versions")
+
+      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
+      local hossv henterv hmanv jossv jenterv jmanv
+      for i in hazelcast-*; do
+         if [[ "$i" == "hazelcast-enterprise-"** ]]; then
+            __version=${i#hazelcast-enterprise-}
+            henterv="$henterv $__version"
+         elif [[ "$i" == "hazelcast-management-center-"** ]]; then
+            __version=${i#hazelcast-management-center-}
+            hmanv="$hmanv $__version"
+         elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
+            __version=${i#hazelcast-jet-enterprise-}
+            jenterv="$jenterv $__version"
+         elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
+            __version=${i#hazelcast-jet-management-center-}
+            jmanv="$jmanv $__version"
+         elif [[ "$i" == "hazelcast-jet-"** ]]; then
+            __version=${i#hazelcast-jet-}
+            jossv="$jossv $__version"
+         elif [[ "$i" == "hazelcast-"** ]]; then
+            __version=${i#hazelcast-}
+            hossv="$hossv $__version"
+         fi
+      done
+
+      HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
+      HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
+      JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
+      JET_OSS_VERSIONS=$(sortVersionList "$jossv")
+      HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
+
+      # Hazelcast/Jet  management center merged starting 4.2021.02
+      for i in ${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}; do
+         if [[ "$i" == "4.2021"* ]]; then
+            jmanv="$i $jmanv"
+         fi
+      done
+      JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
+
+      # SnappyData
+      __versions=""
+      for i in snappydata-*; do
+         __version=${i#snappydata-}
+         #__version=${__version%-bin}
+         __versions="$__versions $__version "
+      done
+      SNAPPYDATA_VERSIONS=$(sortVersionList "$__versions")
+
+      # Spark
+      __versions=""
+      for i in spark-*; do
+         __version=${i#spark-}
+         __version=${__version%-bin}
+         __versions="$__versions $__version "
+      done
+      SPARK_VERSIONS=$(sortVersionList "$__versions")
+
+      popd > /dev/null 2>&1
+            
+   fi
+}
+
+#
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
 #   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, spark
@@ -3110,3 +3257,4 @@ function getOptValue
    done
    echo "$__VALUE"
 }
+
