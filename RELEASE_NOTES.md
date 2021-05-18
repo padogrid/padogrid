@@ -4,11 +4,11 @@
 
 ## Version 0.9.6-SNAPSHOT
 
-### Release Date: 05/14/21
+### Release Date: 05/18/21
 
 - Added support for managing Pado. In anticipation of the upcoming release of Pado that runs on the latest versions of Geode and GemFire, PadoGrid now includes support for managing Pado grids.
 - Added `make_cluster` for creating a cluster with a product of your choice. Unlike `create_cluster` which is product specific, `make_cluster` allows you to specify any of the supported products.
-- Added the `install_padogrid` command for installing the latest product versions. This command completely automates the PadoGrid installation process. By default, it runs in the interactive mode, allowing you to select the products to install. For hands-free, auto-installtion, run `install_padogrid -quiet`. It automatically installs PadoGrid along with all the downlodable products and creates an RWE if it does not exist.
+- Added the `install_padogrid` command for automatically installing one or more products. By default, it runs in the interactive mode, providing product version lists from which you can select products to install. For auto-installation, run `install_padogrid -quiet` which non-interactively installs PadoGrid along with all the latest downlodable products. Note that it also creates a new RWE if you are installing PadoGrid for the first time in the specified PadoGrid environment base path.
 - Added `switch_pod` and `pwd_pod` for pod context switching.
 - Added support for running multi-clusters in a single workspace. With this support, you can now create clusters for any products in a local workspace and run them concurrently, provided that there are no port conflicts. Please see the **Default Port Numbers** section in the manual for details.
 - Added lifecycle management support for Spark which joins the growing list of clustering products natively supported by PadoGrid out of the box. This release supports the Spark's "standalone" deployment option.
