@@ -92,6 +92,7 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
+DEFAULT_PADO_CLUSTER="mypado"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
@@ -604,10 +605,14 @@ fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
 if [ "$CLUSTER_TYPE" == "gemfire" ]; then
-   __CLASSPATH="$__CLASSPATH:$GEMFIRE_HOME/lib/*"
+   __CLASSPATH="$__CLASSPATH:$GEMFIRE_HOME/lib/geode-dependencies.jar"
 else
-   __CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/*"
+   __CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/geode-dependencies.jar"
 fi
+if [ "$RUN_TYPE" == "pado" ]; then
+   __CLASSPATH="$__CLASSPATH:$PADO_HOME/plugins/*"
+fi
+
 export CLASSPATH="$__CLASSPATH"
 
 #

@@ -96,6 +96,7 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
+DEFAULT_PADO_CLUSTER="mypado"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
@@ -587,11 +588,20 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
 
    # Set Jet MC jar
    if [ "$JET_MC_HOME" != "" ]; then
-      for file in $JET_MC_HOME/hazelcast-jet-management-center-*; do
-         file=${file##*hazelcast\-jet\-management\-center\-}
-         JET_MC_VERSION=${file%.jar}
-      done
-      JET_MC_JAR=hazelcast-jet-management-center-${JET_MC_VERSION}.jar 
+      if [[ "$JET_MC_HOME" == **"202"** ]]; then
+         for file in $JET_MC_HOME/hazelcast-management-center-*; do
+            file=${file##*hazelcast\-management\-center\-}
+            JET_MC_VERSION=${file%.jar}
+         done
+         JET_MC_JAR=hazelcast-management-center-${JET_MC_VERSION}.jar
+      else
+         # TODO: Drop the following support before 2021 ends
+         for file in $JET_MC_HOME/hazelcast-jet-management-center-*; do
+            file=${file##*hazelcast\-jet\-management\-center\-}
+            JET_MC_VERSION=${file%.jar}
+         done
+         JET_MC_JAR=hazelcast-jet-management-center-${JET_MC_VERSION}.jar 
+      fi
    fi
 else
    if [ "$HAZELCAST_HOME" != "" ]; then

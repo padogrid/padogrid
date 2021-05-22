@@ -135,7 +135,7 @@ function getMcName
 #
 function getAddonApps {
    if [ "$1" == "jet" ]; then
-      __APPS="jet_demo"
+      __APPS="desktop jet_demo"
    else
       pushd $PADOGRID_HOME/${PRODUCT}/apps > /dev/null 2>&1
       __APPS=""

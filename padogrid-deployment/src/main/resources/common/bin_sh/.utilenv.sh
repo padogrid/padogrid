@@ -2643,6 +2643,7 @@ function printClassPath()
 {
    # '()' for subshell to localize IFS
    (
+   local IFS
    if [[ ${OS_NAME} == CYGWIN* ]]; then
       IFS=';';
    else
@@ -2653,6 +2654,7 @@ function printClassPath()
          echo "$token"
       fi
    done
+   unset IFS
    )
 }
 
@@ -2830,6 +2832,7 @@ function sortVersionList
 # Determines versions of all installed products by scanning the products base directory.
 # This function sets the following arrays.
 #    PADOGRID_VERSIONS
+#    PADO_VERSIONS
 #    GEMFIRE_VERSIONS
 #    GEODE_VERSIONS
 #    HAZELCAST_ENTERPRISE_VERSIONS
@@ -2846,6 +2849,7 @@ function sortVersionList
 function determineInstalledProductVersions
 {
    PADOGRID_VERSIONS=""
+   PADO_VERSIONS=""
    GEMFIRE_VERSIONS=""
    GEODE_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
@@ -2874,6 +2878,14 @@ function determineInstalledProductVersions
       done
       PADOGRID_VERSIONS=$(sortVersionList "$__versions")
 
+      # Pado
+      __versions=""
+      for i in pado_*; do
+         __version=${i#pado_}
+         __versions="$__versions $__version "
+      done
+      PADO_VERSIONS=$(sortVersionList "$__versions")
+
       # GemFire
       __versions=""
       for i in pivotal-gemfire-*; do
@@ -2896,6 +2908,14 @@ function determineInstalledProductVersions
          if [[ "$i" == "hazelcast-enterprise-"** ]]; then
             __version=${i#hazelcast-enterprise-}
             henterv="$henterv $__version"
+            # Get man center version included in the hazelcast distribution
+            for j in $i/management-center/*.jar; do
+               if [[ "$j" == *"hazelcast-management-center"* ]]; then
+                  local mcv=${j#*hazelcast-management-center-}
+                  hmanv="$hmanv ${mcv%.jar}"
+                  break;
+               fi
+             done
          elif [[ "$i" == "hazelcast-management-center-"** ]]; then
             __version=${i#hazelcast-management-center-}
             hmanv="$hmanv $__version"
@@ -2911,9 +2931,18 @@ function determineInstalledProductVersions
          elif [[ "$i" == "hazelcast-"** ]]; then
             __version=${i#hazelcast-}
             hossv="$hossv $__version"
+            # Get man center version included in the hazelcast distribution
+            for j in $i/*.jar; do
+               if [[ "$j" == *"hazelcast-management-center"* ]]; then
+                  local mcv=${j#*hazelcast-management-center-}
+                  hmanv="$hmanv ${mcv%.jar}"
+                  break;
+               fi
+             done
          fi
       done
 
+      hmanv=$(unique_words "$hmanv")
       HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
       HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
       JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
