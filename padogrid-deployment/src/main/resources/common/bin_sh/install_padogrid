@@ -45,6 +45,11 @@ if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
    fi
 fi      
 
+# If the base path is not writable then set it to the default PadoGrid base path.
+if [ ! -w "$PADOGRID_ENV_BASE_PATH" ]; then
+   PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+fi
+
 #
 # NOTE: To make this command independent, some of the functions defined in the file are duplicated
 #       from the .utilenv.sh and .argenv.sh files.
@@ -1324,7 +1329,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
 
    if [ -f "$__PADOGRID_HOME/bin_sh/create_rwe" ]; then
       echo "PadoGrid: $__PADOGRID_HOME"
-      echo "Creating your first rwe..."
+      echo ""
+      echo "Creating your first rwe in the specified PadoGrid environment..."
       echo ""
 
       TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh

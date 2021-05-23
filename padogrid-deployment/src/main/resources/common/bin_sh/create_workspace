@@ -150,6 +150,12 @@ if [ "$PADOGRID_WORKSPACES_HOME" == "" ] || [ ! -d $PADOGRID_WORKSPACES_HOME ]; 
    fi
 fi
 
+# TODO: It seems .argenv.sh source-in of ENV_ARG has no effect due to recurrent source-ins.
+#       For now, source in again.
+if [ "$ENV_ARG" != "" ]; then
+   . $ENV_ARG
+fi
+
 if [ "$JAVA_HOME_ARG" == "" ]; then
    JAVA_HOME_ARG="$JAVA_HOME"
 fi
@@ -830,11 +836,6 @@ fi
 
 # Create product env file
 createProductEnvFile "$PRODUCT" "$PADOGRID_WORKSPACES_HOME"
-
-# Update the defaultenv.sh file if this is the sole workspace
-if [ "$(list_workspaces)" == "$WORKSPACE" ]; then
-   updateDefaultEnv
-fi
 
 #
 # Display workspace information
