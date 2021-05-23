@@ -1285,7 +1285,7 @@ function switch_rwe
       echo "   to the specified directory. To specify the nested directory names, use the tab"
       echo "   key to drill down the directory structure. If the specified nested directory"
       echo "   is a workspace or workspace component, then it also automatically switches to"
-      "        their respective context."
+      echo "   their respective context."
       echo ""
       echo "   If the workspace directory is not specified and the current workspace name exists in"
       echo "   the target RWE, then it switches into that workspace. Otherwise, it switches to"
@@ -2715,7 +2715,7 @@ function printSeeAlsoList
    local FILTER=$1
    local EXCLUDE=$2
    pushd $SCRIPT_DIR > /dev/null 2>&1
-   local COMMANDS=`ls $FILTER`
+   local COMMANDS=`ls $FILTER 2> /dev/null`
    popd > /dev/null 2>&1
    local LINE=""
    COMMANDS=($COMMANDS)
