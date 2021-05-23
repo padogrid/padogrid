@@ -872,6 +872,7 @@ function getPropertiesArray
             let index=index+1
          fi
       done < "$__PROPERTIES_FILE"
+      unset IFS
    fi
 }
 
@@ -919,6 +920,7 @@ function getProperty2
             break;
          fi
       done < "$__PROPERTIES_FILE"
+      unset IFS
       if [ -z $__VALUE ]; then
          echo $3
       else
@@ -1006,6 +1008,7 @@ function setProperty
             break;
          fi
       done < "$__PROPERTIES_FILE"
+      unset IFS
       if [ "$__found" == "true" ]; then
          # SED backup prefix
          if [[ ${OS_NAME} == DARWIN* ]]; then
@@ -1136,6 +1139,7 @@ function getPrivateNetworkAddresses
             fi
          fi  
       done < "$__TMP_FILE"
+      unset IFS
       rm $__TMP_FILE
    else
       ifconfig > $__TMP_FILE
@@ -1150,6 +1154,7 @@ function getPrivateNetworkAddresses
             fi
          fi  
       done < "$__TMP_FILE"
+      unset IFS
    fi
    rm -f $__TMP_FILE
    echo $__PRIVATE_IP_ADDRESSES

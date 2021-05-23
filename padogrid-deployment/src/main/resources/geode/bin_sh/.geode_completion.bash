@@ -24,6 +24,10 @@ fi
 . $SCRIPT_DIR/.addonenv.sh -script_dir $SCRIPT_DIR
 . $SCRIPT_DIR/.utilenv.sh
 
+# Unset IFS in case it is not reset by some of the commands executed.
+# Without this, command completion may not properly parse options.
+unset IFS
+
 __get_pod()
 {
    local __found=false
@@ -308,7 +312,7 @@ __padogrid_complete()
    else
       for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
          __WORD="${COMP_WORDS[$i]}"
-         if [ "$__WORD" != "$cur_word" ]; then
+         if [[ "$__WORD" == "-"* ]] && [ "$__WORD" != "$cur_word" ]; then
             type_list=${type_list/$__WORD/}
          fi
       done
@@ -821,7 +825,7 @@ __command_complete()
    # Remove typed options from the list
    for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
       __WORD="${COMP_WORDS[$i]}"
-      if [ "$__WORD" != "$cur_word" ]; then
+      if [[ "$__WORD" == "-"* ]] && [ "$__WORD" != "$cur_word" ]; then
          type_list=${type_list/$__WORD/}
       fi
    done
