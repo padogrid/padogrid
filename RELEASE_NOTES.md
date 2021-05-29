@@ -4,19 +4,24 @@
 
 ## Version 0.9.6-SNAPSHOT
 
-### Release Date: 05/22/21
+### Release Date: 05/29/21
 
 - Added support for managing Pado. In anticipation of the upcoming release of Pado that runs on the latest versions of Geode and GemFire, PadoGrid now includes support for managing Pado grids.
 - Added `make_cluster` for creating a cluster with a product of your choice. Unlike `create_cluster` which is product specific, `make_cluster` allows you to specify any of the supported products.
 - Added `show_products` for displaying installed product versions with the current workspace version hightlighted.
 - Added the `install_padogrid` command for automatically installing one or more products. By default, it runs in the interactive mode, providing product version lists from which you can select products to install. For auto-installation, run `install_padogrid -quiet` which non-interactively installs PadoGrid along with all the latest downlodable products. Note that it also creates a new RWE if you are installing PadoGrid for the first time in the specified PadoGrid environment base path.
 - Added `switch_pod` and `pwd_pod` for pod context switching.
-- Added support for running multi-clusters in a single workspace. With this support, you can now create clusters for any products in a local workspace and run them concurrently, provided that there are no port conflicts. Please see the **Default Port Numbers** section in the manual for details.
+- Added support for running heterogeneous cluster products in a single workspace. With this support, you can now create clusters for any products in a local workspace and run them concurrently, provided that there are no port conflicts. Please see the [**Default Port Numbers**](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers) section in the manual for details.
 - Added lifecycle management support for Spark which joins the growing list of clustering products natively supported by PadoGrid out of the box. This release supports the Spark's "standalone" deployment option.
 - The pod VMs are now configured without the Avahi network discovery service by default. To enable Avahi, specify the `-avahi` option when executing the `create_pod` command.
 - Clusters created in the VM-enabled workspaces can now seamlessly run with or without pods. If a cluster is attached to a pod, then it automatcially inherits the workspace's VM configuration, allowing you to manage clusters from either the host OS or any of the guest OS VMs.
 - Vagrant VMs can now be logged in without password. Examples: `ssh vagrant@pnode.local`, `ssh vagrant@node-01.local`, etc.
 - Vagrant pods are now configured as VMs.
+
+### Known Issues
+
+- For cluster management, Cygwin support is limited to Hazelcast and Coherence. The other products may not work due to limitations and bugs in their respective scripts. To support the remaining products, PadoGrid will include extended product scripts in the next lrease. Note that non-cluster features are fully supported for all products on Cygwin.
+- This release may not be fully compatible with the previous releases. You might encounter cluster and auto-completion issues if your workspaces were created prior to this release. This is due to the addition of the new support for hosting heterogeneous products per workspace. To avoid this problem, please migrate your workspaces to this release by following the instructions provided in the [**Migrating Workspaces**]((https://github.com/padogrid/padogrid/wiki/Migrating-Workspaces) section of the PadoGrid manual.
 
 ----
 
