@@ -27,7 +27,11 @@ function getMcPid
 {
    __MC=$1
    __WORKSPACE=$2
-   mcs=`jps -v | grep "hazelcast.mc.name=$__MC" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   # Use eval to handle commands with spaces
+   local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep hazelcast.mc.name=$__MC"
+   mcs=$(eval $__COMMAND)
+   mcs=$(echo $mcs | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
+   #mcs=`jps -v | grep "hazelcast.mc.name=$__MC" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $mcs; do
       spids="$j $spids"

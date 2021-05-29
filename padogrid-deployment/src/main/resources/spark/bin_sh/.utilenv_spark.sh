@@ -47,7 +47,11 @@ function getMasterPid
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
-      masters=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MASTER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      # Use eval to handle commands with spaces
+      local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__MASTER"
+      masters=$(eval $__COMMAND)
+      masters=$(echo $masters | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
+      #masters=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MASTER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    fi
    spids=""
    for j in $masters; do

@@ -529,11 +529,23 @@ else
          nohup $RUN_SCRIPT >> $LOG_FILE &
       fi
    else
-      echo gfsh start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH
-      if [ "$FG_SPECIFIED" == "true" ]; then
-         gfsh start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH
+      if [[ ${OS_NAME} == CYGWIN* ]]; then
+         # Start gfsh using gfsh.bat on Windows
+         GFSH="$PRODUCT_HOME/bin/gfsh.bat"
+         export GF_JAVA=$JAVA_HOME/bin/java.exe
+         # GF_JAVA required by gfsh.bat
+         GF_JAVA="$(cygpath -wp "$GF_JAVA")"
+         export GF_JAVA
       else
-         nohup gfsh start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH >> $LOG_FILE &
+         GFSH=gfsh
+         GF_JAVA="$JAVA_HOME/bin/java"
+         export GF_JAVA
+      fi
+      echo $GFSH start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         $GFSH start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH
+      else
+         nohup $GFSH start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH >> $LOG_FILE &
       fi
    fi
    PID=`getMemberPid $MEMBER $WORKSPACE`
@@ -568,7 +580,7 @@ echo "        JMX_PORT: $JMX_PORT"
 if [ "$JMX_ENABLED" == "true" ]; then
 echo "         JMX_URL: $JMX_URL"
 fi
-echo "            JAVA: $JAVA"
+echo "         GF_JAVA: $GF_JAVA"
 if [ "$RUN_SCRIPT" != "" ]; then
 echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
 fi

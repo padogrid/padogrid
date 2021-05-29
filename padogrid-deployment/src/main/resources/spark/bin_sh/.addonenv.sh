@@ -522,8 +522,9 @@ fi
 #
 # Java version
 #
-JAVA_VERSION=$($JAVA -version 2>&1)
-JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
+__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+JAVA_VERSION=$(eval $__COMMAND)
+JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
 JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 
 #

@@ -767,7 +767,11 @@ function getMemberPid
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
-      members=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MEMBER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      # Use eval to handle commands with spaces
+      local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__MEMBER"
+      members=$(eval $__COMMAND)
+      members=$(echo $members | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
+      #members=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MEMBER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    fi
    spids=""
    for j in $members; do
@@ -2593,20 +2597,25 @@ function getWorkspaceInfoList
    local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
    local JAVA_VERSION=""
    local JAVA_INFO=""
-   if [ -f $__JAVA_HOME/bin/java ]; then
-      JAVA_VERSION=$("$__JAVA_HOME/bin/java" -version 2>&1 | grep "version" | sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-      JAVA_INFO="java_$JAVA_VERSION"
+   if [ -f "$__JAVA_HOME/bin/java" ]; then
+      # Use eval to handle commands with spaces
+      local __COMMAND="\"$__JAVA_HOME/bin/java\" -version 2>&1 | grep version "
+      JAVA_VERSION=$(eval $__COMMAND)
+      JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+      JAVA_INFO="java_$JAVA_VERSION";
    fi
 
    local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
    if [ "$VM_ENABLED" == "true" ]; then
-      VM_WORKSPACE="vm, "
+      VM_WORKSPACE="vm, ";
    else
-      VM_WORKSPACE=""
+      VM_WORKSPACE="";
    fi
-   local PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh")
+   local PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh");
    # Remove blank lines from grep results. Pattern includes space and tab.
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
+
+   # TODO: For some reason, Cygwin does not print the beginning string...
    echo "${VM_WORKSPACE}${JAVA_INFO}, padogrid_$PADOGRID_VERSION"
 }
 

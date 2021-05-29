@@ -415,8 +415,20 @@ else
    if [ "$RUN_SCRIPT" != "" ]; then
       $RUN_SCRIPT >> $LOG_FILE &
    else
-      echo gfsh start locator $GFSH_OPTS $JAVA_OPTS
-      gfsh start locator $GFSH_OPTS $JAVA_OPTS
+      if [[ ${OS_NAME} == CYGWIN* ]]; then
+         # Start gfsh using gfsh.bat on Windows
+         GFSH="$PRODUCT_HOME/bin/gfsh.bat"
+         export GF_JAVA=$JAVA_HOME/bin/java.exe
+         # GF_JAVA required by gfsh.bat
+         GF_JAVA="$(cygpath -wp "$GF_JAVA")"
+         export GF_JAVA
+      else
+         GFSH=gfsh
+         GF_JAVA="$JAVA_HOME/bin/java"
+         export GF_JAVA
+      fi
+      echo $GFSH start locator $GFSH_OPTS $JAVA_OPTS
+      $GFSH start locator $GFSH_OPTS $JAVA_OPTS
       PID=`getLocatorPid $LOCATOR $WORKSPACE`
    fi
 fi
@@ -452,7 +464,7 @@ echo "JMX_MANAGER_PORT: $JMX_MANAGER_PORT"
 if [ "$LOCATOR_JMX_ENABLED" == "true" ]; then
 echo "         JMX_URL: $JMX_URL"
 fi
-echo "            JAVA: $JAVA"
+echo "         GF_JAVA: $GF_JAVA"
 if [ "$RUN_SCRIPT" != "" ]; then
 echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
 fi
