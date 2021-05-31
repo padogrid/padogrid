@@ -65,6 +65,7 @@ function getLocatorPid
 # This function is for clusters running on VMs whereas the getLocatorPid
 # is for pods running on the same machine.
 # @required VM_USER        VM ssh user name
+# @required VM_JAVA_HOME   VM Java home path
 # @optional VM_KEY         VM private key file path with -i prefix, e.g., "-i file.pem"
 # @param    host           VM host name or address
 # @param    locatorName    Unique locator name
