@@ -2,7 +2,7 @@
 
 ----
 
-## Version 0.9.6-SNAPSHOT
+## Version 0.9.6
 
 ### Release Date: 05/31/21
 
