@@ -4,9 +4,28 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 
+## Installation
+
+You can install PadoGrid and the supported data grid products by simply running the [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script.
+
+```bash
+curl -sO https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid
+chmod 755 install_padogrid
+
+# To install all the latest product releases in the default directory, i.e., ~/Padogrid:
+./install_padogrid -quiet
+
+# To install interactively:
+./install_padogrid
+```
+
+*Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
+
+[**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
+
 ## Downloads
 
-PadoGrid binary downloads are available from the *Releases* page:
+PadoGrid binary downloads are available from the *Releases* page. If your host does not have access to the Internet and you are unable to run `install_padogrid` then you can download a version from this link and install it manually.
 
 [PadoGrid Releases/Downloads](https://github.com/padogrid/padogrid/releases)
 
@@ -20,7 +39,7 @@ Online use case bundles:
 
 ## PadoGrid Brief
 
-PadoGrid is a collection of add-on components and tools specifically designed for [data grid products](#data-Grid-Products) to deliver out-of-the-box shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
+PadoGrid is a collection of add-on components and tools specifically designed for [data grid products](#data-Grid-Products) to deliver out-of-the-box, shrink-wrapped solutions. It introduces the concept of *distributed workspaces* for creating DevOps environments in which use cases can be quickly developed, tested, deployed and shared.
 
 A workspace provides a sandbox environment completely isolated from other workspaces and can host a wide range of software components from a simple app to a highly complex ecosystem with many data grid clusters, apps, VMs, and Docker/Kubernetes containers. You can, for example, create a workspace that federates multiple data grid clusters serving inventory and sales data, a workspace that streams database CDC records via Kafka, a workspace that handles streamed data into the federated clusters via one or more Apache Spark or Hazelcast Jet clusters, and yet another workspace that integrates data analytics tools for performing AI/ML operations and creating reports. PadoGrid consolidates your workspaces into a single operations center.
 
@@ -34,7 +53,6 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [Bundle Catalogs](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 - [Bundle Templates](https://github.com/padogrid/padogrid/wiki/Using-Bundle-Templates)
 - [Building PadoGrid](#building-padogrid)
-- [Installing PadoGrid](#installing-padogrid)
 
 ## PadoGrid Features
 
@@ -96,7 +114,9 @@ mvn install -Pcoherence
 ./build_all.sh -coherence -man
 ```
 
-## Installing `padogrid`
+## Installing `padogrid` you have built
+
+Released versions of PadoGrid are normally installed by running the `install_padogrid` command. For those that you have built, however, must be installed manually as describe in this section.
 
 Upon successful build, the following distribution files will be generated.
 
@@ -114,9 +134,9 @@ padogrid-deployment/target/assembly/padogrid-all_<version>.zip
 Inflate one of the distribution files in your file system. For example,
 
 ```bash
-mkdir ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.6-SNAPSHOT.tar.gz
-cd ~/Padogrid/products
+mkdir ~/Padogrid/snapshots
+tar -C ~/Padogrid/snapshots/ -xzf padogrid_0.9.6-SNAPSHOT.tar.gz
+cd ~/Padogrid/snapshots
 tree -L 1 padogrid_0.9.6-SNAPSHOT
 ```
 
@@ -143,7 +163,7 @@ padogrid_0.9.6-SNAPSHOT
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.6-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/snapshots/padogrid_0.9.6-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid on Docker and Podman

@@ -1216,7 +1216,7 @@ function retrieveRweEnvFile
 
 #
 # Updates the workspace envionment variables with the current values
-# in the .workspace file.
+# in the .workspace/workspaceenv.sh file.
 # @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
 # @required CLUSTER
 # @required POD
@@ -1227,17 +1227,28 @@ function updateWorkspaceEnvFile
    if [ "$__WORKSPACE_PATH" == "" ]; then
       __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
    fi
-   local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace"
    if [ ! -d "$__WORKSPACE_PATH" ]; then
       echo >&2 "Workspace does not exist."
       return 1
    fi
+
+   # Upgrade to the new release directory struture (0.9.6)
+   if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
+      if [ -f "$__WORKSPACE_PATH/.workspace" ]; then
+         rm -f "$__WORKSPACE_PATH/.workspace"
+      fi
+   fi
+   if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
+      mkdir "$__WORKSPACE_PATH/.workspace"
+   fi
+
+   local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace/workspaceenv.sh"
    echo "CLUSTER=$CLUSTER" > "$WORKSPACEENV_FILE"
    echo "POD=$POD" >> "$WORKSPACEENV_FILE"
 }
 
 #
-# Retrieves the workspace environment variables set in the .workspace file.
+# Retrieves the workspace environment variables set in the .workspace/workspaceenv.sh file.
 # @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
 #
 function retrieveWorkspaceEnvFile
@@ -1246,23 +1257,101 @@ function retrieveWorkspaceEnvFile
    if [ "$__WORKSPACE_PATH" == "" ]; then
       __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
    fi
-   local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace"
-   if [ -f "$WORKSPACEENV_FILE" ]; then
-      . "$WORKSPACEENV_FILE"
+   if [ -f "$__WORKSPACE_PATH/.workspace/workspaceenv.sh" ]; then
+      . "$__WORKSPACE_PATH/.workspace/workspaceenv.sh"
+   elif [ ! -d "$__WORKSPACE_PATH/.workspace" ] && [ -f "$__WORKSPACE_PATH/.workspace" ]; then
+      # For backward compatibility (0.9.6)
+      . "$__WORKSPACE_PATH/.workspace"
+      rm "$__WORKSPACE_PATH/.workspace"
    fi
    # If the cluster does not exist then pick the first cluster and pod in the workspace dir
-   if [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
-      local __CLUSTERS=$(list_clusters)
+   if [ "$CLUSTER" == "" ] || [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
+      local __CLUSTERS=$(ls $__WORKSPACE_PATH/clusters)
+      local __CLUSTER=""
       for i in $__CLUSTERS; do
-         CLUSTER=$i
+         __CLUSTER=$i
          break;
       done
-      local __PODS=$(list_pods)
-      for i in $__PODS; do
-         POD=$i
-         break;
-      done
+      CLUSTER=$__CLUSTER
       updateWorkspaceEnvFile "$__WORKSPACE_PATH"
+   fi
+   if [ "$POD" == "" ] || [ ! -d "$__WORKSPACE_PATH/pods/$POD" ]; then
+      local __PODS=$(ls $__WORKSPACE_PATH/pods)
+      local __POD=""
+      for i in $__PODS; do
+         __POD=$i
+         break;
+      done
+      POD=$__POD
+      updateWorkspaceEnvFile "$__WORKSPACE_PATH"
+   fi
+}
+
+#
+# Updates the product envionment variables with the current values
+# in the .cluster/clusterenv.sh file.
+# @param clusterPath Cluster path. If not specified then $PADOGRID_WORKSPACE/clusters/$CLUSTER is assigned.
+# @required PRODUCT
+# @required CLUSTER_TYPE
+#
+function updateClusterEnvFile
+{
+   local __CLUSTER_PATH="$1"
+   if [ "$__CLUSTER_PATH" == "" ]; then
+      __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   fi
+   if [ ! -d "$__CLUSTER_PATH" ]; then
+      echo >&2 "Cluster does not exist."
+      return 1
+   fi
+
+   # Upgrade to the new release directory struture (0.9.6)
+   if [ ! -d "$__CLUSTER_PATH/.cluster" ]; then
+      if [ -f "$__CLUSTER_PATH/.cluster" ]; then
+         rm -f "$__CLUSTER_PATH/.cluster"
+      fi
+   fi
+   if [ ! -d "$__CLUSTER_PATH/.cluster" ]; then
+      mkdir "$__CLUSTER_PATH/.cluster"
+   fi
+
+   local CLUSTERENV_FILE="$__CLUSTER_PATH/.cluster/clusterenv.sh"
+
+   # Override "gemfire" with "geode". Both products share resources under the name "geode".
+   # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
+   if [ "$PRODUCT" == "gemfire" ]; then
+      echo "PRODUCT=geode" > "$CLUSTERENV_FILE"
+   elif [ "$PRODUCT" == "jet" ]; then
+      echo "PRODUCT=hazelcast" > "$CLUSTERENV_FILE"
+   else
+      echo "PRODUCT=$PRODUCT" > "$CLUSTERENV_FILE"
+   fi
+   echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$CLUSTERENV_FILE"
+}
+
+#
+# Retrieves the cluster environment variables set in the .cluster/clusterenv.sh file.
+# @param clusterPath Cluster path. If not specified then PADOGRID_WORKSPACE is assigned.
+#
+function retrieveClusterEnvFile
+{
+   local __CLUSTER_PATH="$1"
+   if [ "$__CLUSTER_PATH" == "" ]; then
+      __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   fi
+   if [ -f "$__CLUSTER_PATH/.cluster/clusterenv.sh" ]; then
+      . "$__CLUSTER_PATH/.cluster/clusterenv.sh"
+   elif [ ! -d "$__CLUSTER_PATH/.cluster" ] && [ -f "$__CLUSTER_PATH/.cluster" ]; then
+      # For backward compatibility (0.9.6)
+      . "$__CLUSTER_PATH/.cluster"
+      rm "$__CLUSTER_PATH/.cluster"
+   fi
+   # Override "gemfire" with "geode". Both products share resources under the name "geode".
+   # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
+   if [ "$PRODUCT" == "gemfire" ]; then
+      PRODUCT="geode"
+   elif [ "$PRODUCT" == "jet" ]; then
+      PRODUCT="hazelcast"
    fi
 }
 
@@ -1344,9 +1433,7 @@ function switch_rwe
       . $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet
 
       # Source in the last switched cluster
-      if [ -f "$CLUSTERS_DIR/$CLUSTER/.cluster" ]; then
-         .  "$CLUSTERS_DIR/$CLUSTER/.cluster"
-      fi
+      retrieveClusterEnvFile
       cd_rwe $@
    else
       local __PATH=""
@@ -1385,9 +1472,14 @@ function switch_rwe
             echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
             return 1
          fi
+         
+         # Set PADOGRID_WORKSPACES_HOME here. It's a new RWE.
+         export PADOGRID_WORKSPACES_HOME="$NEW_RWE_DIR"
 
          # Retreive last switched cluster/pod
-         retrieveWorkspaceEnvFile
+         retrieveWorkspaceEnvFile "$NEW_WORKSPACE_DIR"
+         export CLUSTER
+         export POD
 
          if [ "$__COMPONENT_DIR_NAME" == "clusters" ] && [ "$__COMPONENT_NAME" != "" ]; then
              if [ -d "$NEW_WORKSPACE_DIR/clusters/$__COMPONENT_NAME" ]; then
@@ -1401,13 +1493,10 @@ function switch_rwe
              fi
          fi
 
-         # Source in the last switched cluster and pod
-         if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
-            .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
-         fi
-         if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
-            .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
-         fi
+         # Source in the last switched cluster (pod has no env file)
+         retrieveClusterEnvFile "$NEW_WORKSPACE_DIR/clusters/$CLUSTER"
+         export PRODUCT
+         export CLUSTER_TYPE
 
          # Initialze workspace
          . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
@@ -1422,25 +1511,20 @@ function switch_rwe
          # Retrieve the last switched workspace
          retrieveRweEnvFile
 
-         # PADOGRID_WORKSPACE i retrieved by the above call, retrieveRweEnvFile
+         # PADOGRID_WORKSPACE is retrieved by the above call, retrieveRweEnvFile
          NEW_WORKSPACE_DIR=$PADOGRID_WORKSPACE
 
          # Retreive last switched cluster/pod
          retrieveWorkspaceEnvFile
 
-         # Source in the last switched cluster and pod
-         if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
-            .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
-         fi
-         if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
-            .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
-         fi
+         # Source in the last switched cluster (pod has no env file)
+         retrieveClusterEnvFile "$NEW_WORKSPACE_DIR/clusters/$CLUSTER"
+
          export PADOGRID_WORKSPACES_HOME
          export CLUSTER
          export POD
          export PRODUCT
          export CLUSTER_TYPE
-
          . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
 
          cd_rwe $__RWE
@@ -1519,15 +1603,11 @@ function switch_workspace
       fi
 
       # Retreive last switched cluster/pod
+
       retrieveWorkspaceEnvFile
 
-      # Source in the last switched cluster and pod
-      if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
-         .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
-      fi
-      if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
-         .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
-      fi
+      # Source in the last switched cluster (pod has no env)
+      retrieveClusterEnvFile
 
       # Intialize workspace
       . "$PADOGRID_WORKSPACE/initenv.sh" -quiet
@@ -1582,13 +1662,8 @@ function switch_workspace
           fi
       fi
 
-      # Source in the last switched cluster and pod
-      if [ -f "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster" ]; then
-         .  "$NEW_WORKSPACE_DIR/clusters/$CLUSTER/.cluster"
-      fi
-      if [ -f "$NEW_WORKSPACE_DIR/pods/$POD/.pod" ]; then
-         .  "$NEW_WORKSPACE_DIR/pods/$POD/.pod"
-      fi
+      # Source in the last switched cluster (pod has no env)
+      retrieveClusterEnvFile "$NEW_WORKSPACE_DIR/clusters/$CLUSTER"
 
       # Intialize workspace
       . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
@@ -1692,10 +1767,14 @@ function __switch_cluster
         fi
       done
       export CLUSTER=$__COMPONENT_NAME
-      if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
-         sed -i${__SED_BACKUP} '/CLUSTER=/d' "$PADOGRID_WORKSPACE/.workspace"
+      local WORKSPACEENV_FILE="$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh"
+      if [ ! -d "$PADOGRID_WORKSPACE/.workspace" ]; then
+         # For backward compatibility (0.9.6)
+         updateWorkspaceEnvFile
+      elif [ -f "$WORKSPACEENV_FILE"  ]; then
+         sed -i${__SED_BACKUP} '/CLUSTER=/d' "$WORKSPACEENV_FILE"
+         echo "CLUSTER=$CLUSTER" >> "$WORKSPACEENV_FILE"
       fi
-      echo "CLUSTER=$CLUSTER" >> "$PADOGRID_WORKSPACE/.workspace"
       determineClusterProduct
       local __PRODUCT
       if [ "$PRODUCT" == "geode" ]; then
@@ -1730,9 +1809,7 @@ function __switch_cluster
       fi
       local NEW_PRODUCT=$PRODUCT
       local NEW_PRODUCT_HOME=$PRODUCT_HOME
-      if [ -f "$CLUSTERS_DIR/$CLUSTER/.cluster" ]; then
-         . $CLUSTERS_DIR/$CLUSTER/.cluster
-      fi
+      retrieveClusterEnvFile "$CLUSTERS_DIR/$CLUSTER"
       export CLUSTER
       export CLUSTER_TYPE
       . $PADOGRID_HOME/$__PRODUCT/bin_sh/.${__PRODUCT}_completion.bash
@@ -1741,6 +1818,7 @@ function __switch_cluster
       export PRODUCT_HOME=$NEW_PRODUCT_HOME
    fi
 }
+
 # 
 # Switches the pod to the specified pod. This function is provided
 # to be executed in the shell along with other padogrid commands. It
@@ -1829,10 +1907,14 @@ function __switch_pod
         fi
       done
       export POD=$__COMPONENT_NAME
-      if [ -f "$PADOGRID_WORKSPACE/.workspace" ]; then
-         sed -i${__SED_BACKUP} '/POD=/d' "$PADOGRID_WORKSPACE/.workspace"
+      local WORKSPACEENV_FILE="$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh"
+      if [ ! -d "$PADOGRID_WORKSPACE/.workspace" ]; then
+         # For backward compatibility (0.9.6)
+         updateWorkspaceEnvFile
+      elif [ -f "$WORKSPACEENV_FILE" ]; then
+         sed -i${__SED_BACKUP} '/POD=/d' "$WORKSPACEENV_FILE"
+         echo "POD=$POD" >> "$WORKSPACEENV_FILE"
       fi
-      echo "POD=$POD" >> "$PADOGRID_WORKSPACE/.workspace"
    fi
 }
 
@@ -3081,10 +3163,17 @@ function determineClusterProduct
       __CLUSTER=$CLUSTER
    fi
    local CLUSTER_DIR=$CLUSTERS_DIR/$__CLUSTER
-   if [ -f "$CLUSTER_DIR/.cluster" ]; then
+   retrieveClusterEnvFile "$CLUSTER_DIR"
+   if [ -f "$CLUSTER_DIR/.cluster/clusterenv.sh" ]; then
+      . "$CLUSTER_DIR/.cluster/clusterenv.sh"
+   elif [ -f "$CLUSTER_DIR/.cluster" ]; then
+      # For backward compatibility (0.9.6)
       . "$CLUSTER_DIR/.cluster"
+      updateClusterEnvFile
    else
       if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then   
+         # Without the .clusterenv.sh file, we cannot determine whether geode or gemfire.
+         # Set it to geode for now.
          PRODUCT="geode"
          CLUSTER_TYPE=$PRODUCT
       elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then   

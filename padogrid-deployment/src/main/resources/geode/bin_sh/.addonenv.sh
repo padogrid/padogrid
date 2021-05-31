@@ -322,12 +322,12 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
 fi
 
 #
-# Source in the workspaces setenv.sh file (mainly for license keys)
+# Source in the workspaces .geodeenv.sh file (mainly for license keys)
 #
-if [ -f "$PADOGRID_WORKSPACE/../setenv.sh" ]; then
+if [ -f "$PADOGRID_WORKSPACE/../.geodeenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
-   . $PADOGRID_WORKSPACE/../setenv.sh
+   . $PADOGRID_WORKSPACE/../.geodeenv.sh
    SCRIPT_DIR=$__SCRIPT_DIR
    export PADOGRID_WORKSPACE=$__PADOGRID_WORKSPACE
 fi
@@ -441,9 +441,9 @@ CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
 # Source in cluster file to get the product and cluster type
 THIS_PRODUCT=$PRODUCT
 THIS_CLUSTER_TYPE=$CLUSTER_TYPE
-if [ -f "$CLUSTER_DIR/.cluster" ]; then
-   . $CLUSTER_DIR/.cluster
-fi
+
+# Retrieve PRODUCT and CLUSTER_TYPE
+retrieveClusterEnvFile
 
 # Parent directory of member working directories
 RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
@@ -522,9 +522,11 @@ if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
 
-# Depends on PRODUCT_HOME due to switch_workspace which does not have cluster info
-# Due to workspace, PRODUCT_HOME is set to the default workspace PRODUCT_HOME
+# PATH Depends on PRODUCT_HOME due to switch_workspace which does not have cluster info.
 # We need to change that accordingly here.
+# Also, set PRODUCT to "geode" to override "gemfire". This is required due to both products
+# sharing the same resources under the name "geode".
+export PRODUCT="geode"
 if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
    IS_GEODE_ENTERPRISE=true
    export CLUSTER_TYPE="gemfire"

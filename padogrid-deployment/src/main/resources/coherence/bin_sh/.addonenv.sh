@@ -300,12 +300,12 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
 fi
 
 #
-# Source in the workspaces setenv.sh file (mainly for license keys)
+# Source in the workspaces .coherence.sh file (mainly for license keys)
 #
-if [ -f "$PADOGRID_WORKSPACE/../setenv.sh" ]; then
+if [ -f "$PADOGRID_WORKSPACE/../.coherenceenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
-   . $PADOGRID_WORKSPACE/../setenv.sh
+   . $PADOGRID_WORKSPACE/../.coherenceenv.sh
    SCRIPT_DIR=$__SCRIPT_DIR
    export PADOGRID_WORKSPACE=$__PADOGRID_WORKSPACE
 fi
@@ -419,9 +419,9 @@ CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
 # Source in cluster file to get the product and cluster type
 THIS_PRODUCT=$PRODUCT
 THIS_CLUSTER_TYPE=$CLUSTER_TYPE
-if [ -f "$CLUSTER_DIR/.cluster" ]; then
-   . $CLUSTER_DIR/.cluster
-fi
+
+# Retrieve PRODUCT and CLUSTER_TYPE
+retrieveClusterEnvFile
 
 # Parent directory of member working directories
 RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run

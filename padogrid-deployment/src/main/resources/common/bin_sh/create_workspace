@@ -599,10 +599,10 @@ fi
 if [ "$PRODUCT" == "geode" ]; then
    if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
       echo "   export GEMFIRE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-      echo "   export GEODE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   #export GEODE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "   export GEODE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-      echo "   export GEMFIRE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   #export GEMFIRE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    fi
    echo "   export PADO_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "coherence" ]; then
@@ -825,9 +825,10 @@ echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
 # Switch workspace and create cluster. This is done in sub-shell and hence
 # the exported variables do not carry on to the parent shell.
 #
+export POD=""
 export PADOGRID_WORKSPACE=$WORKSPACE_DIR
 export CLUSTER
-$SCRIPT_DIR/switch_workspace
+#switch_workspace
 if [ "$VM_ENABLED" == "true" ]; then
    $PARENT_DIR/$PRODUCT/bin_sh/create_cluster -vm $VM_HOSTS -cluster $CLUSTER
 else
