@@ -1319,6 +1319,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
    PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/myrwe"
 
    # Find all installed products
+   HAZELCAST_OSS_HOME=""
+   JET_OSS_HOME=""
    pushd $PADOGRID_PRODUCTS_PATH > /dev/null 2>&1
    for i in *; do
      if [[ "$i" == **"padogrid"** ]]; then
@@ -1335,8 +1337,10 @@ if [ "$RWE_EXISTS" == "false" ]; then
        JET_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast-jet"** ]]; then
        JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+       JET_OSS_HOME="$JET_HOME"
      elif [[ "$i" == **"hazelcast"** ]]; then
        HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+       HAZELCAST_OSS_HOME="$HAZELCAST_HOME"
      elif [[ "$i" == **"snappydata"** ]]; then
        SNAPPYDATA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"spark"** ]]; then
@@ -1357,6 +1361,26 @@ if [ "$RWE_EXISTS" == "false" ]; then
 
       TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
       # product homes
+      if [ "$HAZELCAST_OSS_HOME" != "" ]; then
+         HAZELCAST_HOME="$HAZELCAST_OSS_HOME"
+      fi
+      if [ "$JET_OSS_HOME" != "" ]; then
+         JET_HOME="$JET_OSS_HOME"
+      fi
+      if [ "$HAZELCAST_HOME" != "" ]; then
+        PRODUCT_HOME="$HAZELCAST_HOME"
+      elif [ "$GEODE_HOME" != "" ]; then
+        PRODUCT_HOME="$GEODE_HOME"
+         elif [ "$JET_HOME" != "" ]; then
+        PRODUCT_HOME="$JET_HOME"
+      elif [ "$SNAPPYDATA_HOME" != "" ]; then
+        PRODUCT_HOME="$SNAPPYDATA_HOME"
+      elif [ "$SPARK_HOME" != "" ]; then
+        PRODUCT_HOME="$SNAPPYDATA_HOME"
+      elif [ "$GEMFIRE_HOME" != "" ]; then
+        PRODUCT_HOME="$GEMFIRE_HOME"
+      fi
+
       echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
       echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
       echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
@@ -1369,9 +1393,13 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
       echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
       if [ "$QUIET" == "false" ]; then
-         $__PADOGRID_HOME/bin_sh/create_rwe -env $TMP_ENV_FILE
+         if [ "$PRODUCT_HOME" != "" ]; then
+            $__PADOGRID_HOME/bin_sh/create_rwe -rwe myrwe -product "$PRODUCT_HOME" -env $TMP_ENV_FILE 
+         fi
       else
-         $__PADOGRID_HOME/bin_sh/create_rwe -quiet -rwe myrwe -product "$HAZELCAST_HOME" -env $TMP_ENV_FILE
+         if [ "$PRODUCT_HOME" != "" ]; then
+            $__PADOGRID_HOME/bin_sh/create_rwe -quiet -rwe myrwe -product "$PRODUCT_HOME" -env $TMP_ENV_FILE
+         fi
       fi
       rm $TMP_ENV_FILE
    fi
