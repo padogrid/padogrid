@@ -1144,7 +1144,9 @@ function getPrivateNetworkAddresses
          fi  
       done < "$__TMP_FILE"
       unset IFS
-      rm $__TMP_FILE
+      if [ -f $__TMP_FILE ]; then
+         rm $__TMP_FILE
+      fi
    else
       ifconfig > $__TMP_FILE
       while IFS= read -r line; do
@@ -1160,7 +1162,9 @@ function getPrivateNetworkAddresses
       done < "$__TMP_FILE"
       unset IFS
    fi
-   rm -f $__TMP_FILE
+   if [ -f $__TMP_FILE ]; then
+      rm $__TMP_FILE
+   fi
    echo $__PRIVATE_IP_ADDRESSES
 }
 
@@ -1228,7 +1232,7 @@ function updateWorkspaceEnvFile
       __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
    fi
    if [ ! -d "$__WORKSPACE_PATH" ]; then
-      echo >&2 "Workspace does not exist."
+      echo >&2 "Workspace does not exist: [$__WORKSPACE_PATH]."
       return 1
    fi
 
@@ -1301,7 +1305,7 @@ function updateClusterEnvFile
       __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
    fi
    if [ ! -d "$__CLUSTER_PATH" ]; then
-      echo >&2 "Cluster does not exist."
+      echo >&2 "Cluster does not exist: [$__CLUSTER_PATH]."
       return 1
    fi
 
@@ -1464,12 +1468,12 @@ function switch_rwe
       done
       NEW_RWE_DIR="$PARENT_DIR/$__RWE"
       if [ ! -d "$PARENT_DIR/$__RWE" ]; then
-         echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid RWE name: [$__RWE]. RWE does not exist. Command aborted."
          return 1
       elif [ "$__WORKSPACE" != "" ]; then
          NEW_WORKSPACE_DIR="$NEW_RWE_DIR/$__WORKSPACE"
          if [ ! -d "$NEW_WORKSPACE_DIR" ]; then
-            echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+            echo >&2 "ERROR: Invalid workspace name: [$__WORKSPACE]. Workspace does not exist. Command aborted."
             return 1
          fi
          
@@ -1619,7 +1623,7 @@ function switch_workspace
 
    else
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
-         echo >&2 "ERROR: Invalid workspace. Workspace does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid workspace: [$1]. Workspace does not exist. Command aborted."
          return 1
       fi
       local __PATH=""
@@ -1977,7 +1981,7 @@ function cd_rwe
    else
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid RWE name. RWE name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid RWE name: [$1]. RWE does not exist. Command aborted."
          return 1
       else
          local DIR=""
@@ -2053,7 +2057,7 @@ function cd_workspace
    else
       local PARENT_DIR="$PADOGRID_WORKSPACES_HOME"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid workspace name. Workspace name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid workspace name: [$1]. Workspace does not exist. Command aborted."
          return 1
       else
          local DIR=""
@@ -2149,7 +2153,7 @@ function cd_pod
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/pods"
       if [ "$__COMPONENT_NAME" != "local" ] && [ ! -d "$PARENT_DIR/$__COMPONENT_NAME" ]; then
-         echo >&2 "ERROR: Invalid pod name. Pod name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid pod name: [$__COMPONENT_NAME]. Pod does not exist. Command aborted."
          return 1
       else
          local DIR=""
@@ -2247,7 +2251,7 @@ function cd_cluster
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/clusters"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid cluster name: [$1]. Cluster does not exist. Command aborted."
          return 1
       else
          local DIR=""
@@ -2325,7 +2329,7 @@ function cd_k8s
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/k8s"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid k8s name. K8s name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid k8s name: [$1]. K8s cluster does not exist. Command aborted."
          return 1
       else
          local DIR=""
@@ -2403,7 +2407,7 @@ function cd_docker
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/docker"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid docker name. Docker name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid docker name: [$1]. Docker cluster does not exist. Command aborted."
          return 1
       else
          local DIR=""
@@ -2480,7 +2484,7 @@ function cd_app
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/apps"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid app name. App name does not exist. Command aborted."
+         echo >&2 "ERROR: Invalid app name: [$1]. App does not exist. Command aborted."
          return 1
       else 
          local DIR=""
@@ -2920,7 +2924,9 @@ function sortVersionList
       echo "$i" >> $TMP_FILE
    done
    SORTED_VERSIONS=$(sort -rV $TMP_FILE)
-   rm $TMP_FILE
+   if [ -f $TMP_FILE ]; then
+      rm $TMP_FILE
+   fi
    echo $SORTED_VERSIONS
 }
 

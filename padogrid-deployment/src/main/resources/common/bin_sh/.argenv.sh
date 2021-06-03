@@ -63,6 +63,7 @@ COUNT=
 VERSION_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_SPECIFIED=false
+CLUSTER_TYPE_SPECIFIED=false
 FG_SPECIFIED=false
 MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
@@ -192,6 +193,7 @@ do
       CLUSTER=$i
    elif [ "$PREV" == "-cluster-type" ]; then
       CLUSTER_TYPE=$i
+      CLUSTER_TYPE_SPECIFIED="true"
    elif [ "$PREV" == "-num" ]; then
       MEMBER_NUM=$i
    elif [ "$PREV" == "-password" ]; then

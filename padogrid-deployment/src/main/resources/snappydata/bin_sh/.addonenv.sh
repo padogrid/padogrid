@@ -356,12 +356,15 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
 fi
 
 #
-# Source in the workspaces .snappydataenv.sh file (mainly for license keys)
+# Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)
 #
-if [ -f "$PADOGRID_WORKSPACE/../.snappydataenv.sh" ]; then
+if [ -f "$PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
-   . $PADOGRID_WORKSPACE/../.snappydataenv.sh
+   . $PADOGRID_WORKSPACES_HOME/setenv.sh
+   if [ -f "$PADOGRID_WORKSPACE/setenv.sh" ]; then
+      . $PADOGRID_WORKSPACE/setenv.sh
+   fi
    SCRIPT_DIR=$__SCRIPT_DIR
    export PADOGRID_WORKSPACE=$__PADOGRID_WORKSPACE
 fi

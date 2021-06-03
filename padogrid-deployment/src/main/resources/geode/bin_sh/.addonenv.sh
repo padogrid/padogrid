@@ -322,12 +322,15 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
 fi
 
 #
-# Source in the workspaces .geodeenv.sh file (mainly for license keys)
+# Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)
 #
-if [ -f "$PADOGRID_WORKSPACE/../.geodeenv.sh" ]; then
+if [ -f "$PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
-   . $PADOGRID_WORKSPACE/../.geodeenv.sh
+   . $PADOGRID_WORKSPACES_HOME/setenv.sh
+   if [ -f "$PADOGRID_WORKSPACE/setenv.sh" ]; then
+      . $PADOGRID_WORKSPACE/setenv.sh
+   fi
    SCRIPT_DIR=$__SCRIPT_DIR
    export PADOGRID_WORKSPACE=$__PADOGRID_WORKSPACE
 fi
@@ -527,17 +530,15 @@ fi
 # Also, set PRODUCT to "geode" to override "gemfire". This is required due to both products
 # sharing the same resources under the name "geode".
 export PRODUCT="geode"
-if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
+if [ "$CLUSTER_TYPE_SPECIFIED" == "false" ]; then
+   if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
+      export CLUSTER_TYPE="gemfire"
+   elif [[ "$PRODUCT_HOME" == *"geode"* ]]; then
+      export CLUSTER_TYPE="geode"
+   fi
+fi
+if [ "$CLUSTER_TYPE" == "gemfire" ]; then
    IS_GEODE_ENTERPRISE=true
-   export CLUSTER_TYPE="gemfire"
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
-elif [[ "$PRODUCT_HOME" == *"geode"* ]]; then
-   IS_GEODE_ENTERPRISE=false
-   export CLUSTER_TYPE="geode"
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
-elif [ "$CLUSTER_TYPE" == "gemfire" ]; then
-   IS_GEODE_ENTERPRISE=true
-   export CLUSTER_TYPE="gemfire"
    export PRODUCT_HOME="$GEMFIRE_HOME"
    export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
 else
