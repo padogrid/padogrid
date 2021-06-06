@@ -184,7 +184,17 @@ elif [ "$PRODUCT_ARG" == "coherence" ]; then
 fi
 
 if [ "$PRODUCT_EXISTS" == "false" ]; then
-   echo >&2 "ERROR: The specified product has not been installed or configured: [$PRODUCT_ARG]"
+   echo -e >&2 "${CLightRed}ERROR:${CNone} The specified product has not been installed or configured: [$PRODUCT_ARG]"
+   if [ "$PRODUCT_ARG" = "gemfire" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
+      echo -e >&2 "       Please download and install the product in the following directory:"
+      echo >&2 "          $PADOGRID_WORKSPACES_HOME/products"
+      echo >&2 "       You must also set its home path in one of the following 'setenv.sh' files:"
+   else
+      echo -e >&2 "       To install a product release, run ${CLightGreen}install_padogrid${CNone} and set its"
+      echo >&2 "       home path in one of the following 'setenv.sh' files:"
+   fi
+   echo >&2 "                RWE: $PADOGRID_WORKSPACES_HOME/setenv.sh"
+   echo >&2 "          Workspace: $PADOGRID_WORKSPACE/setenv.sh"
    echo >&2 "       Command aborted."
    exit 1
 fi

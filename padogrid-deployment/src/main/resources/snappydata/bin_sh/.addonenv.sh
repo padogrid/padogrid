@@ -358,6 +358,24 @@ fi
 #
 # Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)
 #
+# First, reset product paths for local pods. This is required in case the user
+# switches contexts.
+if [ "$IN_POD" != "true" ]; then
+   export PADOGRID_HOME=""
+   export PADO_HOME=""
+   export JAVA_HOME=""
+   export COHERENCE_HOME=""
+   export GEMFIRE_HOME=""
+   export GEODE_HOME=""
+   export HAZELCAST_HOME=""
+   export HAZELCAST_MC_HOME=""
+   export JET_HOME=""
+   export JET_MC_HOME=""
+   export SNAPPYDATA_HOME=""
+   export SPARK_HOME=""
+   export PRODUCT_HOME=""
+fi
+# Source in setenv.sh
 if [ -f "$PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
