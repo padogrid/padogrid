@@ -63,5 +63,15 @@ if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
    exit 1
 fi
 
-WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
-removeTokens "$WORKSPACES" "initenv.sh setenv.sh"
+__WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
+WORKSPACES=""
+for i in $__WORKSPACES; do
+   if [ -f "$PADOGRID_WORKSPACES_HOME/$i/initenv.sh" ] \
+     && [ -f "$PADOGRID_WORKSPACES_HOME/$i/.addonenv.sh" ] \
+     && [ -f "$PADOGRID_WORKSPACES_HOME/$i/setenv.sh" ]; then
+      WORKSPACES="$WORKSPACES $i"
+   fi
+done
+WORKSPACES=$WORKSPACES
+echo $WORKSPACES
+
