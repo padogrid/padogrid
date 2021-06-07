@@ -4,8 +4,9 @@
 
 ## Version 0.9.7-SNAPSHOT
 
-### Release Date: 06/06/21
+### Release Date: 06/07/21
 
+- Added 'update_products' for interatively updating product versions.
 - Fixed the logic that incorrectly set the cluster type when creating a Geode/GemFire cluster.
 - Product paths are now correctly reset for workspaces hosting heterogeneous products. Prior to this fix, the switched workspace continue to use the previous workspace's products even though it may not have defined them.
 
