@@ -318,7 +318,9 @@ __padogrid_complete()
       done
    fi
 
-   if [ "${type_list}" != "" ] || [ "$is_path" == "true" ]; then
+   if [ "$is_path" == "true" ]; then
+      COMPREPLY=( $( compgen -f -- "$cur_word" ))
+   elif [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -660,6 +662,19 @@ __get_str_position()
   [[ "$x" = "$1" ]] && echo -1 || echo "${#x}"
 }
 
+# Returns filenames and directories, appending a slash to directory names.
+__mycmd_compgen_filenames() {
+    local cur="$1"
+
+    # Files, excluding directories:
+    grep -v -F -f <(compgen -d -P ^ -S '$' -- "$cur") \
+        <(compgen -f -P ^ -S '$' -- "$cur") |
+        sed -e 's/^\^//' -e 's/\$$/ /'
+
+    # Directories:
+    compgen -d -S / -- "$cur"
+}
+
 __command_complete()
 {
    local command cur_word prev_word type_list
@@ -739,7 +754,7 @@ __command_complete()
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
       else
-         is_path=""
+         is_path="true"
       fi
       ;;
    -rwe)
@@ -825,7 +840,9 @@ __command_complete()
       fi
    done
 
-   if [ "${type_list}" != "" ] || [ "$is_path" == "true" ]; then
+   if [ "$is_path" == "true" ]; then
+      COMPREPLY=( $( compgen -f -- "$cur_word" ))
+   elif [ "${type_list}" != "" ]; then
       COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
    fi
    return 0
@@ -838,40 +855,40 @@ for i in $commands; do
       if [ "$i" == "cp_sub" ] || [ "$i" == "tools" ]; then
          sub_commands=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$i`
          for j in $sub_commands; do
-            complete -F __command_complete -o bashdefault $j
+            complete -F __command_complete -o filenames -o bashdefault $j
          done
-         complete -F __command_complete -o bashdefault $i
+         complete -F __command_complete -o filenames -o bashdefault  $i
       else
-         complete -F __command_complete -o bashdefault $i
+         complete -F __command_complete -o filenames -o bashdefault $i
       fi
    fi
 done
 
 # Register padogrid
-complete -F __padogrid_complete -o bashdefault padogrid
+complete -F __padogrid_complete -o filenames -o bashdefault padogrid
 
 # Register switch_rwe, cd_rwe
-complete -F __rwe_complete_space -o bashdefault switch_rwe
-complete -F __rwe_complete_space -o bashdefault cd_rwe
-#complete -F __rwe_complete_nospace -o bashdefault -o nospace switch_rwe
+complete -F __rwe_complete_space -o filenames -o bashdefault switch_rwe
+complete -F __rwe_complete_space -o filenames -o bashdefault cd_rwe
+#complete -F __rwe_complete_nospace -o filenames -o bashdefault -o nospace switch_rwe
 
 # Register switch_workspace, cd_workspace
-complete -F __workspace_complete_space -o bashdefault switch_workspace
-complete -F __workspace_complete_space -o bashdefault cd_workspace
+complete -F __workspace_complete_space -o filenames -o bashdefault switch_workspace
+complete -F __workspace_complete_space -o filenames -o bashdefault cd_workspace
 
 # Register switch_cluster, cd_cluster
-complete -F __clusters_complete_space -o bashdefault switch_cluster
-complete -F __clusters_complete_space -o bashdefault cd_cluster
+complete -F __clusters_complete_space -o filenames -o bashdefault switch_cluster
+complete -F __clusters_complete_space -o filenames -o bashdefault cd_cluster
 
 # Register switch_pod, cd_pod
-complete -F __pods_complete_space -o bashdefault switch_pod
-complete -F __pods_complete_space -o bashdefault cd_pod
+complete -F __pods_complete_space -o filenames -o bashdefault switch_pod
+complete -F __pods_complete_space -o filenames -o bashdefault cd_pod
 
 # Register cd_k8s
-complete -F __k8s_complete_space -o bashdefault cd_k8s
+complete -F __k8s_complete_space -o filenames -o bashdefault cd_k8s
 
 # Register cd_docker
-complete -F __docker_complete_space -o bashdefault cd_docker
+complete -F __docker_complete_space -o filenames -o bashdefault cd_docker
 
 # Register cd_app
-complete -F __apps_complete_space -o bashdefault cd_app
+complete -F __apps_complete_space -o filenames -o bashdefault cd_app
