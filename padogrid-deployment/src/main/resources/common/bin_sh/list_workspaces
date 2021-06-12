@@ -21,9 +21,20 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
 EXECUTABLE="`basename $0`"
 
+# 
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi      
+
 __options()
 {
-   echo "-?"
+   echo "-rwe -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -35,13 +46,13 @@ if [ "$HELP" == "true" ]; then
 cat <<EOF
 
 NAME
-   $EXECUTABLE - List all the workspaces in the current padogrid workspaces environment
+   $EXECUTABLE - List all the workspaces in the current or specified RWE
 
 SYNOPSIS
-   $EXECUTABLE [-?]
+   $EXECUTABLE [-rwe] [-?]
 
 DESCRIPTION
-   Lists all the workspaces in the current workspace environemt. 
+   Lists all the workspaces in the current or specified RWE.
 
 DEFAULT
    $EXECUTABLE
@@ -53,22 +64,38 @@ EOF
 fi
 
 if [ "$PADOGRID_WORKSPACES_HOME" == "" ]; then
-   echo "ERROR: Workspaces not initialized. Please first run 'create_rwe' to initialize workspaces."
-   echo "       Command aborted."
+   echo >&2 "ERROR: Workspaces not initialized. Please first run 'create_rwe' to initialize workspaces."
+   echo >&2 "       Command aborted."
    exit 1
 fi
 if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
-   echo "ERROR: Invalid workspaces. Please run 'create_rwe' to initialize workspaces."
-   echo "       Command aborted."
+   echo >&2 "ERROR: Invalid workspaces. Please run 'create_rwe' to initialize workspaces."
+   echo >&2 "       Command aborted."
    exit 1
 fi
 
-__WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
+if [ "$RWE_ARG" == "" ]; then
+   RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+else
+   RWE_PATH="$PADOGRID_ENV_BASE_PATH/workspaces/$RWE_ARG"
+   if [ ! -d "$RWE_PATH" ]; then
+      echo >&2 "ERROR: Specifed RWE does not exist. Command aborted." 
+      exit 1
+   fi
+   if [ ! -f "$RWE_PATH/initenv.sh" ] \
+      || [ ! -f "$RWE_PATH/.addonenv.sh" ] \
+      || [ ! -f "$RWE_PATH/setenv.sh" ]; then
+      echo >&2 "ERROR: Specified RWE is not a invalid RWE. Command aborted." 
+      exit 1
+   fi
+fi
+
+__WORKSPACES=`ls $RWE_PATH`
 WORKSPACES=""
 for i in $__WORKSPACES; do
-   if [ -f "$PADOGRID_WORKSPACES_HOME/$i/initenv.sh" ] \
-     && [ -f "$PADOGRID_WORKSPACES_HOME/$i/.addonenv.sh" ] \
-     && [ -f "$PADOGRID_WORKSPACES_HOME/$i/setenv.sh" ]; then
+   if [ -f "$RWE_PATH/$i/initenv.sh" ] \
+     && [ -f "$RWE_PATH/$i/.addonenv.sh" ] \
+     && [ -f "$RWE_PATH/$i/setenv.sh" ]; then
       WORKSPACES="$WORKSPACES $i"
    fi
 done

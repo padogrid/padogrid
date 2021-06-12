@@ -78,9 +78,11 @@ fi
 
 if [ "$RWE_ARG" == "" ]; then
    __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
 else
    RWE_PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
    __RWE_PATH="$RWE_PARENT_DIR/$RWE_ARG"
+   RWE_NAME=$RWE_ARG
    if [ ! -d "$__RWE_PATH" ]; then
       echo >&2 "ERROR: Specified RWE does not exist [$RWE_ARG]. Command aborted."
       exit 1
@@ -158,8 +160,7 @@ function displayTreeNode
 echo ""
 echo "$__RWE_PATH"
 CURRENT_WORKSPACE="$(basename "$PADOGRID_WORKSPACE")"
-WORKSPACES=`ls $__RWE_PATH`
-WORKSPACES=$(removeTokens "$WORKSPACES" "initenv.sh setenv.sh")
+WORKSPACES=`list_workspaces -rwe $RWE_NAME`
 WORKSPACES=( $WORKSPACES )
 let WORKSPACES_LAST_INDEX=${#WORKSPACES[@]}-1
 for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do

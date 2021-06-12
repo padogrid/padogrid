@@ -420,7 +420,7 @@ __workspace_complete_arg()
    let i3=start_index+2
       
    if [ $len -lt $i3 ]; then
-      type_list=`ls $PADOGRID_WORKSPACES_HOME`
+      type_list=`list_workspaces`
       type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
    else
       local COMPONENT_DIR="$PADOGRID_WORKSPACES_HOME/${COMP_WORDS[start_index]}"

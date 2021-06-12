@@ -2681,6 +2681,10 @@ function getWorkspaceInfoList
 
    # Remove blank lines from grep results. Pattern includes space and tab.
    local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   if [ "$__JAVA_HOME" == "" ]; then
+      # Get the RWE's JAVA_HOME
+      __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   fi
    local JAVA_VERSION=""
    local JAVA_INFO=""
    if [ -f "$__JAVA_HOME/bin/java" ]; then
@@ -2697,8 +2701,12 @@ function getWorkspaceInfoList
    else
       VM_WORKSPACE="";
    fi
-   local PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh");
    # Remove blank lines from grep results. Pattern includes space and tab.
+   local PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   if [ "$PADOGRID_VERSION" == "" ]; then
+      # Get the RWE's PADOGRID_HOME
+      PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   fi
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
 
    # TODO: For some reason, Cygwin does not print the beginning string...
