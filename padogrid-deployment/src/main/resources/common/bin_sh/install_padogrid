@@ -694,14 +694,14 @@ while [ "$REDO" == "true" ]; do
             echo "Invalid path. The specified path exists and is not a directory."
             continue;
          fi
-      fi
-      __parent=$(dirname "$__BASE_PATH")
-      while [ "$__parent" != "/" ] && [ ! -w "$__parent" ]; do
-         __parent=$(dirname "$__parent")
-      done
-      if [ ! -w "$__parent" ]; then
-         echo "Invalid path. You do not have wirte permissions."
-         continue;
+         __parent=$(dirname "$__BASE_PATH")
+         #while [ "$__parent" != "/" ] && [ ! -w "$__parent" ]; do
+         #   __parent=$(dirname "$__parent")
+         #done
+         if [ ! -w "$__parent" ]; then
+            echo "Invalid path. You do not have write permissions to create directory: [$__parent]"
+            continue;
+         fi
       fi
       INNER_LOOP=false
       PADOGRID_ENV_BASE_PATH="$__BASE_PATH"
@@ -1350,6 +1350,14 @@ if [ "$RWE_EXISTS" == "false" ]; then
      fi
    done
    popd > /dev/null 2>&1
+
+   # If Hazelcast Management Center is not installed then set it
+   # to the management center included in the Hazelcast distribution.
+   if [ "$HAZELCAST_MC_HOME" == "" ]; then
+      if [ "$HAZELCAST_HOME" != "" ]; then 
+          HAZELCAST_MC_HOME="$HAZELCAST_HOME/management-center"
+      fi
+   fi
 
    if [ -f "$__PADOGRID_HOME/bin_sh/create_rwe" ]; then
       echo "PadoGrid: $__PADOGRID_HOME"

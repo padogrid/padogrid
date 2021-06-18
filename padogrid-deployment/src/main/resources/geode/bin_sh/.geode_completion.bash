@@ -495,7 +495,7 @@ __get_dir_list()
   # echo returns the same input string if sub-directories do not exist
   if [ "$__dir_list" != "$__command" ]; then
      for i in $__dir_list; do
-        dir_list="$dir_list $(basename $i)/"
+        dir_list="$dir_list $(basename $i)"
      done
   fi
   echo $dir_list

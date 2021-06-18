@@ -489,7 +489,7 @@ __get_dir_list()
   # echo returns the same input string if sub-directories do not exist
   if [ "$__dir_list" != "$__command" ]; then
      for i in $__dir_list; do
-        dir_list="$dir_list $(basename $i)/"
+        dir_list="$dir_list $(basename $i)"
      done
   fi
   echo $dir_list
@@ -1022,6 +1022,39 @@ __cluster_complete()
    return 0
 }
 
+__arrayContainsElement ()
+{
+  local e match="$1"
+  shift
+  for e; do
+    [[ "$e" == "$match" ]] && echo "true" && return 0
+  done
+  echo "false"
+  return 1
+}
+
+#
+# Returns the index number of the specified array if the specified element is found, otherwise,
+# returns 255.
+# Example: 
+#    __getArrayElementIndex "submit" "${COMP_WORDS[@]}"
+#    index=$?
+#
+# @param element - Element value to search
+# @param array - Array
+#
+__getArrayElementIndex ()
+{
+  local e match="$1"
+  shift
+  local index=0
+  for e; do
+    [[ "$e" == "$match" ]] && return $index
+    let index=index+1
+  done
+  return 255
+}
+
 __jet_complete()
 {
    local cur_word prev_word type_list commands len before_prev_word
@@ -1034,6 +1067,22 @@ __jet_complete()
    third_word="${COMP_WORDS[2]}"
    cur_word="${COMP_WORDS[COMP_CWORD]}"
    prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+   local type_path="false"
+
+   # If submit then default the next word to file name
+   __getArrayElementIndex "submit" "${COMP_WORDS[@]}"
+   local index=$?
+   if [ $index -ne 255 ]; then
+      let last_index=len-2
+      if [ $index -eq $last_index ]; then
+         type_path="true"
+      fi
+      if [ "$type_path" == "true" ]; then
+         COMPREPLY=( $( compgen -f -- "$cur_word" ))
+         return 0
+      fi
+      return 0
+   fi
 
    if [ $len -gt 2 ]; then
       before_prev_word="${COMP_WORDS[COMP_CWORD-2]}"
@@ -1115,8 +1164,7 @@ __jet_complete()
       type_list=""
       ;;
    save-snapshot)
-      type_list=""
-      ;;
+      type_list="" ;;
    delete-snapshot)
       type_list="$(__get_jet_snapshots)"
       for iter in $type_list; do
@@ -1182,3 +1230,10 @@ complete -F __docker_complete_space -o filenames -o bashdefault cd_docker
 
 # Register cd_app
 complete -F __apps_complete_space -o filenames -o bashdefault cd_app
+
+# Register cluster.sh
+complete -F __cluster_complete -o bashdefault cluster.sh
+
+# Register jet.sh
+complete -F __jet_complete -o bashdefault jet.sh
+complete -F __jet_complete -o bashdefault jet
