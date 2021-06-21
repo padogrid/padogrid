@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -142,7 +142,147 @@ fi
 
 BUNDLE_FILE_PATH=${@: -1}
 
-# Set arguments. (due to the arg parser limations, we need to do this here)
+
+# Determine required products
+#if [ ! -d "$PADOGRID_WORKSPACE/bundles" ]; then
+#   mkdir "$PADOGRID_WORKSPACE/bundles"
+#fi
+URL=https://raw.githubusercontent.com/padogrid/$BUNDLE_FILE_PATH/master/required_products.txt
+GIT_PATH=$PADOGRID_WORKSPACE/bundles/required_productsx.txt
+#curl -s $URL > $GIT_PATH 2>/dev/null
+
+
+#
+# Returns "true" if one of the specfied product versions match the configured product version.
+#
+# @param product        Product name in lowercase. Valid values are hazelcast, hazecast-enterprise,
+#                       jet, jet-enterprise, geode, gemfire, snappydata, spark, coherence, pado.
+# @param productHome    Product home path, e.g. $HAZELCAST_HOME.
+# @param productVersion Product versions, e.g., "3,4"
+#
+function isProductExist
+{
+   local product=$1          # hazelcast
+   local productHome=$2     # HAZELCAST_HOME
+   local productVersions=$3 # 3,4
+   local found="false"
+   local IFS=','
+   for token in $productVersions; do
+      if [ "$product" == "hazelcast-enterprise" ] && [[ "$productHome" == *"hazelcast-enterprise-$token"* ]]; then
+         found="true"
+         break;
+      elif [ "$product" == "jet-enterprise" ] && [[ "$productHome" == *"jet-enterprise-$token"* ]]; then
+         found="true"
+         break;
+      elif [[ "$productHome" == *"$token"* ]]; then
+         found="true"
+         break;
+      fi
+   done
+   unset IFS
+   echo "$found"
+}
+
+#
+# Returns key/value product pair for the specified bundle name.
+#
+# Example:
+#    getProductKeyValue "bundle-hazelcast-3n4-app-pado"
+#    hazelcast=3,4 
+# 
+# @param bundleName Bundle name
+#
+function getProductKeyValue
+{
+   local bundleName=$1
+   local product=${bundleName#bundle-}
+   product=${product%%-*}
+   version=${bundleName#bundle-$product-}
+   version=${version%%-*}
+   version=${version/n/,} 
+   echo "$product=$version"
+}
+
+declare -a requiredProducts
+declare -a propArray
+getPropertiesArray "$GIT_PATH" propArray
+let len=${#propArray[@]}
+if [ $len -eq 0 ]; then
+   echo "Using bundle name to determine installed products..."
+
+   #
+   # Make sure the bundle can be installed in the current environment.
+   #
+   file_name="`basename $BUNDLE_FILE_PATH $0`"
+   keyvalue=$(getProductKeyValue "$file_name")
+
+   if [[ "$keyvalue" != "hazelcast"* ]] \
+      && [[ "$keyvalue" != "geode"* ]] \
+      && [[ "$keyvalue" != "gemfire"* ]] \
+      && [[ "$keyvalue" != "snappydata"* ]] \
+      && [[ "$keyvalue" != "spark"* ]] \
+      && [[ "$keyvalue" != "coherence"* ]]; then
+      echo >&2 "ERROR: Unsupported bundle product name [$keyvalue]. Command aborted."
+      exit 1
+   fi
+   requiredProducts[0]=$keyvalue
+fi
+
+# Determine if the required product versions are available.
+declare -a unfoundProducts
+if [ $len -gt 0 ]; then
+   let last_index=len-1
+   for i in $(seq 0 $last_index); do
+      keyvalue=${propArray[$i]}
+      PRODUCT=${keyvalue%%=*}
+      PRODUCT_VERSIONS=${keyvalue#*=}
+      found="false"
+      if [ "$PRODUCT" == "hazelcast-enterprise" ]; then
+         found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "hazelcast" ]; then
+         found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "jet-enterprise" ]; then
+         found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "jet" ]; then
+         found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "geode" ]; then
+         found=$(isProductExist "$PRODUCT" "$GEODE_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "gemfire" ]; then
+         found=$(isProductExist "$PRODUCT" "$GEMFIRE_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "snappydata" ]; then
+         found=$(isProductExist "$PRODUCT" "$SNAPPYDATA_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "spark" ]; then
+         found=$(isProductExist "$PRODUCT" "$SPARK_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "coherence" ]; then
+         found=$(isProductExist "$PRODUCT" "$COHERENCE_HOME" "$PRODUCT_VERSIONS")
+      elif [ "$PRODUCT" == "pado" ]; then
+         found=$(isProductExist "$PRODUCT" "$PADO_HOME" "$PRODUCT_VERSIONS")
+      fi
+      if [ "$found" == "true" ]; then
+          requiredProducts[$i]=$PRODUCT
+      else
+          unfoundProducts[$i]=$keyvalue
+      fi
+   done
+fi
+
+# Exit if there are unfound versions.
+let len=${#unfoundProducts[@]}
+if [ $len -gt 0 ]; then
+   let last_index=len-1
+   echo >&2 "ERROR: This bundle requires the following product version(s) configured for the workspace."
+   for i in $(seq 0 $last_index); do
+      echo >&2 "          ${unfoundProducts[$i]}"
+   done
+   echo >&2 ""
+   echo >&2 "       The following commands are available to verify and install products."
+   echo >&2 "          show_products, update_products, install_products, change_version"
+   echo >&2 ""
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+
+# Set arguments. (due to the arg parser limitations, we need to do this here)
 if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]]; then
    if [ "$WORKSPACE_ARG" == "-download" ]; then
       DOWNLOAD="true"
@@ -250,6 +390,16 @@ if [ "$DOWNLOAD" == "true" ]; then
          cp -r $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/* $GIT_DIR/
          cp $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
          rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}
+
+         # Update product home paths
+#         let len=${#requiredProducts[@]}
+#         if [ $len -gt 0 ]; then
+#            let last_index=len-1
+#            for i in $(seq 0 $last_index); do
+#               echo [$i]=${requiredProducts[$i]}
+#            done
+#         fi
+
          echo ""
          echo "Bundle workspace created. Switch workspace by executing the following command:"
          echo -e "   ${CLightGreen}switch_workspace $REPO_NAME ${CNone}"
@@ -278,36 +428,6 @@ if [ ! -f $BUNDLE_FILE_PATH ]; then
    exit 1 
 fi
 
-file_name="`basename $BUNDLE_FILE_PATH $0`"
-if [ "$PRODUCT" == "hazelcast" ]; then
-   if [[ "$file_name" == "bundle-hazelcast-"* ]]; then
-      cluster_type="imdg"
-   elif [[ "$file_name" == "bundle-jet-"* ]]; then
-      cluster_type="jet"
-   else
-      echo >&2 "ERROR: Unsupported bundle name. Command aborted."
-      exit 1
-   fi
-elif [[ "$file_name" == "bundle-geode-"* ]]; then
-   cluster_type="geode"
-elif [[ "$file_name" == "bundle-coherence-"* ]]; then
-   cluster_type="coherence"
-elif [[ "$file_name" == "bundle-gemfire-"* ]]; then
-   cluster_type="gemfire"
-elif [[ "$file_name" == "bundle-snappydata-"* ]]; then
-   cluster_type="snappydata"
-elif [[ "$file_name" == "bundle-spark-"* ]]; then
-   cluster_type="standalone"
-else
-   echo >&2 "ERROR: Unsupported bundle name. Command aborted."
-   exit 1
-fi
-
-if [ "$PREVIEW" == "false" ] && [ "$PRODUCT" == "hazelcast" ] && [ "$CLUSTER_TYPE" != "$cluster_type" ]; then
-   echo >&2 "ERROR: Invalid cluster type. This workspace is configured to run \"$CLUSTER_TYPE\""
-   echo >&2 "       but the bundle is for \"$cluster_type\". Command aborted."
-   exit 1
-fi
 
 # Set workspace and its path
 if [ "$WORKSPACE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "default" ]; then

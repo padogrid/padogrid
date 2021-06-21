@@ -841,17 +841,17 @@ function unique_words
 
 #
 # Sets all the properties read from the specified properties file to the
-# specifiied array. The array must be declared before invoking this function,
+# specified array. The array must be declared before invoking this function,
 # otherwise, it will fail with an error.
 #
 # Example:
 #    declare -a propArray
 #    getPropertiesArray "$ETC_DIR/cluster.properties" propArray
-#    len=${#propArray[@]}-1
-#    if [ $size -gt 0 ]; then
+#    let len=${#propArray[@]}
+#    if [ $len -gt 0 ]; then
 #       let last_index=len-1
 #       for i in $(seq 0 $last_index); do
-#          echo "[$i] ${props[$i]}"
+#          echo "[$i] ${propArray[$i]}"
 #       done
 #    fi
 #    
