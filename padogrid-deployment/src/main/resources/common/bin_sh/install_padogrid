@@ -144,7 +144,7 @@ echo -e "      - VMware GemFire   ${CUrl}https://network.pivotal.io/products/piv
 cat <<EOF
 
    This command does not install Java. It expects that you have already installed JDK 1.8+ and prompts for
-   the JAVA_HOME path. If you haven't installed it, then you can donwload it from one of the following sites.
+   the JAVA_HOME path. If you haven't installed it, then you can download it from one of the following sites.
 
 EOF
 echo -e "      - Oracle JDK      ${CUrl}https://www.oracle.com/java/technologies/javase-downloads.html${CNone}"
@@ -188,7 +188,7 @@ echo -e "[2] VMware GemFire   ${CUrl}https://network.pivotal.io/products/pivotal
 cat <<EOF
 
 Note that this command does not install Java. It expects that you have already installed JDK 1.8+ and
-prompts for the JAVA_HOME path. If you haven't installed it, then you can donwload it from one of the
+prompts for the JAVA_HOME path. If you haven't installed it, then you can download it from one of the
 following sites.
 
 EOF
@@ -347,8 +347,15 @@ function getDownloadableSnappyDataVersions
 
 function getDownloadableSparkVersions
 {
-   local ALL_SPARK_VERSIONS=$(curl -s $SPARK_DOWNLOAD_URL |grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/<.*//' -e 's/spark-//' | grep -v img)
+   local ALL_SPARK_VERSIONS=$(curl -s $SPARK_DOWNLOAD_URL | grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/<.*//' -e 's/spark-//' | grep -v img)
    unique_words "$ALL_SPARK_VERSIONS"
+}
+
+function getPrebuiltSparkVersions
+{
+   local VERSION=$1
+   local PREBUILT_SPARK_VERSIONS=$(curl -s ${SPARK_DOWNLOAD_URL}spark-$VERSION/ | grep img | grep spark-$VERSION-bin | sed -e 's/.*spark-//' -e 's/.tgz.*//')
+   unique_words "$PREBUILT_SPARK_VERSIONS"
 }
 
 #
@@ -527,7 +534,7 @@ function doUserInput
    for i in ${PRODUCT_DOWNLOAD_VERSIONS[@]}; do
       __INSTALLED="false"
       for j in ${INSTALLED_VERSIONS[@]}; do
-         if [ "$i" == "$j" ]; then
+         if [[ "$j" == "$i"* ]]; then
             __INSTALLED="true"
             break;
          fi
@@ -605,7 +612,7 @@ function doUserInput
 # Scan downloadable product versions
 #
 echo ""
-echo "Scanning donwloadable products... Please wait."
+echo "Scanning downloadable products... Please wait."
 echo ""
 
 # Turn off the enter key while waiting
@@ -832,6 +839,58 @@ while [ "$REDO" == "true" ]; do
       let INSTALL_COUNT=INSTALL_COUNT+1
    fi
    SPARK_VERSION=$INSTALL_VERSION
+   
+   # Allow the user to select a prebuilt spark distribution.
+   INSTALLED_VERSIONS=($SPARK_VERSIONS)
+   if [ "$SPARK_VERSION" != "" ]; then
+      SPARK_PREBUILT_VERSIONS_ARRAY=(${SPARK_VERSION} $(getPrebuiltSparkVersions "$SPARK_VERSION"))
+      __LEN=${#SPARK_PREBUILT_VERSIONS_ARRAY[@]}
+      let __LAST_INDEX=__LEN-1
+      __LOOP=true
+      __INSTALLED="false"
+      while [ "$__LOOP" == "true" ]; do
+         __INDEX=0
+         echo -e "Spark distributions ${CUrl}${SPARK_DOWNLOAD_URL}spark-$SPARK_VERSION/${CNone}"
+         for i in ${SPARK_PREBUILT_VERSIONS_ARRAY[@]}; do
+            __INSTALLED="false"
+            for j in ${INSTALLED_VERSIONS[@]}; do
+               if [ "$i" == "$j" ]; then
+                  __INSTALLED="true"
+                  break;
+               fi
+            done
+            if [ "$__INSTALLED" == "true" ]; then
+               if [ $__INDEX -eq 0 ]; then
+                  echo "   [$__INDEX] $i [installed] - source only (build may be required)"
+               else
+                  echo "   [$__INDEX] $i [installed]"
+               fi
+            else
+               if [ $__INDEX -eq 0 ]; then
+                  echo "   [$__INDEX] $i - source only (build required)"
+               else
+                  echo "   [$__INDEX] $i"
+               fi
+            fi
+            let __INDEX=__INDEX+1
+         done
+         read -p "Enter a distribution to install or leave blank to skip: " INPUT
+         if [ "$INPUT" == "" ]; then
+            break;
+         else
+            if [ "$(isNumber $INPUT)" == "true" ]; then
+               if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
+                  echo "Invalid number. Enter [0, $__LAST_INDEX]."
+                  continue;
+               fi
+            fi
+            SPARK_DIST_VERSION=${SPARK_PREBUILT_VERSIONS_ARRAY[$INPUT]}
+            echo -e "Spark selected: ${CLightGreen}$SPARK_DIST_VERSION${CNone}"
+            __LOOP="false"
+         fi
+      done
+   fi
+   
    echo ""
 
    if [ $INSTALL_COUNT -eq 0 ]; then
@@ -867,8 +926,8 @@ while [ "$REDO" == "true" ]; do
    if [ "$SNAPPYDATA_VERSION" != "" ]; then
       echo -e "SnappyData: ${CLightGreen}$SNAPPYDATA_VERSION${CNone}"
    fi
-   if [ "$SPARK_VERSION" != "" ]; then
-      echo -e "Spark: ${CLightGreen}$SPARK_VERSION${CNone}"
+   if [ "$SPARK_VERSION" != "" ] && [ "$SPARK_DIST_VERSION" != "" ]; then
+      echo -e "Spark: ${CLightGreen}$SPARK_DIST_VERSION${CNone}"
    fi
    echo ""
 
@@ -1274,9 +1333,9 @@ if [ "$SNAPPYDATA_VERSION" != "" ]; then
    # installProduct "snappydata" "simulate"
    installProduct "snappydata"
 fi
-if [ "$SPARK_VERSION" != "" ]; then
+if [ "$SPARK_VERSION" != "" ] && [ "$SPARK_DIST_VERSION" != "" ]; then
    SPARK_RELEASE="spark-$SPARK_VERSION"
-   SPARK_TARBALL="$SPARK_RELEASE.tgz"
+   SPARK_TARBALL="spark-$SPARK_DIST_VERSION.tgz"
    # installProduct "spark" "simulate"
    installProduct "spark"
 fi

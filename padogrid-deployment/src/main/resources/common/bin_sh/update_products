@@ -52,16 +52,16 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Interatively add or update product versions
+   $EXECUTABLE - Interatively add or update product versions in the current RWE
 
 SYNOPSIS
    $EXECUTABLE [-?]
 
 DESCRIPTION
-   Interactively add or update the PadoGrid environment with the installed product versions.
-   This command extracts product versions from the PadoGrid products directory where the
-   product installations are stored. If you have products installed in other directories,
-   then use the 'change_version' command instead.
+   Interactively add or update the current PadoGrid environment (RWE) with the installed product
+   versions. This command extracts product versions from the PadoGrid products directory where the
+   products are installed. If you have products installed in other directories, then you can use
+   the 'change_version' command or manually enter them in the RWE and/or workspace setenv.sh file.
 
 EOF
 cat <<EOF
@@ -332,7 +332,7 @@ while [ "$REDO" == "true" ]; do
    echo "Selected: [$SELECTED_INDEX] ${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}"
    SELECTED_INDEX_JET_MC=$SELECTED_INDEX
    PRODUCT_EVAL_ARRAY[$INDEX_JET_MC]=${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}
-  echo ""
+   echo ""
 
    # SnappyData
    doUserInput "SnappyData" "$SNAPPYDATA_VERSIONS" "$__SNAPPYDATA_VERSION" "$SELECTED_INDEX_SNAPPYDATA"
@@ -471,7 +471,13 @@ function getProductDirName
           DIR_NAME="hazelcast-jet-$VERSION"
        fi
       ;;
-    [$INDEX_JET_MC] ) DIR_NAME="hazelcast-jet-management-center-$VERSION";;
+    [$INDEX_JET_MC] )
+       if [[ "$VERSION" == *"4.2021"* ]]; then
+          DIR_NAME="hazelcast-management-center-$VERSION"
+       else
+          DIR_NAME="hazelcast-jet-management-center-$VERSION"
+       fi
+       ;;
     [$INDEX_SNAPPYDATA] ) DIR_NAME="snappydata-$VERSION";;
     [$INDEX_SPARK] ) DIR_NAME="spark-$VERSION";;
   esac
@@ -500,7 +506,7 @@ function updateEVAL_RWE
    local ENV_HOME_PATH=$PRODUCTS_DIR/$PRODUCT_DIR_NAME
 
    if [ "$(grep "$ENV_HOME" $SETENV_PATH)" == "" ]; then
-      # If env var not found in setenv.sh, then instert this one before PRODUCT_HOME.
+      # If env var not found in setenv.sh, then insert this one before PRODUCT_HOME.
       EVAL_RWE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\"${ENV_HOME_PATH}\"'\'$'\n''\1|'"
    elif [ "$(grep "^.*#.*export $ENV_HOME" $SETENV_PATH)" != "" ]; then
       # Replace commented env var
@@ -523,7 +529,7 @@ function updateEVAL_WORKSPACE
    local ENV_HOME_PATH=$PRODUCTS_DIR/$PRODUCT_DIR_NAME
 
    if [ "$(grep "$ENV_HOME" $SETENV_PATH)" == "" ]; then
-      # If env var not found in setenv.sh, then instert this one before PRODUCT_HOME.
+      # If env var not found in setenv.sh, then insert this one before PRODUCT_HOME.
       EVAL_WORKSPACE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\"${ENV_HOME_PATH}\"'\'$'\n''\1|'"
    elif [ "$(grep "^.*#.*export $ENV_HOME" $SETENV_PATH)" != "" ]; then
       # Replace commented env var
@@ -539,7 +545,7 @@ if [ "$UPDATE_RWE" == "true" ]; then
    EVAL_RWE=""
    let PRODUCT_INDEX=0
    for i in "${PRODUCT_EVAL_ARRAY[@]}"; do
-      if [ "$i" != "(none)" ]; then
+      if [ "$i" != "(none)" ] && [ "$i" != "none" ]; then
          if [[ $PRODUCT_INDEX -eq $INDEX_HAZELCAST ]]; then
             IS_ENTERPRISE="$IS_HAZELCAST_ENTERPRISE"
          elif [[ $PRODUCT_INDEX -eq $INDEX_JET ]]; then
@@ -568,7 +574,7 @@ for WORKSPACE in $WORKSPACES; do
    WORKSPACE_SETENV="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/setenv.sh"
    let PRODUCT_INDEX=0
    for i in "${PRODUCT_EVAL_ARRAY[@]}"; do
-      if [ "$i" != "(none)" ]; then
+      if [ "$i" != "(none)" ] && [ "$i" != "none" ]; then
          if [[ $PRODUCT_INDEX -eq $INDEX_HAZELCAST ]]; then
             IS_ENTERPRISE="$IS_HAZELCAST_ENTERPRISE"
          elif [[ $PRODUCT_INDEX -eq $INDEX_JET ]]; then
@@ -582,7 +588,7 @@ for WORKSPACE in $WORKSPACES; do
    done
    if [ "$EVAL_WORKSPACE" != "" ]; then
       eval "sed -i $__SED_BACKUP $EVAL_WORKSPACE \"$WORKSPACE_SETENV\""
-      echo -e "Updated workspace: ${CLightGreen}$WORKSPACE${CNone}"
+      echo -e "Updated Workspace: ${CLightGreen}$WORKSPACE${CNone}"
    fi
 done
 

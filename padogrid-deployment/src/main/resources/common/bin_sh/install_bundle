@@ -142,16 +142,6 @@ fi
 
 BUNDLE_FILE_PATH=${@: -1}
 
-
-# Determine required products
-#if [ ! -d "$PADOGRID_WORKSPACE/bundles" ]; then
-#   mkdir "$PADOGRID_WORKSPACE/bundles"
-#fi
-URL=https://raw.githubusercontent.com/padogrid/$BUNDLE_FILE_PATH/master/required_products.txt
-GIT_PATH=$PADOGRID_WORKSPACE/bundles/required_productsx.txt
-#curl -s $URL > $GIT_PATH 2>/dev/null
-
-
 #
 # Returns "true" if one of the specfied product versions match the configured product version.
 #
@@ -203,84 +193,6 @@ function getProductKeyValue
    echo "$product=$version"
 }
 
-declare -a requiredProducts
-declare -a propArray
-getPropertiesArray "$GIT_PATH" propArray
-let len=${#propArray[@]}
-if [ $len -eq 0 ]; then
-   echo "Using bundle name to determine installed products..."
-
-   #
-   # Make sure the bundle can be installed in the current environment.
-   #
-   file_name="`basename $BUNDLE_FILE_PATH $0`"
-   keyvalue=$(getProductKeyValue "$file_name")
-
-   if [[ "$keyvalue" != "hazelcast"* ]] \
-      && [[ "$keyvalue" != "geode"* ]] \
-      && [[ "$keyvalue" != "gemfire"* ]] \
-      && [[ "$keyvalue" != "snappydata"* ]] \
-      && [[ "$keyvalue" != "spark"* ]] \
-      && [[ "$keyvalue" != "coherence"* ]]; then
-      echo >&2 "ERROR: Unsupported bundle product name [$keyvalue]. Command aborted."
-      exit 1
-   fi
-   requiredProducts[0]=$keyvalue
-fi
-
-# Determine if the required product versions are available.
-declare -a unfoundProducts
-if [ $len -gt 0 ]; then
-   let last_index=len-1
-   for i in $(seq 0 $last_index); do
-      keyvalue=${propArray[$i]}
-      PRODUCT=${keyvalue%%=*}
-      PRODUCT_VERSIONS=${keyvalue#*=}
-      found="false"
-      if [ "$PRODUCT" == "hazelcast-enterprise" ]; then
-         found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "hazelcast" ]; then
-         found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "jet-enterprise" ]; then
-         found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "jet" ]; then
-         found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "geode" ]; then
-         found=$(isProductExist "$PRODUCT" "$GEODE_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "gemfire" ]; then
-         found=$(isProductExist "$PRODUCT" "$GEMFIRE_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "snappydata" ]; then
-         found=$(isProductExist "$PRODUCT" "$SNAPPYDATA_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "spark" ]; then
-         found=$(isProductExist "$PRODUCT" "$SPARK_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "coherence" ]; then
-         found=$(isProductExist "$PRODUCT" "$COHERENCE_HOME" "$PRODUCT_VERSIONS")
-      elif [ "$PRODUCT" == "pado" ]; then
-         found=$(isProductExist "$PRODUCT" "$PADO_HOME" "$PRODUCT_VERSIONS")
-      fi
-      if [ "$found" == "true" ]; then
-          requiredProducts[$i]=$PRODUCT
-      else
-          unfoundProducts[$i]=$keyvalue
-      fi
-   done
-fi
-
-# Exit if there are unfound versions.
-let len=${#unfoundProducts[@]}
-if [ $len -gt 0 ]; then
-   let last_index=len-1
-   echo >&2 "ERROR: This bundle requires the following product version(s) configured for the workspace."
-   for i in $(seq 0 $last_index); do
-      echo >&2 "          ${unfoundProducts[$i]}"
-   done
-   echo >&2 ""
-   echo >&2 "       The following commands are available to verify and install products."
-   echo >&2 "          show_products, update_products, install_products, change_version"
-   echo >&2 ""
-   echo >&2 "       Command aborted."
-   exit 1
-fi
 
 # Set arguments. (due to the arg parser limitations, we need to do this here)
 if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]]; then
@@ -307,7 +219,7 @@ if [ "$DOWNLOAD" == "true" ]; then
       fi
       GIT_DIR="$PADOGRID_WORKSPACES_HOME/$REPO_NAME"
       if [ "$QUIET" == "false" ] && [ -d "$GIT_DIR" ]; then
-         echo >&2 "ERROR: The specified bundle workspace already exists. Command aborted."
+         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace already exists. Command aborted."
          exit 1
       fi
    else
@@ -343,14 +255,113 @@ if [ "$DOWNLOAD" == "true" ]; then
          . $SETENV_FILE
       fi
 
+      GIT_PATH=$PADOGRID_WORKSPACE/bundles/required_products.txt
       if [ "$GITHOST" == "gitea" ]; then
          GITHUB_USER_HOME="$GITEA_SSH_URL:$GITHUB_USER"
+         USER_REPOS_URL="$GITEA_HTTPS_URL/api/v1/user/repos"
+         REPOS_URL="$GITEA_HTTPS_URL/api/v1/repos"
+         AUTH_HEADER="Authorization: token $GITEA_ACCESS_TOKEN"
+         REQUIRED_PRODUCTS_CONTENT_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_FILE_PATH}/contents/required_products.txt"
+         curl -sS -X GET "$REQUIRED_PRODUCTS_CONTENT_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d > $GIT_PATH 2>/dev/null
       else
          if [ "$CONNECT" == "ssh" ] || [ "$GITHUB_PRIVATE_REPO_ENABLED" == "true" ]; then
              GITHUB_USER_HOME="git@github.com:$GITHUB_USER"
          else
              GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
          fi
+         RAW_REQUIRED_PRODUCTS_URL=https://raw.githubusercontent.com/$GITHUB_USER/$BUNDLE_FILE_PATH/master/required_products.txt
+         curl -sS $RAW_REQUIRED_PRODUCTS_URL > $GIT_PATH 2>/dev/null
+      fi
+      
+      declare -a requiredProducts
+      declare -a clusterTypes
+      declare -a propArray
+      getPropertiesArray "$GIT_PATH" propArray
+      let len=${#propArray[@]}
+      if [ $len -eq 0 ]; then
+         echo "Using bundle name to determine installed products..."
+      
+         #
+         # Make sure the bundle can be installed in the current environment.
+         #
+         file_name="`basename $BUNDLE_FILE_PATH $0`"
+         keyvalue=$(getProductKeyValue "$file_name")
+      
+         if [[ "$keyvalue" != "hazelcast"* ]] \
+            && [[ "$keyvalue" != "jet"* ]] \
+            && [[ "$keyvalue" != "geode"* ]] \
+            && [[ "$keyvalue" != "gemfire"* ]] \
+            && [[ "$keyvalue" != "snappydata"* ]] \
+            && [[ "$keyvalue" != "spark"* ]] \
+            && [[ "$keyvalue" != "coherence"* ]]; then
+            echo -e >&2 "${CLightRed}ERROR:${CNone} Unsupported bundle product name [$keyvalue]. Command aborted."
+            exit 1
+         fi
+         requiredProducts[0]=$keyvalue
+      fi
+      
+      # Determine if the required product versions are available.
+      declare -a unfoundProducts
+      if [ $len -gt 0 ]; then
+         let last_index=len-1
+         for i in $(seq 0 $last_index); do
+            keyvalue=${propArray[$i]}
+            PRODUCT=${keyvalue%%=*}
+            PRODUCT_VERSIONS=${keyvalue#*=}
+            found="false"
+            CLUSTER_TYPE=""
+            if [ "$PRODUCT" == "hazelcast-enterprise" ]; then
+               found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="imdg"
+            elif [ "$PRODUCT" == "hazelcast" ]; then
+               found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="imdg"
+            elif [ "$PRODUCT" == "jet-enterprise" ]; then
+               found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="jet"
+            elif [ "$PRODUCT" == "jet" ]; then
+               found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="jet"
+            elif [ "$PRODUCT" == "geode" ]; then
+               CLUSTER_TYPE="geode"
+               found=$(isProductExist "$PRODUCT" "$GEODE_HOME" "$PRODUCT_VERSIONS")
+            elif [ "$PRODUCT" == "gemfire" ]; then
+               found=$(isProductExist "$PRODUCT" "$GEMFIRE_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="gemfire"
+            elif [ "$PRODUCT" == "snappydata" ]; then
+               found=$(isProductExist "$PRODUCT" "$SNAPPYDATA_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="snappydata"
+            elif [ "$PRODUCT" == "spark" ]; then
+               found=$(isProductExist "$PRODUCT" "$SPARK_HOME" "$PRODUCT_VERSIONS")
+            elif [ "$PRODUCT" == "coherence" ]; then
+               found=$(isProductExist "$PRODUCT" "$COHERENCE_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="coherence"
+            elif [ "$PRODUCT" == "pado" ]; then
+               found=$(isProductExist "$PRODUCT" "$PADO_HOME" "$PRODUCT_VERSIONS")
+            fi
+            if [ "$found" == "true" ]; then
+                requiredProducts[$i]=$PRODUCT
+                clusterTypes[$i]=$CLUSTER_TYPE
+            else
+                unfoundProducts[$i]=$keyvalue
+            fi
+         done
+      fi
+
+      # Exit if there are unfound versions.
+      let len=${#unfoundProducts[@]}
+      if [ $len -gt 0 ]; then
+         let last_index=len-1
+         echo -e >&2 "${CLightRed}ERROR:${CNone} This bundle requires the following product version(s) configured for the workspace."
+         for i in $(seq 0 $last_index); do
+            echo >&2 "          ${unfoundProducts[$i]}"
+         done
+         echo >&2 ""
+         echo >&2 "       Use the following commands to verify and install products."
+         echo >&2 "          show_products, update_products, install_products, change_version"
+         echo >&2 ""
+         echo >&2 "       Command aborted."
+         exit 1
       fi
       
       if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
@@ -366,14 +377,14 @@ if [ "$DOWNLOAD" == "true" ]; then
       fi
 
       if [ ! -d "$GIT_DIR" ]; then
-         echo >&2 "ERROR: The specified bundle does not exist for the user [$GITHUB_USER]."
+         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle does not exist for the user [$GITHUB_USER]."
          exit 1
       fi
       pushd $GIT_DIR > /dev/null 2>&1 
       if [ "$BRANCH" != "" ]; then
          BRANCH_IN_REMOTE=$(git ls-remote --heads origin ${BRANCH})
          if [[ -z ${BRANCH_IN_REMOTE} ]]; then
-            echo >&2 "ERROR: The specified branch does not exist: [$BRANCH]. Command aborted."
+            echo -e >&2 "${CLightRed}ERROR:${CNone} The specified branch does not exist: [$BRANCH]. Command aborted."
             exit 1
          fi
          git checkout $BRANCH
@@ -391,15 +402,6 @@ if [ "$DOWNLOAD" == "true" ]; then
          cp $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
          rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}
 
-         # Update product home paths
-#         let len=${#requiredProducts[@]}
-#         if [ $len -gt 0 ]; then
-#            let last_index=len-1
-#            for i in $(seq 0 $last_index); do
-#               echo [$i]=${requiredProducts[$i]}
-#            done
-#         fi
-
          echo ""
          echo "Bundle workspace created. Switch workspace by executing the following command:"
          echo -e "   ${CLightGreen}switch_workspace $REPO_NAME ${CNone}"
@@ -411,7 +413,7 @@ if [ "$DOWNLOAD" == "true" ]; then
          if [ -f $TARBALL_PATH ]; then
             BUNDLE_FILE_PATH=$TARBALL_PATH
          else
-            echo >&2 "ERROR: File not found. Command aborted."
+            echo -e >&2 "${CLightRed}ERROR:${CNone} File not found. Command aborted."
             exit 1
          fi
       fi
@@ -423,7 +425,7 @@ fi
 if [ ! -f $BUNDLE_FILE_PATH ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "    ERROR: The specified file not found. Command aborted."
+   echo -e >&2 "    ${CLightRed}ERROR:${CNone} The specified file not found. Command aborted."
    echo >&2 "----------------------------------------------------------------"
    exit 1 
 fi
@@ -470,7 +472,7 @@ fi
 # 
 # Find all pods, clusters and apps in the bundle
 #
-# Find all clusters
+# Find all pods
 PODS=""
 for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* clusters\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* pods\//pods\//'`; do
    if [[ $i == pods/* ]]; then
@@ -482,6 +484,7 @@ for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* clusters\/.*//' -e 's/^.* 
    fi
 done
 
+# Find all clusters
 CLUSTERS=""
 for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* clusters\//clusters\//'`; do
    if [[ $i == clusters/* ]]; then
@@ -544,6 +547,18 @@ if [ "$PREVIEW" == "true" ]; then
    tar -tzvf $BUNDLE_FILE_PATH
 else
    tar -C $WORKSPACE_PATH -xzvf $BUNDLE_FILE_PATH
+   # The following is to support the deprecated bundle installation method
+   # which relied on a single product/cluster type per workspace. This only
+   # addresses a bundle with a single type.
+   __PRODUCT=${PRODUCT%%-enterprise}
+   for cluster in $CLUSTERS; do
+      CLUSTER_DIR="$WORKSPACE_PATH/clusters/$cluster"
+      if [ ! -d "$CLUSTER_DIR/.cluster" ]; then
+         mkdir "$CLUSTER_DIR/.cluster"
+         echo "PRODUCT=$__PRODUCT" > "$CLUSTER_DIR/.cluster/clusterenv.sh"
+         echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$CLUSTER_DIR/.cluster/clusterenv.sh"
+      fi
+    done
 fi
 
 echo ""
@@ -555,7 +570,7 @@ else
    echo "---------"
 fi
 if [ "$PREVIEW" == "true" ]; then
-   echo "      Cluster Type: $cluster_type"
+   echo "      Cluster Type: $CLUSTER_TYPE"
    if [ "$DOWNLOAD" == "true" ]; then
    echo " Downloaded Bundle: $BUNDLE_FILE_PATH"
    else
@@ -568,7 +583,7 @@ if [ "$PREVIEW" == "true" ]; then
    echo "      Preiview K8S:$K8S"
 else
    echo "           WORKSPACE: $WORKSPACE_PATH"
-   echo "        Cluster Type: $cluster_type"
+   echo "        Cluster Type: $CLUSTER_TYPE"
    echo "              Bundle: $BUNDLE_FILE_PATH"
    echo "    Installed Pod(s):$PODS"
    echo "Installed Cluster(s):$CLUSTERS"
