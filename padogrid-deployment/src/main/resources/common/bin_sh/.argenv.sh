@@ -59,6 +59,7 @@ K8S_SPECIFIED=false
 DOCKER=
 DOCKER_SPECIFIED=false
 HOST=
+HOST_SPECIFIED=false
 COUNT=
 VERSION_SPECIFIED=false
 MAN_SPECIFIED=false
@@ -345,6 +346,8 @@ do
       DOCKER_SPECIFIED=true
    elif [ "$i" == "-app" ]; then
       APP_SPECIFIED=true
+   elif [ "$i" == "-host" ]; then
+      HOST_SPECIFIED="true"      
    elif [ "$i" == "-grid" ]; then
       GRID_SPECIFIED=true
    elif [ "$i" == "-site" ]; then

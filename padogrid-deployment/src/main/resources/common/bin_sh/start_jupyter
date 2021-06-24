@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-host -port -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start Jupyter Notebook server
+
+SYNOPSIS
+   $EXECUTABLE [-host [ip_address]] [-port port_number] -?]
+
+NOTES
+   Jupyter commands are experimental and subject to change in future releases.
+
+DESCRIPTION
+   Starts Jupyter Notebook server in the current RWE. By default, the Jupyter Notebook server listens
+   on localhost. To access the Jupyter Notebook server remotely, this machine's host name or IP address
+   must be specified using the '-host' option. If '-host' is specified without the IP address then this
+   machine's it defaults to this machine's host name.
+
+OPTIONS
+   -host [ip_address]
+             The IP address the notebook server will listen on. Default: localhost
+             If ip_address is not specified then the host name is assigned.
+
+   -port [port_number]
+             The port the notebook server will listen on. Default: 8888
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -host localhost -port 8888
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*jupyter*" $EXECUTABLE
+   exit
+fi
+
+if [ "$(which jupyter)" == "" ]; then
+   echo >&2 "ERROR: jupyter executable not found. Command aborted."
+   exit 1
+fi
+
+if [ "$HOST_SPECIFIED" == "true" ]; then
+   IP_ADDRESS=$HOST
+else
+   IP_ADDRESS="localhost"
+fi
+if [ "$IP_ADDRESS" == "" ]; then
+   IP_ADDRESS=$(hostname)
+fi
+
+PORT_NUMBER="$PORT_ARG"
+if [ "$PORT_NUMBER" == "" ]; then
+   PORT_NUMBER="8888"
+fi
+
+NOTEBOOK_SERVERS=$(jupyter notebook list | grep -v "Currently")
+
+if [[ "$NOTEBOOK_SERVERS" == *"$PORT_NUMBER"* ]]; then
+   echo >&2 "ERROR: Notebook server already running. Command aborted."
+   exit 1
+fi
+
+pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
+nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS > /dev/null 2>&1 &
+popd > /dev/null 2>&1
+
+RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+RWE_URL="http://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME"
+
+echo ""
+echo "Notebook server started."
+echo -e "   ${CUrl}$RWE_URL${CNone}"
+echo ""

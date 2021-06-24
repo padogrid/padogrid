@@ -448,6 +448,13 @@ if [ -f "$ETC_DIR/worker.properties" ]; then
    fi
 fi
 
+# For Arrow related features. This prevents java.lang.UnsupportedOperationException: 
+# sun.misc.Unsafe or java.nio.DirectByteBuffer.(long, int) not available when Apache Arrow
+# uses Netty internally.
+if [ "$JAVA_MAJOR_VERSION_NUMBER" == "11" ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dio.netty.tryReflectionSetAccessible=true"
+fi
+
 # Master URL
 BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
 MASTER_START_PORT=`getClusterProperty "master.tcp.startPort" $DEFAULT_MASTER_START_PORT`

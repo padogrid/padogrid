@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-host -port -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Open the current RWE JupyterLab workspace
+
+SYNOPSIS
+   $EXECUTABLE [-host [ip_address]] [-port port_number] [-?]
+
+NOTES
+   Jupyter commands are experimental and subject to change in future releases.
+
+DESCRIPTION
+   Opens the current RWE JupyterLab workspace. It starts a Jupyter Notebook server if it is not
+   running. If a Jupyter Notebook server is already running, then the '-host' '-port' options are
+   ignored.
+
+OPTIONS
+   -host [ip_address]
+             The IP address the notebook server will listen on.  If ip_address is not 
+             specified then the host name is assigned. This option is ignored if the
+             notebook server is already running. Default: localhost
+
+   -port [port_number]
+             The port the notebook server will listen on. Default: 8888
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -host localhost -port 8888
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*jupyter*" $EXECUTABLE
+   exit
+fi
+
+if [ "$(which jupyter)" == "" ]; then
+   echo >&2 "ERROR: jupyter executable not found. Command aborted."
+   exit 1
+fi
+   
+RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
+
+# Determine if the workspace exists - Not used.
+WORKSPACE_LAYOUT=$(jupyter lab workspaces export $RWE_NAME | grep layout)
+if [ "$WORKSPACE_LAYOUT" == "" ]; then
+   NEW_WORKSPACE="true"
+else
+   NEW_WORKSPACE="false"
+fi
+
+# Create the default Jupyter workspace using the template.
+if [ ! -f $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json ]; then
+   if [ ! -d "$PADOGRID_WORKSPACES_HOME/.jupyter" ]; then
+      mkdir "$PADOGRID_WORKSPACES_HOME/.jupyter"
+   fi
+   sed -e "s/\${WORKSPACE}/${WORKSPACE_NAME}/g" \
+       -e "s/\${RWE}/$RWE_NAME/g" \
+       $PADOGRID_HOME/etc/jupyter/template-jupyter-workspace.json \
+       > $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json
+fi
+
+if [ "$HOST_SPECIFIED" == "true" ]; then
+   IP_ADDRESS=$HOST
+else
+   IP_ADDRESS="localhost"
+fi
+if [ "$IP_ADDRESS" == "" ]; then
+   IP_ADDRESS=$(hostname)
+fi
+PORT_NUMBER="$PORT_ARG"
+if [ "$PORT_NUMBER" == "" ]; then
+   PORT_NUMBER="8888"
+fi
+
+JUPYTER_SERVERS=$(jupyter notebook list | grep -v "Currently" | grep $PORT_NUMBER)
+
+# Import the workspace configuration file
+if [ -f $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json ]; then
+   jupyter lab workspaces import $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json
+fi
+
+# Start the notebook server if is not running
+if [ "$JUPYTER_SERVERS" == "" ]; then
+   start_jupyter $@
+   sleep 3
+fi
+RWE_URL="http://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME"
+
+if [ "$OS_NAME" == "DARWIN" ]; then
+   open $RWE_URL
+elif [ "$OS_NAME" == "CYGWIN" ]; then
+   cygstart $RWE_URL
+else
+   BROWSER_OPEN_PATH=$(which xdg-open)
+   if [ "$BROWSER_OPEN_PATH" == "" ]; then
+      echo >&2 "ERROR: Unable to find the executable to open the default browser. Please install 'xdg-open'."
+      echo >&2 "       Command aborted."
+      exit 1
+   else
+      eval "$BROWSER_OPEN_PATH" $RWE_URL
+   fi
+fi
