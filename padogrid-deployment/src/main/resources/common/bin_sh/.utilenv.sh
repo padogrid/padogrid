@@ -1736,6 +1736,9 @@ function switch_cluster
       echo "-?"
       return
    fi
+   if [ -z $CLUSTER ]; then
+      retrieveWorkspaceEnvFile
+   fi
    __switch_cluster $@
    cd_cluster $@
  }
@@ -2247,6 +2250,9 @@ function cd_cluster
    fi
 
    if [ "$1" == "" ]; then
+      if [ -z $CLUSTER ]; then
+         retrieveWorkspaceEnvFile
+      fi
       cd $PADOGRID_WORKSPACE/clusters/$CLUSTER
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/clusters"

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -connect -preview -download -workspace -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -checkout -workspace -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -51,6 +51,7 @@ SYNOPSIS
                [-githost github|gitea]
                [-branch git_branch] 
                [-connect https|ssh]
+               [-checkout default | workspace_name]
                [-workspace default | workspace_name]
                [-preview] [-download]
                [-quiet] [-?] bundle_file_path
@@ -82,16 +83,22 @@ OPTIONS
              Do not install but display the bundle contents.
 
    -download
-             Downloads and installs the specified bundle from the remote padogrid
-             bundle repo. To prevent it from installing, specify the '-preview' option.
-             If the '-preview' option is specified, then it downloads and displays the
-             contents but does not install the bundle. You can install the downloaded
-             bundle later by specifying the bundle file path.
+             Downloads and installs the specified bundle from the remote padogrid bundle repo. To
+             prevent it from installing, specify the '-preview' option.  If the '-preview' option is
+             specified, then it downloads and displays the contents but does not install the bundle.
+             You can install the downloaded bundle later by specifying the bundle file path.
+
+   -checkout default | workspace_name
+             If this option is specified then it checks out the bundle in the specified workspace.
+             If workspace_name is 'default' or unspecified then the bundle name is used as the workspace
+             name.  The new workspace it creates clones the same configuration as the current workspace. 
+             The '-download' option is not necessary for this option as it always downloads the bundle
+             from the repo.
 
    -workspace default | workspace_name
              If this option is specified then it installs the bundle in the specified workspace.
-             if the workspace name is 'default' then the bundle name is used as the workspace name. 
-             The new workspace it creates clones the same configuration as the current workspace. 
+             If workspace_name is 'default' or unspecified then the bundle name is used as the workspace
+             name. The new workspace it creates clones the same configuration as the current workspace. 
              If the '-download' option is also specified, then it checks out the bundle from the repo.
 
    -quiet
@@ -193,15 +200,59 @@ function getProductKeyValue
    echo "$product=$version"
 }
 
+#
+# Creates .cluster/clusterenv.sh in all bundle clusters. This function is to support the deprecated
+# bundle installation method which relied on a single product/cluster type per workspace. This only
+# addresses a bundle with a single type.
+# 
+# @required PRODUCT
+# @required CLUSTERS
+# @required WORKSPACE_PATH
+# @required CLUSTER_TYPE
+#
+function createClusterEnv
+{
+   __PRODUCT=${PRODUCT%%-enterprise}
+   for cluster in $CLUSTERS; do
+      CLUSTER_DIR="$WORKSPACE_PATH/clusters/$cluster"
+      if [ ! -d "$CLUSTER_DIR/.cluster" ]; then
+         mkdir "$CLUSTER_DIR/.cluster"
+         echo "PRODUCT=$__PRODUCT" > "$CLUSTER_DIR/.cluster/clusterenv.sh"
+         echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$CLUSTER_DIR/.cluster/clusterenv.sh"
+      fi
+    done
+}
+
+if [ "$CHECKOUT_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. Specify either '-checkout' or '-workspace'. Command aborted."
+   exit 1
+fi
 
 # Set arguments. (due to the arg parser limitations, we need to do this here)
-if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]]; then
-   if [ "$WORKSPACE_ARG" == "-download" ]; then
+if [ "$CHECKOUT_ARG" == "" ] || [[ "$CHECKOUT_ARG" == "-"* ]]; then
+   if [ "$CHECKOUT_ARG" == "-download" ]; then
       DOWNLOAD="true"
-   elif [ "$WORKSPACE_ARG" == "-preview" ]; then
+   elif [ "$CHECKOUT_ARG" == "-preview" ]; then
       PREVIEW="true"
    fi
-   WORKSPACE_ARG="default"
+   WORKSPACE_NAME="default"
+else
+   WORKSPACE_NAME=$CHECKOUT_ARG
+fi
+if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
+   DOWNLOAD="true"
+fi
+if [ "$WORKSPACE_NAME" == "" ] || [ "$WORKSPACE_NAME" == "default" ]; then
+   if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]]; then
+      if [ "$WORKSPACE_ARG" == "-download" ]; then
+         DOWNLOAD="true"
+      elif [ "$WORKSPACE_ARG" == "-preview" ]; then
+         PREVIEW="true"
+      fi
+      WORKSPACE_NAME="default"
+   else
+      WORKSPACE_NAME=$WORKSPACE_ARG
+   fi
 fi
 
 if [ "$USER" == "" ]; then
@@ -211,9 +262,9 @@ else
 fi
 if [ "$DOWNLOAD" == "true" ]; then
    IS_DOWNLOAD="true"
-   if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-      if [ "$WORKSPACE_ARG" != "default" ]; then
-         REPO_NAME="$WORKSPACE_ARG"
+   if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+      if [ "$WORKSPACE_NAME" != "default" ]; then
+         REPO_NAME="$WORKSPACE_NAME"
       else
          REPO_NAME="$BUNDLE_FILE_PATH"
       fi
@@ -243,7 +294,7 @@ if [ "$DOWNLOAD" == "true" ]; then
       fi
    fi
    if [ "$IS_DOWNLOAD" == "true" ]; then
-      if [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+      if [ "$CHECKOUT_SPECIFIED" == "false" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
          if [ -d $GIT_DIR ]; then
             rm -rf $GIT_DIR
          fi
@@ -297,10 +348,11 @@ if [ "$DOWNLOAD" == "true" ]; then
             echo -e >&2 "${CLightRed}ERROR:${CNone} Unsupported bundle product name [$keyvalue]. Command aborted."
             exit 1
          fi
-         requiredProducts[0]=$keyvalue
+         propArray[0]=$keyvalue
       fi
       
       # Determine if the required product versions are available.
+      let len=${#propArray[@]}
       declare -a unfoundProducts
       if [ $len -gt 0 ]; then
          let last_index=len-1
@@ -323,8 +375,8 @@ if [ "$DOWNLOAD" == "true" ]; then
                found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="jet"
             elif [ "$PRODUCT" == "geode" ]; then
-               CLUSTER_TYPE="geode"
                found=$(isProductExist "$PRODUCT" "$GEODE_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="geode"
             elif [ "$PRODUCT" == "gemfire" ]; then
                found=$(isProductExist "$PRODUCT" "$GEMFIRE_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="gemfire"
@@ -333,6 +385,7 @@ if [ "$DOWNLOAD" == "true" ]; then
                CLUSTER_TYPE="snappydata"
             elif [ "$PRODUCT" == "spark" ]; then
                found=$(isProductExist "$PRODUCT" "$SPARK_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="standalone"
             elif [ "$PRODUCT" == "coherence" ]; then
                found=$(isProductExist "$PRODUCT" "$COHERENCE_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="coherence"
@@ -364,7 +417,7 @@ if [ "$DOWNLOAD" == "true" ]; then
          exit 1
       fi
       
-      if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+      if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
          pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1 
          echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME
          git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME> /dev/null 2>&1
@@ -390,17 +443,33 @@ if [ "$DOWNLOAD" == "true" ]; then
          git checkout $BRANCH
       fi
       git pull
-      if [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+      if [ "$CHECKOUT_SPECIFIED" == "false" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
          mvn package
       fi
       popd > /dev/null 2>&1 
-      if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+      if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
          # Copy the workspace files
          create_workspace -name ws-${BUNDLE_FILE_PATH} -product $PRODUCT_HOME -quiet > /dev/null
          rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/clusters/*
          cp -r $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/* $GIT_DIR/
          cp $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
          rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}
+
+         if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+            # Remove build files including git
+            if [ -d $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME ]; then
+               pushd $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME > /dev/null 2>&1 
+               rm -rf $(find . -name ".git*")
+               rm -f pom.xml
+               rm -f assembly-descriptor.xml
+               rm -f README_HEADER.md
+            popd > /dev/null 2>&1 
+            fi
+         fi
+
+         CLUSTERS=$(list_clusters -workspace $WORKSPACE_NAME)
+         WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
+         createClusterEnv
 
          echo ""
          echo "Bundle workspace created. Switch workspace by executing the following command:"
@@ -432,9 +501,9 @@ fi
 
 
 # Set workspace and its path
-if [ "$WORKSPACE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "default" ]; then
-   WORKSPACE=$WORKSPACE_ARG
-   WORKSPACE_PATH="$PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG"
+if [ "$WORKSPACE_NAME" != "default" ]; then
+   WORKSPACE=$WORKSPACE_NAME
+   WORKSPACE_PATH="$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME"
 else
    WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
    WORKSPACE_PATH="$PADOGRID_WORKSPACE"
@@ -534,7 +603,7 @@ done
 
 # Create workspace if it does not exist
 if [ ! -d "$WORKSPACE_PATH" ]; then
-   create_workspace -name $WORKSPACE_ARG -product $PRODUCT_HOME -quiet > /dev/null
+   create_workspace -name $WORKSPACE_NAME -product $PRODUCT_HOME -quiet > /dev/null
    WORKSPACE_CREATED="true"
 else
    WORKSPACE_CREATED="false"
@@ -547,18 +616,7 @@ if [ "$PREVIEW" == "true" ]; then
    tar -tzvf $BUNDLE_FILE_PATH
 else
    tar -C $WORKSPACE_PATH -xzvf $BUNDLE_FILE_PATH
-   # The following is to support the deprecated bundle installation method
-   # which relied on a single product/cluster type per workspace. This only
-   # addresses a bundle with a single type.
-   __PRODUCT=${PRODUCT%%-enterprise}
-   for cluster in $CLUSTERS; do
-      CLUSTER_DIR="$WORKSPACE_PATH/clusters/$cluster"
-      if [ ! -d "$CLUSTER_DIR/.cluster" ]; then
-         mkdir "$CLUSTER_DIR/.cluster"
-         echo "PRODUCT=$__PRODUCT" > "$CLUSTER_DIR/.cluster/clusterenv.sh"
-         echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$CLUSTER_DIR/.cluster/clusterenv.sh"
-      fi
-    done
+   createCluterEnv
 fi
 
 echo ""
@@ -597,6 +655,6 @@ fi
 if [ "$WORKSPACE_CREATED" == "true" ]; then
    echo ""
    echo "Bundle workspace created. Switch workspace by executing the following command:"
-   echo -e "   ${CLightGreen}switch_workspace $WORKSPACE_ARG ${CNone}"
+   echo -e "   ${CLightGreen}switch_workspace $WORKSPACE_NAME ${CNone}"
 fi
 echo ""

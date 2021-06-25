@@ -40,7 +40,9 @@ ENV_ARG=
 RWE_ARG=
 RWE_SPECIFIED=false
 WORKSPACE_ARG=
+CHECKOUT_ARG=
 WORKSPACE_SPECIFIED=false
+CHECKOUT_SPECIFIED=false
 JAVA_HOME_ARG=
 PATH_ARG=
 JAR_ARG=
@@ -155,6 +157,8 @@ do
       ENV_ARG=$i
    elif [ "$PREV" == "-workspace" ]; then
       WORKSPACE_ARG=$i
+   elif [ "$PREV" == "-checkout" ]; then
+      CHECKOUT_ARG=$i
    elif [ "$PREV" == "-java" ]; then
       JAVA_HOME_ARG=$i
    elif [ "$PREV" == "-path" ]; then
@@ -288,6 +292,8 @@ do
       DOWNLOAD=true
    elif [ "$i" == "-workspace" ]; then
       WORKSPACE_SPECIFIED=true
+   elif [ "$i" == "-checkout" ]; then
+      CHECKOUT_SPECIFIED=true
    elif [ "$i" == "-list" ]; then
       LIST=true
    elif [ "$i" == "-header" ]; then

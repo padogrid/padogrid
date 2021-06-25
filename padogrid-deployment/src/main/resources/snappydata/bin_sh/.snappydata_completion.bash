@@ -106,6 +106,8 @@ __padogrid_complete()
    -port)
       if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_LOCATOR_START_PORT"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
+         type_list="8888"
       fi
       ;;
 
@@ -813,6 +815,8 @@ __command_complete()
    -port)
       if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_LOCATOR_START_PORT"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
+         type_list="8888"
       fi
      ;;
    -vm-user)

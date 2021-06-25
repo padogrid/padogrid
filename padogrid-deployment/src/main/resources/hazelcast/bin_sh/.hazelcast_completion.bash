@@ -106,6 +106,8 @@ __padogrid_complete()
    -port)
       if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
+         type_list="8888"
       fi
       ;;
 
@@ -191,6 +193,8 @@ __padogrid_complete()
    -host)
       if [ "$command" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
+         type_list="localhost `hostname`"
       fi
       ;;
 
@@ -780,6 +784,8 @@ __command_complete()
    -host)
       if [ "$command" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
+         type_list="localhost `hostname`"
       fi
       ;;
    -user)
@@ -807,6 +813,8 @@ __command_complete()
    -port)
       if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
+         type_list="8888"
       fi
      ;;
    -vm-user)

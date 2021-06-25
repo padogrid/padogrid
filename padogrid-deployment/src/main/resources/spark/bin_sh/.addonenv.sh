@@ -442,7 +442,7 @@ fi
 # Set CLUSTER to the default cluster set in setenv.sh if it 
 # is not specified.
 if [ -z $CLUSTER ]; then
-   CLUSTER=$DEFAULT_CLUSTER
+   retrieveWorkspaceEnvFile
 fi
 
 if [ -z $CLUSTERS_DIR ]; then

@@ -664,6 +664,10 @@ if [ "$QUIET" == "true" ]; then
    JET_MANAGEMENT_CENTER_VERSION=${JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[0]}
    SNAPPYDATA_VERSION=${SNAPPYDATA_DOWNLOAD_VERSIONS[0]}
    SPARK_VERSION=${SPARK_DOWNLOAD_VERSIONS[0]}
+   SPARK_DIST_VERSION=${SPARK_VERSION}
+   if [ "$SPARK_VERSION" != "" ]; then
+      SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop
+   fi
 
    echo "Installing the latest products versions as follows:"
    echo ""
@@ -978,6 +982,7 @@ fi
 #
 # @required SPARK_RELEASE
 # @required SPARK_TARBALL
+# @required SPARK_DIST_VERSION
 #
 function installProduct
 {
@@ -1211,8 +1216,8 @@ function installProduct
 
    elif [ "$__PRODUCT" == "spark" ]; then 
       
-      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$SPARK_RELEASE" ]; then
-         echo "Already installed - $SPARK_RELEASE"
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$SPARK_DIST_VERSION" ]; then
+         echo "Already installed - $SPARK_DIST_VERSION"
       else
       # --------------
       # Download Spark
