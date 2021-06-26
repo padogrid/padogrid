@@ -2,9 +2,9 @@
 
 ----
 
-## Version 0.9.7-SNAPSHOT
+## Version 0.9.7
 
-### Release Date: 06/24/21
+### Release Date: 06/26/21
 
 - Added experimental Jupyter commands for creating a PadoGrid/Jupyter workspace integrated environment. These commands are subject to change in future releases.
 - Added support for installing bundles with multiple products and versions. The new bundle installation mechanism introduces the `required_products.txt` file for listing product versions. You must now provide a complete list of products and their versions that are required to install and run the bundle in this file. The previous file name based, single product installation method has been deprecated and its support will eventually be dropped. 
