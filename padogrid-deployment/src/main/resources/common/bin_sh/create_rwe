@@ -132,6 +132,16 @@ function isValidProduct
    echo $FOUND
 }
 
+# 
+# Returns "true" if number, else "false"
+# @param number
+#
+function isNumber
+{
+   num=$1
+   [ ! -z "${num##*[!0-9]*}" ] && echo "true" || echo "false";
+}
+
 function getLatestProductVersion
 {
    local ALL_VERSIONS="$1"
@@ -151,7 +161,7 @@ function getLatestProductVersion
          local minor=${i#*\.}
          local update=-1
       fi
-      #echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
+      # echo debug: lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
       if [ $lmajor -lt $major ]; then
         lmajor=$major
         lminor=$minor
@@ -161,15 +171,19 @@ function getLatestProductVersion
            lminor=$minor
            lupdate=$update
         elif [ $lminor -eq $minor ]; then
-           if [ $lupdate -eq -1 ]; then
+           if [ $lupdate == "-1" ]; then
               lupdate=$update
-           elif [ $lupdate -lt $update ]; then
+           elif [ "$(isNumber $lupdate)" == "true" ] && [ "$(isNumber $update)" == "true" ]; then
+              if [ $lupdate -lt $update ]; then
+                 lupdate=$update
+              fi
+           else
               lupdate=$update
            fi
         fi
       fi
    done
-   if [ $lupdate -eq -1 ]; then
+   if [ $lupdate == "-1" ]; then
       echo "$lmajor.$lminor"
    else
       echo "$lmajor.$lminor.$lupdate"
@@ -279,7 +293,6 @@ function determineInstalledProducts
       if [ "$GEMFIRE_HOME" == "" ]; then
          __versions=""
          for i in pivotal-gemfire-*; do
-            echo i=$i
             __version=${i#pivotal-gemfire-}
             __versions="$__versions $__version "
          done

@@ -1238,18 +1238,24 @@ function updateWorkspaceEnvFile
    fi
 
    # Upgrade to the new release directory struture (0.9.6)
-   if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
-      if [ -f "$__WORKSPACE_PATH/.workspace" ]; then
-         rm -f "$__WORKSPACE_PATH/.workspace"
+   # Check to see if the workspace path is writable. During the initialization phase, 
+   # PadoGrid submits its own installation path as workspace. This needs to be correted.
+   # This causes this function to log errors, if the PadoGrid installation directory
+   # has no write permissions.
+   if [ -w "$__WORKSPACE_PATH" ]; then
+      if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
+         if [ -f "$__WORKSPACE_PATH/.workspace" ]; then
+            rm -f "$__WORKSPACE_PATH/.workspace"
+         fi
       fi
+      if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
+         mkdir "$__WORKSPACE_PATH/.workspace"
+      fi
+   
+      local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace/workspaceenv.sh"
+      echo "CLUSTER=$CLUSTER" > "$WORKSPACEENV_FILE"
+      echo "POD=$POD" >> "$WORKSPACEENV_FILE"
    fi
-   if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
-      mkdir "$__WORKSPACE_PATH/.workspace"
-   fi
-
-   local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace/workspaceenv.sh"
-   echo "CLUSTER=$CLUSTER" > "$WORKSPACEENV_FILE"
-   echo "POD=$POD" >> "$WORKSPACEENV_FILE"
 }
 
 #
@@ -1270,25 +1276,32 @@ function retrieveWorkspaceEnvFile
       rm "$__WORKSPACE_PATH/.workspace"
    fi
    # If the cluster does not exist then pick the first cluster and pod in the workspace dir
-   if [ "$CLUSTER" == "" ] || [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
-      local __CLUSTERS=$(ls $__WORKSPACE_PATH/clusters)
-      local __CLUSTER=""
-      for i in $__CLUSTERS; do
-         __CLUSTER=$i
-         break;
-      done
-      CLUSTER=$__CLUSTER
-      updateWorkspaceEnvFile "$__WORKSPACE_PATH"
+   # Check to see if clusters and pods directories exist. During the initialization phase, 
+   # PadoGrid submits its own installation path as workspace. This needs to be correted.
+   # This causes this function to log errors.
+   if [ -d "$__WORKSPACE_PATH/clusters" ]; then
+      if [ "$CLUSTER" == "" ] || [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
+         local __CLUSTERS=$(ls $__WORKSPACE_PATH/clusters)
+         local __CLUSTER=""
+         for i in $__CLUSTERS; do
+            __CLUSTER=$i
+            break;
+         done
+         CLUSTER=$__CLUSTER
+         updateWorkspaceEnvFile "$__WORKSPACE_PATH"
+      fi
    fi
-   if [ "$POD" == "" ] || [ ! -d "$__WORKSPACE_PATH/pods/$POD" ]; then
-      local __PODS=$(ls $__WORKSPACE_PATH/pods)
-      local __POD=""
-      for i in $__PODS; do
-         __POD=$i
-         break;
-      done
-      POD=$__POD
-      updateWorkspaceEnvFile "$__WORKSPACE_PATH"
+   if [ -d "$__WORKSPACE_PATH/pods/$POD" ]; then
+      if [ "$POD" == "" ] || [ ! -d "$__WORKSPACE_PATH/pods/$POD" ]; then
+         local __PODS=$(ls $__WORKSPACE_PATH/pods)
+         local __POD=""
+         for i in $__PODS; do
+            __POD=$i
+            break;
+         done
+         POD=$__POD
+         updateWorkspaceEnvFile "$__WORKSPACE_PATH"
+      fi
    fi
 }
 
