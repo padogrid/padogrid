@@ -135,15 +135,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir ~/Padogrid/snapshots
-tar -C ~/Padogrid/snapshots/ -xzf padogrid_0.9.6-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/snapshots/ -xzf padogrid_0.9.8-SNAPSHOT.tar.gz
 cd ~/Padogrid/snapshots
-tree -L 1 padogrid_0.9.6-SNAPSHOT
+tree -L 1 padogrid_0.9.8-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.6-SNAPSHOT
+padogrid_0.9.8-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -163,12 +163,12 @@ padogrid_0.9.6-SNAPSHOT
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/snapshots/padogrid_0.9.6-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/snapshots/padogrid_0.9.8-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid on Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.6-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.8-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 ```bash
 # docker
