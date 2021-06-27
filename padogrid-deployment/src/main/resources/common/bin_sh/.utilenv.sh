@@ -1213,7 +1213,8 @@ function retrieveRweEnvFile
       for i in $__WORKSPACES; do
          __WORKSPACE=$i
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
-         updateRweEnv break;
+         updateRweEnvFile
+         break;
       done
    fi
 }
