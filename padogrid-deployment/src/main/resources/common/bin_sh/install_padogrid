@@ -61,6 +61,7 @@ CUnderline='\033[4m'
 CUrl=$CBlue$CUnderline
 
 PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases"
+PADO_DOWNLOAD_URL="https://github.com/netcrest/pado2/releases"
 GEODE_DOWNLOAD_URL="https://archive.apache.org/dist/geode/"
 HAZELCAST_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.org/imdg/download/archives/#hazelcast-imdg"
@@ -394,6 +395,12 @@ function getDownloadablePadogridVersions
   unique_words "$ALL_PADOGRID_VERSIONS"
 }
 
+function getDownloadablePadoVersions
+{
+  local ALL_PADO_VERSIONS=$(curl -s $PADO_DOWNLOAD_URL |grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*pado_//' -e 's/\.tar\.gz.*//')
+  unique_words "$ALL_PADO_VERSIONS"
+}
+
 function getDownloadableGeodeVersions
 {
    local ALL_GEODE_VERSIONS=$(curl -sL $GEODE_DOWNLOAD_URL |grep img | grep -v unknown | grep -v incubating | sed -e 's/.*>1./1./' -e 's/\/.*//' | grep -v img)
@@ -718,6 +725,7 @@ echo ""
 stty igncr
 
 PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions)"))
+PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
 GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
 HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastEnterpriseVersions))
 HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastOssVersions))
@@ -727,8 +735,7 @@ JET_OSS_DOWNLOAD_VERSIONS=($(getDownloadableJetOssVersions))
 SNAPPYDATA_DOWNLOAD_VERSIONS=($(getDownloadableSnappyDataVersions))
 SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
 
-# Hazelcast/Jet  management center merged starting 4.2021.02
-JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=$(getDownloadableJetManCenterVersions)
+# Hazelcast/Jet  management center merged starting 4.2021.02 JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=$(getDownloadableJetManCenterVersions)
 for i in $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS; do
    if [[ "$i" == "4.2021"* ]]; then
       JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS="$i $JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS"
@@ -741,6 +748,7 @@ stty -igncr
 
 # Version variables set by user inputs
 PADOGRID_VERSION=""
+PADO_VERSION=""
 GEODE_VERSION=""
 HAZELCAST_ENTERPRISE_VERSION=""
 HAZELCAST_OSS_VERSION=""
@@ -754,6 +762,7 @@ SPARK_VERSION=""
 if [ "$QUIET" == "true" ]; then
    # Set to the latest versions
    PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[0]}
+   PADO_VERSION=${PADO_DOWNLOAD_VERSIONS[0]}
    GEODE_VERSION=${GEODE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_OSS_VERSION=${HAZELCAST_OSS_DOWNLOAD_VERSIONS[0]}
@@ -771,6 +780,7 @@ if [ "$QUIET" == "true" ]; then
    echo "Installing the latest products versions as follows:"
    echo ""
    echo "PadoGrid             $PADOGRID_VERSION"
+   echo "Pado                 $PADO_VERSION"
    echo "Geode                $GEODE_VERSION"
    echo "Hazelcast Enterprise $HAZELCAST_ENTERPRISE_VERSION"
    echo "Hazelcast OSS        $HAZELCAST_OSS_VERSION"
@@ -835,6 +845,20 @@ while [ "$REDO" == "true" ]; do
    fi
    PADOGRID_VERSION=$INSTALL_VERSION
    echo ""
+
+   # Pado
+   PRODUCT_NAME="Pado"
+   PRODUCT_DOWNLOAD_VERSIONS=("${PADO_DOWNLOAD_VERSIONS[@]}")
+   if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+   INSTALLED_VERSIONS=$PADO_VERSIONS
+   echo -e "Pado ${CUrl}$PADO_DOWNLOAD_URL${CNone}"
+   doUserInput
+   if [ "$INSTALL_VERSION" != "" ]; then
+      let INSTALL_COUNT=INSTALL_COUNT+1
+   fi
+   PADO_VERSION=$INSTALL_VERSION
+   echo ""
+   fi
 
    # Geode
    PRODUCT_NAME="Geode"
@@ -1005,6 +1029,9 @@ while [ "$REDO" == "true" ]; do
    if [ "$PADOGRID_VERSION" != "" ]; then
       echo -e "Padogrid: ${CLightGreen}$PADOGRID_VERSION${CNone}"
    fi
+   if [ "$PADO_VERSION" != "" ]; then
+      echo -e "Pado: ${CLightGreen}$PADO_VERSION${CNone}"
+   fi
    if [ "$GEODE_VERSION" != "" ]; then
       echo -e "Geode: ${CLightGreen}$GEODE_VERSION${CNone}"
    fi
@@ -1050,7 +1077,7 @@ fi
 
 #
 # Installs the specified product in the PadoGrid products directory.
-# @param productName Product name, i.e., padogrid, geode, hazelcast-oss, hazelcast-enterprise, hazelcast-management-center, 
+# @param productName Product name, i.e., padogrid, pado, geode, hazelcast-oss, hazelcast-enterprise, hazelcast-management-center, 
 #                    jet-oss, jet-enterprise, jet-management-center, snappydata, spark
 # @param simulate If 'simulate' then outputs the installation commands without actually executing them.
 #
@@ -1060,6 +1087,10 @@ fi
 # @required PADOGRID_DOWNLOAD_URL
 # @required PADOGRID_RELEASE
 # @required PADOGRID_TARBALL
+#
+# @required PADO_DOWNLOAD_URL
+# @required PADO_RELEASE
+# @required PADO_TARBALL
 #
 # @required GEODE_VERSION
 # @required GEODE_TARBALL
@@ -1089,6 +1120,7 @@ function installProduct
    local __SIMULATE="$2"
 
    if [ "$__PRODUCT" == "padogrid" ]; then 
+
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$PADOGRID_RELEASE" ]; then
          echo "Already installed - $PADOGRID_RELEASE"
       else
@@ -1108,6 +1140,30 @@ function installProduct
       else
          tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL"
          echo "Installed - $PADOGRID_TARBALL"
+      fi
+      fi
+
+   elif [ "$__PRODUCT" == "pado" ]; then 
+
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADO_PRODUCTS_PATH/$PADO_RELEASE" ]; then
+         echo "Already installed - $PADO_RELEASE"
+      else
+      # --------------
+      # Download Pado
+      echo "+ Downloading $PADO_TAR_BALL to $PADO_DOWNLOADS_PATH/..."
+      if [ "$__SIMULATE" == "simulate" ]; then
+         echo curl -sL -o "$PADO_DOWNLOADS_PATH/$PADO_TARBALL" "https://github.com/netcrest/pado2/releases/download/$PADO_RELEASE/$PADO_TARBALL"
+      else
+         curl -sL -o "$PADO_DOWNLOADS_PATH/$PADO_TARBALL" "https://github.com/netcrest/pado2/releases/download/$PADO_RELEASE/$PADO_TARBALL"
+      fi
+      
+      # Install Pado
+      echo "  Installing PadoGrid $PADO_TARBALL in $PADO_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "simulate" ]; then
+         echo tar -C $PADO_PRODUCTS_PATH -xzf "$PADO_DOWNLOADS_PATH/$PADO_TARBALL"
+      else
+         tar -C $PADO_PRODUCTS_PATH -xzf "$PADO_DOWNLOADS_PATH/$PADO_TARBALL"
+         echo "Installed - $PADO_TARBALL"
       fi
       fi
       
@@ -1385,6 +1441,12 @@ if [ "$PADOGRID_VERSION" != "" ]; then
    #installProduct "padogrid" "simulate"
    installProduct "padogrid"
 fi
+if [ "$PADOGRID_VERSION" != "" ]; then
+   PADO_RELEASE="padogrid_$PADO_VERSION"
+   PADO_TARBALL="$PADO_RELEASE.tar.gz"
+   #installProduct "pado" "simulate"
+   installProduct "pado"
+fi
 if [ "$GEODE_VERSION" != "" ]; then
    GEODE_RELEASE="apache-geode-$GEODE_VERSION"
    GEODE_TARBALL="$GEODE_RELEASE.tgz"
@@ -1464,6 +1526,7 @@ popd > /dev/null 2>&1
 # If RWEs do not exist then create one
 if [ "$RWE_EXISTS" == "false" ]; then
    __PADOGRID_HOME=""
+   PADO_HOME=""
    GEODE_HOME=""
    HAZELCAST_HOME=""
    JET_HOME=""
@@ -1484,8 +1547,10 @@ if [ "$RWE_EXISTS" == "false" ]; then
    JET_OSS_HOME=""
    pushd $PADOGRID_PRODUCTS_PATH > /dev/null 2>&1
    for i in *; do
-     if [[ "$i" == **"padogrid"** ]]; then
+     if [[ "$i" == **"padogrid_"** ]]; then
        __PADOGRID_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"pado_"** ]]; then
+       PADO_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"geode"** ]]; then
        GEODE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast-enterprise"** ]]; then
@@ -1552,6 +1617,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
 
       echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
       echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
+      echo "PADO_HOME=\"$PADO_HOME\"" >> $TMP_ENV_FILE
       echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE

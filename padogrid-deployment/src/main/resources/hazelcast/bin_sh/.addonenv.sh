@@ -588,6 +588,7 @@ JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 # HAZELCAST_VERSION/PROUDCT_VERSION: Determine the Hazelcast version
 #
 HAZELCAST_VERSION=""
+HAZELCAST_MC_VERSION=""
 IS_HAZELCAST_ENTERPRISE=false
 if [ "$CLUSTER_TYPE" == "jet" ]; then
    if [ "$JET_HOME" != "" ]; then
@@ -614,6 +615,7 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
          for file in $JET_MC_HOME/hazelcast-management-center-*; do
             file=${file##*hazelcast\-management\-center\-}
             JET_MC_VERSION=${file%.jar}
+            break;
          done
          JET_MC_JAR=hazelcast-management-center-${JET_MC_VERSION}.jar
       else
@@ -621,6 +623,7 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
          for file in $JET_MC_HOME/hazelcast-jet-management-center-*; do
             file=${file##*hazelcast\-jet\-management\-center\-}
             JET_MC_VERSION=${file%.jar}
+            break;
          done
          JET_MC_JAR=hazelcast-jet-management-center-${JET_MC_VERSION}.jar 
       fi
@@ -640,6 +643,13 @@ else
          done
       fi
    fi
+    if [ "$HAZELCAST_MC_HOME" != "" ]; then
+       for file in $HAZELCAST_MC_HOME/hazelcast-management-center-*; do
+          file=${file##*hazelcast\-management\-center\-}
+          HAZELCAST_MC_VERSION=${file%.jar}
+          break;
+       done
+    fi
 fi
 HAZELCAST_MAJOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[1]'})
 HAZELCAST_MINOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[2]'})

@@ -1,8 +1,13 @@
 # PadoGrid Release Notes
 
+©2020-2021 Netcrest Technologies, LLC. All rights reserved.
+https://github.com/padogrid
+
 ## Version 0.9.8-SNAPSHOT
 
-### Release Date: 06/27/21
+### Release Date: 07/01/21
+
+- Docker cluster support is now compliant with Hazelcast 4.x changes.
 
 ----
 

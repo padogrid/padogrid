@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-port -?"
+   echo "-all -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Stops Jupyter Notebook
 
 SYNOPSIS
-   $EXECUTABLE [-port port_number] [-?]
+   $EXECUTABLE [-all] [-port port_number] [-?]
 
 NOTES
    Jupyter commands are experimental and subject to change in future releases.
@@ -50,6 +50,9 @@ DESCRIPTION
    Stops Jupyter Notebook running in the current RWE.
 
 OPTIONS
+   -all
+             If specified, then stops all running notebook servers.
+
    -port [port_number]
              The port the notebook server is listening on. Default: 8888
 
@@ -73,15 +76,32 @@ if [ "$(which jupyter)" == "" ]; then
    exit 1
 fi
 
-echo ""
-
 PORT_NUMBER="$PORT_ARG"
 if [ "$PORT_NUMBER" == "" ]; then
    PORT_NUMBER="8888"
 fi
 
-jupyter notebook stop $PORT_NUMBER
+echo ""
+if [ "$ALL" == "true" ]; then
+   JUPYTER_PORTS=$(jupyter notebook list | grep token | sed -e 's/\/\?token.*//' -e 's/.*://')
+   JUPYTER_PORTS=$(unique_words "$JUPYTER_PORTS")
+   for PORT_NUMBER in $JUPYTER_PORTS; do
+      jupyter notebook stop $PORT_NUMBER
+      echo "Jupyter notebook server stopped: [$PORT_NUMBER]"
+   done
+   JUPYTER_PIDS=$(ps -ef | grep jupyter | grep "\-\-no-browser" | grep -v grep | awk '{print $2}')
+   JUPYTER_PIDS="$JUYPTER_PIDS $(ps -ef | grep ipykernel_launcher | grep -v grep | awk '{print $2}')"
+   JUPYTER_PIDS=$(unique_words "$JUPYTER_PIDS")
+   if [ "$JUPYTER_PIDS" != "" ]; then
+      kill -9 $JUPYTER_PIDS
+   fi
+else
+   JUPYTER_PIDS=$(ps -ef | grep jupyter | grep "\-\-no-browser" | grep $PORT_NUMBER | grep -v grep | awk '{print $2}')
+   JUPYTER_PIDS=$(unique_words "$JUPYTER_PIDS")
+   if [ "$JUPYTER_PIDS" != "" ]; then
+      kill -9 $JUPYTER_PIDS
+   fi
+   echo "Jupyter notebook server stopped: [$PORT_NUMBER]"
+fi
+echo ""
 
-echo ""
-echo "Jupyter notebook server stopped: [$PORT_NUMBER]"
-echo ""

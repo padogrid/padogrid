@@ -55,7 +55,11 @@ DESCRIPTION
  
    compose  docker-compose Dockfile based cluster orchestration
 
-   To use the created environment, you must have the specified Docker tool installed.
+   Make sure your Docker version includes support for 'docker compose'.
+
+   This command generates the 'docker-compose.yaml' file configured with the current workspace's
+   product versions. If the product versions cannot be determined then it defaults to the
+   'latest' tag.
 
 OPTIONS
    -docker compose
@@ -156,6 +160,7 @@ if [ "$DOCKER" == "compose" ]; then
 
    # Copy Docker doc
    cp -rf $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
+   cp -rf $BASE_DIR/docker/compose/images $CLUSTER_DIR
    # Copy the template hazelcast.xml file
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
@@ -214,7 +219,10 @@ if [ "$DOCKER" == "compose" ]; then
        $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-env > $CLUSTER_DIR/.env
 
    # Update docker-compose.yaml
-   sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
+   if [ "$HAZELCAST_MC_VERSION" == "" ]; then
+      HAZELCAST_MC_VERSION="latest"
+   fi
+   sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" -e "s/\${MC_VERSION}/$HAZELCAST_MC_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
 
    # Append server services to docker-compose.yaml
    if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -276,6 +284,7 @@ cat <<EOF
 $CLUSTER
 ├── .env
 ├── README.md
+├── images
 ├── docker-compose.yaml
 └── padogrid
     ├── etc

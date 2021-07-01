@@ -200,6 +200,17 @@ function determineInstalledProducts
 
       local __versions
 
+      # Pado
+      if [ "$PADO_HOME" == "" ]; then
+         __versions=""
+         for i in pado_*; do
+            __version=${i#pado_}
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         PADO_HOME=$PADOGRID_ENV_BASE_PATH/products/pado_$__version
+      fi
+
       # Geode
       if [ "$GEODE_HOME" == "" ]; then
          __versions=""
@@ -327,6 +338,7 @@ function determineInstalledProducts
       fi
 
       #echo ""
+      #echo PADO_HOME=$PADO_HOME
       #echo GEODE_HOME=$GEODE_HOME
       #echo HAZELCAST_HOME=$HAZELCAST_HOME
       #echo HAZELCAST_MC_HOME=$HAZELCAST_MC_HOME
@@ -355,6 +367,8 @@ if [ "$__PRODUCT_HOME" == "" ]; then
       __PRODUCT_HOME="$COHERENCE_HOME"
    elif [ "$PRODUCT" == "snappydata" ]; then
       __PRODUCT_HOME="$SNAPPYDATA_HOME"
+   elif [ "$PRODUCT" == "spark" ]; then
+      __PRODUCT_HOME="$SPARK_HOME"
    else
       __PRODUCT_HOME=""
    fi
@@ -439,6 +453,7 @@ echo "VM_SPECIFIED=\"$VM_SPECIFIED\"" >> $TMP_ENV_FILE
 echo "QUIET=\"$QUIET\"" >> $TMP_ENV_FILE
 
 # product homes
+echo "PADO_HOME=\"$PADO_HOME\"" >> $TMP_ENV_FILE
 echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
 echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
 echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
