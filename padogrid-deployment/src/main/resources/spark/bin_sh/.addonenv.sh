@@ -70,7 +70,7 @@ if [ -z $PADOGRID_WORKSPACE ]; then
 fi
 
 # 
-# Spark/GemFire home directory
+# Spark home directory
 #
 #SPARK_HOME=
 
@@ -101,7 +101,7 @@ DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
 DEFAULT_SPARK_CLUSTER="myspark"
-DEFAULT_CLUSTER="$DEFAULT_GEODE_CLUSTER"
+DEFAULT_CLUSTER="$DEFAULT_SPARK_CLUSTER"
 
 #
 # Default pod type. The pod type determines the node envirionment in which
@@ -565,8 +565,8 @@ fi
 #
 # PADOGRID_VERSION: Determine the padogrid version
 #
-for file in $BASE_DIR/lib/spark-addon-core-*; do
-   file=${file#*spark\-addon\-core\-}
+for file in $BASE_DIR/../lib/padogrid-common-*; do
+   file=${file#*padogrid\-common\-}
    PADOGRID_VERSION=${file%.jar}
 done
 

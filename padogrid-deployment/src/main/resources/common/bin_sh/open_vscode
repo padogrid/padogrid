@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-host -port -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Open the current RWE workspaces in VSCode
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+
+DESCRIPTION
+   Opens the current RWE workspaces in VSCode.
+
+DEFAULT
+   $EXECUTABLE
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*jupyter* *vscode*" $EXECUTABLE
+   exit
+fi
+
+if [ "$OS_NAME" != "DARWIN" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} This commonad only supports macOS. Command aborted."
+   exit 1
+fi
+
+if [ "$OS_NAME" == "DARWIN" ]; then
+   VSCODE_EXECUTABLE="/Applications/Visual Studio Code.app"
+fi
+
+if [ ! -d "$VSCODE_EXECUTABLE" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} $VSCODE_EXECUTABLE not found. Command aborted."
+   exit 1
+fi
+
+RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
+
+RWE_VSCODE_WORKSPACE_FILE="$RWE_PATH/rwe.code-workspace"
+RWEINIT_VSCODE_FILE="$RWE_PATH/.rwe/rweinit_vscode.sh"
+WORKSPACE_NAMES=$(list_workspaces)
+
+# Write to rwe.code-workspace
+echo "{" > "$RWE_VSCODE_WORKSPACE_FILE"
+echo "  \"folders\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+
+COUNT=0
+for WORKSPACE_NAME in $WORKSPACE_NAMES; do
+if [ $COUNT -gt 0 ]; then
+echo "    }," >> "$RWE_VSCODE_WORKSPACE_FILE"
+fi
+echo "    {" >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "      \"path\": \"$WORKSPACE_NAME\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+let COUNT=COUNT+1
+done
+echo "    }" >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "  ]," >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "  \"settings\": {" >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "    \"terminal.integrated.shellArgs.osx\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "      \"--init-file\"," >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "      \"$RWE_PATH/.rwe/rweinit_vscode.sh\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "   ]" >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "  }" >> "$RWE_VSCODE_WORKSPACE_FILE"
+echo "}" >> "$RWE_VSCODE_WORKSPACE_FILE"
+
+# Write to rweinit_vscode.sh
+echo "#!/usr/bin/env bash" > $RWEINIT_VSCODE_FILE
+if [ -f "$HOME/.bashrc" ]; then
+echo ". ~/.bashrc" >> $RWEINIT_VSCODE_FILE
+elif [ -f "$HOME/.bash_profile" ]; then
+echo ". ~/.bash_profile" >> $RWEINIT_VSCODE_FILE
+else
+echo ". \"$RWE_PATH/initenv.sh\" -quiet" >> $RWEINIT_VSCODE_FILE
+fi
+
+echo "switch_rwe $RWE_NAME" >> $RWEINIT_VSCODE_FILE
+
+open "$VSCODE_EXECUTABLE" $RWE_VSCODE_WORKSPACE_FILE

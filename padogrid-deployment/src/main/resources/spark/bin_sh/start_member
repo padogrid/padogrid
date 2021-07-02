@@ -38,18 +38,21 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Display member configuration information in the specified padogrid cluster
+   $EXECUTABLE - Start a Spark member (worker) in the specified cluster
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name] [-num member_number] [-simulate] [-?]
 
 DESCRIPTION
-   Displays member configuration information. The displayed information can be
-   transferred to setup to another environment where padogrid is not available.
+   Starts a Spark member (worker) in the specified cluster.
 
 OPTIONS
    -cluster cluster_name
              Cluster name.
+
+   -fg
+             This option is only applicable for RUN_SCRIPT. If RUN_SCRIPT is defined, then the
+             script is run in the foreground.
 
    -num member_number
              Member number 1-99.
@@ -509,12 +512,7 @@ else
           SPARK_WORKER_DIR=$RUN_DIR/$MEMBER \
           SPARK_LOG_DIR=$LOG_DIR \
           SPARK_PID_DIR=$RUN_DIR/pids \
-          SPARK_WORKER_OPTS=$JAVA_OPTS \
-          ${SPARK_HOME}/sbin/spark-daemon.sh start \
-          $CLASS $MEMBER_NUM_NO_LEADING_ZERO \
-          --webui-port "$MEMBER_WEBUI_PORT" \
-          --port $MEMBER_PORT \
-          $MASTER_URL
+          SPARK_WORKER_OPTS=$JAVA_OPTS
 
           SPARK_CONF_DIR=$ETC_DIR \
           SPARK_WORKER_PORT=$MEMBER_PORT \
@@ -522,6 +520,13 @@ else
           SPARK_LOG_DIR=$LOG_DIR \
           SPARK_PID_DIR=$RUN_DIR/pids \
           SPARK_WORKER_OPTS=$JAVA_OPTS \
+
+          echo ${SPARK_HOME}/sbin/spark-daemon.sh start \
+          $CLASS $MEMBER_NUM_NO_LEADING_ZERO \
+          --webui-port "$MEMBER_WEBUI_PORT" \
+          --port $MEMBER_PORT \
+          $MASTER_URL
+
           ${SPARK_HOME}/sbin/spark-daemon.sh start \
           $CLASS $MEMBER_NUM_NO_LEADING_ZERO \
           --webui-port "$MEMBER_WEBUI_PORT" \

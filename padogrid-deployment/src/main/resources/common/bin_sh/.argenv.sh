@@ -472,7 +472,7 @@ fi
 # SED backup prefix
 if [[ ${OS_NAME} == DARWIN* ]]; then
    # Mac - space required
-   __SED_BACKUP=" ''"
+   __SED_BACKUP=" 0"
 else
    __SED_BACKUP="0"
 fi
