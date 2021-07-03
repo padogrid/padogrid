@@ -5,8 +5,9 @@ https://github.com/padogrid
 
 ## Version 0.9.8-SNAPSHOT
 
-### Release Date: 07/01/21
+### Release Date: 07/03/21
 
+- Added the `open_vscode` command that integrates PadoGrid RWE workspaces with Visual Studio Code.
 - Docker cluster support is now compliant with Hazelcast 4.x changes.
 
 ----

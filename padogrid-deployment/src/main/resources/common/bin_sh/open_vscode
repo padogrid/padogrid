@@ -43,9 +43,18 @@ NAME
 SYNOPSIS
    $EXECUTABLE [-?]
 
-
 DESCRIPTION
    Opens the current RWE workspaces in VSCode.
+
+   This command requires the 'jq' executable downloadable from the following link.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+   echo -e "   ${CUrl}https://stedolan.github.io/jq/download/${CNone}"
+else
+   echo "   https://stedolan.github.io/jq/download/"
+fi
+cat <<EOF
 
 DEFAULT
    $EXECUTABLE
@@ -70,6 +79,12 @@ if [ ! -d "$VSCODE_EXECUTABLE" ]; then
    exit 1
 fi
 
+if [ "$(which jq)" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} This command requires the 'jq' executable in your path. You can downlaod it from the following link."
+   echo -e >&2 "       ${CUrl}https://stedolan.github.io/jq/download/${CNone}"
+   exit 1
+fi
+
 RWE_PATH="$PADOGRID_WORKSPACES_HOME"
 RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
 WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
@@ -78,28 +93,44 @@ RWE_VSCODE_WORKSPACE_FILE="$RWE_PATH/rwe.code-workspace"
 RWEINIT_VSCODE_FILE="$RWE_PATH/.rwe/rweinit_vscode.sh"
 WORKSPACE_NAMES=$(list_workspaces)
 
-# Write to rwe.code-workspace
-echo "{" > "$RWE_VSCODE_WORKSPACE_FILE"
-echo "  \"folders\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+if [ -f "$RWE_VSCODE_WORKSPACE_FILE" ]; then
+   # If vscode workspace file exists then update the folders only.
 
-COUNT=0
-for WORKSPACE_NAME in $WORKSPACE_NAMES; do
-if [ $COUNT -gt 0 ]; then
-echo "    }," >> "$RWE_VSCODE_WORKSPACE_FILE"
+   # Write to rwe.code-workspace
+   let i=0
+   JQ_INPUT="del(.folders)"
+   for WORKSPACE_NAME in $WORKSPACE_NAMES; do
+      JQ_INPUT="$JQ_INPUT|.folders[$i].path=\"$WORKSPACE_NAME\""
+      let i=i+1
+   done
+   cat "$RWE_VSCODE_WORKSPACE_FILE" | eval jq '$JQ_INPUT' > "$TMPDIR/rwe.code-workspace"
+   mv "$TMPDIR/rwe.code-workspace" "$RWE_VSCODE_WORKSPACE_FILE"
+else
+   # Create a new vscode workspace file
+
+   # Write to rwe.code-workspace
+   echo "{" > "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "  \"settings\": {" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "    \"terminal.integrated.shellArgs.osx\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "      \"--init-file\"," >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "      \"$RWE_PATH/.rwe/rweinit_vscode.sh\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "   ]" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "  }," >> "$RWE_VSCODE_WORKSPACE_FILE"
+
+   COUNT=0
+   echo "  \"folders\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   for WORKSPACE_NAME in $WORKSPACE_NAMES; do
+   if [ $COUNT -gt 0 ]; then
+   echo "    }," >> "$RWE_VSCODE_WORKSPACE_FILE"
+   fi
+   echo "    {" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "      \"path\": \"$WORKSPACE_NAME\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   let COUNT=COUNT+1
+   done
+   echo "    }" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "  ]" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   echo "}" >> "$RWE_VSCODE_WORKSPACE_FILE"
 fi
-echo "    {" >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "      \"path\": \"$WORKSPACE_NAME\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
-let COUNT=COUNT+1
-done
-echo "    }" >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "  ]," >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "  \"settings\": {" >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "    \"terminal.integrated.shellArgs.osx\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "      \"--init-file\"," >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "      \"$RWE_PATH/.rwe/rweinit_vscode.sh\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "   ]" >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "  }" >> "$RWE_VSCODE_WORKSPACE_FILE"
-echo "}" >> "$RWE_VSCODE_WORKSPACE_FILE"
 
 # Write to rweinit_vscode.sh
 echo "#!/usr/bin/env bash" > $RWEINIT_VSCODE_FILE
