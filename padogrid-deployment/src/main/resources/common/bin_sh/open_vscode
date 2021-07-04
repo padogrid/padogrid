@@ -83,18 +83,23 @@ EOF
    exit
 fi
 
-if [ "$OS_NAME" != "DARWIN" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} This commonad only supports macOS. Command aborted."
+if [ "$OS_NAME" != "DARWIN" ] &&  [[ "$OS_NAME" != "CYGWIN"* ]] && [ "$OS_NAME" != "LINUX" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} This command only supports macOS, Cygwin and Linux. Command aborted."
    exit 1
 fi
 
 if [ "$OS_NAME" == "DARWIN" ]; then
    VSCODE_EXECUTABLE="/Applications/Visual Studio Code.app"
-fi
-
-if [ ! -d "$VSCODE_EXECUTABLE" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} $VSCODE_EXECUTABLE not found. Command aborted."
-   exit 1
+   if [ ! -d "$VSCODE_EXECUTABLE" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} $VSCODE_EXECUTABLE not found. Command aborted."
+      exit 1
+   fi
+elif [[ "$OS_NAME" == "CYGWIN"* ]] || [ "$OS_NAME" == "LINUX" ]; then
+   VSCODE_EXECUTABLE="code"
+   if [ "$(which $VSCODE_EXECUTABLE)" == "" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} $VSCODE_EXECUTABLE not found. Command aborted."
+      exit 1
+   fi
 fi
 
 if [ "$(which jq)" == "" ]; then
@@ -140,8 +145,8 @@ function createVscodeRwe
          JQ_INPUT="$JQ_INPUT|.folders[$i].path=\"$WORKSPACE_NAME\""
          let i=i+1
       done
-      cat "$RWE_VSCODE_WORKSPACE_FILE" | eval jq '$JQ_INPUT' > "$TMPDIR/$RWE_CODE_WORKSPACE_FILE_NAME"
-      mv "$TMPDIR/$RWE_CODE_WORKSPACE_FILE_NAME" "$RWE_VSCODE_WORKSPACE_FILE"
+      cat "$RWE_VSCODE_WORKSPACE_FILE" | eval jq '$JQ_INPUT' > "/tmp/$RWE_CODE_WORKSPACE_FILE_NAME"
+      mv "/tmp/$RWE_CODE_WORKSPACE_FILE_NAME" "$RWE_VSCODE_WORKSPACE_FILE"
    else
       # Create a new vscode workspace file
    
@@ -220,9 +225,22 @@ function createVscodeWorkspace
 if [ "$RWE_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
    # Create RWE vscode 
    createVscodeRwe
-   open "$VSCODE_EXECUTABLE" $RWE_VSCODE_WORKSPACE_FILE
+
+   if [ "$OS_NAME" == "DARWIN" ]; then
+      open "$VSCODE_EXECUTABLE" $RWE_VSCODE_WORKSPACE_FILE
+   elif [[ "$OS_NAME" == "CYGWIN"* ]]; then
+      "$VSCODE_EXECUTABLE" "$(sygpath -d $RWE_VSCODE_WORKSPACE_FILE)"
+   elif [ "$OS_NAME" == "LINUX" ]; then
+      "$VSCODE_EXECUTABLE" $RWE_VSCODE_WORKSPACE_FILE
+   fi
 else
    # Create workspace vscode 
    createVscodeWorkspace
-   open "$VSCODE_EXECUTABLE" $WORKSPACE_VSCODE_WORKSPACE_FILE
+   if [ "$OS_NAME" == "DARWIN" ]; then
+      open "$VSCODE_EXECUTABLE" $WORKSPACE_VSCODE_WORKSPACE_FILE
+   elif [[ "$OS_NAME" == "CYGWIN"* ]]; then
+      "$VSCODE_EXECUTABLE" "$(cygpath -d $WORKSPACE_VSCODE_WORKSPACE_FILE)"
+	 elif [ "$OS_NAME" == "LINUX" ]; then
+      "$VSCODE_EXECUTABLE" "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+   fi
 fi

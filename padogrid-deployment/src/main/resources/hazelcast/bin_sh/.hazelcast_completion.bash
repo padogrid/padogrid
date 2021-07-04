@@ -193,7 +193,7 @@ __padogrid_complete()
          if [ $index -ne 255 ]; then
              rwe_name="${COMP_WORDS[$index+1]}"
          fi
-         if [[ "$rwe_name" != "-"** ]]; then
+         if [ "$rwe_name" != "" ] && [[ "$rwe_name" != "-"** ]]; then
             type_list=`getWorkspaces "$(dirname $PADOGRID_WORKSPACES_HOME)/$rwe_name"`
          else
             type_list=`getWorkspaces`
@@ -784,7 +784,7 @@ __command_complete()
          if [ $index -ne 255 ]; then
              rwe_name="${COMP_WORDS[$index+1]}"
          fi
-         if [[ "$rwe_name" != "-"** ]]; then
+         if [ "$rwe_name" != "" ] && [[ "$rwe_name" != "-"** ]]; then
             type_list=`getWorkspaces "$(dirname $PADOGRID_WORKSPACES_HOME)/$rwe_name"`
          else
             type_list=`getWorkspaces`
