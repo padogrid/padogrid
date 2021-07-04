@@ -191,6 +191,19 @@ __padogrid_complete()
    -workspace)
       if [ "$command" == "install_bundle" ]; then
          type_list="default "`getWorkspaces`
+      elif [ "$command" == "open_vscode" ]; then
+         # If -rwe specified then get the rwe's workspaces
+         __getArrayElementIndex "-rwe" "${COMP_WORDS[@]}"
+         local index=$?
+         local rwe_name=""
+         if [ $index -ne 255 ]; then
+             rwe_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [[ "$rwe_name" != "-"** ]]; then
+            type_list=`getWorkspaces "$(dirname $PADOGRID_WORKSPACES_HOME)/$rwe_name"`
+         else
+            type_list=`getWorkspaces`
+         fi
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
       fi
@@ -769,6 +782,19 @@ __command_complete()
    -workspace)
       if [ "$command" == "install_bundle" ]; then
          type_list="default "`getWorkspaces`
+      elif [ "$command" == "open_vscode" ]; then
+         # If -rwe specified then get the rwe's workspaces
+         __getArrayElementIndex "-rwe" "${COMP_WORDS[@]}"
+         local index=$?
+         local rwe_name=""
+         if [ $index -ne 255 ]; then
+             rwe_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [[ "$rwe_name" != "-"** ]]; then
+            type_list=`getWorkspaces "$(dirname $PADOGRID_WORKSPACES_HOME)/$rwe_name"`
+         else
+            type_list=`getWorkspaces`
+         fi
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
       fi

@@ -312,11 +312,11 @@ function isValidRwe
 }
 
 # 
-# Returns a complete list of workspaces found in the specified workspace path.
+# Returns a complete list of workspaces found in the specified workspaces (RWE) path.
 # If the workspaces path is not specified then it returns the workspaces in 
 # PADOGRID_WORKSPACES_HOME.
 # @required PADOGRID_WORKSPACES_HOME
-# @param workspacePath Workspace path.
+# @param workspacesPath Workspaces (RWE) path.
 #
 function getWorkspaces
 {
