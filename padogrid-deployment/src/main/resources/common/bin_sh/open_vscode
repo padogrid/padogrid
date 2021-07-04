@@ -88,18 +88,16 @@ if [ "$OS_NAME" != "DARWIN" ] &&  [[ "$OS_NAME" != "CYGWIN"* ]] && [ "$OS_NAME" 
    exit 1
 fi
 
-if [ "$OS_NAME" == "DARWIN" ]; then
-   VSCODE_EXECUTABLE="/Applications/Visual Studio Code.app"
-   if [ ! -d "$VSCODE_EXECUTABLE" ]; then
+VSCODE_EXECUTABLE="code"
+if [ "$(which $VSCODE_EXECUTABLE)" == "" ]; then
+   if [ "$OS_NAME" == "DARWIN" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} The '$VSCODE_EXECUTABLE' execuable not found. To add it to PATH, from VS Code, run the"
+      echo  "       \"Shell Command: Install 'code' command in PATH\" command (available through"
+      echo "       the Command Pallette, Shift-Opt-P). Command aborted."
+   else
       echo -e >&2 "${CLightRed}ERROR:${CNone} $VSCODE_EXECUTABLE not found. Command aborted."
-      exit 1
    fi
-elif [[ "$OS_NAME" == "CYGWIN"* ]] || [ "$OS_NAME" == "LINUX" ]; then
-   VSCODE_EXECUTABLE="code"
-   if [ "$(which $VSCODE_EXECUTABLE)" == "" ]; then
-      echo -e >&2 "${CLightRed}ERROR:${CNone} $VSCODE_EXECUTABLE not found. Command aborted."
-      exit 1
-   fi
+   exit 1
 fi
 
 if [ "$(which jq)" == "" ]; then
@@ -226,21 +224,17 @@ if [ "$RWE_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
    # Create RWE vscode 
    createVscodeRwe
 
-   if [ "$OS_NAME" == "DARWIN" ]; then
-      open "$VSCODE_EXECUTABLE" $RWE_VSCODE_WORKSPACE_FILE
-   elif [[ "$OS_NAME" == "CYGWIN"* ]]; then
+   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
       "$VSCODE_EXECUTABLE" "$(sygpath -d $RWE_VSCODE_WORKSPACE_FILE)"
-   elif [ "$OS_NAME" == "LINUX" ]; then
-      "$VSCODE_EXECUTABLE" $RWE_VSCODE_WORKSPACE_FILE
+   else
+      "$VSCODE_EXECUTABLE" "$RWE_VSCODE_WORKSPACE_FILE"
    fi
 else
    # Create workspace vscode 
    createVscodeWorkspace
-   if [ "$OS_NAME" == "DARWIN" ]; then
-      open "$VSCODE_EXECUTABLE" $WORKSPACE_VSCODE_WORKSPACE_FILE
-   elif [[ "$OS_NAME" == "CYGWIN"* ]]; then
+   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
       "$VSCODE_EXECUTABLE" "$(cygpath -d $WORKSPACE_VSCODE_WORKSPACE_FILE)"
-	 elif [ "$OS_NAME" == "LINUX" ]; then
+   else
       "$VSCODE_EXECUTABLE" "$WORKSPACE_VSCODE_WORKSPACE_FILE"
    fi
 fi
