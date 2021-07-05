@@ -5,8 +5,9 @@ https://github.com/padogrid
 
 ## Version 0.9.8-SNAPSHOT
 
-### Release Date: 07/03/21
+### Release Date: 07/05/21
 
+- Added the entry point, 'init_bundle.sh', for intializing bundle during installation. If this script exists in the root directory of the bundle then the 'install_bundle' triggers it upon completion of bundle installation. Note that this applies to workspace bundles only, i.e., bundles must be installed by using `install_bundle -checkout` or `install_bundle -workspace -download`.
 - Added the `open_vscode` command that integrates PadoGrid workspaces with Visual Studio Code.
 - Docker cluster support is now compliant with Hazelcast 4.x changes.
 

@@ -27,7 +27,7 @@ WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
 __options()
 {
-   echo "-rwe -workspace -?"
+   echo "-rwe -workspace -init -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -53,6 +53,9 @@ DESCRIPTION
    This command requires the 'jq' executable downloadable from the following link.
 
 OPTIONS
+   -init
+             If specified, then it initializes but does not open VS Code.
+
    -rwe [rwe_name]
              RWE name. If the rwe_name is not specified, then it defaults to the current RWE.
 
@@ -154,6 +157,10 @@ function createVscodeRwe
       echo "    \"terminal.integrated.shellArgs.osx\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
       echo "      \"--init-file\"," >> "$RWE_VSCODE_WORKSPACE_FILE"
       echo "      \"$RWE_PATH/.rwe/rwe_vscode.sh\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "   ]," >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "    \"terminal.integrated.shellArgs.linux\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "      \"--init-file\"," >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "      \"$RWE_PATH/.rwe/rwe_vscode.sh\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
       echo "   ]" >> "$RWE_VSCODE_WORKSPACE_FILE"
       echo "  }," >> "$RWE_VSCODE_WORKSPACE_FILE"
    
@@ -198,6 +205,10 @@ function createVscodeWorkspace
       echo "    \"terminal.integrated.shellArgs.osx\": [" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
       echo "      \"--init-file\"," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
       echo "      \".workspace/$WORKSPACEINIT_FILE_NAME\"" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "   ]," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "    \"terminal.integrated.shellArgs.linux\": [" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "      \"--init-file\"," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "      \".workspace/$WORKSPACEINIT_FILE_NAME\"" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
       echo "   ]" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
       echo "  }," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
    
@@ -224,17 +235,25 @@ if [ "$RWE_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
    # Create RWE vscode 
    createVscodeRwe
 
-   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-      "$VSCODE_EXECUTABLE" "$(sygpath -d $RWE_VSCODE_WORKSPACE_FILE)"
+   if [ "$INIT_SPECIFIED" != "true" ]; then
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         "$VSCODE_EXECUTABLE" "$(sygpath -d $RWE_VSCODE_WORKSPACE_FILE)"
+      else
+         "$VSCODE_EXECUTABLE" "$RWE_VSCODE_WORKSPACE_FILE"
+      fi
    else
-      "$VSCODE_EXECUTABLE" "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "RWE VS Code initialized [$RWE_NAME]"
    fi
 else
    # Create workspace vscode 
    createVscodeWorkspace
-   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-      "$VSCODE_EXECUTABLE" "$(cygpath -d $WORKSPACE_VSCODE_WORKSPACE_FILE)"
+   if [ "$INIT_SPECIFIED" != "true" ]; then
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         "$VSCODE_EXECUTABLE" "$(cygpath -d $WORKSPACE_VSCODE_WORKSPACE_FILE)"
+      else
+         "$VSCODE_EXECUTABLE" "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      fi
    else
-      "$VSCODE_EXECUTABLE" "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "Workspace VS Code initialized [$RWE_NAME/$WORKSPACE_NAME]"
    fi
 fi

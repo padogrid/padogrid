@@ -63,6 +63,7 @@ DOCKER_SPECIFIED=false
 HOST=
 HOST_SPECIFIED=false
 COUNT=
+INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_SPECIFIED=false
@@ -278,6 +279,8 @@ do
       DATASOURCE=$i
 
 # options with no value
+   elif [ "$i" == "-init" ]; then
+      INIT_SPECIFIED=true
    elif [ "$i" == "-version" ]; then
       VERSION_SPECIFIED=true
    elif [ "$i" == "-man" ]; then

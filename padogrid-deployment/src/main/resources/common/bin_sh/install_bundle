@@ -41,39 +41,48 @@ NAME
    $EXECUTABLE - Install the specified bundle file in the current padogrid workspace
 
 WARNING
-   This command OVERWRITES the files in the current padogrid workspace that have
-   the same paths. As a safety measure, it will back up the workspace by executing
-   the 'create_bundle -all' command before  installing the specified bundle.
-
+   Depending on the options specified, this command may overwrite the files in the
+   current padogrid workspace that have the same paths. As a safety measure, it will
+   back up the workspace by executing the 'create_bundle -all' command before  installing
+   the specified bundle.
 
 SYNOPSIS
    $EXECUTABLE [-user git_user_name]
-               [-githost github|gitea]
-               [-branch git_branch] 
-               [-connect https|ssh]
-               [-checkout default | workspace_name]
-               [-workspace default | workspace_name]
-               [-preview] [-download]
-               [-quiet] [-?] bundle_file_path
+                  [-githost github | gitea]
+                  [-branch git_branch] 
+                  [-connect https | ssh]
+                  [-checkout default | workspace_name]
+                  [-workspace default | workspace_name]
+                  [-preview] [-download]
+                  [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
-   Installs the specified bundle file in the current padogrid workspace. Make
-   sure to terminate all of the conflicting clusters and apps before executing
-   this command. Otherwise, the running processes may produce unpredictable behavior.
+   Installs the specified bundle file in the specified padogrid workspace. If the target
+   workspace exists and has running processes, then make sure to terminate all of the
+   conflicting processes before executing this command; otherwise, the running processes
+   may result in unpredictable state.
+
+   For online bundles, if the 'init_bundle.sh' script exists in the top directory, then it
+   is executed upon completion of bundle installation. The 'init_bundle.sh' script is the
+   entry point for initializing the bundle in a workspace environment; hence, it is executed
+   only if the following options are specified.
+
+      install_bundle -checkout
+      install_bundle -workspace -download
 
 OPTIONS
    -user git_user_name
              Git user name. If specified, then it downloads the specified bundle from user's
              Git repos.
 
-   -githost github|gitea
+   -githost github | gitea
              Git host. Supported git hosts are 'github' and 'gitea'. Default: github.
 
    -branch git_branch
-            Git branch to download. If not specified then the default branch is downloaded.
+             Git branch to download. If not specified then the default branch is downloaded.
 
 
-   -connect https|ssh
+   -connect https | ssh
              Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh'
              is supported and this option is ignored. Specify 'ssh' if the bundle repos are 
              private. To connect to private repos, you must first deploy your public key, i.e.,
@@ -107,6 +116,7 @@ OPTIONS
    bundle_file_path
               Bundle file path if local or bundle name if download.
 
+
 DEFAULT
    $EXECUTABLE -user padogrid -githost github
 
@@ -120,8 +130,11 @@ EXAMPLES
    To install a remote bundle:
       $EXECUTABLE -download bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
 
-   To check out a remote bundle as a workspace:
+   To install a remote bundle as a workspace:
       $EXECUTABLE -download -workspace bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
+
+   To check out a remote bundle as a workspace:
+      $EXECUTABLE -checkout bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -449,11 +462,11 @@ if [ "$DOWNLOAD" == "true" ]; then
       popd > /dev/null 2>&1 
       if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
          # Copy the workspace files
-         create_workspace -name ws-${BUNDLE_FILE_PATH} -product $PRODUCT_HOME -quiet > /dev/null
-         rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/clusters/*
-         cp -r $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/* $GIT_DIR/
-         cp $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
-         rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}
+         create_workspace -name __ws-${BUNDLE_FILE_PATH} -product $PRODUCT_HOME -quiet > /dev/null
+         rm -rf $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}/clusters/*
+         cp -r $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}/* $GIT_DIR/
+         cp $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
+         rm -rf $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}
 
          if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
             # Remove build files including git
@@ -470,6 +483,12 @@ if [ "$DOWNLOAD" == "true" ]; then
          CLUSTERS=$(list_clusters -workspace $WORKSPACE_NAME)
          WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
          createClusterEnv
+         if [ -f "$WORKSPACE_PATH/init_bundle.sh" ]; then
+            chmod 755 "$WORKSPACE_PATH/init_bundle.sh"
+            pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
+            ./init_bundle.sh "$WORKSPACE_NAME"
+            popd > /dev/null 2>&1 
+         fi
 
          echo ""
          echo "Bundle workspace created. Switch workspace by executing the following command:"
@@ -616,7 +635,7 @@ if [ "$PREVIEW" == "true" ]; then
    tar -tzvf $BUNDLE_FILE_PATH
 else
    tar -C $WORKSPACE_PATH -xzvf $BUNDLE_FILE_PATH
-   createCluterEnv
+   createClusterEnv
 fi
 
 echo ""
