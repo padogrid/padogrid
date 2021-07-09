@@ -219,10 +219,16 @@ if [ "$DOCKER" == "compose" ]; then
        $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-env > $CLUSTER_DIR/.env
 
    # Update docker-compose.yaml
-   if [ "$HAZELCAST_MC_VERSION" == "" ]; then
-      HAZELCAST_MC_VERSION="latest"
+   MC_VERSION=""
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      MC_VERSION="$JET_MC_VERSION"
+   else
+      MC_VERSION="$HAZELCAST_MC_VERSION"
    fi
-   sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" -e "s/\${MC_VERSION}/$HAZELCAST_MC_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
+   if [ "$MC_VERSION" == "" ]; then
+      MC_VERSION="latest"
+   fi
+   sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" -e "s/\${MC_VERSION}/$MC_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
 
    # Append server services to docker-compose.yaml
    if [ "$CLUSTER_TYPE" == "jet" ]; then

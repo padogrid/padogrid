@@ -721,7 +721,7 @@ function getMemberPrefix
 #
 function getMemberName
 {
-   __MEMBER_NUM=`trimString $1`
+   __MEMBER_NUM=`trimString "$1"`
    len=${#__MEMBER_NUM}
    if [ $len == 1 ]; then
       __MEMBER_NUM=0$__MEMBER_NUM
@@ -777,7 +777,7 @@ function getMemberPid
    for j in $members; do
       spids="$j $spids"
    done
-   spids=`trimString $spids`
+   spids=`trimString "$spids"`
    echo $spids
 }
 
@@ -801,7 +801,7 @@ function getVmMemberPid
    for j in $members; do
       spids="$j $spids"
    done
-   spids=`trimString $spids`
+   spids=`trimString "$spids"`
    echo $spids
 }
 
@@ -868,7 +868,7 @@ function getPropertiesArray
    local index=0
    if [ -f $__PROPERTIES_FILE ]; then
       while IFS= read -r line; do
-         local line=`trimString $line`
+         local line=`trimString "$line"`
          if [ "$line" != "" ] && [[ $line != "#"* ]]; then
             local key=${line%%=*}
             local value=${line#*=}
@@ -881,7 +881,7 @@ function getPropertiesArray
 }
 
 #
-# Returns the property value found in the $PODS_DIR/$POD/etc/pod.properties file.
+# Returns the property value found in the specified file.
 # @param propertiesFilePath  Properties file path.
 # @param propertyName        Property name.
 # @param defaultValue        If the specified property is not found then this default value is returned.
@@ -889,9 +889,11 @@ function getPropertiesArray
 function getProperty
 {
    __PROPERTIES_FILE=$1
+local IFS="
+"
    if [ -f $__PROPERTIES_FILE ]; then
       for line in `grep $2 ${__PROPERTIES_FILE}`; do
-         line=`trimString $line`
+         line=`trimString "$line"`
          if [[ $line == $2=* ]]; then
             __VALUE=${line#$2=}
             break;
@@ -905,27 +907,28 @@ function getProperty
    else
       echo "$3"
    fi
+   unset IFS
 }
 
 #
-# Returns the property value found in the $PODS_DIR/$POD/etc/pod.properties file.
+# Returns the property value found in the specified file.
 # @param propertiesFilePath  Properties file path.
 # @param propertyName        Property name.
 # @param defaultValue        If the specified property is not found then this default value is returned.
 #
 function getProperty2
 {
-   __PROPERTIES_FILE=$1
+   local __PROPERTIES_FILE=$1
    if [ -f $__PROPERTIES_FILE ]; then
       while IFS= read -r line; do
-         line=`trimString $line`
+         line=`trimString "$line"`
          if [[ $line == $2=* ]]; then
             __VALUE=${line#$2=}
             break;
          fi
       done < "$__PROPERTIES_FILE"
       unset IFS
-      if [ -z $__VALUE ]; then
+      if [ -z "$__VALUE" ]; then
          echo $3
       else
          echo "$__VALUE"
@@ -994,20 +997,23 @@ function getWorkspaceClusterProperty
 
 # 
 # Sets the specified property in the the properties file.
-# @param propertiesFilePath  Properties file path.
+# @param propertiesFilePath Properties file path.
 # @parma propertyName       Property name.
 # @param propertyValue      Property value.
 #
 function setProperty
 {
+   local __PROPERTIES_FILE="$1"
+   local __PROPERTY="$2"
+   local __VALUE=$(echo "$3" | sed -e 's/ /\\ /g')
    local __LINE_NUM=0
    local __SED_BACKUP
-   if [ -f $__PROPERTIES_FILE ]; then
+   if [ -f "$__PROPERTIES_FILE" ]; then
       local __found="false"
       while IFS= read -r line; do
          let __LINE_NUM=__LINE_NUM+1
-         line=`trimString $line`
-         if [[ $line == $2=* ]]; then
+         line=`trimString "$line"`
+         if [[ $line == ${__PROPERTY}=* ]]; then
             __found="true"
             break;
          fi
@@ -1021,7 +1027,7 @@ function setProperty
          else
             __SED_BACKUP="0"
          fi
-         sed -i${__SED_BACKUP} ''$__LINE_NUM's/'$line'/'$2'='$3'/g' "$__PROPERTIES_FILE"
+         sed -i${__SED_BACKUP} -e "${__LINE_NUM}s/.*/${__PROPERTY}=${__VALUE}/" "$__PROPERTIES_FILE"
       else
          echo "$2=$3" >> "$__PROPERTIES_FILE"
       fi
@@ -1038,7 +1044,7 @@ function setProperty
 function setPodProperty
 {
    __PROPERTIES_FILE="$PODS_DIR/$POD/etc/pod.properties"
-   `setProperty $__PROPERTIES_FILE $1 $2`
+   `setProperty "$__PROPERTIES_FILE" $1 $2`
 }
 
 # 
@@ -1050,7 +1056,7 @@ function setPodProperty
 function setClusterProperty
 {
    __PROPERTIES_FILE="$CLUSTERS_DIR/$CLUSTER/etc/cluster.properties"
-   `setProperty $__PROPERTIES_FILE $1 $2`
+   `setProperty "$__PROPERTIES_FILE" $1 $2`
 }
 
 #
