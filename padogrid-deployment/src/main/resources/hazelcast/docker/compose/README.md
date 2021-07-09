@@ -2,9 +2,25 @@
 
 This article describes how to create a Docker environment and launch a Hazelcast cluster using `docker compose`.
 
-:exclamation: You must first install Docker and Docker Compose. See [References](#References) for download links.
+:exclamation: You must first install Docker and Docker Compose. See [References](#references) for download links.
+
+## Switch to Hazelcast Cluster
+
+Make sure you switch into the correct the correct Hazelcast cluster (IMDG or Jet) before creating a Docker cluster. The `create_docker` command applies the current cluster settings to the Docker Compose files.
+
+```bash
+# Create and switch into an IMDG cluster if you want to create a Docker cluster for IMDG.
+make_cluster -product hazelcast -cluster myhz 
+switch_cluster myhz
+
+# Create and switch into a Jet cluster if you want to create a Docker cluster for Jet.
+make_cluster -product jet -cluster myjet
+switch_cluster myjet
+```
 
 ## Create PadoGrid Docker Cluster
+
+Once you are switched into the cluster that is configured for the desired product (IMDG or Jet) as described in the previouse section, run the `create_cluster` command which creates a Docker cluster that is specific to that product.
 
 ```console
 # Create Hazelcast cluster with 2 members (default)
@@ -34,9 +50,9 @@ There are three (3) Hazelcast configuration files as follows. Edit them as neede
 
 | Configuration File                         | Cluster Type |
 | ------------------------------------------ | ------------ |
-| `padogrid/etc/hazelcast.xml`        | IMDG, Jet    |
-| `padogrid/etc/hazelcast-jet.xml`    | Jet          |
-| `padogrid/etc/hazelcast-client.xml` | Jet          |
+| `padogrid/etc/hazelcast.xml`               | IMDG, Jet    |
+| `padogrid/etc/hazelcast-jet.xml`           | Jet          |
+| `padogrid/etc/hazelcast-client.xml`        | Jet          |
 
 :exclamation:By default, the cluster name is hard-coded in the `padogrid/etc/hazelcast.xml` file as `dev`, even though the Docker cluster name is `mydocker` in our example. If you want to keep the Hazelcast cluster name same as the Docker cluster name then uncomment the `padogrid.cluster-name` system property in the `padogrid/etc/hazelcast.xml` file.
 
