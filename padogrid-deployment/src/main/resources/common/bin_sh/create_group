@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,10 +42,11 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-group group_name]
-               [-prefix cluster_prefix_name]
-               [-type default|pado]
-               [-count cluster_count]
-               [-port first_locator_port_number] [-?]
+                [-product product_name]
+                [-prefix cluster_prefix_name]
+                [-type default|pado]
+                [-count cluster_count]
+                [-port first_port_number] [-?]
 
 DESCRIPTION
    Creates multiple clusters in the current workspace. Once the clusters are created,
@@ -58,6 +59,13 @@ OPTIONS
              Grid group name. The created clusters (grids) are grouped by this name. If this
              option is not specified then the group name is assigned to 'default'.
 
+   -product product_name
+             Cluser product name. If unspecified then the current cluster's product is assigned.
+             This command will abort, if the specified product is not installed for the current
+             workspace. To add or update product installations, set the appropriate '*_HOME'
+             environment varibles in the RWE or workspace 'setenv.sh' file. Note that workspace
+             'setenv.sh' inherits RWE 'setenv.sh'.
+
    -prefix cluster_prefix_name
              The prefix of each cluster's name. Cluster names are enumuerated starting from
              0 and incremented by 1. For example, if the prefix is 'mycluster' then the first
@@ -66,36 +74,27 @@ OPTIONS
              then the last cluster is named 'mycluster2'.
 
    -type default|pado
-             If the 'pado' option is specified, then it creates Pado clusters that provide
-             full support for grid federation. The 'default' option creates normal clusters
-             without federation support and any Pado dependencies.
+             If the 'pado' option is specified, then it creates a Pado cluster that includes
+             full support for grid federation. The 'default' option creates a normal cluster
+             without any Pado dependencies. Note that Pado supports only Geode and GemFire
+             at this time. For other products, this option is ignored.
   
    -count cluster_count
             The number of clusters. The max number of clusters allowed is 10. If this option
             is not specified then by default it creates two (2) clusters.
 
-   -port first_locator_port_number
-             First locator's port number. Port number is incremented
-             starting from this port number for the subsquent locators.
-             The port number difference between the default locator port
-             number and the specified port number is added to the default
-             port numbers of other components. For example, if the port
-             number 10336 is specified then the difference of 2 (10336-$DEFAULT_LOCATOR_START_PORT)
-             is added to the member's default port number of $DEFAULT_MEMBER_START_PORT
-             to obtain the port number 40406 for the member's first port number.
-             Similarly, the JMX Manager's first HTTP port number would be 7072 ($DEFAULT_JMX_MANAGER_HTTP_START_PORT+2).
-
-             To create multiple clusters, this number is incremented by 10. The specified
-             number is used for the first cluster and then incremented by 10 for the second
-             cluster, and so on.
-
-             Default: $DEFAULT_LOCATOR_START_PORT 
+   -port first_port_number
+             First member's port number. Port number is incremented
+             starting from this port number for the subsquent members.
+             
+             This option applies only for a cluster running locally. It is ignored
+             for creating non-local pod and VM clusters.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -prefix grid -count 2 -type default -port $DEFAULT_MEMBER_START_PORT
+   $EXECUTABLE -prefix grid -count 2 -type default
 
 FILES
    $PADOGRID_WORKSPACE/setenv.sh
@@ -106,7 +105,7 @@ fi
 cat <<EOF
 SEE ALSO
 EOF
-   printSeeAlsoList "create_cluster" $EXECUTABLE
+   printSeeAlsoList "make_cluster *_group" $EXECUTABLE
    exit
 fi
 
@@ -122,7 +121,7 @@ let LAST_CLUSTER_NUM=COUNT-1
 if [ "$COUNT" -lt 1 ] || [ "$COUNT" -gt 10 ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "    ERROR: Invalid count. The valid range is [1, 10]. Command aborted."
+   echo -e >&2 "    ${CLightRed}ERROR:${CNone} Invalid count. The valid range is [1, 10]. Command aborted."
    echo >&2 "----------------------------------------------------------------"
    exit 1
 fi
@@ -134,7 +133,7 @@ for i in $(seq 0 $LAST_CLUSTER_NUM); do
    if [ -d $CLUSTER_DIR ]; then
       echo >&2 "----------------------------------------------------------------"
       echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo >&2 "    ERROR: Cluster already exists: [$CLUSTER]. Use the '-prefix' option to set a different name."
+      echo -e >&2 "    ${CLightRed}ERROR:${CNone} Cluster already exists: [$CLUSTER]. Use the '-prefix' option to set a different name."
       echo >&2 "           Command aborted."
       echo >&2 "----------------------------------------------------------------"
       exit 1
@@ -142,15 +141,22 @@ for i in $(seq 0 $LAST_CLUSTER_NUM); do
 done
 
 if [ "$TYPE_ARG" == "pado" ]; then
+  if [ "$PRODUCT" != "geode" ] && [ "PRODUCT" != "gemfire" ]; then
+     echo >&2 "----------------------------------------------------------------"
+     echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+     echo >&2 "----------------------------------------------------------------"
+     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is only supported for Geode and GemFire: [$PRODUCT]. Command aborted."
+     exit 1
+  fi
   if [ "$PADO_HOME" == "" ]; then
-   echo >&2 "----------------------------------------------------------------"
-   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "----------------------------------------------------------------"
-   echo >&2 "ERROR: Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
-   echo >&2 "       workspace 'setenv.sh' file."
-   echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
-   echo >&2 "       Command aborted."
-   exit 1
+     echo >&2 "----------------------------------------------------------------"
+     echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+     echo >&2 "----------------------------------------------------------------"
+     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
+     echo >&2 "       workspace 'setenv.sh' file."
+     echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
+     echo >&2 "       Command aborted."
+     exit 1
   fi
 fi
 
@@ -176,12 +182,19 @@ fi
 #
 # Generate base clusters
 #
-PARENT_LOCATOR_PORT=$DEFAULT_LOCATOR_START_PORT
-LOCATOR_PORT=$PARENT_LOCATOR_PORT
+if [ "$PRODUCT_ARG" == "" ]; then
+   PRODUCT_ARG=$PRODUCT
+fi
+if [ "$PORT_ARG" != "" ]; then
+   FIRST_START_PORT="$PORT_ARG"
+else
+   FIRST_START_PORT=$(getDefaultStartPortNumber "$PRODUCT")
+fi
+FIRST_PORT=$FIRST_START_PORT
 for i in $(seq 0 $LAST_CLUSTER_NUM); do
    CLUSTER_NAME="$PREFIX$i"
-   create_cluster -cluster $CLUSTER_NAME -type $TYPE_ARG -port $LOCATOR_PORT
-   let LOCATOR_PORT=LOCATOR_PORT+10
+   make_cluster -product $PRODUCT_ARG -cluster $CLUSTER_NAME -type $TYPE_ARG -port $FIRST_PORT
+   let FIRST_PORT=FIRST_PORT+100
    if [ $i -eq 0 ]; then
       CLUSTER_NAMES="$CLUSTER_NAME"
    else

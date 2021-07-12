@@ -1,0 +1,92 @@
+#!/usr/bin/env bash 
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - List all the defined groups in the specified workspace
+
+SYNOPSIS
+   $EXECUTABLE [-workspace] [-?]
+
+DESCRIPTION
+   Lists all the defined groups in the specified workspace. A group of clusters is created by running the 
+   'create_group' command. The group definitions are stored in the workspace 'etc/clusters.properties' file.
+
+OPTIONS
+   -workspace
+             Workspace name. If not specified, then it displays clusters in the current workspace.
+
+DEFAULT
+   $EXECUTABLE
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*group" $EXECUTABLE
+   exit
+fi
+
+if [ "$PADOGRID_WORKSPACES_HOME" == "" ]; then
+   >&2 echo "ERROR: Workspaces not initialized. Please first run 'create_rwe' to initialize workspaces."
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
+   >&2 echo "ERROR: Invalid workspaces. Please run 'create_rwe' to initialize workspaces."
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+
+if [ "$WORKSPACE_ARG" != "" ]; then
+   __WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_ARG
+else
+   __WORKSPACE_PATH=$PADOGRID_WORKSPACE
+fi
+
+
+if [ "$__WORKSPACE_PATH" == "" ]; then
+   >&2 echo "ERROR: Workspace undefined. Please first create a workspace."
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+if [ ! -d "$__WORKSPACE_PATH" ]; then
+   >&2 echo "ERROR: Invalid workspace. Directory does not exist."
+   >&2 echo "       $__WORKSPACE_PATH"
+   >&2 echo "       Command aborted."
+   exit 1
+fi
+
+GROUP_NAMES=$(getProperty "$__WORKSPACE_PATH/etc/clusters.properties" "clusters.group.names")
+GROUP_NAMES=$(echo $GROUP_NAMES | sed 's/,/ /g')
+echo "$GROUP_NAMES"

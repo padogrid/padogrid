@@ -3430,3 +3430,27 @@ function getOptValue
    echo "$__VALUE"
 }
 
+#
+# Returns the default start port number of the specified product.
+# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, spark, kafka.
+#
+function getDefaultStartPortNumber
+{
+   local __PRODUCT=$1
+   if [ "$__PRODUCT" == "geode" ] || [ "$__PRODUCT" == "gemfire" ]; then
+      echo "10334"
+   elif [ "$__PRODUCT" == "hazelcast" ] || [ "$__PRODUCT" == "jet" ]; then
+      echo "5701"
+   elif [ "$__PRODUCT" == "snappydata" ]; then
+      echo "10334"
+   elif [ "$__PRODUCT" == "coherence" ]; then
+      echo "9000"
+   elif [ "$__PRODUCT" == "spark" ]; then
+      echo "7077"
+   elif [ "$__PRODUCT" == "kafka" ]; then
+      echo "9092"
+   else
+      # DEFAULT_LOCATOR_START_PORT for geode/gemfire/snappydata
+      echo "$DEFAULT_MEMBRER_START_PORT"
+   fi
+}
