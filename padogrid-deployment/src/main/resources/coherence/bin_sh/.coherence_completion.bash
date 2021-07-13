@@ -104,7 +104,7 @@ __padogrid_complete()
       ;;
 
    -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
       elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list="8888"
@@ -131,7 +131,7 @@ __padogrid_complete()
       ;;
 
    -prefix)
-      if [ "$command" == "create_grid" ]; then
+      if [ "$command" == "create_group" ]; then
          type_list="grid"
       fi
      ;;
@@ -139,7 +139,7 @@ __padogrid_complete()
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
          type_list="default"
       elif [ "$command" == "make_cluster" ]; then
          type_list="default"
@@ -755,14 +755,14 @@ __command_complete()
       fi
       ;;
    -prefix)
-      if [ "$command" == "create_grid" ]; then
+      if [ "$command" == "create_group" ]; then
          type_list="grid"
       fi
       ;;
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_grid" ]; then
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
          type_list="default"
       elif [ "$command" == "make_cluster" ]; then
          type_list="default"
@@ -866,7 +866,7 @@ __command_complete()
       type_list="1 2 3 4 5 6 7 8 9"
      ;;
    -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_grid" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
          type_list="$DEFAULT_MEMBER_START_PORT"
       fi
      ;;
