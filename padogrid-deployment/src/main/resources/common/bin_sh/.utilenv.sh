@@ -1403,7 +1403,7 @@ function updateClusterEnvFile
 
 #
 # Retrieves the cluster environment variables set in the .cluster/clusterenv.sh file.
-# @param clusterPath Cluster path. If not specified then PADOGRID_WORKSPACE is assigned.
+# @param clusterPath Cluster path. If not specified then the current cluster path is assigned.
 #
 function retrieveClusterEnvFile
 {
