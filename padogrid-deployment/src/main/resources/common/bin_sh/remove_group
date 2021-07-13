@@ -47,7 +47,7 @@ NAME
    $EXECUTABLE - Remove the specified group of clusters in the specified workspace
 
 SYNOPSIS
-   $EXECUTABLE [-group group_name] [-workspace workspace_name] [-kill] [-?]
+   $EXECUTABLE [-group group_name] [-workspace workspace_name] [-kill] [-simulate] [-quiet] [-?]
 
 DESCRIPTION
    Permanently removes the specified group of clusters from the specified workspace. This command 
@@ -192,10 +192,12 @@ if [ "$SIMULATE" != "true" ]; then
    GROUP_NAMES_COMMAS=$(getProperty "$CLUSTERS_FILE" "clusters.group.names")
    GROUP_NAMES=$(echo $GROUP_NAMES_COMMAS | sed 's/,/ /g')
    NEW_GROUP_NAMES_COMMAS=""
+   NEW_FIRST_GROUP=""
    for i in $GROUP_NAMES; do
       if [ "$i" != "$GROUP" ]; then
          if [ "$NEW_GROUP_NAMES_COMMAS" = "" ]; then
             NEW_GROUP_NAMES_COMMAS="$i"
+            NEW_FIRST_GROUP="$i"
          else
             NEW_GROUP_NAMES_COMMAS="$NEW_GROUP_NAMES_COMMAS, $i"
          fi
@@ -203,6 +205,13 @@ if [ "$SIMULATE" != "true" ]; then
    done
    setProperty "$CLUSTERS_FILE" "clusters.group.names" "$NEW_GROUP_NAMES_COMMAS"
    sed -i${__SED_BACKUP} -e '/clusters.'$GROUP'.cluster.names/d' -e '/#.*'$GROUP'/d' "$CLUSTERS_FILE"
+   DEFAULT_GROUP=$(getProperty "$CLUSTERS_FILE" "clusters.group.default")
+   # If the default group has been removed then set the first group in the list
+   # as the default group.
+   if [ "$DEFAULT_GROUP" == "$GROUP" ]; then
+      setProperty "$CLUSTERS_FILE" "clusters.group.default" "$NEW_FIRST_GROUP"
+      echo -e "The default group has been changed from ${CLightRed}$GROUP${CNone} to ${CLightGreen}$NEW_FIRST_GROUP${CNone}."
+   fi
 else
    echo "Simulating group removal..."
    for i in $CLUSTER_NAMES; do
