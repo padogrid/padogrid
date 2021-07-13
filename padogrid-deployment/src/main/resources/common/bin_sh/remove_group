@@ -183,14 +183,10 @@ if [ "$KILL" == "true" ]; then
 fi
 
 if [ "$SIMULATE" != "true" ]; then
-   ARGS=""
-   if [ "$QUIET" == "true" ]; then
-      ARGS="-quiet"
-   fi
    pushd "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters" > /dev/null 2>&1
    echo "Removing group: [$GROUP]..."
    for i in $CLUSTER_NAMES; do
-      remove_cluster -cluster $i $ARGS
+      remove_cluster -cluster $i -quiet
    done
    popd > /dev/null 2>&1
    GROUP_NAMES_COMMAS=$(getProperty "$CLUSTERS_FILE" "clusters.group.names")
@@ -210,7 +206,7 @@ if [ "$SIMULATE" != "true" ]; then
 else
    echo "Simulating group removal..."
    for i in $CLUSTER_NAMES; do
-      echo remove_cluster -cluster $i
+      echo remove_cluster -cluster $i -quiet
    done
 fi
 
