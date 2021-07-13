@@ -50,6 +50,16 @@ OPTIONS
 
 DEFAULT
    $EXECUTABLE
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+
+FILES
+   $PADOGRID_WORKSPACE/etc/clusters.properties
+             The current workspace group file.
+EOF
+fi
+cat <<EOF
 
 SEE ALSO
 EOF
@@ -87,6 +97,5 @@ if [ ! -d "$__WORKSPACE_PATH" ]; then
    exit 1
 fi
 
-GROUP_NAMES=$(getProperty "$__WORKSPACE_PATH/etc/clusters.properties" "clusters.group.names")
-GROUP_NAMES=$(echo $GROUP_NAMES | sed 's/,/ /g')
+GROUP_NAMES=$(getClusterGroups $WORKSPACE_ARG)
 echo "$GROUP_NAMES"

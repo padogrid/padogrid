@@ -346,6 +346,54 @@ function getWorkspaces
 }
 
 #
+# Returns the specified workspace's cluster group names defined in the etc/clusters.properties file.
+# Note that the returned group names are space separated, and not comma separated.
+# @required PADOGRID_WORKSPACES_HOME
+# @required PADOGRID_WORKSPACE
+# @param workspaceName Optional workspace name. If not specified then the current workspace is assigned.
+#
+function getClusterGroups
+{
+   local WORKSPACE="$1"
+   if [ "$WORKSPACE" = "" ]; then
+      local GROUP_NAMES=$(getProperty "$PADOGRID_WORKSPACE/etc/clusters.properties" "clusters.group.names")
+   else
+      local GROUP_NAMES=$(getProperty "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/etc/clusters.properties" "clusters.group.names")
+   fi
+   GROUP_NAMES=$(echo $GROUP_NAMES | sed 's/,/ /g')
+   echo "$GROUP_NAMES"
+}
+
+#
+# Returns "true" if the specified workspace exists in the specified RWE and is valid.
+# Note that the first argument in the workspace name.
+# @required PADOGRID_WORKSPACES_HOME
+# @param workspaceName Workspace name.
+# @param rweName       Optional RWE name. If not specified then the current RWE is checked.
+#
+function isValidWorkspace
+{
+   local WORKSPACE="$1"
+   local RWE="$2"
+   if [ "$WORKSPACE" != "" ]; then
+      if [ "$RWE" == "" ]; then
+         local WORKSPACE_LIST=$(getWorkspaces)
+      else
+         PADOGRID_ENV_BASE_PATH="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+         RWE_PATH="$PADOGRID_ENV_BASE_PATH/$RWE"
+         local WORKSPACE_LIST=$(getWorkspaces "$RWE_PATH")
+      fi
+      for i in $WORKSPACE_LIST; do
+         if [ "$i" == "$WORKSPACE" ]; then
+            echo "true"
+            return 0
+         fi
+      done
+   fi
+   echo "false"
+}
+
+#
 # Returns a comma separated list of VM hosts of the specified workspace. Returns an empty
 # string if the workspace does not exist.
 # @param    workspaceName    Workspace name

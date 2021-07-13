@@ -203,6 +203,19 @@ __padogrid_complete()
       fi
       ;;
 
+   -group)
+      if [[ "$command" == *"group" ]]; then
+         # If -workspace specified then get the workspace's groups
+         __getArrayElementIndex "-workspace" "${COMP_WORDS[@]}"
+         local index=$?
+         local workspace_name=""
+         if [ $index -ne 255 ]; then
+             workspace_name="${COMP_WORDS[$index+1]}"
+         fi
+         type_list=$(getClusterGroups $workspace_name)
+      fi
+      ;;
+
    -host)
       if [ "$command" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
@@ -791,6 +804,18 @@ __command_complete()
          fi
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getWorkspaces`
+      fi
+      ;;
+   -group)
+      if [[ "$command" == *"group" ]]; then
+         # If -workspace specified then get the workspace's groups
+         __getArrayElementIndex "-workspace" "${COMP_WORDS[@]}"
+         local index=$?
+         local workspace_name=""
+         if [ $index -ne 255 ]; then
+             workspace_name="${COMP_WORDS[$index+1]}"
+         fi
+         type_list=$(getClusterGroups $workspace_name)
       fi
       ;;
    -k8s)

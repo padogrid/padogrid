@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-group -workspace -kill -simulate -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$WORKSPACE_ARG" != "" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+else
+   WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified group of clusters in the specified workspace
+
+SYNOPSIS
+   $EXECUTABLE [-group group_name] [-workspace workspace_name] [-kill] [-?]
+
+DESCRIPTION
+   Permanently removes the specified group of clusters from the specified workspace. This command 
+   iteratively invokes the 'remove_cluster' to remove each cluster. Note that the 'remove_cluster'
+   command aborts if the cluster is still running. To override this behavior, specify the '-kill'
+   option to first kill the cluster before removing it.
+
+   By default, this command runs in the interactive mode if the '-quiet' option is not specified.
+
+OPTIONS
+   -group group_name
+             Group name. The group name is required.
+
+   -workspace workspace_name
+             Workspace name. If not specified, then it removes the specified group of clusters in the current
+             workspace.
+
+   -kill
+             If specified, then it first kills clusters before removing them.
+
+   -simulate
+             If specified, then it only simulates the group removal steps without actually removing the group.
+             Always use this option first to verify the removal steps before comitting the group removal. This
+             option automatically entables the quiet mode.
+
+   -quiet
+             Quiet mode. Suppresses the interactive prompts.
+   
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -workspace $WORKSPACE -group group_name
+
+FILES
+   $PADOGRID_WORKSPACE/etc/clusters.properties
+             The current workspace group file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*group" $EXECUTABLE
+   exit
+fi
+
+if [ "$GROUP" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Group name required. Use '-group' to specify the group to remove.  Command aborted."
+   exit 1
+fi
+
+# Simulation runs in the quite mode
+if [ "$SIMULATE" == "true" ]; then
+   QUIET=$SIMULATE
+fi
+
+CLUSTERS_FILE="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/etc/clusters.properties"
+
+if [ ! -f "$CLUSTERS_FILE" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} No cluster groups found in the workspace. Command aborted."
+   exit 1
+fi
+   
+CURRENT_DIR="`pwd`"
+CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+CURRENT_CLUSTER=$CLUSTER
+
+CLUSTER_NAMES_COMMAS=$(getProperty "$CLUSTERS_FILE" "clusters.$GROUP.cluster.names")
+
+if [ "$CLUSTER_NAMES_COMMAS" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Group name undefined in the workspace. Command aborted."
+   exit 1
+fi
+
+if [ "$(isValidWorkspace $WORKSPACE)" == "false" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Specified workspace does not exist: [$WORKSPACE]. Command aborted."
+   exit 1
+fi
+
+if [ "$QUIET" == "false" ]; then
+   echo ""
+   echo "The following group will be permanently removed."
+   echo ""
+   echo "   Group: $GROUP"
+   echo ""
+   echo "A backup of the entire group will be created before removing the workspace."
+   echo "Do you want to continue?"
+   echo "(Enter 'continue' + Enter to continue the group removal, other keys to abort.)"
+   read INPUT
+   if [ "$INPUT" != "continue" ]; then
+      echo "Group removal aborted."
+      exit
+   fi
+fi
+
+if [ "$CURRENT_WORKSPACE" != "$WORKSPACE" ]; then
+   switch_workspace $WORKSPACE
+fi
+
+CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
+
+# Back up group in the workspaces/bundles directory.
+GROUP_ARCHIVE_FILE="$PADOGRID_WORKSPACES_HOME/.archive/$GROUP-clusters-group.tar.gz"
+if [ ! -d $PADOGRID_WORKSPACES_HOME/.archive ]; then
+   mkdir $PADOGRID_WORKSPACES_HOME/.archive
+fi
+echo ""
+if [ "$SIMULATE" != "true" ]; then
+   echo "Creating a group backup..."
+   pushd "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters" > /dev/null 2>&1
+   echo tar -czf "$GROUP_ARCHIVE_FILE" $CLUSTER_NAMES
+   tar -czf $GROUP_ARCHIVE_FILE $CLUSTER_NAMES
+   echo ""
+   echo "Group backup created:"
+   echo "   $GROUP_ARCHIVE_FILE"
+   popd > /dev/null 2>&1
+else
+   echo "Simulating group backup..."
+   echo tar -czf $GROUP_ARCHIVE_FILE $CLUSTER_NAMES
+fi
+
+if [ "$KILL" == "true" ]; then
+   if [ "$SIMULATE" != "true" ]; then
+      echo "Killing group: [$GROUP]..."
+      for i in $CLUSTER_NAMES; do
+         kill_cluster -all -cluster $i
+      done
+   else
+      echo "Simulating group kill..."
+   fi
+   echo ""
+fi
+
+if [ "$SIMULATE" != "true" ]; then
+   ARGS=""
+   if [ "$QUIET" == "true" ]; then
+      ARGS="-quiet"
+   fi
+   pushd "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters" > /dev/null 2>&1
+   echo "Removing group: [$GROUP]..."
+   for i in $CLUSTER_NAMES; do
+      remove_cluster -cluster $i $ARGS
+   done
+   popd > /dev/null 2>&1
+   GROUP_NAMES_COMMAS=$(getProperty "$CLUSTERS_FILE" "clusters.group.names")
+   GROUP_NAMES=$(echo $GROUP_NAMES_COMMAS | sed 's/,/ /g')
+   NEW_GROUP_NAMES_COMMAS=""
+   for i in $GROUP_NAMES; do
+      if [ "$i" != "$GROUP" ]; then
+         if [ "$NEW_GROUP_NAMES_COMMAS" = "" ]; then
+            NEW_GROUP_NAMES_COMMAS="$i"
+         else
+            NEW_GROUP_NAMES_COMMAS="$NEW_GROUP_NAMES_COMMAS, $i"
+         fi
+      fi
+   done
+   setProperty "$CLUSTERS_FILE" "clusters.group.names" "$NEW_GROUP_NAMES_COMMAS"
+   sed -i${__SED_BACKUP} -e '/clusters.'$GROUP'.cluster.names/d' -e '/#.*'$GROUP'/d' "$CLUSTERS_FILE"
+else
+   echo "Simulating group removal..."
+   for i in $CLUSTER_NAMES; do
+      echo remove_cluster -cluster $i
+   done
+fi
+
+if [ "$CURRENT_WORKSPACE" != "$WORKSPACE" ]; then
+   switch_workspace $CURRENT_WORKSPACE
+   switch_cluster $CLUSTER
+   cd $CURRENT_DIR
+fi

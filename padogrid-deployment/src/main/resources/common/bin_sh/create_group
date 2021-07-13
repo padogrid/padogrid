@@ -54,10 +54,17 @@ DESCRIPTION
 
    etc/cluster.properties
 
+   If the group is the first group created for the workspace, then it is set as the default group
+   so that it can be managed without specifying the `-group' option of the '_group' commands.
+   You can change the default group by setting the followling property in the workspace 
+   'etc/clusters.properties' file.
+
+   clusters.group.default=mygroup
+
 OPTIONS
    -group group_name
              Grid group name. The created clusters (grids) are grouped by this name. If this
-             option is not specified then the group name is assigned to 'default'.
+             option is not specified then the group name is assigned to 'mygroup'.
 
    -product product_name
              Cluser product name. If unspecified then the current cluster's product is assigned.
@@ -97,8 +104,8 @@ DEFAULT
    $EXECUTABLE -prefix grid -count 2 -type default
 
 FILES
-   $PADOGRID_WORKSPACE/setenv.sh
-             The current workspace configuration file.
+   $PADOGRID_WORKSPACE/etc/clusters.properties
+             The current workspace group file.
 
 EOF
 fi
@@ -161,7 +168,7 @@ if [ "$TYPE_ARG" == "pado" ]; then
 fi
 
 if [ "$GROUP" == "" ]; then
-   GROUP="default"
+   GROUP="mygroup"
 fi
 
 if [ "$TYPE_ARG" == "" ]; then
@@ -361,6 +368,9 @@ if [ ! -f "$PADOGRID_WORKSPACE/etc/clusters.properties" ]; then
    echo "#" > "$PADOGRID_WORKSPACE/etc/clusters.properties"
    echo "# This file contains workspace-wide cluster specific properties." >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
    echo "#" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
+   echo "" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
+   echo "# Default group" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
+   echo "clusters.group.default=$GROUP" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
    echo "" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
    echo "# Enter comma separated cluster group names" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
    echo "clusters.group.names=$GROUP_NAMES" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
