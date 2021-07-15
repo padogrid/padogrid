@@ -17,7 +17,7 @@ By default, the create_docker command adds one (1) locator and two (2) Geode ser
 create_docker -cluster mydocker -count 4
 ```
 
-If you are running Docker containers other than Geode containers and they need to connect to the Geode cluster, then specify host IP address that is accessble form the containers using the `-host` option. For example, the following example specifies the host IP, `host.docker.internal`, which is defined by Docker Desktop. Please run `create_docker -?` or `man create_docker` for the usage.
+If you are running Docker containers other than Geode containers and they need to connect to the Geode cluster, then specify host IP address that is accessble from the containers using the `-host` option. For example, the following example specifies the host IP, `host.docker.internal`, which is defined by Docker Desktop. Please run `create_docker -?` or `man create_docker` for the usage.
 
 ```console
 create_docker -cluster mydocker -host host.docker.internal

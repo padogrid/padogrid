@@ -71,9 +71,9 @@ __padogrid_complete()
    local len=${#COMP_WORDS[@]}
    local command=$second_word
    local is_product="false"
+   local is_path="false"
       
    local type_list=""
-
    case "$prev_word" in
    -?)
       type_list=""
@@ -177,13 +177,15 @@ __padogrid_complete()
          type_list="$BUNDLE_PRODUCT_LIST"
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
-      else
+      elif [ $len -gt 3 ]; then
          is_path="true"
       fi
       ;;
 
    -rwe)
-      if [ "$command" != "find_padogrid" ]; then
+      if [ $len -eq 3 ]; then
+         type_list=""
+      elif [ "$command" != "find_padogrid" ]; then
          type_list=`getRweList`
       fi
       ;;
