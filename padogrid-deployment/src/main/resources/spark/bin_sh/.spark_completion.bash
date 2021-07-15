@@ -177,6 +177,8 @@ __padogrid_complete()
          type_list="$BUNDLE_PRODUCT_LIST"
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
+      elif [ "$command" == "create_docker" ]; then
+         type_list="$DOCKER_PRODUCT_LIST"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -785,6 +787,8 @@ __command_complete()
          type_list="$BUNDLE_PRODUCT_LIST"
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
+      elif [ "$command" == "create_docker" ]; then
+         type_list="$DOCKER_PRODUCT_LIST"
       else
          is_path="true"
       fi

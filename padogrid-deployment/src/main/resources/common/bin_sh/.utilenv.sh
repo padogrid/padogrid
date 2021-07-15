@@ -63,6 +63,24 @@ function trimLeadingZero
 }
 
 #
+# Returns "true" if the specified space-separated string contains the specified word.
+# @param string   Space-speparated string
+# @param word     Word to search in the specified string
+#
+function containsWord
+{
+   local string="$1"
+   local word="$2"
+   for i in $string; do
+      if [ "$i" == "$word" ]; then
+         echo "true"
+         break;
+      fi
+    done
+    echo "false"
+}
+
+#
 # Returns the absolute path of the specified file path.
 # If the file does not exist then it returns -1.
 # @param filePath

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-docker -host -port -cluster -count -?"
+   echo "-product -docker -host -port -cluster -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -36,6 +36,10 @@ for i in $(getHostIPv4List); do
    HOST_IP=$i
 done
 
+PRODUCT_OPTIONS=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /|/g')
+PRODUCTS_SUPPORTED=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /, /g')
+THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+
 if [ "$HELP" == "true" ]; then
 cat <<EOF
 
@@ -46,8 +50,9 @@ NAME
    $EXECUTABLE - Create a Docker environment in the current padogrid workspace
 
 SYNOPSIS
-   $EXECUTABLE [-docker compose] [-host host_ip] [-port first_port_number]
-               [-count member_count] -cluster cluster_name [-?]
+   $EXECUTABLE [-product $PRODUCT_OPTIONS]
+                 [-host host_ip] [-port first_port_number]
+                 [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
    Creates a Docker environment that includes Hazelcast cluster configuration files for
@@ -62,6 +67,9 @@ DESCRIPTION
    'latest' tag.
 
 OPTIONS
+   -product $PRODUCT_OPTIONS
+             Docker cluster product name. Supported products are $PRODUCTS_SUPPORTED.
+
    -docker compose
              Docker compose driven Hazelcast cluster.
 
@@ -88,7 +96,7 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -docker $DEFAULT_DOCKER -host $HOST_IP -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
+   $EXECUTABLE -product $THIS_PRODUCT -docker $DEFAULT_DOCKER -host $HOST_IP -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
 
 EXAMPLES
    To create 'mydocker' cluster with the host IP 'host.docker.internal':
@@ -107,6 +115,28 @@ FILES
 EOF
 fi
    exit
+fi
+
+#
+# Run the target docker command if the product is different.
+#
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$DOCKER_PRODUCT_LIST" "$PRODUCT_ARG")" == "false" ]; then
+      >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+      exit 1
+   fi
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ] && [ "$PRODUCT_ARG" != "jet" ]; then
+      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+      exit
+   fi
+   if [ "$PRODUCT_ARG" == "jet" ]; then
+      CLUSTER_TYPE="jet"
+    else
+      CLUSTER_TYPE="imdg"
+    fi
+else
+   # Default product is hazelcast and hence CLUSTER_TYPE is "imdg"
+   CLUSTER_TYPE="imdg"
 fi
 
 if [ "$CLUSTER_SPECIFIED" == "false" ]; then
@@ -280,6 +310,7 @@ fi
 #
 echo ""
 echo "         WORKSPACE: $PADOGRID_WORKSPACE"
+echo -e "           Product: ${CLightGreen}$CLUSTER_TYPE${CNone}"
 echo "            Docker: $DOCKER"
 echo "      Member Count: $COUNT"
 echo "Docker Environment:"

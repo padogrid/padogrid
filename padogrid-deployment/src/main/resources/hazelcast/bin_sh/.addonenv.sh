@@ -392,6 +392,8 @@ DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 # Supported Bundle Products
 BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark"
 
+# Supported Docker Products
+DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then

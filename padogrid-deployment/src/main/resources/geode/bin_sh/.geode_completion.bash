@@ -177,6 +177,8 @@ __padogrid_complete()
          type_list="$BUNDLE_PRODUCT_LIST"
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
+      elif [ "$command" == "create_docker" ]; then
+         type_list="$DOCKER_PRODUCT_LIST"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -785,6 +787,8 @@ __command_complete()
          type_list="$BUNDLE_PRODUCT_LIST"
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
+      elif [ "$command" == "create_docker" ]; then
+         type_list="$DOCKER_PRODUCT_LIST"
       else
          is_path="true"
       fi
@@ -843,6 +847,8 @@ __command_complete()
    -host)
       if [ "$command" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
+         type_list="localhost `hostname`"
       fi
       ;;
    -user)
@@ -870,6 +876,8 @@ __command_complete()
    -port)
       if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
          type_list="$DEFAULT_LOCATOR_START_PORT"
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
+         type_list="8888"
       fi
      ;;
    -vm | -locator)
