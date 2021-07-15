@@ -158,7 +158,18 @@ __padogrid_complete()
 
    -k8s) 
       if [ "$command" == "create_k8s" ]; then
-         type_list="minikube"
+         # If -product specified then get the product's k8s options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            type_list=$(getK8sOptions $product_name)
+         else
+            type_list="minikube"
+         fi
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getClusters k8s`
       fi
@@ -179,6 +190,8 @@ __padogrid_complete()
          type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"
+      elif [ "$command" == "create_k8s" ]; then
+         type_list="$K8S_PRODUCT_LIST"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -789,6 +802,8 @@ __command_complete()
          type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"
+      elif [ "$command" == "create_k8s" ]; then
+         type_list="$K8S_PRODUCT_LIST"
       else
          is_path="true"
       fi
@@ -831,8 +846,19 @@ __command_complete()
       fi
       ;;
    -k8s)
-      if [ "$command" != "create_workspace" ]; then
-         type_list="minikube"
+      if [ "$command" == "create_k8s" ]; then
+         # If -product specified then get the product's k8s options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            type_list=$(getK8sOptions $product_name)
+         else
+            type_list="minikube"
+         fi
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getClusters k8s`
       fi

@@ -176,6 +176,9 @@ HELP_VALID_POD_TYPE_LIST="local|vagrant"
 # Default Kubernetes
 DEFAULT_K8S="minikube"
 
+# Supported Kubernetes Products
+K8S_PRODUCT_LIST="geode hazelcast jet"
+
 # Default Docker tool
 DEFAULT_DOCKER="compose"
 

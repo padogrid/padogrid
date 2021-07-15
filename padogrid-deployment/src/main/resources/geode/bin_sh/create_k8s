@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,13 +23,18 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-k8s -cluster -?"
+   echo "-product -k8s -cluster -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
    __options
    exit
 fi
+
+PRODUCT_OPTIONS=$(echo "$K8S_PRODUCT_LIST" | sed 's/ /|/g')
+PRODUCTS_SUPPORTED=$(echo "$K8S_PRODUCT_LIST" | sed 's/ /, /g')
+THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+K8S_OPTIONS="$(echo $(getK8sOptions $THIS_PRODUCT) | sed 's/ /|/g')"
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -41,7 +46,10 @@ NAME
    $EXECUTABLE - Create a Kubernetes environment in the current padogrid workspace
 
 SYNOPSIS
-   $EXECUTABLE [-k8s minikube] -cluster cluster_name [-?]
+   $EXECUTABLE [-product $PRODUCT_OPTIONS]
+              [-k8s $K8S_OPTIONS]
+              -cluster cluster_name
+              [-?]
 
 DESCRIPTION
    Creates a Kubernetes environment that includes Geode deployment files for
@@ -54,18 +62,21 @@ DESCRIPTION
    comes with a document describing the prerequisites and detailed instructions.
 
 OPTIONS
+   -product $PRODUCT_OPTIONS
+             Kubernetes cluster product name. Supported products are $PRODUCTS_SUPPORTED.
+
    -k8s minikube
              Minikube on your local machine.
 
    -cluster cluster_name
-             Required Kubernetes cluster name. This name is used to create
-             a cluster in the cloud platform if it does not exist.
+             Required Kubernetes cluster name. This name is used to create a cluster in
+             the cloud platform if it does not exist.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -k8s $DEFAULT_K8S -cluster cluster_name
+   $EXECUTABLE -product $THIS_PRODUCT -k8s $DEFAULT_K8S -cluster cluster_name
 
 FILES
    $PADOGRID_WORKSPACE/k8s
@@ -74,6 +85,23 @@ FILES
 EOF
 fi
    exit
+fi
+
+#
+# Run the target k8s command if the product is different.
+#
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$K8S_PRODUCT_LIST" "$PRODUCT_ARG")" == "false" ]; then
+      >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+      exit 1
+   fi
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
+      if [ "$PRODUCT_ARG" == "jet" ]; then
+         PRODUCT_ARG="hazelcast"
+      fi
+      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+      exit
+   fi
 fi
 
 if [ "$CLUSTER_SPECIFIED" == "false" ]; then
@@ -170,6 +198,7 @@ fi
 #
 echo ""
 echo "     WORKSPACE: $PADOGRID_WORKSPACE"
+echo -e "       Product: ${CLightGreen}geode${CNone}"
 echo "    Kubernetes: $K8S"
 echo "Kubernetes Environment:"
 echo "   $CLUSTER_DIR"

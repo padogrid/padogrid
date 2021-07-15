@@ -535,6 +535,24 @@ function getK8s {
    echo $__K8S
 }
 
+#
+# Returns a space-sparated list of supported '-k8s' options for the 'create_k8s' command.
+# @param product  Product name. Supported are hazelcast, jet, geode
+#
+function getK8sOptions 
+{
+   local __PRODUCT="$1"
+   if [ "$__PRODUCT" == "hazelcast" ]; then
+      echo "minikube minishift openshift gke"
+   elif [ "$__PRODUCT" == "jet" ]; then
+      echo "openshift"
+   elif [ "$__PRODUCT" == "geode" ]; then
+      echo "minikube"
+   else
+      echo ""
+   fi
+}
+
 # 
 # Returns a complete list of Docker components found in DOCKER_DIR
 # @required DOCKER_DIR
