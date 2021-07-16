@@ -23,13 +23,18 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-app -name -?"
+   echo "-product -app -name -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
    __options
    exit
 fi
+
+PRODUCT_OPTIONS=$(echo "$APP_PRODUCT_LIST" | sed 's/ /|/g')
+PRODUCTS_SUPPORTED=$(echo "$APP_PRODUCT_LIST" | sed 's/ /, /g')
+THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+APP_OPTIONS="$(echo $(getAppOptions $THIS_PRODUCT) | sed 's/ /|/g')"
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -42,7 +47,10 @@ NAME
                  padogrid distribution
 
 SYNOPSIS
-   $EXECUTABLE [-app <app_name>] [-name new_app_name] [-?]
+   $EXECUTABLE [-product $PRODUCT_OPTIONS]
+              [-app app_name]
+              [-name new_app_name]
+              [-?]
 
 DESCRIPTION
    Creates a new app by installing the specified app that is part of the
@@ -55,15 +63,19 @@ DESCRIPTION
    together for easier deployment.
 
 OPTIONS
+   -product $PRODUCT_OPTIONS
+             Product name. Supported products are $PRODUCTS_SUPPORTED.
+
    -app app_name
-             Name of the app to create. Uset <tab><tab> to see available
-             apps. If not specified, then it defaults to 'perf_test'
-             if CLUSTER_TYPE is "imdg" or 'jet_demo' if CLUSTER_TYPE
-             is "jet".
+             Name of the app to create. Uset <tab><tab> to see available apps. If not 
+             specified, then it defaults to 'perf_test' if the specified product is 'hazelcast'
+             or 'jet_demo' if the specified product is 'jet'.
 
    -name new_app_name
-             New name of the app. If not specified, then it defaults
-             to app_name.
+             New name of the app. If not specified and the -product option is not specified,
+             then it defaults to 'perf_test' if the specified product is 'hazelcast' or 'jet_demo'
+             if the specified product is 'jet'. If the '-product' option is not specified, then
+             it defaults to 'perf_test' or the specified app_name.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -92,6 +104,29 @@ SEE ALSO
 EOF
    printSeeAlsoList "*app*" $EXECUTABLE
    exit
+fi
+
+#
+# Run the target k8s command if the product is different.
+#
+PRODUCT="$THIS_PRODUCT"
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$APP_PRODUCT_LIST" "$PRODUCT_ARG")" == "false" ]; then
+      >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+      exit 1
+   fi
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ] && [ "$PRODUCT_ARG" != "jet" ]; then
+      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+      exit
+   fi
+   if [ "$PRODUCT_ARG" == "jet" ]; then
+      CLUSTER_TYPE="jet"
+    else
+      CLUSTER_TYPE="imdg"
+    fi
+else
+   # Default product is hazelcast and hence CLUSTER_TYPE is "imdg"
+   CLUSTER_TYPE="imdg"
 fi
 
 if [ "$APP_SPECIFIED" == "false" ]; then
@@ -148,8 +183,9 @@ if [ -d "$APP_DIR/bin_sh" ]; then
    chmod 755 $APP_DIR/bin_sh/*
 fi
 
-echo ""
-echo "App created in the following directory:"
-echo ""
-echo -e "   ${CLightGreen}$APP_DIR${CNone}"
+echo "App created as follows."
+echo -e "  Product: ${CLightGreen}$CLUSTER_TYPE${CNone}"
+echo -e "      App: $APP"
+echo -e "     Name: $NAME_ARG"
+echo -e "Directory: ${CLightGreen}$APP_DIR${CNone}"
 echo ""

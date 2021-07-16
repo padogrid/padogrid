@@ -372,6 +372,12 @@ BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 
+# Supported Kubernetes Products
+K8S_PRODUCT_LIST="geode hazelcast jet"
+
+# Supported App Products
+APP_PRODUCT_LIST="coherence geode hazelcast jet"
+
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
   POD_BOX_IMAGE=$DEFAULT_POD_BOX_IMAGE
@@ -591,24 +597,3 @@ RUN_SCRIPT=
 if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
    . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
 fi
-
-# Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'
-CUnderline='\033[4m'
-CUrl=$CBlue$CUnderline

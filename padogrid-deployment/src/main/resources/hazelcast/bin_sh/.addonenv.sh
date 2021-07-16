@@ -179,6 +179,9 @@ DEFAULT_K8S="minikube"
 # Supported Kubernetes Products
 K8S_PRODUCT_LIST="geode hazelcast jet"
 
+# Supported App Products
+APP_PRODUCT_LIST="coherence geode hazelcast jet"
+
 # Default Docker tool
 DEFAULT_DOCKER="compose"
 

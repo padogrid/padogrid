@@ -1,5 +1,5 @@
 #
-# .padoenv.sh file is souced in by start_member to intialize the Pado environment. Pado is
+# .padoenv.sh file is sourced in by start_member to intialize the Pado environment. Pado is
 # enabled only if PADO_HOME is defined. PADO_HOME must be set in the workspace's setenv.sh file.
 #
 

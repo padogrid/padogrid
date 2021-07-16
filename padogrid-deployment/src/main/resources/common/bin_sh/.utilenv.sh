@@ -601,6 +601,26 @@ function getApps {
    echo $__APPS
 }
 
+#
+# Returns a space-sparated list of supported '-app' options for the 'create_app' command.
+# @param product  Product name. Supported are hazelcast, jet, geode
+#
+function getAppOptions 
+{
+   local __PRODUCT="$1"
+   if [ "$__PRODUCT" == "hazelcast" ]; then
+      echo "dekstop grafana perf_test"
+   elif [ "$__PRODUCT" == "jet" ]; then
+      echo "desktop jet_demo"
+   elif [ "$__PRODUCT" == "geode" ]; then
+      echo "grafana perf_test"
+   elif [ "$__PRODUCT" == "coherence" ]; then
+      echo "perf_test"
+   else
+      echo ""
+   fi
+}
+
 # 
 # Returns "true" if the specified cluster exists. Otherwise, "false".
 # @required CLUSTERS_DIR

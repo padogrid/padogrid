@@ -97,7 +97,18 @@ __padogrid_complete()
    
    -app)
       if [ "$command" == "create_app" ]; then
-         type_list=`getAddonApps $CLUSTER_TYPE`
+         # If -product specified then get the product's app options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            type_list=$(getAppOptions $product_name)
+         else
+            type_list=`getAddonApps $CLUSTER_TYPE`
+         fi
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getApps`
       fi
@@ -186,6 +197,8 @@ __padogrid_complete()
          type_list="$DOCKER_PRODUCT_LIST"
       elif [ "$command" == "create_k8s" ]; then
          type_list="$K8S_PRODUCT_LIST"
+      elif [ "$command" == "create_app" ]; then
+         type_list="$APP_PRODUCT_LIST"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -748,7 +761,18 @@ __command_complete()
       ;;
    -app)
       if [ "$command" == "create_app" ]; then
-         type_list=`getAddonApps $CLUSTER_TYPE`
+         # If -product specified then get the product's app options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            type_list=$(getAppOptions $product_name)
+         else
+            type_list=`getAddonApps $CLUSTER_TYPE`
+         fi
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getApps`
       fi
@@ -798,6 +822,8 @@ __command_complete()
          type_list="$DOCKER_PRODUCT_LIST"
       elif [ "$command" == "create_k8s" ]; then
          type_list="$K8S_PRODUCT_LIST"
+      elif [ "$command" == "create_app" ]; then
+         type_list="$APP_PRODUCT_LIST"
       else
          is_path="true"
       fi

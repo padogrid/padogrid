@@ -428,6 +428,12 @@ BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 
+# Supported Kubernetes Products
+K8S_PRODUCT_LIST="geode hazelcast jet"
+
+# Supported App Products
+APP_PRODUCT_LIST="coherence geode hazelcast jet"
+
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
   POD_BOX_IMAGE=$DEFAULT_POD_BOX_IMAGE
