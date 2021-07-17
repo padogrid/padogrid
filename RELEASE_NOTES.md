@@ -9,7 +9,7 @@ https://github.com/padogrid
 
 - Added the `-product` option to `create_docker`,`create_k8s`, and `create_app` to target a specific product.
 - Added support for managing cluster groups. With this support, a group of clusters can be created and managed using the new `_group` commands. These commands are particularly useful for managing federated grids.
-- Added the entry point, 'init_bundle.sh', for intializing bundle during installation. If this script exists in the root directory of the bundle then the 'install_bundle' triggers it upon completion of bundle installation. Note that this applies to workspace bundles only, i.e., bundles must be installed by using `install_bundle -checkout` or `install_bundle -workspace -download`.
+- Added the entry point, `init_bundle.sh`, for intializing bundle during installation. If this script exists in the root directory of the bundle then the `install_bundle` triggers it upon completion of bundle installation. Note that this applies to workspace bundles only, i.e., bundles must be installed by using `install_bundle -checkout` or `install_bundle -workspace -download`.
 - Added the `open_vscode` command that integrates PadoGrid workspaces with Visual Studio Code.
 - Docker cluster support is now compliant with Hazelcast 4.x changes.
 

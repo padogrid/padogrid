@@ -176,12 +176,6 @@ HELP_VALID_POD_TYPE_LIST="local|vagrant"
 # Default Kubernetes
 DEFAULT_K8S="minikube"
 
-# Supported Kubernetes Products
-K8S_PRODUCT_LIST="geode hazelcast jet"
-
-# Supported App Products
-APP_PRODUCT_LIST="coherence geode hazelcast jet"
-
 # Default Docker tool
 DEFAULT_DOCKER="compose"
 
@@ -400,6 +394,12 @@ BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark"
 
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
+
+# Supported Kubernetes Products
+K8S_PRODUCT_LIST="geode hazelcast jet"
+
+# Supported App Products
+APP_PRODUCT_LIST="coherence geode hazelcast jet"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
