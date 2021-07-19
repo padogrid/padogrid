@@ -2643,6 +2643,7 @@ function padogrid
    # the -? to be passed to the subsequent command if specified.
    if [ "$1" == "-?" ]; then
       COMMANDS=`ls $SCRIPT_DIR`
+      echo ""
       echo "WORKSPACE"
       echo "   $PADOGRID_WORKSPACE"
       echo ""

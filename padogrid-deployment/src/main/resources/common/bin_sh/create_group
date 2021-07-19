@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-group -prefix -count -type -port -?"
+   echo "-group -product -prefix -count -type -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,8 +41,8 @@ NAME
    $EXECUTABLE - Create and group multiple clusters
 
 SYNOPSIS
-   $EXECUTABLE [-group group_name]
-                [-product product_name]
+   $EXECUTABLE [-product product_name]
+                [-group group_name]
                 [-prefix cluster_prefix_name]
                 [-type default|pado]
                 [-count cluster_count]
@@ -62,16 +62,16 @@ DESCRIPTION
    clusters.group.default=mygroup
 
 OPTIONS
-   -group group_name
-             Grid group name. The created clusters (grids) are grouped by this name. If this
-             option is not specified then the group name is assigned to 'mygroup'.
-
    -product product_name
              Cluser product name. If unspecified then the current cluster's product is assigned.
-             This command will abort, if the specified product is not installed for the current
+             This command will abort if the specified product is not installed for the current
              workspace. To add or update product installations, set the appropriate '*_HOME'
              environment varibles in the RWE or workspace 'setenv.sh' file. Note that workspace
              'setenv.sh' inherits RWE 'setenv.sh'.
+
+   -group group_name
+             Grid group name. The created clusters (grids) are grouped by this name. If this
+             option is not specified then the group name is assigned to 'mygroup'.
 
    -prefix cluster_prefix_name
              The prefix of each cluster's name. Cluster names are enumuerated starting from
@@ -116,6 +116,45 @@ EOF
    exit
 fi
 
+if [ "$PRODUCT_ARG" == "" ]; then
+   PRODUCT_ARG=$PRODUCT
+fi
+if [ "$(containsWord "$(getInstalledProducts)" "$PRODUCT_ARG")" == "false" ]; then
+   echo >&2 -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+   exit 1
+fi
+if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
+   if [ "$PRODUCT_ARG" == "jet" ]; then
+      PRODUCT_ARG="hazelcast"
+   fi
+fi
+
+if [ "$TYPE_ARG" == "" ]; then
+   TYPE_ARG="default"
+fi
+if [ "$TYPE_ARG" == "pado" ]; then
+  if [ "$PRODUCT_ARG" != "geode" ] && [ "$PRODUCT_ARG" != "gemfire" ]; then
+     echo >&2 "----------------------------------------------------------------"
+     echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+     echo >&2 "----------------------------------------------------------------"
+     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is only supported for Geode and GemFire: [$PRODUCT_ARG]. Command aborted."
+     exit 1
+  fi
+  if [ "$PADO_HOME" == "" ]; then
+     echo >&2 "----------------------------------------------------------------"
+     echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+     echo >&2 "----------------------------------------------------------------"
+     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
+     echo >&2 "           workspace 'setenv.sh' file."
+     echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
+     echo >&2 "           Command aborted."
+     exit 1
+  fi
+elif [ "$TYPE_ARG" != "default" ]; then
+   >&2 echo -e "${CLightRed}ERROR:${CNone} Specified type is not supported: [$TYPE_ARG]. Command aborted."
+   exit 1
+fi
+
 if [ -z $PREFIX ]; then
    PREFIX="grid"
 fi
@@ -147,32 +186,9 @@ for i in $(seq 0 $LAST_CLUSTER_NUM); do
    fi
 done
 
-if [ "$TYPE_ARG" == "pado" ]; then
-  if [ "$PRODUCT" != "geode" ] && [ "PRODUCT" != "gemfire" ]; then
-     echo >&2 "----------------------------------------------------------------"
-     echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-     echo >&2 "----------------------------------------------------------------"
-     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is only supported for Geode and GemFire: [$PRODUCT]. Command aborted."
-     exit 1
-  fi
-  if [ "$PADO_HOME" == "" ]; then
-     echo >&2 "----------------------------------------------------------------"
-     echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-     echo >&2 "----------------------------------------------------------------"
-     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
-     echo >&2 "           workspace 'setenv.sh' file."
-     echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
-     echo >&2 "           Command aborted."
-     exit 1
-  fi
-fi
 
 if [ "$GROUP" == "" ]; then
    GROUP="mygroup"
-fi
-
-if [ "$TYPE_ARG" == "" ]; then
-   TYPE_ARG="default"
 fi
 
 GROUP_NAMES=""
@@ -189,13 +205,10 @@ fi
 #
 # Generate base clusters
 #
-if [ "$PRODUCT_ARG" == "" ]; then
-   PRODUCT_ARG=$PRODUCT
-fi
 if [ "$PORT_ARG" != "" ]; then
    FIRST_START_PORT="$PORT_ARG"
 else
-   FIRST_START_PORT=$(getDefaultStartPortNumber "$PRODUCT")
+   FIRST_START_PORT=$(getDefaultStartPortNumber "$PRODUCT_ARG")
 fi
 FIRST_PORT=$FIRST_START_PORT
 for i in $(seq 0 $LAST_CLUSTER_NUM); do
