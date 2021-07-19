@@ -1,0 +1,167 @@
+#!/usr/bin/env bash 
+
+# ========================================================================
+# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+if [ -f $SCRIPT_DIR/.addonenv.sh ]; then
+   . $SCRIPT_DIR/.addonenv.sh
+   BASE_DIR="$(dirname "$BASE_DIR")"
+else
+   . $SCRIPT_DIR/.argenv.sh
+   BASE_DIR="$(dirname "$SCRIPT_DIR")"
+fi
+
+EXECUTABLE="`basename $0`"
+
+# 
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi      
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+NAME
+   $EXECUTABLE - Display PadoGrid help page
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+DESCRIPTION
+   Displays PagoGrid help page.
+
+DEFAULT
+   $EXECUTABLE
+
+EOF
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "padogrid" $EXECUTABLE
+   exit
+fi
+
+cat <<EOF
+
+SUMMARY
+   PadoGrid commands are grouped and identifiable by prefixes and postfixes as follows.
+
+   Prefix
+      cp_(Hazelcast CP Subsystem), t_(tools), vm_.
+
+   Postfix
+      _app, _bundle, _cluster, _docker, _group, _jutyper, _k8s, _locator, _master, _member, _pod, _rwe, _vm, _worker, _workspace.
+
+EOF
+
+HEADERS="APP BUNDLE CLUSTER DOCKER GROUP JUPYTER K8S LOCATOR MASTER MEMBER POD RWE VM WORKER WORKSPACE"
+COMMANDS="*_app *_bundle *_cluster *_docker *_group *_jupyter *_k8s *_locator *_master *_member *_pod *_rwe vm_* *_worker *_workspace"
+
+HEADERS_ARRAY=($HEADERS)
+COMMANDS_ARRAY=($COMMANDS)
+
+#
+# Appends spaces to the specified string to create the new string size of the
+# specified length.
+# @param str  String
+# @param len  New length with the spaces appended
+# @return Returns a new string with spaces padded at the end. If the specified length is
+#         less than or equal to the specified string then it returns the specified string.
+#
+function appendSpaces
+{
+   local str=$1
+   local len=$2
+   local str_len=${#str}
+   local padded_str=$str
+   let pad_count=len-str_len   
+   if [ $pad_count -gt 0 ]; then
+      for i in $(seq 1 $pad_count); do
+         padded_str="$padded_str "
+      done
+   fi
+   echo "      $padded_str"
+}
+
+#
+# Displays all the commands matching the specified name part.
+# @param directory Command directory path
+# @param namePart  Command name part with wild cards
+#
+function displayCommands
+{
+   local dir="$1"
+   local name_part="$2"
+   pushd $dir > /dev/null 2>&1
+   COMMANDS=$(ls $name_part)
+   for i in $COMMANDS; do
+      COMMAND=$(appendSpaces $i 26)
+      echo "$COMMAND $(grep "^. *\$EXECUTABLE - " $i | sed 's/^.*\$EXECUTABLE - //')"
+   done
+   popd > /dev/null 2>&1
+}
+
+let LAST_INDEX=${#HEADERS_ARRAY[@]}-1
+for i in $(seq 0 $LAST_INDEX); do
+   HEADER=${HEADERS_ARRAY[$i]}
+   COMMAND=${COMMANDS_ARRAY[$i]}
+   if [ "$HEADER" == "LOCATOR" ]; then
+      HEADER="$HEADER (Geode/GemFire/SnappyData/ComputeDB)"
+   elif [ "$HEADER" == "MASTER" ] || [ "$HEADER" == "WORKER" ]; then
+      HEADER="$HEADER (Spark)"
+   elif [ "$HEADER" == "POD" ]; then
+      COMMAND="$COMMAND *_node"
+   fi
+   echo "   $HEADER"
+   if [[ "$HEADER" == *"Spark"* ]]; then
+      displayCommands "$PADOGRID_HOME/spark/bin_sh" "${COMMAND}"
+   else
+      displayCommands "$PADOGRID_HOME/geode/bin_sh" "${COMMAND}"
+   fi
+   echo ""
+done
+
+# tools
+echo "   TOOLS"
+displayCommands "$PADOGRID_HOME/geode/bin_sh/tools" "*"
+echo ""
+
+# cp_sub
+echo "   CP SUBSYSTEM (Hazelcast)"
+displayCommands "$PADOGRID_HOME/hazelcast/bin_sh/cp_sub" "*"
+echo ""
+
+# misc
+echo "   MISCELLANEOUS"
+displayCommands "$PADOGRID_HOME/geode/bin_sh" "find_padogrid install_padogrid"
+echo ""

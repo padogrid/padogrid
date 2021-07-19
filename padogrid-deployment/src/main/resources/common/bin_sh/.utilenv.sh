@@ -2416,8 +2416,7 @@ function cd_k8s
    EXECUTABLE=cd_k8s
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Change directory to the specified padogrid Kubernetes cluster directory"
-      echo "            in the current workspace"
+      echo "   $EXECUTABLE - Change directory to the specified padogrid Kubernetes cluster directory in the current workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [cluster_name][/directory_name/...]] [-?]"
@@ -2494,8 +2493,7 @@ function cd_docker
    EXECUTABLE=cd_docker
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Change directory to the specified padogrid Docker cluster directory"
-      echo "               in the current workspace"
+      echo "   $EXECUTABLE - Change directory to the specified padogrid Docker cluster directory in the current workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [cluster_name][/directory_name/...]] [-?]"
@@ -2679,7 +2677,7 @@ function padogrid
       echo ""
       echo "COMMANDS"
       ls $SCRIPT_DIR
-      echo ""
+      help_padogrid
       return
    fi
 
@@ -2695,6 +2693,9 @@ function padogrid
    elif [ "$1" == "-version" ]; then
       echo "$PADOGRID_VERSION"
       return 0
+   elif [[ "$1" == *"-"* ]]; then
+      echo >&2 -e "${CLightRed}ERROR:${CNone} Invalid option: [$1]. Command aborted."
+      return 1
    else
       local COMMAND=$1
       local SHIFT_NUM=1

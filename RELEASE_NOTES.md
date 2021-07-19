@@ -5,8 +5,9 @@ https://github.com/padogrid
 
 ## Version 0.9.8-SNAPSHOT
 
-### Release Date: 07/16/21
+### Release Date: 07/18/21
 
+- `padogrid -?` now displays a complete list of commands grouped by components and short descriptions.
 - Added the `-product` option to `create_docker`,`create_k8s`, and `create_app` to target a specific product.
 - Added support for managing cluster groups. With this support, a group of clusters can be created and managed using the new `_group` commands. These commands are particularly useful for managing federated grids.
 - Added the entry point, `init_bundle.sh`, for intializing bundle during installation. If this script exists in the root directory of the bundle then the `install_bundle` triggers it upon completion of bundle installation. Note that this applies to workspace bundles only, i.e., bundles must be installed by using `install_bundle -checkout` or `install_bundle -workspace -download`.

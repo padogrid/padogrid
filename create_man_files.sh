@@ -170,6 +170,10 @@ for PRODUCT in $PRODUCTS; do
             section="CAUTION"
             echo ".SH $section" >> $MAN_FILE
             continue
+         elif [ "$line" == "SUMMARY" ]; then
+            section="SUMMARY"
+            echo ".SH $section" >> $MAN_FILE
+            continue
          fi
    
          # trim string
