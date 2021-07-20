@@ -53,12 +53,12 @@ SYNOPSIS
    $EXECUTABLE [-group group_name] [-workspace workspace_name] [-all] [-?]
 
 DESCRIPTION
-   Starts the specified group of clusters in the specified workspace. If the group name is not specified then
-   it starts the 'default' group. To create a group, run the 'create_group' command.
+   Starts the specified group of clusters in the specified workspace. If the group name is not specified
+   then it starts the current group. To create a group, run the 'create_group' command.
 
 OPTIONS
    -group group_name
-             Group name. If not specified, then it starts the 'default' group of clusters.
+             Group name. If not specified, then it starts the current group.
 
    -workspace workspace_name
              Workspace name. If not specified, then it starts the group of clusters in the current workspace.
@@ -73,10 +73,6 @@ cat <<EOF
 DEFAULT
    $EXECUTABLE -workspace $WORKSPACE -group default
 
-FILES
-   $PADOGRID_WORKSPACE/etc/clusters.properties
-             The current workspace group file.
-
 EOF
 fi
 cat <<EOF
@@ -86,34 +82,29 @@ EOF
    exit
 fi
 
-CLUSTERS_FILE="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/etc/clusters.properties"
+if [ "$(isValidWorkspace $WORKSPACE)" == "false" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Specified workspace does not exist: [$WORKSPACE]. Command aborted."
+   exit 1
+fi
 
-if [ ! -f "$CLUSTERS_FILE" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} No cluster groups found in the workspace. Run 'create_group' to create one. Command aborted."
+if [ "$GROUP" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} '-group' not specified. Command aborted."
+   exit 1
+fi
+
+GROUP_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/groups/$GROUP"
+GROUP_FILE="$GROUP_DIR/etc/group.properties"
+
+if [ ! -f "$GROUP_FILE" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Specified group not found. Run 'create_group' to create one. Command aborted."
    exit 1
 fi
    
-
-if [ "$GROUP" == "" ]; then
-   GROUP="default"
-fi
-
-if [ "$GROUP" = "default" ]; then
-   GROUP=$(getProperty "$CLUSTERS_FILE" "clusters.group.default")
-fi
-
-if [ "$GROUP" == "" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} Default group undefined. Please set the 'clusters.group.default' property in the following file:"
-   echo -e >&2 "       $CLUSTERS_FILE"
-   echo -e >&2 "       Command aborted."
-   exit 1
-fi
-
 CURRENT_DIR="`pwd`"
 CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
 CURRENT_CLUSTER=$CLUSTER
 
-CLUSTER_NAMES=$(getProperty "$CLUSTERS_FILE" "clusters.$GROUP.cluster.names")
+CLUSTER_NAMES=$(getProperty "$GROUP_FILE" "group.cluster.names")
 
 if [ "$CURRENT_WORKSPACE" != "$WORKSPACE" ]; then
    switch_workspace $WORKSPACE

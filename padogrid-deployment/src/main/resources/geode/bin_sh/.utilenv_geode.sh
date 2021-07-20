@@ -195,16 +195,30 @@ function getVmActiveMemberCount
 #
 # Returns the locator name prefix that is used in constructing the unique locator
 # name for a given locator number. See getLocatorName.
-# @required POD               Pod name.
-# @required NODE_NAME_PREFIX  Node name prefix.
-# @required CLUSTER           Cluster name.
+# @param clusterName    Optional cluster name. If not specified then it defaults to CLUSTER.
+# @param podName        Optional pod name. If not specified then it defaults to POD.
+# @param nodeNamePrefix Optional node name prefix. If not specified then it defaults to NODE_NAME_PREFIX.
 #
 function getLocatorPrefix
 {
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-locator-${NODE_NAME_PREFIX}-"
+   local __CLUSTER="$1"
+   local __POD="$2"
+   local __NODE_NAME_PREFIX="$3"
+
+   if [ "$__CLUSTER" == "" ]; then
+     __CLUSTER=$CLUSTER
+   fi
+   if [ "$__POD" == "" ]; then
+     __POD=$POD
+   fi
+   if [ "$__NODE_NAME_PREFIX" == "" ]; then
+     __NODE_NAME_PREFIX=$NODE_NAME_PREFIX
+   fi
+
+   if [ "$__POD" != "local" ]; then
+      echo "${__CLUSTER}-locator-${__NODE_NAME_PREFIX}-"
    else
-      echo "${CLUSTER}-locator-`hostname`-"
+      echo "${__CLUSTER}-locator-`hostname`-"
    fi
 }
 

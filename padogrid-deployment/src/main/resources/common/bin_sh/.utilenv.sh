@@ -71,13 +71,14 @@ function containsWord
 {
    local string="$1"
    local word="$2"
+   local retval="false"
    for i in $string; do
       if [ "$i" == "$word" ]; then
-         echo "true"
+         retval="true"
          break;
       fi
     done
-    echo "false"
+    echo "$retval"
 }
 
 #
@@ -364,25 +365,6 @@ function getWorkspaces
 }
 
 #
-# Returns the specified workspace's cluster group names defined in the etc/clusters.properties file.
-# Note that the returned group names are space separated, and not comma separated.
-# @required PADOGRID_WORKSPACES_HOME
-# @required PADOGRID_WORKSPACE
-# @param workspaceName Optional workspace name. If not specified then the current workspace is assigned.
-#
-function getClusterGroups
-{
-   local WORKSPACE="$1"
-   if [ "$WORKSPACE" = "" ]; then
-      local GROUP_NAMES=$(getProperty "$PADOGRID_WORKSPACE/etc/clusters.properties" "clusters.group.names")
-   else
-      local GROUP_NAMES=$(getProperty "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/etc/clusters.properties" "clusters.group.names")
-   fi
-   GROUP_NAMES=$(echo $GROUP_NAMES | sed 's/,/ /g')
-   echo "$GROUP_NAMES"
-}
-
-#
 # Returns "true" if the specified workspace exists in the specified RWE and is valid.
 # Note that the first argument in the workspace name.
 # @required PADOGRID_WORKSPACES_HOME
@@ -449,7 +431,7 @@ function getVmWorkspacesHome
 # Returns a complete list of clusters found in the speciefied cluster environment.
 # @required PADOGRID_WORKSPACE  Workspace directory path.
 # @param clusterEnv   Optional cluster environment.
-#                     Valid values: "clusters", "pods", "k8s", "docker", and "apps".
+#                     Valid values: "groups", "clusters", "pods", "k8s", "docker", and "apps".
 #                     If unspecified then defaults to "clusters".
 # @param workspace    Optional workspace name. If unspecified, then defaults to
 #                     the current workspace.
@@ -784,7 +766,7 @@ function getActiveMemberCount
    else
       local RUN_DIR=$PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/$__CLUSTER/run
       pushd $RUN_DIR > /dev/null 2>&1
-      MEMBER_PREFIX=$(getMemberPrefix)
+      MEMBER_PREFIX=$(getMemberPrefix "$__CLUSTER")
       for i in ${MEMBER_PREFIX}*; do
          if [ -d "$i" ]; then
             MEMBER=$i
@@ -804,18 +786,32 @@ function getActiveMemberCount
 #
 # Returns the member name prefix that is used in constructing the unique member
 # name for a given member number. See getMemberName.
-# @required POD               Pod name.
-# @required NODE_NAME_PREFIX  Node name prefix.
-# @required CLUSTER           Cluster name.
+# @param clusterName    Optional cluster name. If not specified then it defaults to CLUSTER.
+# @param podName        Optional pod name. If not specified then it defaults to POD.
+# @param nodeNamePrefix Optional node name prefix. If not specified then it defaults to NODE_NAME_PREFIX.
 #
 function getMemberPrefix
 {
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-${NODE_NAME_PREFIX}-"
+   local __CLUSTER="$1"
+   local __POD="$2"
+   local __NODE_NAME_PREFIX="$3"
+
+   if [ "$__CLUSTER" == "" ]; then
+     __CLUSTER=$CLUSTER
+   fi
+   if [ "$__POD" == "" ]; then
+     __POD=$POD
+   fi
+   if [ "$__NODE_NAME_PREFIX" == "" ]; then
+     __NODE_NAME_PREFIX=$NODE_NAME_PREFIX
+   fi
+
+   if [ "$__POD" != "local" ]; then
+      echo "${__CLUSTER}-${__NODE_NAME_PREFIX}-"
    elif [ "$PRODUCT" == "spark" ]; then
-      echo "${CLUSTER}-worker-`hostname`-"
+      echo "${__CLUSTER}-worker-`hostname`-"
    else
-      echo "${CLUSTER}-`hostname`-"
+      echo "${__CLUSTER}-`hostname`-"
    fi
 }
 
@@ -2314,6 +2310,87 @@ function getSeeAlsoList
    local FILTER=$1
    local COMMANDS=`ls $SCRIPT_DIR/$FILTER`
    echo $COMMANDS
+}
+
+#
+# Changes directory to the specified group directory. This function is provided
+# to be executed in the shell along with other padogrid commands. It changes
+# directory in the parent shell.
+#
+# @required PADOGRID_WORKSPACE Workspace path.
+# @param    groupName Optional group in the
+#                     $PADOGRID_WORKSPACE/groups directory.
+#                     If not specified, then changes directory to the current group.
+#
+function cd_group
+{
+   #__ctrl_c
+   EXECUTABLE=cd_group
+   if [ "$1" == "-?" ]; then
+      echo "NAME"
+      echo "   $EXECUTABLE - Change directory to the specified padogrid group in the current workspace"
+      echo ""
+      echo "SYNOPSIS"
+      echo "   $EXECUTABLE [group_name[/directory_name/...]] [-?]"
+      echo ""
+      echo "DESCRIPTION"
+      echo "   Chagnes directory to the specified group's nested directory. To specify"
+      echo "   the nested directory names, use the tab key to drill down the directory"
+      echo "   structure."
+      echo ""
+      echo "OPTIONS"
+      echo "   group_name" 
+      echo "             Group name. If not specified then changes to the current group directory."
+      echo ""
+      echo "   /directory_name/..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Change directory to 'mygroup/etc'"
+      echo ""
+      echo "        cd_cluster mygroup/etc/"
+      if [ "$MAN_SPECIFIED" == "false" ]; then
+      echo ""
+      echo "DEFAULT"
+      echo "   $EXECUTABLE $CLUSTER"
+      fi
+      echo ""
+      echo "SEE ALSO"
+      printSeeAlsoList "*group*" $EXECUTABLE
+      return
+   elif [ "$1" == "-options" ]; then
+      echo "-?"
+      return
+   fi
+
+   if [ "$1" == "" ]; then
+      if [ -z $GROUP ]; then
+         retrieveWorkspaceEnvFile
+      fi
+      cd $PADOGRID_WORKSPACE/groups/$GROUP
+   else
+      local PARENT_DIR="$PADOGRID_WORKSPACE/groups"
+      if [ ! -d "$PARENT_DIR/$1" ]; then
+         echo >&2 "ERROR: Invalid group name: [$1]. Group does not exist. Command aborted."
+         return 1
+      else
+         local DIR=""
+         for i in "$@"; do
+            DIR="$DIR"/"$i"
+         done
+         DIR="${PARENT_DIR}${DIR}"
+         if [ ! -d "$DIR" ]; then
+            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+         cd "$DIR"
+      fi
+   fi
+   pwd
 }
 
 #

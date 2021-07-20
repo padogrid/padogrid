@@ -199,6 +199,8 @@ __padogrid_complete()
          type_list="$BUNDLE_PRODUCT_LIST"
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
+      elif [ "$command" == "create_group" ]; then
+         type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"
       elif [ "$command" == "create_k8s" ]; then
@@ -240,7 +242,7 @@ __padogrid_complete()
       ;;
 
    -group)
-      if [[ "$command" == *"group" ]]; then
+      if [[ "$command" == *"group" ]] || [ "$command" == "add_cluster" ]; then
          # If -workspace specified then get the workspace's groups
          __getArrayElementIndex "-workspace" "${COMP_WORDS[@]}"
          local index=$?
@@ -248,7 +250,7 @@ __padogrid_complete()
          if [ $index -ne 255 ]; then
              workspace_name="${COMP_WORDS[$index+1]}"
          fi
-         type_list=$(getClusterGroups $workspace_name)
+         type_list=$(getClusters groups $workspace_name)
       fi
       ;;
 
@@ -338,6 +340,8 @@ __padogrid_complete()
             type_list=$(__workspace_complete_arg 2)
       elif [ "$command" == "switch_cluster" ] || [ "$command" == "cd_cluster" ]; then
             type_list=$(__cd_complete_arg "clusters" 2)
+      elif [ "$command" == "switch_group" ] || [ "$command" == "cd_group" ]; then
+            type_list=$(__cd_complete_arg "groups" 2)
       elif [ "$command" == "cd_pod" ]; then
             type_list=$(__cd_complete_arg "pods" 2)
       elif [ "$command" == "cd_docker" ]; then
@@ -611,6 +615,16 @@ __cd_complete_arg()
    echo $type_list
 }
 
+__groups_complete_space()
+{
+   local cur_word="${COMP_WORDS[COMP_CWORD]}"
+   local type_list=$(__cd_complete_arg "groups" 1)
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
+   return 0
+}
+
 __clusters_complete_space()
 {
    local cur_word="${COMP_WORDS[COMP_CWORD]}"
@@ -824,6 +838,8 @@ __command_complete()
          type_list="$BUNDLE_PRODUCT_LIST"
       elif [ "$command" == "make_cluster" ]; then
          type_list=$(getInstalledProducts)
+      elif [ "$command" == "create_group" ]; then
+         type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"
       elif [ "$command" == "create_k8s" ]; then
@@ -860,7 +876,7 @@ __command_complete()
       fi
       ;;
    -group)
-      if [[ "$command" == *"group" ]]; then
+      if [[ "$command" == *"group" ]] || [ "$command" == "add_cluster" ]; then
          # If -workspace specified then get the workspace's groups
          __getArrayElementIndex "-workspace" "${COMP_WORDS[@]}"
          local index=$?
@@ -868,7 +884,7 @@ __command_complete()
          if [ $index -ne 255 ]; then
              workspace_name="${COMP_WORDS[$index+1]}"
          fi
-         type_list=$(getClusterGroups $workspace_name)
+         type_list=$(getClusters groups $workspace_name)
       fi
       ;;
    -k8s)
@@ -992,6 +1008,10 @@ complete -F __rwe_complete_space -o filenames -o bashdefault cd_rwe
 # Register switch_workspace, cd_workspace
 complete -F __workspace_complete_space -o filenames -o bashdefault switch_workspace
 complete -F __workspace_complete_space -o filenames -o bashdefault cd_workspace
+
+# Register switch_group, cd_group
+complete -F __groups_complete_space -o filenames -o bashdefault switch_group
+complete -F __groups_complete_space -o filenames -o bashdefault cd_group
 
 # Register switch_cluster, cd_cluster
 complete -F __clusters_complete_space -o filenames -o bashdefault switch_cluster

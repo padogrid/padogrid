@@ -68,6 +68,8 @@ fi
 
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
 if [ "$CLUSTER_SPECIFIED" == "false" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -207,9 +209,42 @@ if [ "$VM_ENABLED" == "true" ]; then
    done
 fi
 
+# Get group names before removing the cluster to prevent the error due to removed dir
+GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
+GROUP_NAMES=""
+if [ -d "$GROUPS_DIR" ]; then
+   GROUP_NAMES=$(list_groups)
+fi
+
 # Remove the cluster in local VM
 CURRENT_DIR=`pwd`
 rm -rf $CLUSTER_DIR
+
+# Update group.properties if the cluster belongs to groups
+GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
+for GROUP in $GROUP_NAMES; do
+   GROUP_FILE="$GROUPS_DIR/$GROUP/etc/group.properties"
+   echo debug: GROUP_FILE=$GROUP_FILE
+   if [ -f "$GROUP_FILE" ]; then
+      CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
+      if [ "$CLUSTER_NAMES_COMMAS" != "" ]; then
+         CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
+         if [ "$(containsWord "$CLUSTER_NAMES" "$CLUSTER")" == "true" ]; then
+            NEW_CLUSTER_NAMES_COMMAS=""
+            for i in $CLUSTER_NAMES; do
+               if [ "$i" != "$CLUSTER" ]; then
+                  if [ "$NEW_CLUSTER_NAMES_COMMAS" == "" ]; then
+                     NEW_CLUSTER_NAMES_COMMAS="$i"
+                  else
+                     NEW_CLUSTER_NAMES_COMMAS="$NEW_CLUSTER_NAMES_COMMAS, $i"
+                  fi
+               fi
+            done
+            setProperty "$GROUPS_DIR/$GROUP/etc/group.properties" "group.cluster.names" "$NEW_CLUSTER_NAMES_COMMAS"
+         fi
+      fi
+   fi
+done
 
 echo "----------------------------------------------------------------"
 echo "      WORKSPACE: $PADOGRID_WORKSPACE"

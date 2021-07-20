@@ -211,7 +211,8 @@ else
       WAR_FILE_PREFIX="hazelcast-mancenter-"
    fi
    LIB_EXTENSION=""
-   for file in $MC_HOME/${WAR_FILE_PREFIX}*; do
+   pushd $MC_HOME/ > /dev/null 2>&1 
+   for file in ${WAR_FILE_PREFIX}*; do
       file=${file#*$WAR_FILE_PREFIX}
       if [[ $file == *.jar ]]; then
          MC_VERSION=${file%.jar}
@@ -222,6 +223,7 @@ else
       fi
       echo MC_VERSION=$MC_VERSION
    done
+         popd > /dev/null 2>&1 
    if [ -z $CLASSPATH ]; then
       CLASSPATH="$MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
    else

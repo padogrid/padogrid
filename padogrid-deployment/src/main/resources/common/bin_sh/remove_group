@@ -50,10 +50,15 @@ SYNOPSIS
    $EXECUTABLE [-group group_name] [-workspace workspace_name] [-kill] [-simulate] [-quiet] [-?]
 
 DESCRIPTION
-   Permanently removes the specified group of clusters from the specified workspace. This command 
-   iteratively invokes the 'remove_cluster' to remove each cluster. Note that the 'remove_cluster'
-   command aborts if the cluster is still running. To override this behavior, specify the '-kill'
-   option to first kill the cluster before removing it.
+   Permanently removes the specified group of clusters from the specified workspace. This command
+   aborts if any of the clusters has active (running) members. Note that it only checks the
+   active members and not other components such as locators, mangement center, leaders, masters,
+   and etc. If no active members are found then it first kills all remaining components if any
+   and removes the group.
+
+   If it aborts due to the active members, then you can run the 'stop_group' command to 
+   stop the clusters before runnning this command again. You can also suppress the active
+   member verification step by specifying the '-kill' option.
 
    By default, this command runs in the interactive mode if the '-quiet' option is not specified.
 
@@ -82,10 +87,6 @@ cat <<EOF
 DEFAULT
    $EXECUTABLE -workspace $WORKSPACE -group group_name
 
-FILES
-   $PADOGRID_WORKSPACE/etc/clusters.properties
-             The current workspace group file.
-
 EOF
 fi
 cat <<EOF
@@ -95,8 +96,21 @@ EOF
    exit
 fi
 
+if [ "$(isValidWorkspace $WORKSPACE)" == "false" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Specified workspace does not exist: [$WORKSPACE]. Command aborted."
+   exit 1
+fi
+
 if [ "$GROUP" == "" ]; then
    echo -e >&2 "${CLightRed}ERROR:${CNone} Group name required. Use '-group' to specify the group to remove.  Command aborted."
+   exit 1
+fi
+
+GROUP_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/groups/$GROUP"
+GROUP_FILE="$GROUP_DIR/etc/group.properties"
+
+if [ ! -f "$GROUP_FILE" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Specified group not found. Command aborted."
    exit 1
 fi
 
@@ -105,28 +119,11 @@ if [ "$SIMULATE" == "true" ]; then
    QUIET=$SIMULATE
 fi
 
-CLUSTERS_FILE="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/etc/clusters.properties"
-
-if [ ! -f "$CLUSTERS_FILE" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} No cluster groups found in the workspace. Command aborted."
-   exit 1
-fi
-   
 CURRENT_DIR="`pwd`"
 CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
 CURRENT_CLUSTER=$CLUSTER
 
-CLUSTER_NAMES_COMMAS=$(getProperty "$CLUSTERS_FILE" "clusters.$GROUP.cluster.names")
-
-if [ "$CLUSTER_NAMES_COMMAS" == "" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} Group name undefined in the workspace. Command aborted."
-   exit 1
-fi
-
-if [ "$(isValidWorkspace $WORKSPACE)" == "false" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} Specified workspace does not exist: [$WORKSPACE]. Command aborted."
-   exit 1
-fi
+CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
 
 if [ "$QUIET" == "false" ]; then
    echo ""
@@ -150,6 +147,26 @@ fi
 
 CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
 
+# First, check to see if cluster members are running. If so, abort.
+# Note that it only checks cluster members. If no members are running then it
+# sets KILL=true so that it kills non-member components before removing the group.
+COUNT=0
+if [ "$KILL" != "true" ]; then
+   echo "Cluster Members Running:"
+   for i in $CLUSTER_NAMES; do
+      MEMBER_COUNT=$(getActiveMemberCount $WORKSPACE $i)
+      let COUNT=COUNT+MEMBER_COUNT
+      echo "   $i - $MEMBER_COUNT"
+   done
+fi
+if [ "$COUNT" -gt 0 ]; then
+   echo -e "${CLightRed}ERROR:${CNone} One or more clusters are still active. Stop the clusters first and try again."
+   echo "       Specify the '-kill' option to override this message. Command aborted."
+   exit 1
+else
+   KILL="true"
+fi
+
 # Back up group in the workspaces/bundles directory.
 GROUP_ARCHIVE_FILE="$PADOGRID_WORKSPACES_HOME/.archive/$GROUP-clusters-group.tar.gz"
 if [ ! -d $PADOGRID_WORKSPACES_HOME/.archive ]; then
@@ -167,7 +184,7 @@ if [ "$SIMULATE" != "true" ]; then
    popd > /dev/null 2>&1
 else
    echo "Simulating group backup..."
-   echo tar -czf $GROUP_ARCHIVE_FILE $CLUSTER_NAMES
+   echo "   tar -czf $GROUP_ARCHIVE_FILE $CLUSTER_NAMES"
 fi
 
 if [ "$KILL" == "true" ]; then
@@ -178,45 +195,26 @@ if [ "$KILL" == "true" ]; then
       done
    else
       echo "Simulating group kill..."
+      for i in $CLUSTER_NAMES; do
+         echo "   kill_cluster -all -cluster $i"
+      done
    fi
-   echo ""
 fi
 
 if [ "$SIMULATE" != "true" ]; then
-   pushd "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters" > /dev/null 2>&1
    echo "Removing group: [$GROUP]..."
    for i in $CLUSTER_NAMES; do
       remove_cluster -cluster $i -quiet
    done
-   popd > /dev/null 2>&1
-   GROUP_NAMES_COMMAS=$(getProperty "$CLUSTERS_FILE" "clusters.group.names")
-   GROUP_NAMES=$(echo $GROUP_NAMES_COMMAS | sed 's/,/ /g')
-   NEW_GROUP_NAMES_COMMAS=""
-   NEW_FIRST_GROUP=""
-   for i in $GROUP_NAMES; do
-      if [ "$i" != "$GROUP" ]; then
-         if [ "$NEW_GROUP_NAMES_COMMAS" = "" ]; then
-            NEW_GROUP_NAMES_COMMAS="$i"
-            NEW_FIRST_GROUP="$i"
-         else
-            NEW_GROUP_NAMES_COMMAS="$NEW_GROUP_NAMES_COMMAS, $i"
-         fi
-      fi
-   done
-   setProperty "$CLUSTERS_FILE" "clusters.group.names" "$NEW_GROUP_NAMES_COMMAS"
-   sed -i${__SED_BACKUP} -e '/clusters.'$GROUP'.cluster.names/d' -e '/#.*'$GROUP'/d' "$CLUSTERS_FILE"
-   DEFAULT_GROUP=$(getProperty "$CLUSTERS_FILE" "clusters.group.default")
-   # If the default group has been removed then set the first group in the list
-   # as the default group.
-   if [ "$DEFAULT_GROUP" == "$GROUP" ]; then
-      setProperty "$CLUSTERS_FILE" "clusters.group.default" "$NEW_FIRST_GROUP"
-      echo -e "The default group has been changed from ${CLightRed}$GROUP${CNone} to ${CLightGreen}$NEW_FIRST_GROUP${CNone}."
+   if [ -d "$GROUP_DIR" ]; then
+       rm -rf "$GROUP_DIR"
    fi
 else
    echo "Simulating group removal..."
    for i in $CLUSTER_NAMES; do
-      echo remove_cluster -cluster $i -quiet
+      echo "   remove_cluster -cluster $i -quiet"
    done
+   echo "   rm -rf $GROUP_DIR"
 fi
 
 if [ "$CURRENT_WORKSPACE" != "$WORKSPACE" ]; then

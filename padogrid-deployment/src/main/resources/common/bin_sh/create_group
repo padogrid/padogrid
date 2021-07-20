@@ -50,16 +50,10 @@ SYNOPSIS
 
 DESCRIPTION
    Creates multiple clusters in the current workspace. Once the clusters are created,
-   you can reconfigured each cluster by editing the followig file in their cluster directory.
+   you can reconfigure each cluster by editing the followig file in their respective
+   cluster directory.
 
    etc/cluster.properties
-
-   If the group is the first group created for the workspace, then it is set as the default group
-   so that it can be managed without specifying the '-group' option of the '_group' commands.
-   You can change the default group by setting the followling property in the workspace 
-   'etc/clusters.properties' file.
-
-   clusters.group.default=mygroup
 
 OPTIONS
    -product product_name
@@ -103,10 +97,6 @@ cat <<EOF
 DEFAULT
    $EXECUTABLE -prefix grid -count 2 -type default
 
-FILES
-   $PADOGRID_WORKSPACE/etc/clusters.properties
-             The current workspace group file.
-
 EOF
 fi
 cat <<EOF
@@ -114,6 +104,16 @@ SEE ALSO
 EOF
    printSeeAlsoList "make_cluster *_group" $EXECUTABLE
    exit
+fi
+
+if [ "$GROUP" == "" ]; then
+   GROUP="mygroup"
+fi
+GROUP_DIR="$PADOGRID_WORKSPACE/groups/$GROUP"
+
+if [ -d "$GROUP_DIR" ]; then
+   echo >&2 -e "${CLightRed}ERROR:${CNone} Specified group already exists: [$GROUP]. Command aborted."
+   exit 1
 fi
 
 if [ "$PRODUCT_ARG" == "" ]; then
@@ -186,25 +186,10 @@ for i in $(seq 0 $LAST_CLUSTER_NUM); do
    fi
 done
 
-
-if [ "$GROUP" == "" ]; then
-   GROUP="mygroup"
-fi
-
-GROUP_NAMES=""
-CLUSTER_NAMES=""
-if [ -f "$PADOGRID_WORKSPACE/etc/clusters.properties" ]; then
-   GROUP_NAMES=$(getProperty "$PADOGRID_WORKSPACE/etc/clusters.properties" "clusters.group.names")
-   CLUSTER_NAMES=$(getProperty "$PADOGRID_WORKSPACE/etc/clusters.properties" "clusters.$GROUP.cluster.names")
-   if [ "$CLUSTER_NAMES" != "" ]; then
-      echo -e >&2 "${LightRed}ERROR:${CNone} The cluster group already exists: [$GROUP]. Command aborted."
-      exit 1
-   fi
-fi
-
 #
 # Generate base clusters
 #
+CLUSTER_NAMES=""
 if [ "$PORT_ARG" != "" ]; then
    FIRST_START_PORT="$PORT_ARG"
 else
@@ -366,30 +351,26 @@ if [ "$TYPE_ARG" == "pado" ]; then
 fi
 
 # Group the grid (cluster) IDs
-
-if [ "$GROUP_NAMES" == "" ]; then
-   GROUP_NAMES="$GROUP"
-else
-   GROUP_NAMES="$GROUP_NAMES, $GROUP"
-fi
-
-if [ ! -d "$PADOGRID_WORKSPACE/etc" ]; then
-   mkdir "$PADOGRID_WORKSPACE/etc"
-fi
-
-if [ ! -f "$PADOGRID_WORKSPACE/etc/clusters.properties" ]; then
-   echo "#" > "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "# This file contains workspace-wide cluster specific properties." >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "#" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "# Default group" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "clusters.group.default=$GROUP" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "# Enter comma separated cluster group names" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-   echo "clusters.group.names=$GROUP_NAMES" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-else
-   setProperty "$PADOGRID_WORKSPACE/etc/clusters.properties" "clusters.group.names" "$GROUP_NAMES"
-fi
-echo "" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-echo "# $GROUP - Enter comma separated cluster names" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
-echo "clusters.$GROUP.cluster.names=$CLUSTER_NAMES" >> "$PADOGRID_WORKSPACE/etc/clusters.properties"
+mkdir -p "$GROUP_DIR/etc"
+GROUP_FILE="$GROUP_DIR/etc/group.properties"
+echo "#" > "$GROUP_FILE"
+echo "# This file contains group specific properties." >> "$GROUP_FILE"
+echo "#" >> "$GROUP_FILE"
+echo "" >> "$GROUP_FILE"
+echo "# Group name" >> "$GROUP_FILE"
+echo "group.name=$GROUP" >> "$GROUP_FILE"
+echo "" >> "$GROUP_FILE"
+echo "# Cluster name prefix" >> "$GROUP_FILE"
+echo "group.cluster.prefix=$PREFIX" >> "$GROUP_FILE"
+echo "" >> "$GROUP_FILE"
+echo "# Comma separated cluster names" >> "$GROUP_FILE"
+echo "group.cluster.names=$CLUSTER_NAMES" >> "$GROUP_FILE"
+echo "" >> "$GROUP_FILE"
+echo "# Product" >> "$GROUP_FILE"
+echo "group.product=$PRODUCT_ARG" >> "$GROUP_FILE"
+echo "" >> "$GROUP_FILE"
+echo "# Type (default or pado)" >> "$GROUP_FILE"
+echo "group.type=$TYPE_ARG" >> "$GROUP_FILE"
+echo "" >> "$GROUP_FILE"
+echo "# First port" >> "$GROUP_FILE"
+echo "group.firstPort=$FIRST_START_PORT" >> "$GROUP_FILE"

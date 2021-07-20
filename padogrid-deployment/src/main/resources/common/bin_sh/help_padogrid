@@ -82,13 +82,13 @@ SUMMARY
       cp_ (Hazelcast CP Subsystem), t_(tools), vm_.
 
    Postfix
-      _app, _bundle, _cluster, _docker, _group, _jutyper, _k8s, _locator, _master, _member, _pod,
-      _rwe, _vm, _worker, _workspace.
+      _app, _bundle, _cluster, _docker, _group, _jutyper, _k8s, _leader, _locator, _master, _member,
+      _pod, _rwe, _vm, _worker, _workspace.
 
 EOF
 
-HEADERS="APP BUNDLE CLUSTER DOCKER GROUP JUPYTER K8S LOCATOR MASTER MEMBER POD RWE VM WORKER WORKSPACE"
-COMMANDS="*_app *_bundle *_cluster *_docker *_group *_jupyter *_k8s *_locator *_master *_member *_pod *_rwe vm_* *_worker *_workspace"
+HEADERS="APP BUNDLE CLUSTER DOCKER GROUP JUPYTER K8S LEADER LOCATOR MASTER MEMBER POD RWE VM WORKER WORKSPACE"
+COMMANDS="*_app *_bundle *_cluster *_docker *_group *_jupyter *_k8s *_leader *_locator *_master *_member *_pod *_rwe vm_* *_worker *_workspace"
 
 HEADERS_ARRAY=($HEADERS)
 COMMANDS_ARRAY=($COMMANDS)
@@ -126,7 +126,7 @@ function displayCommands
    local dir="$1"
    local name_part="$2"
    pushd $dir > /dev/null 2>&1
-   COMMANDS=$(ls $name_part)
+   local COMMANDS=$(ls $name_part)
    for i in $COMMANDS; do
       COMMAND=$(appendSpaces $i 26)
       echo "$COMMAND $(grep "^. *\$EXECUTABLE - " $i | sed 's/^.*\$EXECUTABLE - //')"
@@ -140,13 +140,27 @@ for i in $(seq 0 $LAST_INDEX); do
    COMMAND=${COMMANDS_ARRAY[$i]}
    if [ "$HEADER" == "LOCATOR" ]; then
       HEADER="$HEADER (Geode/GemFire/SnappyData/ComputeDB)"
+   elif [ "$HEADER" == "LEADER" ]; then
+      HEADER="$HEADER (SnappyData/ComputeDB)"
    elif [ "$HEADER" == "MASTER" ] || [ "$HEADER" == "WORKER" ]; then
       HEADER="$HEADER (Spark)"
+   elif [ "$HEADER" == "RWE" ]; then
+      COMMAND="$COMMAND list_rwes"
+   elif [ "$HEADER" == "WORKSPACE" ]; then
+      COMMAND="$COMMAND list_workspaces"
    elif [ "$HEADER" == "POD" ]; then
-      COMMAND="$COMMAND *_node"
+      COMMAND="$COMMAND *_node list_pods"
+   elif [ "$HEADER" == "GROUP" ]; then
+      COMMAND="$COMMAND list_groups"
+   elif [ "$HEADER" == "CLUSTER" ]; then
+      COMMAND="$COMMAND list_clusters"
+   elif [ "$HEADER" == "APP" ]; then
+      COMMAND="$COMMAND list_apps"
    fi
    echo "   $HEADER"
-   if [[ "$HEADER" == *"Spark"* ]]; then
+   if [[ "$HEADER" == *"SnappyData"* ]]; then
+      displayCommands "$PADOGRID_HOME/snappydata/bin_sh" "${COMMAND}"
+   elif [[ "$HEADER" == *"Spark"* ]]; then
       displayCommands "$PADOGRID_HOME/spark/bin_sh" "${COMMAND}"
    else
       displayCommands "$PADOGRID_HOME/geode/bin_sh" "${COMMAND}"
@@ -155,8 +169,13 @@ for i in $(seq 0 $LAST_INDEX); do
 done
 
 # tools
-echo "   TOOLS"
+echo "   TOOLS (Geode/GemFire)"
 displayCommands "$PADOGRID_HOME/geode/bin_sh/tools" "*"
+echo ""
+
+# tools
+echo "   TOOLS (Hazelcast)"
+displayCommands "$PADOGRID_HOME/hazelcast/bin_sh/tools" "*"
 echo ""
 
 # cp_sub

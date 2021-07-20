@@ -47,7 +47,10 @@ function getLocatorPid
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
-      locators=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__LOCATOR" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      # Use eval to handle commands with spaces
+      local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__LOCATOR"
+      locators=$(eval $__COMMAND)
+      locators=$(echo $locators | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
    fi
    spids=""
    for j in $locators; do
@@ -62,6 +65,7 @@ function getLocatorPid
 # This function is for clusters running on VMs whereas the getLocatorPid
 # is for pods running on the same machine.
 # @required VM_USER        VM ssh user name
+# @required VM_JAVA_HOME   VM Java home path
 # @optional VM_KEY         VM private key file path with -i prefix, e.g., "-i file.pem"
 # @param    host           VM host name or address
 # @param    locatorName    Unique locator name
@@ -191,21 +195,38 @@ function getVmActiveMemberCount
 #
 # Returns the locator name prefix that is used in constructing the unique locator
 # name for a given locator number. See getLocatorName.
-# @required POD               Pod name.
-# @required NODE_NAME_PREFIX  Node name prefix.
-# @required CLUSTER           Cluster name.
+# @param clusterName    Optional cluster name. If not specified then it defaults to CLUSTER.
+# @param podName        Optional pod name. If not specified then it defaults to POD.
+# @param nodeNamePrefix Optional node name prefix. If not specified then it defaults to NODE_NAME_PREFIX.
 #
 function getLocatorPrefix
 {
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-locator-${NODE_NAME_PREFIX}-"
+   local __CLUSTER="$1"
+   local __POD="$2"
+   local __NODE_NAME_PREFIX="$3"
+
+   if [ "$__CLUSTER" == "" ]; then
+     __CLUSTER=$CLUSTER
+   fi
+   if [ "$__POD" == "" ]; then
+     __POD=$POD
+   fi
+   if [ "$__NODE_NAME_PREFIX" == "" ]; then
+     __NODE_NAME_PREFIX=$NODE_NAME_PREFIX
+   fi
+
+   if [ "$__POD" != "local" ]; then
+      echo "${__CLUSTER}-locator-${__NODE_NAME_PREFIX}-"
    else
-      echo "${CLUSTER}-locator-`hostname`-"
+      echo "${__CLUSTER}-locator-`hostname`-"
    fi
 }
 
 #
 # Returns the unique locator name (ID) for the specified locator number.
+# @required POD               Pod name.
+# @required NODE_NAME_PREFIX  Node name prefix.
+# @required CLUSTER           Cluster name.
 # @param locatorNumber
 #
 function getLocatorName
