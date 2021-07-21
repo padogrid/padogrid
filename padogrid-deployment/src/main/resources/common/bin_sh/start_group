@@ -53,8 +53,13 @@ SYNOPSIS
    $EXECUTABLE [-group group_name] [-workspace workspace_name] [-all] [-?]
 
 DESCRIPTION
-   Starts the specified group of clusters in the specified workspace. If the group name is not specified
-   then it starts the current group. To create a group, run the 'create_group' command.
+   Starts the specified group of clusters in the specified workspace. If the group name is
+   not specified then it starts the current group. The current group is determined in the 
+   following order.
+   
+     1. Defined by the 'switch_group'.
+     2. If the current group is not defined or the current cluster does not belong to
+        the current group, then first group the current cluster belongs to.
 
 OPTIONS
    -group group_name
@@ -88,8 +93,11 @@ if [ "$(isValidWorkspace $WORKSPACE)" == "false" ]; then
 fi
 
 if [ "$GROUP" == "" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} '-group' not specified. Command aborted."
-   exit 1
+   GROUP=$(getCurrentClusterGroup)
+   if [ "$GROUP" == "" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} No group defined for the current cluster: [$CLUSTER]. Try again with the '-group' option. Command aborted."
+      exit 1
+   fi
 fi
 
 GROUP_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/groups/$GROUP"

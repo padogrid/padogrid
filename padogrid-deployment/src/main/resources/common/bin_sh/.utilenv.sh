@@ -1805,6 +1805,129 @@ function switch_workspace
 }
 
 # 
+# Switches the group to the specified group. This function is provided
+# to be executed in the shell along with other padogrid commands. It
+# sets the environment variables in the parent shell.
+#
+# @required PADOGRID_WORKSPACE  Workspace path.
+# @param    groupName           Optional group in the
+#                               $PADOGRID_WORKSPACE/groups directory.
+#                               If not specified, then switches to the   
+#                               current group.
+#
+function switch_group
+{
+   EXECUTABLE=switch_group
+   if [ "$1" == "-?" ]; then
+      echo "NAME"
+      echo "   $EXECUTABLE - Switch to the specified group in the current padogrid workspace"
+      echo ""
+      echo "SYNOPSIS"
+      echo "   $EXECUTABLE [group_name[/directory_name/...]] [-?]"
+      echo ""
+      echo "   Switches to the specified group and chagnes directory to the specified nested."
+      echo "   directory. To specify the nested directory names, use the tab key to drill down"
+      echo "   the directory structure."
+      echo ""
+      echo "OPTIONS"
+      echo "   group_name"
+      echo "             Group to switch to. If not specified, then switches to the current group."
+      echo ""
+      echo "   /directory_name/..."
+      echo "             One or names of nested directories. The $EXECUTABLE command constructs"
+      echo "             the leaf directory path using the specified directory names and then"
+      echo "             changes directory to that directory."
+      echo ""
+      echo "             HINT: Use the tab key to get the next nested directory name."
+      echo ""
+      echo "DEFAULT"
+      echo "   $EXECUTABLE"
+      echo ""
+      echo "EXAMPLES"
+      echo "   - Switch group to 'mygroup', and change directory to that group's 'etc' directory."
+      echo ""
+      echo "        switch mygroup/etc/"
+      echo ""
+      echo "SEE ALSO"
+      printSeeAlsoList "*group* list_groups" $EXECUTABLE
+      return
+   elif [ "$1" == "-options" ]; then
+      echo "-?"
+      return
+   fi
+   if [ -z $CLUSTER ]; then
+      retrieveWorkspaceEnvFile
+   fi
+   __switch_group $@
+   cd_group $@
+}
+
+#
+# Returns the current cluster group. It returns an empty string if the current cluster
+# does not belong to any group.
+#
+function getCurrentClusterGroup
+{
+   local GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
+   local GROUP_NAMES=$(list_groups)
+   local GROUP=""
+   for __GROUP in $GROUP_NAMES; do
+      GROUP_FILE="$GROUPS_DIR/$__GROUP/etc/group.properties"
+      local CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
+      local CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
+      for i in $CLUSTER_NAMES; do
+         if [ "$i" == "$CLUSTER" ]; then
+            GROUP=$__GROUP
+            break;
+         fi
+      done
+   done
+   echo "$GROUP"
+}
+
+# 
+# Switches the group to the specified group but does not change directory.
+#
+# @required PADOGRID_WORKSPACE  Workspace path.
+# @param    groupName           Optional group in the
+#                               $PADOGRID_WORKSPACE/groups directory.
+#                               If not specified, then switches to the   
+#                               current group.
+#
+function __switch_group
+{
+   local __GROUP="$1"
+   if [ "$__GROUP" == "" ]; then
+      return 0
+   fi
+   local GROUP_FILE="$PADOGRID_WORKSPACE/groups/$__GROUP/etc/group.properties"
+   if [ ! -f "$GROUP_FILE" ]; then
+      return 0
+   fi
+   local CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
+   if [ "$CLUSTER_NAMES_COMMAS" == "" ]; then
+      return 0
+   fi
+   CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
+   FIRST_CLUSTER=""
+   for i in $CLUSTER_NAMES; do
+      if [ "$FIRST_CLUSTER" == "" ]; then
+         FIRST_CLUSTER=$i
+      fi
+      # If the cluster found then set the group and return
+      if [ "$i" == "$CLUSTER" ]; then
+         export GROUP=$__GROUP
+         return 0
+      fi
+   done
+   if [ "$FIRST_CLUSTER" == "" ]; then
+      return 0
+   fi
+   switch_cluster $FIRST_CLUSTER
+   export GROUP=$__GROUP
+}
+
+# 
 # Switches the cluster to the specified cluster. This function is provided
 # to be executed in the shell along with other padogrid commands. It
 # sets the environment variables in the parent shell.
@@ -1845,12 +1968,12 @@ function switch_cluster
       echo "   $EXECUTABLE"
       echo ""
       echo "EXAMPLES"
-      echo "   - Switch cluster to 'mycluster', and change direoctory to that cluster's 'etc' directory."
+      echo "   - Switch cluster to 'mycluster', and change directory to that cluster's 'etc' directory."
       echo ""
       echo "        switch mycluster/etc/"
       echo ""
       echo "SEE ALSO"
-      printSeeAlsoList "*cluster*" $EXECUTABLE
+      printSeeAlsoList "*cluster* list_clusters" $EXECUTABLE
       return
    elif [ "$1" == "-options" ]; then
       echo "-?"

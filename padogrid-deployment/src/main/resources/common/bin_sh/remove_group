@@ -102,8 +102,11 @@ if [ "$(isValidWorkspace $WORKSPACE)" == "false" ]; then
 fi
 
 if [ "$GROUP" == "" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} Group name required. Use '-group' to specify the group to remove.  Command aborted."
-   exit 1
+   GROUP=$(getCurrentClusterGroup)
+   if [ "$GROUP" == "" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} No group defined for the current cluster: [$CLUSTER]. Try again with the '-group' option. Command aborted."
+      exit 1
+   fi
 fi
 
 GROUP_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/groups/$GROUP"

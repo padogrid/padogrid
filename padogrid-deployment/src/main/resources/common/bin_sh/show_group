@@ -50,8 +50,13 @@ SYNOPSIS
    $EXECUTABLE [-group group_name] [-workspace workspace_name] [-short | -long]  [-?]
 
 DESCRIPTION
-   Display the status of the specified group of clusters in the specified workspace. If the group name 
-   is not specified then it displays the current group. To create a group, run the 'create_group' command.
+   Displays the specified group of clusters in the specified workspace. If the group name is
+   not specified then it displays the current group. The current group is determined in the 
+   following order.
+   
+     1. Defined by the 'switch_group' command.
+     2. If the current group is not defined or the current cluster does not belong to
+        the current group, then first group the current cluster belongs to.
 
 OPTIONS
    -group group_name
@@ -87,8 +92,11 @@ if [ "$(isValidWorkspace $WORKSPACE)" == "false" ]; then
 fi
 
 if [ "$GROUP" == "" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} '-group' not specified. Command aborted."
-   exit 1
+   GROUP=$(getCurrentClusterGroup)
+   if [ "$GROUP" == "" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} No group defined for the current cluster: [$CLUSTER]. Try again with the '-group' option. Command aborted."
+      exit 1
+   fi
 fi
 
 GROUP_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/groups/$GROUP"
@@ -103,13 +111,13 @@ CURRENT_DIR="`pwd`"
 CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
 CURRENT_CLUSTER=$CLUSTER
 
-CLUSTER_NAMES=$(getProperty "$GROUP_FILE" "group.cluster.names")
+CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
 
 if [ "$CURRENT_WORKSPACE" != "$WORKSPACE" ]; then
    switch_workspace $WORKSPACE
 fi
 
-CLUSTER_NAMES=$(echo $CLUSTER_NAMES | sed 's/,/ /g')
+CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
 
 # Additional args supplied by the user
 if [ "$LONG" == "true" ]; then
@@ -122,6 +130,7 @@ fi
 
 echo ""
 echo -e "           GROUP: ${CLightGreen}$GROUP${CNone}"
+echo -e "        Clusters: ${CLightGreen}$CLUSTER_NAMES_COMMAS${CNone}"
 echo ""
 for i in $CLUSTER_NAMES; do
    show_cluster -cluster $i $ARGS
