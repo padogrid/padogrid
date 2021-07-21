@@ -406,7 +406,7 @@ Run `test_group -db`.
 
 ## Generating Entity Relationships (ER)
 
-If you want to add entity relationships to your data, then you can implement `DataObjectFactory.` or extend `AbstractDataObjectFactory` and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see `org.hazelcast.demo.nw.impl.OrderFactoryImpl` for details. You can run the example as follows:
+If you want to add entity relationships to your data, then you can implement `DataObjectFactory` or extend `AbstractDataObjectFactory` and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see `org.hazelcast.demo.nw.impl.OrderFactoryImpl` for details. You can run the example as follows:
 
 ```bash
 ./test_group -run -prop ../etc/group-factory-er.properties
