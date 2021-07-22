@@ -15,15 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ========================================================================
-  
-SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+  SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 . $SCRIPT_DIR/.addonenv.sh
 
 EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -num -full -log -?"
+   echo "-cluster -num -all -full -log -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -42,7 +41,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster <cluster-name>] [-num <member-number>]
-               [-full] [-log [data|gc|locator|leader]] [-?]
+               [-all | -full] [-log [data|gc|locator|leader]] [-?]
 
 DESCRIPTION
    Displays the specified member's log file. By default, follows the tail
@@ -58,6 +57,10 @@ DESCRIPTION
 
    -num member_number
               Member number 1-99
+
+   -all       
+              Display all log files. This option is applicable to local clusters only.
+              The '-num' option overrides this this option.
 
    -full
               Display the entire log file using 'less'
@@ -81,6 +84,15 @@ FILES
 EOF
 fi
    exit
+fi
+
+if [ "$ALL" == "true" ] && [ "$FULL" == "true" ]; then 
+   echo >&2 "${CLightRed}ERROR:${CNone} '-all' and '-full' cannot be specified together. Command aborted ."
+   exit 1
+fi
+# -num overrides -all
+if [ "$MEMBER_NUM_SPECIFIED" == "true" ]; then
+   ALL="false"
 fi
 
 # 
@@ -146,6 +158,7 @@ locator)
    # For pod clusters. If non-pod, the following variables are ignored.
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   LOCATOR_PREFIX=`getLocatorPrefix`
    MEMBER_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
    LOCATOR=`getLocatorName $MEMBER_NUMBER`
    MEMBER_DIR=$RUN_DIR/$LOCATOR
@@ -155,6 +168,7 @@ leader)
    # For pod clusters. If non-pod, the following variables are ignored.
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   LEADER_PREFIX=`getLeaderPrefix`
    MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
    LEADER=`getLeaderName $MEMBER_NUMBER`
    MEMBER_DIR=$RUN_DIR/$LEADER
@@ -162,6 +176,7 @@ leader)
 
 *)
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   MEMBER_PREFIX=`getMemberPrefix`
    MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
    MEMBER=`getMemberName $MEMBER_NUMBER`
    MEMBER_DIR=$RUN_DIR/$MEMBER
@@ -202,19 +217,35 @@ fi
 
 case "$LOG" in 
 locator)
-   LOG_FILE=$LOG_DIR/${LOCATOR}.log
+   if [ "$ALL" == "true" ]; then
+      LOG_FILE=$LOG_DIR/${LOCATOR_PREFIX}??.log
+   else
+      LOG_FILE=$LOG_DIR/${LOCATOR}.log
+   fi
    ;;
 
 leader)
-   LOG_FILE=$LOG_DIR/${LEADER}.log
+   if [ "$ALL" == "true" ]; then
+      LOG_FILE=$LOG_DIR/${LEADER_PREFIX}??.log
+   else
+      LOG_FILE=$LOG_DIR/${LEADER}.log
+   fi
    ;;
 
 gc)
-   LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
+   if [ "$ALL" == "true" ]; then
+      LOG_FILE=$LOG_DIR/${MEMBER_PREFIX}??-gc.log
+   else
+      LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
+   fi
    ;;
 
 *)
-   LOG_FILE=$LOG_DIR/${MEMBER}.log
+   if [ "$ALL" == "true" ]; then
+      LOG_FILE=$LOG_DIR/${MEMBER_PREFIX}??.log
+   else
+      LOG_FILE=$LOG_DIR/${MEMBER}.log
+   fi
    ;;
 
 esac
@@ -222,7 +253,9 @@ esac
 echo ""
 echo -e "Showing log: ${CLightGreen}$LOG_FILE${CNone}"
 echo ""
-if [ "$LOG_FILE" != "" ] && [ -f "$LOG_FILE" ]; then
+if [ "$ALL" == "true" ]; then
+   eval "tail -f $LOG_FILE"
+elif [ "$LOG_FILE" != "" ] && [ -f "$LOG_FILE" ]; then
    if [ "$FULL" == "true" ]; then 
       less $LOG_FILE
    else

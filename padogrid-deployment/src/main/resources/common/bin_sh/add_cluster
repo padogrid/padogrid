@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-product -group -cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Add a new cluster to the specified group in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-product product_name] [-group group_name] [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Adds a new cluster to the specified group in the current padogrid workspace. The '-product'
+   option can be used to add any product for creating a heterogenous product group.
+
+OPTIONS
+   -product product_name
+             Cluser product name. The specified group's default product is assigned.
+             This command will abort if the specified product is not installed for the current
+             workspace. To add or update product installations, set the appropriate '*_HOME'
+             environment varibles in the RWE or workspace 'setenv.sh' file. Note that workspace
+             'setenv.sh' inherits RWE 'setenv.sh'.
+
+   -group group_name
+             Group name. If not specified, then it defaults to the current group.
+
+   -cluster cluster_name
+             Cluster name. If not specified, then the cluster name is assigend using the cluster prefix
+             supplied when the group was created.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*member*" $EXECUTABLE
+   exit
+fi
+
+if [ "$GROUP" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} '-group' not specified. Command aborted."
+   exit 1
+fi
+
+WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+GROUP_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/groups/$GROUP"
+GROUP_FILE="$GROUP_DIR/etc/group.properties"
+
+if [ ! -f "$GROUP_FILE" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Specified group not found [$GROUP]. Run 'create_group' to create one. Command aborted."
+   exit 1
+fi
+
+CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
+CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
+CLUSTER_PREFIX=$(getProperty "$GROUP_FILE" "group.cluster.prefix")
+
+CLUSTER_NAME=""
+if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+   CLUSTER_NAME="$CLUSTER"
+fi
+
+if [ "$CLUSTER_NAME" == "" ]; then
+   if [ "$CLUSTER_PREFIX" == "" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Cluster name not specified and the cluster name prefix is not defined in the following file."
+      echo "          $GROUP_FILE"
+      echo "       Specify the cluster name prefix using the 'group.cluster.prefix' property. Command aborted."
+      exit 1
+   fi
+fi
+
+PRODUCT_NAME=$(getProperty "$GROUP_FILE" "group.product")
+TYPE=$(getProperty "$GROUP_FILE" "group.type")
+FIRST_PORT=$(getProperty "$GROUP_FILE" "group.firstPort")
+
+COUNT=0
+CLUSTERS_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters"
+for i in $CLUSTER_NAMES; do
+  let COUNT=COUNT+1
+  # Determine the undefined properties from one of the clusters
+  if [ "$PRODUCT_NAME" == "" ]; then
+     if [ -f "$CLUSTERS_DIR/$i/.cluster/clusterenv.sh" ]; then
+        . "$CLUSTERS_DIR/$i/.cluster/clusterenv.sh"
+        PRODUCT_NAME=$PRODUCT
+     fi
+  fi
+  if [ "$TYPE" == "" ]; then
+     if [ -f "$CLUSTERS_DIR/$i/etc/grid/pado.properties" ]; then
+        TYPE="pado"
+     fi
+  fi
+done   
+if [ "$TYPE" == "" ]; then
+   TYPE="default"
+fi
+if [ "$FIRST_PORT" == "" ]; then
+   FIRST_PORT=$(getDefaultStartPortNumber "$PRODUCT_NAME")
+fi
+FIRST_PORT=$((FIRST_PORT+100*COUNT))
+
+if [ "$CLUSTER_NAME" == "" ]; then
+   CLUSTER_NAME="${CLUSTER_PREFIX}${COUNT}" 
+fi
+if [ "$CLUSTER_NAMES_COMMAS" == "" ]; then
+   CLUSTER_NAMES_COMMAS="$CLUSTER_NAME"
+ else
+   CLUSTER_NAMES_COMMAS="${CLUSTER_NAMES_COMMAS}, $CLUSTER_NAME"
+fi
+setProperty "$GROUP_FILE" "group.cluster.names" "$CLUSTER_NAMES_COMMAS"
+
+echo ""
+if [ -d "$CLUSTERS_DIR/$CLUSTER_NAME" ]; then
+   echo "Cluster already exists: [$CLUSTER_NAME]. Added to the group nonetheless."
+else
+   make_cluster -product $PRODUCT_NAME -cluster $CLUSTER_NAME -type $TYPE -port $FIRST_PORT
+   echo "A new cluster added: [$CLUSTER_NAME]."
+fi
+echo "   Group: $GROUP"
+echo "Clusters: $CLUSTER_NAMES_COMMAS"
+echo "  Config: $GROUP_FILE"
+echo ""
