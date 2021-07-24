@@ -3,9 +3,9 @@
 ©2020-2021 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
-## Version 0.9.8-SNAPSHOT
+## Version 0.9.8
 
-### Release Date: 07/18/21
+### Release Date: 07/24/21
 
 - `padogrid -?` now displays a complete list of commands grouped by components with short descriptions.
 - Added the `-product` option to `create_docker`,`create_k8s`, and `create_app` to target a specific product.
