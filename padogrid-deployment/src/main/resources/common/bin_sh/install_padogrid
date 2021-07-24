@@ -17,20 +17,25 @@
 # ========================================================================
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-if [ -f "$SCRIPT_DIR/.addonenv.sh" ]; then
+if [ -f "$SCRIPT_DIR/.addonenv.sh" ] && [ -f "$SCRIPT_DIR/.argenv.sh" ]; then
    . $SCRIPT_DIR/.addonenv.sh
 else
-   if [ "$1" == "-quiet" ]; then
-      QUIET="true"
-   else
-      QUIET="false"
-   fi
-   if [ "$1" == "-?" ]; then
-      HELP="true"
-   else
-      HELP="false"
-   fi
+   PRODUCT_SPECIFIED="false"
+   PRODUCT_ARG="false"
+   QUIET="false" 
+   PREV=""
+   for i in "$@"; do
+      case $i in
+         -quiet ) QUIET="true";;
+         -product ) PRODUCT_SPECIFIED="true";;
+         -?) HELP="true";;
+         * ) if [ "$PREV" == "-product" ]; then PRODUCT_ARG="$i"; else echo "Invalid option: [$i]. Command aborted.";  exit 1; fi;;
+      esac
+      PREV="$i"
+   done
 fi
+
+DOWNLOADABLE_PRODUCTS="padogrid geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss jet-mc snappydata spark"
 
 EXECUTABLE="`basename $0`"
 
@@ -57,6 +62,7 @@ fi
 
 CNone='\033[0m' # No Color
 CLightGreen='\033[1;32m'
+CLightRed='\033[1;31m'
 CUnderline='\033[4m'
 CUrl=$CBlue$CUnderline
 
@@ -74,7 +80,7 @@ SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
 
 __options()
 {
-   echo "-quiet -?"
+   echo "-product -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -88,18 +94,29 @@ cat <<EOF
 NAME
    $EXECUTABLE - Install Padogrid and downloable products
 
-OPTIONS
-   -quiet
-             If specified, then it runs in non-internactive mode. By default, it installs all of
-             the latest products if not installed and creates an RWE if it does not exist.
-
 SYNOPSIS
-   $EXECUTABLE [-?]
+   $EXECUTABLE [-product -?]
 
 DESCRIPTION
    Installs PadoGrid and downloadable products. This command downloads one or more selected products
    and installs them in the PadoGrid environment base directory. If the base directory is not
    specified then it defaults to $HOME/Padogrid.
+
+   To download a single product, specify the '-product' option.
+
+OPTIONS
+   -product product_name
+             Product to downlaod. The product name must be one of the following.
+
+EOF
+for i in $DOWNLOADABLE_PRODUCTS; do
+   echo "             $i"
+done
+cat <<EOF
+
+   -quiet
+             If specified, then it runs in non-internactive mode. By default, it installs all of
+             the latest products if not installed and creates an RWE if it does not exist.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -218,6 +235,37 @@ EOF
    exit
 fi
 
+#
+# Returns "true" if the specified space-separated string contains the specified word.
+# @param string   Space-speparated string
+# @param word     Word to search in the specified string
+#
+function containsWord
+{
+   local string="$1"
+   local word="$2"
+   local retval="false"
+   for i in $string; do
+      if [ "$i" == "$word" ]; then
+         retval="true"
+         break;
+      fi
+    done
+    echo "$retval"
+}
+
+# Exit if invalid product specified
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS" "$PRODUCT_ARG")" == "false" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid product name: [$PRODUCT_ARG]. Please enter one of the following products."
+      for i in $DOWNLOADABLE_PRODUCTS; do
+         echo >&2 "          $i"
+      done
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+fi
+
 cat <<EOF
 
 This command installs the following downlodable products:
@@ -254,7 +302,7 @@ fi
 
 cat <<EOF
 
-The following products are not included in this command to their download sign-in requirements.
+The following products are not included in this command due to their download sign-in requirements.
 To install them, you must download them manually. Make sure to install them in the PadoGrid
 products directory. See the PadoGrid manual for instructions.
 
@@ -294,8 +342,6 @@ echo -e "[1] Oracle Open JDK https://jdk.java.net/"
 echo -e "[2] Azule Open JDK  https://www.azul.com/downloads/"
 
 fi
-
-echo ""
 
 function getLatestProductVersion
 {
@@ -725,15 +771,33 @@ echo ""
 stty igncr
 
 PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions)"))
-PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
-GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
-HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastEnterpriseVersions))
-HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastOssVersions))
-HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastManCenterVersions))
-JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableJetEnterpriseVersions))
-JET_OSS_DOWNLOAD_VERSIONS=($(getDownloadableJetOssVersions))
-SNAPPYDATA_DOWNLOAD_VERSIONS=($(getDownloadableSnappyDataVersions))
-SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+   PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+   GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+   HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastEnterpriseVersions))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+   HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastOssVersions))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ] || [ "$PRODUCT_ARG" == "jet-mc" ]; then
+   HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastManCenterVersions))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableJetEnterpriseVersions))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
+   JET_OSS_DOWNLOAD_VERSIONS=($(getDownloadableJetOssVersions))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+   SNAPPYDATA_DOWNLOAD_VERSIONS=($(getDownloadableSnappyDataVersions))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+   SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
+fi
 
 # Hazelcast/Jet  management center merged starting 4.2021.02 JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=$(getDownloadableJetManCenterVersions)
 for i in $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS; do
@@ -815,9 +879,6 @@ while [ "$REDO" == "true" ]; do
             continue;
          fi
          __parent=$(dirname "$__BASE_PATH")
-         #while [ "$__parent" != "/" ] && [ ! -w "$__parent" ]; do
-         #   __parent=$(dirname "$__parent")
-         #done
          if [ ! -w "$__parent" ]; then
             echo "Invalid path. You do not have write permissions to create directory: [$__parent]"
             continue;
@@ -847,175 +908,195 @@ while [ "$REDO" == "true" ]; do
    echo ""
 
    # Pado
-   PRODUCT_NAME="Pado"
-   PRODUCT_DOWNLOAD_VERSIONS=("${PADO_DOWNLOAD_VERSIONS[@]}")
-   if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
-   INSTALLED_VERSIONS=$PADO_VERSIONS
-   echo -e "Pado ${CUrl}$PADO_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   PADO_VERSION=$INSTALL_VERSION
-   echo ""
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+      PRODUCT_NAME="Pado"
+      PRODUCT_DOWNLOAD_VERSIONS=("${PADO_DOWNLOAD_VERSIONS[@]}")
+      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+      INSTALLED_VERSIONS=$PADO_VERSIONS
+      echo -e "Pado ${CUrl}$PADO_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      PADO_VERSION=$INSTALL_VERSION
+      echo ""
+      fi
    fi
 
    # Geode
-   PRODUCT_NAME="Geode"
-   PRODUCT_DOWNLOAD_VERSIONS=("${GEODE_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$GEODE_VERSIONS
-   echo -e "Geode ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+      PRODUCT_NAME="Geode"
+      PRODUCT_DOWNLOAD_VERSIONS=("${GEODE_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$GEODE_VERSIONS
+      echo -e "Geode ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      GEODE_VERSION=$INSTALL_VERSION
+      echo ""
    fi
-   GEODE_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Hazelcast Enterprise
-   PRODUCT_NAME="Hazelcast Enterprise"
-   PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$HAZELCAST_ENTERPRISE_VERSIONS
-   echo -e "Hazelcast Enterprise ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   HAZELCAST_ENTERPRISE_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Hazelcast OSS
-   PRODUCT_NAME="Hazelcast OSS"
-   PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$HAZELCAST_OSS_VERSIONS
-   echo -e "Hazelcast OSS ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   HAZELCAST_OSS_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Hazelcast Management Center
-   PRODUCT_NAME="Hazelcast Management Center"
-   PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$HAZELCAST_MANAGEMENT_CENTER_VERSIONS
-   echo -e "Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   HAZELCAST_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Jet Enterprise
-   PRODUCT_NAME="Jet Enterprise"
-   PRODUCT_DOWNLOAD_VERSIONS=("${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$JET_ENTERPRISE_VERSIONS
-   echo -e "Jet Enterprise ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   JET_ENTERPRISE_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Jet OSS
-   PRODUCT_NAME="Jet OSS"
-   PRODUCT_DOWNLOAD_VERSIONS=("${JET_OSS_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$JET_OSS_VERSIONS
-   echo -e "Jet OSS ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   JET_OSS_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Jet Management Center
-   PRODUCT_NAME="Jet Management Center"
-   PRODUCT_DOWNLOAD_VERSIONS=("${JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$JET_MANAGEMENT_CENTER_VERSIONS
-   echo -e "Jet Management Center ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   JET_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # SnappyData
-   PRODUCT_NAME="SnappyData"
-   PRODUCT_DOWNLOAD_VERSIONS=("${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$SNAPPYDATA_VERSIONS
-   echo -e "SnappyData ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   SNAPPYDATA_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Spark
-   PRODUCT_NAME="Spark"
-   PRODUCT_DOWNLOAD_VERSIONS=("${SPARK_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$SPARK_VERSIONS
-   echo -e "Spark ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   SPARK_VERSION=$INSTALL_VERSION
    
-   # Allow the user to select a prebuilt spark distribution.
-   INSTALLED_VERSIONS=($SPARK_VERSIONS)
-   if [ "$SPARK_VERSION" != "" ]; then
-      SPARK_PREBUILT_VERSIONS_ARRAY=(${SPARK_VERSION} $(getPrebuiltSparkVersions "$SPARK_VERSION"))
-      __LEN=${#SPARK_PREBUILT_VERSIONS_ARRAY[@]}
-      let __LAST_INDEX=__LEN-1
-      __LOOP=true
-      __INSTALLED="false"
-      while [ "$__LOOP" == "true" ]; do
-         __INDEX=0
-         echo -e "Spark distributions ${CUrl}${SPARK_DOWNLOAD_URL}spark-$SPARK_VERSION/${CNone}"
-         for i in ${SPARK_PREBUILT_VERSIONS_ARRAY[@]}; do
-            __INSTALLED="false"
-            for j in ${INSTALLED_VERSIONS[@]}; do
-               if [ "$i" == "$j" ]; then
-                  __INSTALLED="true"
-                  break;
+      # Hazelcast Enterprise
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+      PRODUCT_NAME="Hazelcast Enterprise"
+      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$HAZELCAST_ENTERPRISE_VERSIONS
+      echo -e "Hazelcast Enterprise ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      HAZELCAST_ENTERPRISE_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+   
+      # Hazelcast OSS
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+      PRODUCT_NAME="Hazelcast OSS"
+      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$HAZELCAST_OSS_VERSIONS
+      echo -e "Hazelcast OSS ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      HAZELCAST_OSS_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+   
+      # Hazelcast Management Center
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-ms" ]; then
+      PRODUCT_NAME="Hazelcast Management Center"
+      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+      echo -e "Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      HAZELCAST_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+   
+      # Jet Enterprise
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+      PRODUCT_NAME="Jet Enterprise"
+      PRODUCT_DOWNLOAD_VERSIONS=("${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$JET_ENTERPRISE_VERSIONS
+      echo -e "Jet Enterprise ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      JET_ENTERPRISE_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+   
+      # Jet OSS
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
+      PRODUCT_NAME="Jet OSS"
+      PRODUCT_DOWNLOAD_VERSIONS=("${JET_OSS_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$JET_OSS_VERSIONS
+      echo -e "Jet OSS ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      JET_OSS_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+   
+      # Jet Management Center
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-mc" ]; then
+      PRODUCT_NAME="Jet Management Center"
+      PRODUCT_DOWNLOAD_VERSIONS=("${JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$JET_MANAGEMENT_CENTER_VERSIONS
+      echo -e "Jet Management Center ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      JET_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+   
+      # SnappyData
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+      PRODUCT_NAME="SnappyData"
+      PRODUCT_DOWNLOAD_VERSIONS=("${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$SNAPPYDATA_VERSIONS
+      echo -e "SnappyData ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      SNAPPYDATA_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+   
+      # Spark
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+      PRODUCT_NAME="Spark"
+      PRODUCT_DOWNLOAD_VERSIONS=("${SPARK_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$SPARK_VERSIONS
+      echo -e "Spark ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      SPARK_VERSION=$INSTALL_VERSION
+      
+      # Allow the user to select a prebuilt spark distribution.
+      INSTALLED_VERSIONS=($SPARK_VERSIONS)
+      if [ "$SPARK_VERSION" != "" ]; then
+         SPARK_PREBUILT_VERSIONS_ARRAY=(${SPARK_VERSION} $(getPrebuiltSparkVersions "$SPARK_VERSION"))
+         __LEN=${#SPARK_PREBUILT_VERSIONS_ARRAY[@]}
+         let __LAST_INDEX=__LEN-1
+         __LOOP=true
+         __INSTALLED="false"
+         while [ "$__LOOP" == "true" ]; do
+            __INDEX=0
+            echo -e "Spark distributions ${CUrl}${SPARK_DOWNLOAD_URL}spark-$SPARK_VERSION/${CNone}"
+            for i in ${SPARK_PREBUILT_VERSIONS_ARRAY[@]}; do
+               __INSTALLED="false"
+               for j in ${INSTALLED_VERSIONS[@]}; do
+                  if [ "$i" == "$j" ]; then
+                     __INSTALLED="true"
+                     break;
+                  fi
+               done
+               if [ "$__INSTALLED" == "true" ]; then
+                  if [ $__INDEX -eq 0 ]; then
+                     echo "   [$__INDEX] $i [installed] - source only (build may be required)"
+                  else
+                     echo "   [$__INDEX] $i [installed]"
+                  fi
+               else
+                  if [ $__INDEX -eq 0 ]; then
+                     echo "   [$__INDEX] $i - source only (build required)"
+                  else
+                     echo "   [$__INDEX] $i"
+                  fi
                fi
+               let __INDEX=__INDEX+1
             done
-            if [ "$__INSTALLED" == "true" ]; then
-               if [ $__INDEX -eq 0 ]; then
-                  echo "   [$__INDEX] $i [installed] - source only (build may be required)"
-               else
-                  echo "   [$__INDEX] $i [installed]"
-               fi
+            read -p "Enter a distribution to install or leave blank to skip: " INPUT
+            if [ "$INPUT" == "" ]; then
+               break;
             else
-               if [ $__INDEX -eq 0 ]; then
-                  echo "   [$__INDEX] $i - source only (build required)"
-               else
-                  echo "   [$__INDEX] $i"
+               if [ "$(isNumber $INPUT)" == "true" ]; then
+                  if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
+                     echo "Invalid number. Enter [0, $__LAST_INDEX]."
+                     continue;
+                  fi
                fi
+               SPARK_DIST_VERSION=${SPARK_PREBUILT_VERSIONS_ARRAY[$INPUT]}
+               echo -e "Spark selected: ${CLightGreen}$SPARK_DIST_VERSION${CNone}"
+               __LOOP="false"
             fi
-            let __INDEX=__INDEX+1
          done
-         read -p "Enter a distribution to install or leave blank to skip: " INPUT
-         if [ "$INPUT" == "" ]; then
-            break;
-         else
-            if [ "$(isNumber $INPUT)" == "true" ]; then
-               if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
-                  echo "Invalid number. Enter [0, $__LAST_INDEX]."
-                  continue;
-               fi
-            fi
-            SPARK_DIST_VERSION=${SPARK_PREBUILT_VERSIONS_ARRAY[$INPUT]}
-            echo -e "Spark selected: ${CLightGreen}$SPARK_DIST_VERSION${CNone}"
-            __LOOP="false"
-         fi
-      done
+      fi
    fi
    
    echo ""
