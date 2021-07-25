@@ -35,7 +35,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss jet-mc snappydata spark"
+DOWNLOADABLE_PRODUCTS="padogrid geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss  snappydata spark"
 
 EXECUTABLE="`basename $0`"
 
@@ -74,7 +74,6 @@ HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.org/imdg/download/archives/#hazelc
 HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 JET_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 JET_OSS_DOWNLOAD_URL="https://github.com/hazelcast/hazelcast-jet/releases"
-JET_MANAGEMENT_CENTER_DOWNLOAD_URL="https://jet-start.sh/download"
 SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
 SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
 
@@ -168,7 +167,6 @@ echo -e "      - Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL$
 echo -e "      - Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
 echo -e "      - Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
 echo -e "      - Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
-echo -e "      - Jet Management Center       ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
 echo -e "      - TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
 
@@ -181,7 +179,6 @@ echo -e "      - Hazelcst OSS                $HAZELCAST_OSS_DOWNLOAD_URL"
 echo -e "      - Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL"
 echo -e "      - Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
 echo -e "      - Jet OSS                     $JET_OSS_DOWNLOAD_URL"
-echo -e "      - Jet Management Center       $JET_MANAGEMENT_CENTER_DOWNLOAD_URL"
 echo -e "      - TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
 echo -e "      - Apache Spark                $SPARK_DOWNLOAD_URL"
 
@@ -228,6 +225,10 @@ echo -e "      - Azule Open JDK  https://www.azul.com/downloads/"
 fi
 
 cat <<EOF
+
+NOTES
+   Jet Management Center installation is no longer supported. Install Hazelcast Management Center instead.
+   It supports both IMDG and Jet.
 
 SEE ALSO
 EOF
@@ -281,9 +282,8 @@ echo -e "[3] Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNo
 echo -e "[4] Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
 echo -e "[5] Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
 echo -e "[6] Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
-echo -e "[7] Jet Management Center       ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
-echo -e "[8] TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
-echo -e "[9] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+echo -e "[7] TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+echo -e "[8] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
 
 else
 
@@ -294,9 +294,8 @@ echo -e "[3] Hazelcst OSS                $HAZELCAST_OSS_DOWNLOAD_URL"
 echo -e "[4] Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL"
 echo -e "[5] Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
 echo -e "[6] Jet OSS                     $JET_OSS_DOWNLOAD_URL"
-echo -e "[7] Jet Management Center       $JET_MANAGEMENT_CENTER_DOWNLOAD_URL"
-echo -e "[8] TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
-echo -e "[9] Apache Spark                $SPARK_DOWNLOAD_URL"
+echo -e "[7] TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
+echo -e "[8] Apache Spark                $SPARK_DOWNLOAD_URL"
 
 fi
 
@@ -455,58 +454,50 @@ function getDownloadableGeodeVersions
 
 function getDownloadableHazelcastEnterpriseVersions
 {
-   local ALL_HAZELCAST_ENTERPRISE_VERSIONS=$(curl -s $HAZELCAST_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-enterprise-//' -e 's/\.tar\.gz.*//')
+   local ALL_HAZELCAST_ENTERPRISE_VERSIONS=$(curl -sL $HAZELCAST_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-enterprise-//' -e 's/\.tar\.gz.*//')
    unique_words "$ALL_HAZELCAST_ENTERPRISE_VERSIONS"
 }
 
 function getDownloadableHazelcastOssVersions
 {
-  local ALL_HAZELCAST_OSS_VERSIONS=$(curl -s $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
+  local ALL_HAZELCAST_OSS_VERSIONS=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
   unique_words "$ALL_HAZELCAST_OSS_VERSIONS"
 }
 
 function getDownloadableHazelcastManCenterVersions
 {
-  local ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(curl -s $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL | grep hazelcast-management-center | grep "tar.gz" |  sed -e 's/.*hazelcast-management-center-//' -e 's/\.tar\.gz.*//')
+  local ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(curl -sL $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL | grep hazelcast-management-center | grep "tar.gz" |  sed -e 's/.*hazelcast-management-center-//' -e 's/\.tar\.gz.*//')
   unique_words "$ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS"
 }
 
 function getDownloadableJetEnterpriseVersions
 {
-   local ALL_JET_ENTERPRISE_VERSIONS=$(curl -s $JET_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-jet-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-jet-enterprise-//' -e 's/\.tar\.gz.*//')
+   local ALL_JET_ENTERPRISE_VERSIONS=$(curl -sL $JET_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-jet-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-jet-enterprise-//' -e 's/\.tar\.gz.*//')
    unique_words "$ALL_JET_ENTERPRISE_VERSIONS"
 }
 
 function getDownloadableJetOssVersions
 {
-   local ALL_JET_OSS_VERSIONS=$(curl -s $JET_OSS_DOWNLOAD_URL |grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
+   local ALL_JET_OSS_VERSIONS=$(curl -sL $JET_OSS_DOWNLOAD_URL |grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
    unique_words "$ALL_JET_OSS_VERSIONS"
-}
-
-function getDownloadableJetManCenterVersions
-{
-   local V1=$(curl -s $JET_MANAGEMENT_CENTER_DOWNLOAD_URL | grep "hazelcast/hazelcast-jet/releases/download" | sed -e 's/hazelcast-jet-management-center-/\'$'\n/g' |grep tar.gz | sed -e 's/\.tar\.gz.*//' | grep -v span)
-   local V2=$(curl -s $JET_MANAGEMENT_CENTER_DOWNLOAD_URL| grep "hazelcast/hazelcast-jet/releases/download" | sed -e 's/hazelcast-management-center-/\'$'\n/g' |grep tar.gz | sed -e 's/\.tar\.gz.*//' | grep -v span)
-   local ALL_JET_MANAGEMENT_CENTER_VERSIONS="$V2 $V1"
-   unique_words "$ALL_JET_MANAGEMENT_CENTER_VERSIONS"
 }
 
 function getDownloadableSnappyDataVersions
 {
-   local ALL_SNAPPYDATA_VERSIONS=$(curl -s $SNAPPYDATA_DOWNLOAD_URL | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
+   local ALL_SNAPPYDATA_VERSIONS=$(curl -sL $SNAPPYDATA_DOWNLOAD_URL | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
    unique_words "$ALL_SNAPPYDATA_VERSIONS"
 }
 
 function getDownloadableSparkVersions
 {
-   local ALL_SPARK_VERSIONS=$(curl -s $SPARK_DOWNLOAD_URL | grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/<.*//' -e 's/spark-//' | grep -v img)
+   local ALL_SPARK_VERSIONS=$(curl -sL $SPARK_DOWNLOAD_URL | grep img | grep -v unknown | grep -v incubating  | grep -v preview |  sed -e 's/.*spark-/spark-/' -e 's/\/<.*//' -e 's/spark-//' | grep -v img)
    unique_words "$ALL_SPARK_VERSIONS"
 }
 
 function getPrebuiltSparkVersions
 {
    local VERSION=$1
-   local PREBUILT_SPARK_VERSIONS=$(curl -s ${SPARK_DOWNLOAD_URL}spark-$VERSION/ | grep img | grep spark-$VERSION-bin | sed -e 's/.*spark-//' -e 's/.tgz.*//')
+   local PREBUILT_SPARK_VERSIONS=$(curl -sL ${SPARK_DOWNLOAD_URL}spark-$VERSION/ | grep img | grep spark-$VERSION-bin | sed -e 's/.*spark-//' -e 's/.tgz.*//')
    unique_words "$PREBUILT_SPARK_VERSIONS"
 }
 
@@ -543,7 +534,6 @@ function sortVersionList
 #    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
-#    JET_MANAGEMENT_CENTER_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
 #
@@ -559,7 +549,6 @@ function determineInstalledProductVersions
    JET_ENTERPRISE_VERSIONS=""
    JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
-   JET_MANAGEMENT_CENTER_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
 
@@ -596,7 +585,7 @@ function determineInstalledProductVersions
       done
       GEODE_VERSIONS=$(sortVersionList "$__versions")
 
-      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
+      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise
       local hossv henterv hmanv jossv jenterv jmanv
       for i in hazelcast-*; do
          if [[ "$i" == "hazelcast-enterprise-"** ]]; then
@@ -608,9 +597,6 @@ function determineInstalledProductVersions
          elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
             __version=${i#hazelcast-jet-enterprise-}
             jenterv="$jenterv $__version"
-         elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
-            __version=${i#hazelcast-jet-management-center-}
-            jmanv="$jmanv $__version"
          elif [[ "$i" == "hazelcast-jet-"** ]]; then
             __version=${i#hazelcast-jet-}
             jossv="$jossv $__version"
@@ -625,14 +611,6 @@ function determineInstalledProductVersions
       JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
       JET_OSS_VERSIONS=$(sortVersionList "$jossv")
       HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
-
-      # Hazelcast/Jet  management center merged starting 4.2021.02
-      for i in ${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}; do
-         if [[ "$i" == "4.2021"* ]]; then
-            jmanv="$i $jmanv"
-         fi
-      done
-      JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
 
       # SnappyData
       __versions=""
@@ -671,7 +649,7 @@ function isNumber
 # Prompts user for the product version to install.
 #
 # @required PRODUCT_NAME              Product name
-# @required PRODUCT_DOWNLOAD_VERSIONS Downlodable product versions
+# @required PRODUCT_DOWNLOAD_VERSIONS Downloadable product versions
 # @required INSTALLED_VERSIONS        Installed product versions
 # @return INSTALL_VERSION             Returns the user-entered version to install. If this variable value is empty then the
 #                                     user decided not to install.
@@ -783,7 +761,7 @@ fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
    HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastOssVersions))
 fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ] || [ "$PRODUCT_ARG" == "jet-mc" ]; then
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
    HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastManCenterVersions))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
@@ -799,14 +777,6 @@ if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
    SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
 fi
 
-# Hazelcast/Jet  management center merged starting 4.2021.02 JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=$(getDownloadableJetManCenterVersions)
-for i in $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS; do
-   if [[ "$i" == "4.2021"* ]]; then
-      JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS="$i $JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS"
-   fi
-done
-JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(sortVersionList "$JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS"))
-
 # Enable the enter key
 stty -igncr
 
@@ -819,7 +789,6 @@ HAZELCAST_OSS_VERSION=""
 HAZELCAST_MANAGEMENT_CENTER_VERSION=""
 JET_ENTERPRISE_VERSION=""
 JET_OSS_VERSION=""
-JET_MANAGEMENT_CENTER_VERSION=""
 SNAPPYDATA_VERSION=""
 SPARK_VERSION=""
 
@@ -833,7 +802,6 @@ if [ "$QUIET" == "true" ]; then
    HAZELCAST_MANAGEMENT_CENTER_VERSION=${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[0]}
    JET_ENTERPRISE_VERSION=${JET_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    JET_OSS_VERSION=${JET_OSS_DOWNLOAD_VERSIONS[0]}
-   JET_MANAGEMENT_CENTER_VERSION=${JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[0]}
    SNAPPYDATA_VERSION=${SNAPPYDATA_DOWNLOAD_VERSIONS[0]}
    SPARK_VERSION=${SPARK_DOWNLOAD_VERSIONS[0]}
    SPARK_DIST_VERSION=${SPARK_VERSION}
@@ -851,7 +819,6 @@ if [ "$QUIET" == "true" ]; then
    echo "Hazelcast Man Center $HAZELCAST_MANAGEMENT_CENTER_VERSION"
    echo "Jet Enterprise       $JET_ENTERPRISE_VERSION"
    echo "Jet OSS              $JET_OSS_VERSION"
-   echo "Jet Man Center       $JET_MANAGEMENT_CENTER_VERSION"
    echo "SnappyData           $SNAPPYDATA_VERSION"
    echo "Spark                $SPARK_VERSION"
    echo ""
@@ -1007,20 +974,6 @@ while [ "$REDO" == "true" ]; do
       echo ""
    fi
    
-      # Jet Management Center
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-mc" ]; then
-      PRODUCT_NAME="Jet Management Center"
-      PRODUCT_DOWNLOAD_VERSIONS=("${JET_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$JET_MANAGEMENT_CENTER_VERSIONS
-      echo -e "Jet Management Center ${CUrl}$JET_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      JET_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
       # SnappyData
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
       PRODUCT_NAME="SnappyData"
@@ -1131,9 +1084,6 @@ while [ "$REDO" == "true" ]; do
    if [ "$JET_OSS_VERSION" != "" ]; then
       echo -e "Jet OSS: ${CLightGreen}$JET_OSS_VERSION${CNone}"
    fi
-   if [ "$JET_MANAGEMENT_CENTER_VERSION" != "" ]; then
-      echo -e "Jet Management Center: ${CLightGreen}$JET_MANAGEMENT_CENTER_VERSION${CNone}"
-   fi
    if [ "$SNAPPYDATA_VERSION" != "" ]; then
       echo -e "SnappyData: ${CLightGreen}$SNAPPYDATA_VERSION${CNone}"
    fi
@@ -1159,7 +1109,7 @@ fi
 #
 # Installs the specified product in the PadoGrid products directory.
 # @param productName Product name, i.e., padogrid, pado, geode, hazelcast-oss, hazelcast-enterprise, hazelcast-management-center, 
-#                    jet-oss, jet-enterprise, jet-management-center, snappydata, spark
+#                    jet-oss, jet-enterprise, snappydata, spark
 # @param simulate If 'simulate' then outputs the installation commands without actually executing them.
 #
 # @required PADOGRID_PRODUCTS_PATH
@@ -1305,9 +1255,9 @@ function installProduct
       # Download Hazelcast Enterprise
       echo "+ Downloading $HAZELCAST_ENTERPRISE_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
       if [ "$__SIMULATE" == "simulate" ]; then
-         echo curl -sSL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_ENTERPRISE_TARBALL" "https://download.hazelcast.com/enterprise/$HAZELCAST_ENTERPRISE_TARBALL"
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_ENTERPRISE_TARBALL" "https://download.hazelcast.com/enterprise/$HAZELCAST_ENTERPRISE_TARBALL"
       else
-         curl -sSL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_ENTERPRISE_TARBALL" "https://download.hazelcast.com/enterprise/$HAZELCAST_ENTERPRISE_TARBALL"
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_ENTERPRISE_TARBALL" "https://download.hazelcast.com/enterprise/$HAZELCAST_ENTERPRISE_TARBALL"
       fi
       
       # Install Hazelcast Enterprise
@@ -1390,39 +1340,6 @@ function installProduct
       else
          tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL"
          echo "Installed - $JET_ENTERPRISE_TARBALL"
-      fi
-      fi
-
-   elif [ "$__PRODUCT" == "jet-management-center" ]; then 
-
-      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$HAZELCAST_MC_RELEASE" ]; then
-         echo "Already installed - $HAZELCAST_MC_RELEASE"
-      else
-      # --------------
-      # Download Hazelcast Jet Management Center
-      echo "+ Downloading $JET_MC_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
-      if [ "$__SIMULATE" == "simulate" ]; then
-         if [[ "$JET_MC_TARBALL" == *"4.20"* ]]; then
-            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/management-center/$JET_MC_TARBALL"
-         else
-            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
-         fi
-
-      else
-         if [[ "$JET_MC_TARBALL" == *"4.20"* ]]; then
-            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/management-center/$JET_MC_TARBALL"
-         else
-            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL" "https://download.hazelcast.com/hazelcast-jet-management-center/$JET_MC_TARBALL"
-         fi
-      fi
-      
-      # Install Hazelcast Jet Management Center
-      echo "  Installing Hazelcast Jet Management Center $JET_MC_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "simulate" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL
-      else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$JET_MC_TARBALL
-         echo "Installed - $JET_MC_TARBALL"
       fi
       fi
 
@@ -1564,16 +1481,6 @@ if [ "$JET_OSS_VERSION" != "" ]; then
    # installProduct "jet-oss" "simulate"
    installProduct "jet-oss"
 fi
-if [ "$JET_MANAGEMENT_CENTER_VERSION" != "" ]; then
-   if [[ "$JET_MANAGEMENT_CENTER_VERSION" == *"4.20"* ]]; then
-      JET_MC_RELEASE="hazelcast-management-center-$JET_MANAGEMENT_CENTER_VERSION"
-   else
-      JET_MC_RELEASE="hazelcast-jet-management-center-$JET_MANAGEMENT_CENTER_VERSION"
-   fi
-   JET_MC_TARBALL="$JET_MC_RELEASE.tar.gz"
-   # installProduct "jet-management-center" "simulate"
-   installProduct "jet-management-center"
-fi
 if [ "$SNAPPYDATA_VERSION" != "" ]; then
    SNAPPYDATA_RELEASE="snappydata-$SNAPPYDATA_VERSION"
    SNAPPYDATA_TARBALL="$SNAPPYDATA_RELEASE.tar.gz"
@@ -1640,7 +1547,6 @@ if [ "$RWE_EXISTS" == "false" ]; then
        JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast-management-center"** ]]; then
        HAZELCAST_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-     elif [[ "$i" == **"hazelcast-jet-management-center"** ]]; then
        JET_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast-jet"** ]]; then
        JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
