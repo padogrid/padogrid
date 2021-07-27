@@ -35,7 +35,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss  snappydata spark"
+DOWNLOADABLE_PRODUCTS="padogrid geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss snappydata spark kafka"
 
 EXECUTABLE="`basename $0`"
 
@@ -76,6 +76,7 @@ JET_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 JET_OSS_DOWNLOAD_URL="https://github.com/hazelcast/hazelcast-jet/releases"
 SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
 SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
+KAFKA_DOWNLOAD_URL="https://archive.apache.org/dist/kafka/"
 
 __options()
 {
@@ -94,7 +95,7 @@ NAME
    $EXECUTABLE - Install Padogrid and downloable products
 
 SYNOPSIS
-   $EXECUTABLE [-product -?]
+   $EXECUTABLE [-product] [-?]
 
 DESCRIPTION
    Installs PadoGrid and downloadable products. This command downloads one or more selected products
@@ -169,6 +170,7 @@ echo -e "      - Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL
 echo -e "      - Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
 echo -e "      - TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+echo -e "      - Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
 
 else
 
@@ -181,6 +183,7 @@ echo -e "      - Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
 echo -e "      - Jet OSS                     $JET_OSS_DOWNLOAD_URL"
 echo -e "      - TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
 echo -e "      - Apache Spark                $SPARK_DOWNLOAD_URL"
+echo -e "      - Apache Kafka                $KAFKA_DOWNLOAD_URL"
 
 fi
 cat <<EOF
@@ -227,8 +230,11 @@ fi
 cat <<EOF
 
 NOTES
-   Jet Management Center installation is no longer supported. Install Hazelcast Management Center instead.
-   It supports both IMDG and Jet.
+   Jet Management Center installation is no longer supported. Install Hazelcast Management Center
+   instead. It supports both IMDG and Jet.
+
+   PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0 or
+   a later version.
 
 SEE ALSO
 EOF
@@ -284,6 +290,7 @@ echo -e "[5] Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CN
 echo -e "[6] Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
 echo -e "[7] TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "[8] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+echo -e "[9] Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
 
 else
 
@@ -296,6 +303,7 @@ echo -e "[5] Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
 echo -e "[6] Jet OSS                     $JET_OSS_DOWNLOAD_URL"
 echo -e "[7] TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
 echo -e "[8] Apache Spark                $SPARK_DOWNLOAD_URL"
+echo -e "[9] Apache Kafka                $KAFKA_DOWNLOAD_URL"
 
 fi
 
@@ -501,6 +509,19 @@ function getPrebuiltSparkVersions
    unique_words "$PREBUILT_SPARK_VERSIONS"
 }
 
+function getDownloadableKafkaVersions
+{
+  local ALL_KAFKA_VERSIONS=$(curl -sL $KAFKA_DOWNLOAD_URL |grep img |grep -v unknown | grep -v incubating  | grep -v preview | grep -v kafka |grep -v Parent |grep -v old_releases | grep \[DIR\] | grep -v TXT | sed -e 's/.*href.*\/"\>//' -e 's/\/.*$//')
+   unique_words "$ALL_KAFKA_VERSIONS"
+}
+
+function getScalaKafkaVersions
+{
+   local VERSION=$1
+   local SCALA_KAFKA_VERSIONS=$(curl -sL ${KAFKA_DOWNLOAD_URL}/$VERSION/ | grep img | grep "kafka_.*$VERSION.tgz" | sed -e 's/.*kafka_//' -e 's/\.tgz.*$//')
+   unique_words "$SCALA_KAFKA_VERSIONS"
+}
+
 #
 # Returns the sorted list of the specified list that contains product versions
 # @param versionList
@@ -536,6 +557,7 @@ function sortVersionList
 #    JET_OSS_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
+#    KAFKA_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
 #
@@ -551,6 +573,7 @@ function determineInstalledProductVersions
    HAZELCAST_OSS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
+   KAFKA_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
@@ -629,6 +652,15 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       SPARK_VERSIONS=$(sortVersionList "$__versions")
+
+      # Kafka
+      __versions=""
+      for i in kafka_*; do
+         __version=${i#kafka_}
+         __version=${__version%-bin}
+         __versions="$__versions $__version "
+      done
+      KAFKA_VERSIONS=$(sortVersionList "$__versions")
 
       popd > /dev/null 2>&1
             
@@ -776,6 +808,9 @@ fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
    SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
 fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+   KAFKA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableKafkaVersions)"))
+fi
 
 # Enable the enter key
 stty -igncr
@@ -791,6 +826,7 @@ JET_ENTERPRISE_VERSION=""
 JET_OSS_VERSION=""
 SNAPPYDATA_VERSION=""
 SPARK_VERSION=""
+KAFKA_VERSION=""
 
 if [ "$QUIET" == "true" ]; then
    # Set to the latest versions
@@ -808,6 +844,7 @@ if [ "$QUIET" == "true" ]; then
    if [ "$SPARK_VERSION" != "" ]; then
       SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop
    fi
+   KAFKA_VERSION=${KAFKA_DOWNLOAD_VERSIONS[0]}
 
    echo "Installing the latest products versions as follows:"
    echo ""
@@ -821,6 +858,7 @@ if [ "$QUIET" == "true" ]; then
    echo "Jet OSS              $JET_OSS_VERSION"
    echo "SnappyData           $SNAPPYDATA_VERSION"
    echo "Spark                $SPARK_VERSION"
+   echo "Kafka                $KAFKA_VERSION"
    echo ""
 else
 # Get user inputs
@@ -1051,6 +1089,63 @@ while [ "$REDO" == "true" ]; do
          done
       fi
    fi
+
+      # Kafka
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+      PRODUCT_NAME="Kafka"
+      PRODUCT_DOWNLOAD_VERSIONS=("${KAFKA_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$KAFKA_VERSIONS
+      echo -e "Kafka ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
+      echo -e "(Note that PadoGrid currently ${CLightGreen}supports only Kafka 2.8.0 and above.${CNone} Non-supported versions require manual management.)"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      KAFKA_VERSION=$INSTALL_VERSION
+
+      # Allow the user to select a kafka distribution. (Scala versions)
+      INSTALLED_VERSIONS=($KAFKA_VERSIONS)
+      if [ "$KAFKA_VERSION" != "" ]; then
+         KAFKA_SCALA_VERSIONS_ARRAY=($(getScalaKafkaVersions "$KAFKA_VERSION"))
+         __LEN=${#KAFKA_SCALA_VERSIONS_ARRAY[@]}
+         let __LAST_INDEX=__LEN-1
+         __LOOP=true
+         __INSTALLED="false"
+         while [ "$__LOOP" == "true" ]; do
+            __INDEX=0
+            echo -e "Kafka distributions ${CUrl}${KAFKA_DOWNLOAD_URL}/$KAFKA_VERSION/${CNone}"
+            for i in ${KAFKA_SCALA_VERSIONS_ARRAY[@]}; do
+               __INSTALLED="false"
+               for j in ${INSTALLED_VERSIONS[@]}; do
+                  if [ "$i" == "$j" ]; then
+                     __INSTALLED="true"
+                     break;
+                  fi
+               done
+               if [ "$__INSTALLED" == "true" ]; then
+                     echo "   [$__INDEX] $i [installed]"
+               else
+                  echo "   [$__INDEX] $i"
+               fi
+               let __INDEX=__INDEX+1
+            done
+            read -p "Enter a distribution to install or leave blank to skip: " INPUT
+            if [ "$INPUT" == "" ]; then
+               break;
+            else
+               if [ "$(isNumber $INPUT)" == "true" ]; then
+                  if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
+                     echo "Invalid number. Enter [0, $__LAST_INDEX]."
+                     continue;
+                  fi
+               fi
+               KAFKA_DIST_VERSION=${KAFKA_SCALA_VERSIONS_ARRAY[$INPUT]}
+               echo -e "Kafka selected: ${CLightGreen}$KAFKA_DIST_VERSION${CNone}"
+               __LOOP="false"
+            fi
+         done
+      fi
+   fi
    
    echo ""
 
@@ -1089,6 +1184,9 @@ while [ "$REDO" == "true" ]; do
    fi
    if [ "$SPARK_VERSION" != "" ] && [ "$SPARK_DIST_VERSION" != "" ]; then
       echo -e "Spark: ${CLightGreen}$SPARK_DIST_VERSION${CNone}"
+   fi
+   if [ "$KAFKA_VERSION" != "" ]; then
+      echo -e "Kafka: ${CLightGreen}$KAFKA_DIST_VERSION${CNone}"
    fi
    echo ""
 
@@ -1144,6 +1242,9 @@ fi
 # @required SPARK_RELEASE
 # @required SPARK_TARBALL
 # @required SPARK_DIST_VERSION
+#
+# @required KAFKA_RELEASE
+# @required KAFKA_TARBALL
 #
 function installProduct
 {
@@ -1372,24 +1473,49 @@ function installProduct
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$SPARK_DIST_VERSION" ]; then
          echo "Already installed - $SPARK_DIST_VERSION"
       else
-      # --------------
-      # Download Spark
-      echo "+ Downloading $SPARK_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
-      if [ "$__SIMULATE" == "simulate" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL" "https://archive.apache.org/dist/spark/$SPARK_RELEASE/$SPARK_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL" "https://archive.apache.org/dist/spark/$SPARK_RELEASE/$SPARK_TARBALL"
-      fi
+         # --------------
+         # Download Spark
+         echo "+ Downloading $SPARK_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL" "https://archive.apache.org/dist/spark/$SPARK_RELEASE/$SPARK_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL" "https://archive.apache.org/dist/spark/$SPARK_RELEASE/$SPARK_TARBALL"
+         fi
       
-      # Install Spark
-      echo "  Installing Spark $SPARK_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "simulate" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL"
+         # Install Spark
+         echo "  Installing Spark $SPARK_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL"
+            echo "Installed - $SPARK_TARBALL"
+         fi
+      fi
+
+   elif [ "$__PRODUCT" == "kafka" ]; then 
+      
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$KAFKA_DIST_VERSION" ]; then
+         echo "Already installed - $KAFKA_DIST_VERSION"
       else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL"
-         echo "Installed - $SPARK_TARBALL"
+         # --------------
+         # Download Spark
+         echo "+ Downloading $KAFKA_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$KAFKA_TARBALL" "https://archive.apache.org/dist/kafka/$KAFKA_RELEASE/$KAFKA_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$KAFKA_TARBALL" "https://archive.apache.org/dist/kafka/$KAFKA_RELEASE/$KAFKA_TARBALL"
+         fi
+      
+         # Install Spark
+         echo "  Installing Spark $KAFKA_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$KAFKA_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$KAFKA_TARBALL"
+            echo "Installed - $KAFKA_TARBALL"
+         fi
       fi
-      fi
+
    fi
 
 }
@@ -1493,6 +1619,12 @@ if [ "$SPARK_VERSION" != "" ] && [ "$SPARK_DIST_VERSION" != "" ]; then
    # installProduct "spark" "simulate"
    installProduct "spark"
 fi
+if [ "$KAFKA_VERSION" != "" ] && [ "$KAFKA_DIST_VERSION" != "" ]; then
+   KAFKA_RELEASE="$KAFKA_VERSION"
+   KAFKA_TARBALL="kafka_$KAFKA_DIST_VERSION.tgz"
+   # installProduct "kafka" "simulate"
+   installProduct "kafka"
+fi
 echo ""
 
 echo "PadoGrid Installation complete."
@@ -1524,6 +1656,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
    HAZELCAST_HOME=""
    SNAPPYDATA_HOME=""
    SPARK_HOME=""
+   KAFKA_HOME=""
    GEMFIRE_HOME=""
    COHERENCE_HOME=""
 
@@ -1558,6 +1691,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
        SNAPPYDATA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"spark"** ]]; then
        SPARK_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"kafka"** ]]; then
+       KAFKA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"gemfire"** ]]; then
        GEMFIRE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
 #     elif [[ "$i" == **"coherence"** ]]; then
@@ -1597,7 +1732,9 @@ if [ "$RWE_EXISTS" == "false" ]; then
       elif [ "$SNAPPYDATA_HOME" != "" ]; then
         PRODUCT_HOME="$SNAPPYDATA_HOME"
       elif [ "$SPARK_HOME" != "" ]; then
-        PRODUCT_HOME="$SNAPPYDATA_HOME"
+        PRODUCT_HOME="$SPARK_HOME"
+      elif [ "$KAFKA_HOME" != "" ]; then
+        PRODUCT_HOME="$KAFKA_HOME"
       elif [ "$GEMFIRE_HOME" != "" ]; then
         PRODUCT_HOME="$GEMFIRE_HOME"
       fi
@@ -1612,6 +1749,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
       echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
       echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
+      echo "KAFKA_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
       echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
       echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
       if [ "$QUIET" == "false" ]; then

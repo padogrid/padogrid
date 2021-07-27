@@ -1,0 +1,140 @@
+#!/usr/bin/env bash 
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-product -docker -host -port -cluster -count -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+# Get the host IP. Last IPv4 in the list.
+for i in $(getHostIPv4List); do
+   HOST_IP=$i
+done
+
+PRODUCT_OPTIONS=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /|/g')
+PRODUCTS_SUPPORTED=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /, /g')
+THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a Docker environment in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-product $PRODUCT_OPTIONS]
+                 [-docker compose] [-host host_ip] [-port first_port_number]
+                 [-count member_count] -cluster cluster_name [-?]
+
+DESCRIPTION
+   Creates a Docker environment that includes Kafka cluster configuration files for
+   one of the following Docker tools:
+ 
+   compose  docker-compose Dockfile based cluster orchestration
+
+   To use the created environment, you must have the specified Docker tool installed.
+
+OPTIONS
+   -product $PRODUCT_OPTIONS
+             Docker cluster product name. Supported products are $PRODUCTS_SUPPORTED.
+
+   -docker compose
+             Docker compose driven Geode cluster.
+
+   -host host_ip
+             Host IP address that is acccessible from the Docker containers. If this option
+             is not specified then the IP address of the host name is assigned. If the host
+             is running Docker Desktop, then you may specify the the host name, host.docker.internal,
+             which resolves to the internal IP address used by the host. Note that host.docker.internal
+             is for development only and not for production.
+
+   -port first_port_number
+             If the '-product' option is 'geode', 'snappydata', or unspecified, then the first
+             port number is the first member port number. Otherwise, it represents the respective
+             product's first port number. Port number is incremented starting from this port number
+             for the subsquent members. For 'geode' and 'snappydata', the port number difference
+             between the default member port number and the specified port number is added to the
+             default port numbers of other components. For example, if the port number 10336 is
+             specified then the difference of 2 (10336-$DEFAULT_MEMBER_START_PORT) is added to the member's default
+             port number of $DEFAULT_MEMBER_START_PORT to obtain the port number 40406 for the member's first port
+             number.
+             Default: $DEFAULT_MEMBER_START_PORT 
+
+   -count member_count
+             Number of members (servers) in the cluster. Default: 2
+
+   -cluster cluster_name
+             Required Geode cluster name. This name is used to create a Docker compose project,
+             for example.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -product $THIS_PRODUCT -docker $DEFAULT_DOCKER -host $HOST_IP -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
+
+EXAMPLES
+   To create 'mydocker' cluster with the host IP 'host.docker.internal':
+      $EXECUTABLE -host host.docker.internal -cluster mydocker
+
+   To create 'mydocker' cluster with the host IP '$HOST_IP' and member (server) count of 4:
+      $EXECUTABLE -host $HOST_IP -cluster mydocker -count 4
+
+   To create 'mydocker' cluster with the host IP '$HOST_IP':
+      $EXECUTABLE -host $HOST_IP -cluster mydocker
+
+FILES
+   $PADOGRID_WORKSPACE/docker
+             The current workspace Docker directory.
+
+EOF
+fi
+   exit
+fi
+
+#
+# Run the target docker command if the product is different.
+#
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$DOCKER_PRODUCT_LIST" "$PRODUCT_ARG")" == "false" ]; then
+      >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+      exit 1
+   fi
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
+      if [ "$PRODUCT_ARG" == "jet" ]; then
+         PRODUCT_ARG="hazelcast"
+      fi
+      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+      exit
+   fi
+fi
+
+echo "$EXECUTABLE not supported for $THIS_PRODUCT in this PadoGrid release. Use '-product' to specify another product."

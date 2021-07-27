@@ -1,0 +1,645 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+# Set PRODUCT here. This is necessary due to the default product read from
+# the RWE setenv.sh by the above .addonenv.sh
+PRODUCT="kafka"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -pod -vm -controller -port -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a new cluster in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name]
+               [-pod pod_name]
+               [-vm [comma_separated_hosts]]
+               [-controller comma_separated_controller_hosts]
+               [-port first_controller_port_number] [-?]
+
+DESCRIPTION
+   Creates a new cluster in the current workspace. Once the cluster is created,
+   you can change the settings in the following files:
+
+   etc/cluster.properties
+   etc/server-??.properties
+
+OPTIONS
+   -cluster cluster_name
+             Unique cluster name. The cluster name is prepended
+             to all server names.
+
+   -pod pod_name
+             Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
+             option. 
+             Default: local
+
+   -vm [comma_separated_hosts]
+             A list of VM hosts or addresses separated by comma. If the list
+             contains spaces then enclosed it in quotes. If this option is not
+             specified, then the host list defined by VM_HOSTS in the workspace
+             'setenv.sh' file is applied.
+
+             If the '-pod' option is specified then this option is suppressed.
+
+   -controller comma_separated_controller_hosts
+             A list of controller hosts or addresses separated by comma. If the list
+             contains spaces then enclosed it in quotes. This option is meaningful
+             only if the '-vm' option is specified. 
+
+             If this option is not specified and the '-pod' option is specified then
+             the primary node is used for the controller.
+
+             If this option is not specified but the '-vm' option is specified, then
+             the first host from the '-vm' host list is selected for the controller.
+
+   -port first_server_port_number
+             First server port number. Port number is incremented
+             starting from this port number for the subsquent servers.
+             The port number difference between the default server port
+             number and the specified port number is added to the default
+             port numbers of other components. For example, if the port
+             number 7079 is specified then the difference of 2 (7079-$DEFAULT_MEMBER_START_PORT)
+             is added to the server's default port number of $DEFAULT_MEMBER_START_PORT
+             to obtain the port number 60002 for the server's first port number.
+
+             This option applies only for a cluster running locally. It is ignored
+             for creating non-local pod and VM clusters.
+
+             Default: $DEFAULT_MEMBER_START_PORT 
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -pod $POD -port $DEFAULT_MEMBER_START_PORT
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+if [ -z $CLUSTER ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Cluster name is not specified. Command aborted." 
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Abort if the cluster exists
+CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+if [ -d $CLUSTER_DIR ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Cluster already exists: [$CLUSTER]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Suppress pod if VM specified
+#if [ "$VM_SPECIFIED" == "true" ]; then
+#   POD="local"
+#fi
+
+if [ "$POD_SPECIFIED" == "false" ]; then
+   POD="local"
+fi
+if [ "`isPodExist $POD`" == "false" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: This pod does not exist [$POD]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# If -product (hidden option) is specified then make it default. This effectively
+# provides a way to create any product clusters in the same workspace.
+if [ "$PRODUCT_ARG" != "" ]; then
+   PRODUCT=$PRODUCT_ARG
+fi
+
+if [ "$TYPE_ARG" == "pado" ]; then
+  if [ "$PADO_HOME" == "" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "ERROR: Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
+   echo >&2 "       workspace 'setenv.sh' file."
+   echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
+   echo >&2 "       Command aborted."
+   exit 1
+  fi
+fi
+
+function writeCluster() 
+{
+   # Update cluster env file with PRODUCT and CLUSTER_TYPE
+   updateClusterEnvFile
+
+   # Copy the template server properties file
+   cp $BASE_DIR/etc/template-server.properties $ETC_DIR/server.properties
+   # Copy the template log4j properties file
+   cp $BASE_DIR/etc/template-log4j.properties $ETC_DIR/log4j.properties
+   # Copy the template prometheus file
+   cp $BASE_DIR/etc/template-prometheus.yml $ETC_DIR/prometheus.yml
+
+   # Due to the lack of --override option provided by kafka-storage.sh, we need to 
+   # create server.properties for each member.
+   __MEMBER_1_DIR="${MEMBER_1_DIR//\//\/}"
+   __MEMBER_2_DIR="${MEMBER_2_DIR//\//\/}"
+   __MEMBER_3_DIR="${MEMBER_3_DIR//\//\/}"
+
+   let MEMBER_1_CONTROLLER_PORT=NEW_MEMBER_START_PORT+1
+   let MEMBER_2_CONTROLLER_PORT=MEMBER_1_CONTROLLER_PORT+100
+   let MEMBER_3_CONTROLLER_PORT=MEMBER_2_CONTROLLER_PORT+100
+   QUORUM_VOTERS=1@localhost:$MEMBER_1_CONTROLLER_PORT,2@localhost:$MEMBER_2_CONTROLLER_PORT,3@localhost:$MEMBER_3_CONTROLLER_PORT
+
+   BROKER_PORT=$NEW_MEMBER_START_PORT
+   let CONTROLLER_PORT=BROKER_PORT+1
+   LISTENERS_1="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
+   ADVERTISED_LISTENERS_1="PLAINTEXT:\/\/localhost:$BROKER_PORT"
+   let BROKER_PORT=BROKER_PORT+100
+   let CONTROLLER_PORT=BROKER_PORT+1
+   LISTENERS_2="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
+   ADVERTISED_LISTENERS_2="PLAINTEXT:\/\/localhost:$BROKER_PORT"
+   let BROKER_PORT=BROKER_PORT+100
+   let CONTROLLER_PORT=BROKER_PORT+1
+   LISTENERS_3="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
+   ADVERTISED_LISTENERS_3="PLAINTEXT:\/\/localhost:$BROKER_PORT"
+
+   sed -e 's/\${node.id}/1/' \
+       -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
+       -e 's/\${log.dirs}/'${__MEMBER_1_DIR}'/' \
+       -e 's/\${listeners}/'${LISTENERS_1}'/' \
+       -e 's/\${advertised.listeners}/'${ADVERTISED_LISTENERS_1}'/' \
+       "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-01.properties"
+   sed -e 's/\${node.id}/2/' \
+       -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
+       -e 's/\${log.dirs}/'${__MEMBER_2_DIR}'/' \
+       -e 's/\${listeners}/'${LISTENERS_2}'/' \
+       -e 's/\${advertised.listeners}/'${ADVERTISED_LISTENERS_2}'/' \
+       "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-02.properties"
+   sed -e 's/\${node.id}/3/' \
+       -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
+       -e 's/\${log.dirs}/'${__MEMBER_3_DIR}'/' \
+       -e 's/\${listeners}/'${LISTENERS_3}'/' \
+       -e 's/\${advertised.listeners}/'${ADVERTISED_LISTENERS_3}'/' \
+       "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-03.properties"
+
+   # Format storages
+   $KAFKA_HOME/bin/kafka-storage.sh format -t $CLUSTER_ID -c $ETC_DIR/server-01.properties
+   $KAFKA_HOME/bin/kafka-storage.sh format -t $CLUSTER_ID -c $ETC_DIR/server-02.properties
+   $KAFKA_HOME/bin/kafka-storage.sh format -t $CLUSTER_ID -c $ETC_DIR/server-03.properties
+
+   # Create bin_sh/setenv.sh
+   mkdir -p $CLUSTER_DIR/bin_sh
+   echo "#" > $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Add cluster specific environment variables in this file." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Set Java options, i.e., -Dproperty=xyz" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# IMPORTANT:"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#    If you are running on Windows, then you must convert the file paths from Unix notations"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#    Windows notations. For example,"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Set RUN_SCRIPT. Absolute path required." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# If set, the 'start_server' command will run this script instead of Kafka 'kafka-server-start.sh'." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Your run script will inherit the following:" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#    JAVA      - Java executable."  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#    JAVA_OPTS - Java options set by padogrid." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#    CLASSPATH - Class path set by padogrid. You can include additional libary paths." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#                You should, however, place your library files in the plugins directories" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#                if possible." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#  CLUSTER_DIR - This cluster's top directory path, i.e., $PADOGRID_WORKSPACE/clusters/$CLUSTER" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Run Script Example:" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#    \"\$JAVA\" \$JAVA_OPTS com.newco.MyServer &" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Although it is not required, your script should be placed in the bin_sh directory." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#RUN_SCRIPT=\$CLUSTER_DIR/bin_sh/your-script" >> $CLUSTER_DIR/bin_sh/setenv.sh
+
+   #
+   # Create $ETC_DIR/cluster.properties
+   #
+   echo "# padogrid cluster properties." > $ETC_DIR/cluster.properties
+   echo "# These properties pertain to all of the servers belonging to the named cluster below." >> $ETC_DIR/cluster.properties
+   echo "# Cluster Creation Date: `date`" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   
+   # Cluster name
+   echo "# Cluster name" >> $ETC_DIR/cluster.properties
+   echo "cluster.name=$CLUSTER" >> $ETC_DIR/cluster.properties
+   echo "# Kafka Cluster ID" >> $ETC_DIR/cluster.properties
+   echo "cluster.id=$CLUSTER_ID" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+
+   # hostname-for-clients
+   echo "# The following properties are used only if the cluster is running on" >> $ETC_DIR/cluster.properties
+   echo "# the local machine. For VM clusters, each controller and server must include" >> $ETC_DIR/cluster.properties
+   echo "# their own properties." >> $ETC_DIR/cluster.properties
+   echo "cluster.bindAddress=$BIND_ADDRESS" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+
+   # Pod
+   echo "# Pod properties" >> $ETC_DIR/cluster.properties
+   echo "pod.name=$POD" >> $ETC_DIR/cluster.properties
+   echo "pod.type=$POD_TYPE" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+
+   # TCP port
+   echo "# Member (server) TCP start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "tcp.startPort=$NEW_MEMBER_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+
+   # Debug
+   echo "# Enable/disable server debugging" >> $ETC_DIR/cluster.properties
+   echo "debug.enabled=$DEFAULT_DEBUG_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# The first server's debug port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "debug.startPort=$NEW_DEBUG_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   
+   # JMX
+   echo "# Enable/disable server jmx" >> $ETC_DIR/cluster.properties
+   echo "jmx.enabled=$DEFAULT_JMX_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# The first server's JMX port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "jmx.startPort=$NEW_JMX_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   
+   # Prometheus
+   echo "# Enable/disable server Prometheus" >> $ETC_DIR/cluster.properties
+   echo "prometheus.enabled=$DEFAULT_PROMETHEUS_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# The first server's PROMETHEUS port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "prometheus.startPort=$NEW_PROMETHEUS_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   
+   echo "# Server heap min and max values" >> $ETC_DIR/cluster.properties
+   echo "heap.min=$DEFAULT_MIN_HEAP_SIZE" >> $ETC_DIR/cluster.properties
+   echo "heap.max=$DEFAULT_MAX_HEAP_SIZE" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   
+   # GC logging
+   echo "# GC logging flag. If true then GC information is logged." >> $ETC_DIR/cluster.properties
+   echo "gc.log.enabled=$DEFAULT_GC_LOG_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# Default GC log file flag. If true then GC information is logged in a separate log file." >> $ETC_DIR/cluster.properties
+   echo "gc.log.file.enabled=$DEFAULT_GC_LOG_FILE_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   
+   # VM
+   echo "# Enable/disable VM cluster" >> $ETC_DIR/cluster.properties
+   echo "vm.enabled=$VM_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# A comma separated list of host names or addresses. IMPORANT: No spaces allowed." >> $ETC_DIR/cluster.properties
+
+   # Replace all spaces from host lists
+   VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/ //g")
+   echo "vm.hosts=$VM_HOSTS" >> $ETC_DIR/cluster.properties
+   echo "# SSH user name. If not specified then defaults to the shell login session user name." >> $ETC_DIR/cluster.properties
+   echo "vm.user=$VM_USER" >> $ETC_DIR/cluster.properties
+   echo "# Optional private key file path. You may use the private key file for AWS EC2, for example. " >> $ETC_DIR/cluster.properties
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      echo "#vm.privateKeyFile=$VM_KEY_FILE" >> $ETC_DIR/cluster.properties
+   else
+      echo "vm.privateKeyFile=$VM_PRIVATE_KEY_FILE" >> $ETC_DIR/cluster.properties
+   fi
+
+   echo "" >> $ETC_DIR/cluster.properties
+
+   if [ "$VM_ENABLED" == "true" ]; then
+      echo "# Individual VM host settings: vm.<host>.*" >> $ETC_DIR/cluster.properties
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         echo "#vm.${VM_HOST}.bindAddress=${VM_HOST}" >> $ETC_DIR/cluster.properties
+      done
+   fi
+}
+
+# 
+# VM cluster
+#
+if [ "$VM_SPECIFIED" == "true" ] && [ "$POD" == "local" ]; then
+   VM_ENABLED="true"
+fi
+if [ "$VM_USER" == "" ]; then
+   VM_USER=$(whoami)
+fi
+VM_KEY_FILE="/your/private/keyfile.pem"
+if [ "$VM_ENABLED" == "true" ]; then
+   if [ "$VM_HOSTS_ARG" != "" ]; then
+      VM_HOSTS="$VM_HOSTS_ARG"
+   fi
+
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "WARNING: VM hosts undefined. Configuring with this host."
+      VM_HOSTS=`hostname`
+   fi
+else
+   VM_HOSTS=`hostname`
+fi
+
+# Collect all clusters
+pushd $CLUSTERS_DIR > /dev/null 2>&1
+CLUSTERS=""
+COUNT=0
+for i in *; do
+   if [ -d "$i" ]; then
+      let COUNT=COUNT+1
+      if [ $COUNT -eq 1 ]; then
+         CLUSTERS="$i"
+      else
+         CLUSTERS="$CLUSTERS $i"
+      fi
+   fi
+done
+popd > /dev/null 2>&1
+
+# If the port number is not specified, or if there aren't any existing clusters
+# or the pod name is not "local" then use the default ports. For non-local pods,
+# we can ignore the port number conflicts.
+if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "$VM_ENABLED" == "true" ]; then
+   NEW_MEMBER_START_PORT=$DEFAULT_MEMBER_START_PORT
+   NEW_DEBUG_START_PORT=$DEFAULT_DEBUG_START_PORT
+   NEW_JMX_START_PORT=$DEFAULT_JMX_START_PORT
+   NEW_PROMETHEUS_START_PORT=$DEFAULT_PROMETHEUS_START_PORT
+else
+   NEW_MEMBER_START_PORT=$PORT_ARG
+   let PORT_DIFF=NEW_MEMBER_START_PORT-DEFAULT_MEMBER_START_PORT
+   let NEW_MEMBER_START_PORT=DEFAULT_MEMBER_START_PORT+PORT_DIFF
+   let NEW_DEBUG_START_PORT=DEFAULT_DEBUG_START_PORT+PORT_DIFF
+   let NEW_PROMETHEUS_START_PORT=DEFAULT_PROMETHEUS_START_PORT+PORT_DIFF
+   let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
+fi
+
+# Create the cluster sub-directories and files.
+LOG_DIR=$CLUSTERS_DIR/$CLUSTER/log
+ETC_DIR=$CLUSTERS_DIR/$CLUSTER/etc
+LIB_DIR=$CLUSTERS_DIR/$CLUSTER/lib
+PLUGINS_DIR=$CLUSTERS_DIR/$CLUSTER/plugins
+CONFIG_FILE=$CLUSTERS_DIR/$CLUSTER/etc/cache.xml
+mkdir -p $ETC_DIR
+mkdir -p $LOG_DIR
+mkdir -p $LIB_DIR
+mkdir -p $PLUGINS_DIR
+
+# Add one (1) server if VM is enabled.
+# Add three (3) servers if the pod name is "local".
+# For non-local clusters with remote servers, we start with an empty cluster and
+# allow the user to identify the VMs to run the servers.
+BIND_ADDRESS="localhost"
+HOSTNAME_FOR_CLIENTS="localhost"
+if [ "$VM_ENABLED" == "true" ]; then
+   MEMBER_1=`getMemberName 1`
+   MEMBER_1_DIR=$CLUSTER_DIR/run/$MEMBER_1
+   mkdir -p $MEMBER_1_DIR
+   if [ "POD" == "local" ]; then
+      POD_TYPE="local"
+   fi
+elif [ "$POD" == "local" ]; then
+   MEMBER_1=`getMemberName 1`
+   MEMBER_2=`getMemberName 2`
+   MEMBER_3=`getMemberName 3`
+   MEMBER_1_DIR=$CLUSTER_DIR/run/$MEMBER_1
+   MEMBER_2_DIR=$CLUSTER_DIR/run/$MEMBER_2
+   MEMBER_3_DIR=$CLUSTER_DIR/run/$MEMBER_3
+   mkdir -p $MEMBER_1_DIR
+   mkdir -p $MEMBER_2_DIR
+   mkdir -p $MEMBER_3_DIR
+   POD_TYPE="local" 
+fi
+
+if [ "$POD" != "local" ]; then
+
+   # TODO: Pod VM_ENABLED is currently for workspace-wide only. To support individual clusters,
+   #       VM_* parameters must be set for each cluster. Significant overhauling may required.
+   # VM_ENABLED="true"
+
+   AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" false`
+   NODE_COUNT=`getPodProperty "node.count" "0"`
+   VM_USER="vagrant"
+   POD_TYPE="vagrant"
+   VM_HOSTS=""
+   
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   BIND_ADDRESS=$PRIMARY_NODE_LOCAL
+   HOSTNAME_FOR_CLIENTS=$PRIMARY_NODE_LOCAL
+
+   # Create server run directories
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   for i in $(seq 1 $NODE_COUNT); do
+       MEMBER=`getMemberName $i`
+       MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
+       mkdir -p $MEMBER_DIR
+   done
+   
+   # Vagrant pod VMs   
+   if [ "$AVAHI_ENABLED" == "true" ]; then
+      NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
+      if [ "$NODE_NAME_PRIMARY" != "" ]; then
+         NODE_NAME_PRIMARY=${NODE_NAME_PRIMARY}.local
+      else
+         NODE_NAME_PRIMARY="localhost"
+      fi
+      for i in $(seq 1 $NODE_COUNT); do
+        __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+        NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+        if [ $i -eq 1 ]; then
+           VM_HOSTS="$NODE_LOCAL"
+        else
+           VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
+        fi
+      done
+   else
+      POD_DIR="$PADOGRID_WORKSPACE/pods/$POD"
+      POD_SETENV="$POD_DIR/bin_sh/setenv.sh"
+      HOST_PRIVATE_IP=""
+      if [ -f "$POD_SETENV" ]; then
+         . $POD_SETENV
+      fi
+      if [ "$HOST_PRIVATE_IP" == "" ]; then
+         AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
+         if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
+            echo >&2 "ERROR: Private IP address not specified and unable to determine. Please add"
+            echo >&2 "       a host-only ethernet adapter to VirtualBox. Command aborted."
+            exit 1
+         fi
+         # Pick the first one in the list
+         for i in $AVAILABLE_IP_ADDRESSES; do
+            HOST_PRIVATE_IP=$i
+            break;
+         done
+      fi
+      IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
+      # Extract the first three octets from the primary IP.
+      BASE_PRIVATE_IP_FIRST_THREE_OCTETS=${HOST_PRIVATE_IP%.*}
+      BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
+      BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
+      NODE_NAME_PRIMARY=${BASE_PRIVATE_IP}
+      for i in $(seq 1 $NODE_COUNT); do
+         let NODE_OCTET=i+BASE_PRIVATE_IP_LAST_OCTET
+         NODE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${NODE_OCTET}
+         if [ $i -eq 1 ]; then
+            VM_HOSTS="$NODE_IP"
+         else
+            VM_HOSTS="$VM_HOSTS,$NODE_IP"
+         fi
+      done   
+   fi
+
+fi
+
+# Generate Kafka cluster ID
+CLUSTER_ID=$(kafka-storage.sh random-uuid)
+CLUSTER_TYPE="kraft"
+
+# Write cluster files
+writeCluster
+
+# Display cluster information
+echo "----------------------------------------------------------------"
+echo "                  WORKSPACE: $PADOGRID_WORKSPACE"
+echo "            Cluster Created: $CLUSTER"
+echo "               CLUSTER_TYPE: $CLUSTER_TYPE"
+if [ "$VM_ENABLED" == "true" ]; then
+echo "                 Deployment: VM"
+else
+echo "                        POD: $POD"
+fi
+echo "                CLUSTER_DIR: $CLUSTER_DIR"
+echo "                 CONFIG_DIR: $ETC_DIR"
+echo "                CONFIG_FILE: $CONFIG_FILE"
+echo "                    LOG_DIR: $LOG_DIR"
+echo "          MEMBER_START_PORT: $NEW_MEMBER_START_PORT"
+echo "           DEBUG_START_PORT: $NEW_DEBUG_START_PORT"
+echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
+echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
+echo ""
+echo "The default config.xml file has been placed in the CONFIG_DIR directory."
+echo "Modify or replace it with the appropriate file."
+echo ""
+if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ]; then
+   echo "One (1) server has been configured (added) to run in this cluster as follows:"
+   echo ""
+   echo "      Server: $MEMBER_1"
+   echo " Working Dir: $MEMBER_1_DIR"
+   echo ""
+elif [ "$POD" == "local" ]; then
+   echo "Three (3) servers have been configured (added) to run in this cluster as follows:"
+   echo ""
+   echo "      Server: $MEMBER_1"
+   echo " Working Dir: $MEMBER_1_DIR"
+   echo "      Server: $MEMBER_2"
+   echo " Working Dir: $MEMBER_2_DIR"
+   echo "      Server: $MEMBER_3"
+   echo " Working Dir: $MEMBER_3_DIR"
+   echo ""
+else
+   echo "$NODE_COUNT servers have been configured (added) to run in this cluster as follows:"
+   echo ""
+   NUM=0
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   for i in $(seq 1 $NODE_COUNT); do
+       MEMBER=`getMemberName $i`
+       MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
+       echo "      Server: $MEMBER"
+       echo " Working Dir: $MEMBER_DIR"
+   done
+   echo ""
+fi
+echo "1. Configure Spark in the following files as needed:"
+echo "      ${ETC_DIR}/server.properties"
+echo "2. Place your application jar files in one of the 'plugins' directories:"
+echo "      $PADOGRID_WORKSPACE/plugins/"
+echo "      $CLUSTER_DIR/plugins/"
+echo "3. Configure cluster properties in:"
+echo "      $ETC_DIR/cluster.properties"
+if [ "$VM_ENABLED" == "true" ]; then
+   echo "4. You must configure password-less ssh login to all VMs. On AWS, this"
+   echo "   is already configured but you will need to enter the correct private key"
+   echo "   file path in the cluster.properties file."
+   echo "5. To change VM host names, list the VM host names in the cluster.properties file"
+   echo "   for controllers and servers."
+   echo "      vm.controller.hosts=host1,host2,..."
+   echo "      vm.hosts=host1,host2,..."
+   echo "6. Deploy the cluster configuration changes you made to all the VM hosts listed in the"
+   echo "   previous step by running 'vm_copy' or 'vm_sync'."
+   echo "      vm_copy $CLUSTER_DIR"
+   echo "7. To start the cluster:"
+   echo "      start_cluster -cluster $CLUSTER"
+   echo "8. To verify the cluster state:"
+   echo "      show_cluster -cluster $CLUSTER"
+   echo "9. To view log file:"
+   echo "      show_log -cluster $CLUSTER" 
+elif [ "$POD" == "local" ]; then 
+   echo "4. To configure additional servers:"
+   echo "      add_server -cluster $CLUSTER"
+   echo "5. To start the cluster: "
+   echo "      start_cluster -cluster $CLUSTER"
+   echo "6. To verify the cluster state:"
+   echo "      show_cluster -cluster $CLUSTER"
+   echo "7. To view log file:"
+   echo "      show_log -cluster $CLUSTER" 
+else
+   echo "4. The specified pod ($POD) contains $NODE_COUNT data nodes and the same number of servers"
+   echo "   have been added to the cluster. You can add or remove servers by runnng 'add_server' or"
+   echo "   'remove_server', respectively."
+   echo "    IMPORTANT: The number of servers cannot exceed the number of data nodes in the pod."
+   echo "5. Once you have added or removed servers, execute the following to configure and start the"
+   echo "   Vagrant pod environment:"
+   echo "      build_pod -pod $POD"
+   echo "6. To get the pod details, run the following:"
+   echo "      show_pod -pod $POD"
+   echo "7. To use this pod, attach it to a cluster. For example,"
+   echo "      create_cluster -cluster mycluster -pod $POD"
+   echo "      start_cluster -cluster mycluster"
+   echo "8. You can login to the primary node as follows."
+   echo "      ssh vagrant@$NODE_NAME_PRIMARY"
+fi
+echo "----------------------------------------------------------------"

@@ -485,6 +485,8 @@ if [ "$ENV_ARG" != "" ]; then
    . $ENV_ARG
 fi
 
+DOWNLOADABLE_PRODUCTS="padogrid geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss snappydata spark kafka"
+
 # Bash color code
 CNone='\033[0m' # No Color
 CBlack='\033[0;30m'

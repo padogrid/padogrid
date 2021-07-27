@@ -2056,6 +2056,12 @@ function __switch_cluster
       elif [ "$PRODUCT" == "coherence" ]; then
          export PRODUCT_HOME=$COHERENCE_HOME
          __PRODUCT="coherence"
+      elif [ "$PRODUCT" == "kafka" ]; then
+         export PRODUCT_HOME=$KAFKA_HOME
+         __PRODUCT="kafka"
+      elif [ "$PRODUCT" == "hadoop" ]; then
+         export PRODUCT_HOME=$HADOOP_HOME
+         __PRODUCT="hadoop"
       fi
       local NEW_PRODUCT=$PRODUCT
       local NEW_PRODUCT_HOME=$PRODUCT_HOME
@@ -3285,6 +3291,8 @@ function sortVersionList
 #    JET_MANAGEMENT_CENTER_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
+#    KAFKA_VERSIONS
+#    HADOOP_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
 #
@@ -3302,6 +3310,8 @@ function determineInstalledProductVersions
    JET_MANAGEMENT_CENTER_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
+   KAFKA_VERSIONS=""
+   HADOOP_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
@@ -3416,6 +3426,22 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       SPARK_VERSIONS=$(sortVersionList "$__versions")
+
+      # Kafka
+      __versions=""
+      for i in kafka_*; do
+         __version=${i#kafka_}
+         __versions="$__versions $__version "
+      done
+      KAFKA_VERSIONS=$(sortVersionList "$__versions")
+
+      # Hadoop
+      __versions=""
+      for i in hadoop-*; do
+         __version=${i#hadoop-}
+         __versions="$__versions $__version "
+      done
+      HADOOP_VERSIONS=$(sortVersionList "$__versions")
 
       popd > /dev/null 2>&1
             
@@ -3619,6 +3645,12 @@ function getInstalledProducts
   fi
   if [ "$COHERENCE_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS coherence"
+  fi
+  if [ "$KAFKA_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS kafka"
+  fi
+  if [ "$HADOOP_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS hadoop"
   fi
   echo "$PRODUCTS"
 }
