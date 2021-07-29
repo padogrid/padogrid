@@ -154,6 +154,9 @@ function getActiveVmMemberCount()
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
+# POD needed to get the correct node name
+POD=`getClusterProperty "pod.name" "local"`
+
 # See if any members in the custer are still running. If so, abort.
 LOCATOR_RUNNING_COUNT=0
 MEMBER_RUNNING_COUNT=0
@@ -241,6 +244,7 @@ if [ $LOCATOR_RUNNING_COUNT -gt 0 ]; then
    echo >&2 "----------------------------------------------------------------"
    exit 1
 fi
+exit
 
 # Remove the cluster from VMs if enabled.
 if [ "$VM_ENABLED" == "true" ]; then
@@ -282,7 +286,6 @@ rm -rf $CLUSTER_DIR
 GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
 for GROUP in $GROUP_NAMES; do
    GROUP_FILE="$GROUPS_DIR/$GROUP/etc/group.properties"
-   echo debug: GROUP_FILE=$GROUP_FILE
    if [ -f "$GROUP_FILE" ]; then
       CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
       if [ "$CLUSTER_NAMES_COMMAS" != "" ]; then

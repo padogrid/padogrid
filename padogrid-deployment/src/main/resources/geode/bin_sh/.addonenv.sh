@@ -99,6 +99,9 @@ DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
+DEFAULT_SPARK_CLUSTER="myspark"
+DEFAULT_KAFKA_CLUSTER="mykafka"
+DEFAULT_HADOOP_CLUSTER="myhadoop"
 DEFAULT_CLUSTER="$DEFAULT_GEODE_CLUSTER"
 
 #
@@ -339,6 +342,8 @@ if [ "$IN_POD" != "true" ]; then
    export JET_MC_HOME=""
    export SNAPPYDATA_HOME=""
    export SPARK_HOME=""
+   export KAFKA_HOME=""
+   export HADOOP_HOME=""
    export PRODUCT_HOME=""
 fi
 # Source in setenv.sh
@@ -389,7 +394,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark kafka hadoop"
 
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
@@ -532,6 +537,10 @@ for i in "${PATH_ARRAY[@]}"; do
    elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
       continue;
    elif [ "$SPARK_HOME" != "" ] && [[ "$i" == "$SPARK_HOME"** ]]; then
+      continue;
+   elif [ "$KAFKA_HOME" != "" ] && [[ "$i" == "$KAFKA_HOME"** ]]; then
+      continue;
+   elif [ "$HADOOP_HOME" != "" ] && [[ "$i" == "$HADOOP_HOME"** ]]; then
       continue;
    fi
    if [ "$CLEANED_PATH" == "" ]; then

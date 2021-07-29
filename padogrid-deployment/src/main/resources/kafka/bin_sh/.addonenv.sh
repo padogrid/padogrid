@@ -364,7 +364,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire hazelcast jet snappydata coherence spark kafka hadoop"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark kafka hadoop"
 
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
@@ -548,7 +548,7 @@ IS_KAFKA_ENTERPRISE=false
 if [ "$KAFKA_HOME" != "" ]; then
    file=$(basename $KAFKA_HOME)
    file=${file#*kafka_}
-   KAFKA_VERSION=${file#*2.13\-}
+   KAFKA_VERSION=${file#*\-}
    KAFKA_MAJOR_VERSION_NUMBER=`expr "$KAFKA_VERSION" : '\([0-9]*\)'`
    PRODUCT_VERSION=$KAFKA_VERSION
    PRODUCT_MAJOR_VERSION=$KAFKA_MAJOR_VERSION_NUMBER

@@ -170,14 +170,14 @@ __padogrid_complete()
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
+      elif [ "$command" == "create_cluster" ]; then
          case "$PRODUCT" in
          geode)
             type_list="default pado";;
          hazelcast|snappydata|spark|coherence)
             type_list="default";;
          esac
-      elif [ "$command" == "make_cluster" ]; then
+      elif [ "$command" == "make_cluster" ] || [ "$command" == "create_group" ]; then
          type_list="default"
          local product=""
          for i in $(seq 1 $len); do
@@ -222,9 +222,7 @@ __padogrid_complete()
    -product)
       if [ "$command" == "show_bundle" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
-      elif [ "$command" == "make_cluster" ]; then
-         type_list=$(getInstalledProducts)
-      elif [ "$command" == "create_group" ]; then
+      elif [ "$command" == "make_cluster" ] || [ "$command" == "add_cluster" ] || [ "$command" == "create_group" ]; then
          type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"
@@ -861,14 +859,14 @@ __command_complete()
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
+      elif [ "$command" == "create_cluster" ]; then
          case "$PRODUCT" in
          geode)
             type_list="default pado";;
          hazelcast|snappydata|spark|coherence)
             type_list="default";;
          esac
-      elif [ "$command" == "make_cluster" ]; then
+      elif [ "$command" == "make_cluster" ] || [ "$command" == "create_group" ]; then
          type_list="default"
          local product=""
          for i in $(seq 1 $len); do
@@ -885,9 +883,7 @@ __command_complete()
    -product)
       if [ "$command" == "show_bundle" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
-      elif [ "$command" == "make_cluster" ]; then
-         type_list=$(getInstalledProducts)
-      elif [ "$command" == "create_group" ]; then
+      elif [ "$command" == "make_cluster" ] || [ "$command" == "add_cluster" ] || [ "$command" == "create_group" ]; then
          type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"

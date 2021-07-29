@@ -3720,6 +3720,13 @@ function createProductEnvFile
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.sparkenv.sh
          echo "#" >> $WORKSPACES_HOME/.sparkenv.sh
       fi
+   elif [ "$PRODUCT_NAME" == "hadoop" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.hadoopenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.hadoopenv.sh
+         echo "# Enter Hadoop product specific environment variables and initialization" >> $WORKSPACES_HOME/.hadoopenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.hadoopenv.sh
+         echo "#" >> $WORKSPACES_HOME/.hadoopenv.sh
+      fi
    fi
 }
 

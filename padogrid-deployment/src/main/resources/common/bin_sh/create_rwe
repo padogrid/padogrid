@@ -73,7 +73,7 @@ DESCRIPTION
 OPTIONS
    -product product_home_path
              Default product home path. One of Geode, GemFire, Hazelcast, Jet, Coherence,
-             and Spark home paths.
+             SnappyData, Spark, Kafka, and Hadoop home paths.
 
    -rwe rwe_name
              A new RWE name.
@@ -117,7 +117,7 @@ EOF
    exit
 fi
 
-PRODUCTS="geode hazelcast snappydata coherence spark"
+PRODUCTS="geode gemfire hazelcast snappydata coherence spark kafka hadoop"
 __PRODUCT_HOME="$PRODUCT_HOME_ARG"
 
 function isValidProduct
@@ -222,6 +222,17 @@ function determineInstalledProducts
          GEODE_HOME=$PADOGRID_ENV_BASE_PATH/products/apache-geode-$__version
       fi
 
+      # GemFire
+      if [ "$GEMFIRE_HOME" == "" ]; then
+         __versions=""
+         for i in pivotal-gemfire-*; do
+            __version=${i#pivotal-gemfire-}
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         GEMFIRE__HOME=$PADOGRID_ENV_BASE_PATH/products/pivotal-gemfire-$__version
+      fi
+
       # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
       local hossv henterv hmanv jossv jenterv jmanv
       for i in hazelcast-*; do
@@ -300,20 +311,35 @@ function determineInstalledProducts
          SPARK_HOME=$PADOGRID_ENV_BASE_PATH/products/spark-$__version
       fi
 
-      # GemFire
-      if [ "$GEMFIRE_HOME" == "" ]; then
+      # Kafka
+      if [ "$KAFKA_HOME" == "" ]; then
          __versions=""
-         for i in pivotal-gemfire-*; do
-            __version=${i#pivotal-gemfire-}
+         for i in kafka_*; do
+            __version=${i#kafka_}
             __versions="$__versions $__version "
          done
          __version=$(getLatestProductVersion "$__versions")
-         GEMFIRE_HOME=$PADOGRID_ENV_BASE_PATH/products/pivotal-gemfire-$__version
+         KAFKA_HOME=$PADOGRID_ENV_BASE_PATH/products/kafka_$__version
       fi
+
+      # Hadoop
+      if [ "$HADOOP_HOME" == "" ]; then
+         __versions=""
+         for i in hadoop-*; do
+            __version=${i#hadoop}
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         HADOOP_HOME=$PADOGRID_ENV_BASE_PATH/products/hadoop_$__version
+      fi
+
       popd > /dev/null 2>&1
             
       if [ ! -d "$GEODE_HOME" ]; then
          GEODE_HOME=""
+      fi
+      if [ ! -d "$GEMFIRE_HOME" ]; then
+         GEMFIRE_HOME=""
       fi
       if [ ! -d "$HAZELCAST_HOME" ]; then
          HAZELCAST_HOME=""
@@ -333,20 +359,12 @@ function determineInstalledProducts
       if [ ! -d "$SPARK_HOME" ]; then
          SPARK_HOME=""
       fi
-      if [ ! -d "$GEMFIRE_HOME" ]; then
-         GEMFIRE_HOME=""
+      if [ ! -d "$KAFKA_HOME" ]; then
+         KAFKA_HOME=""
       fi
-
-      #echo ""
-      #echo PADO_HOME=$PADO_HOME
-      #echo GEODE_HOME=$GEODE_HOME
-      #echo HAZELCAST_HOME=$HAZELCAST_HOME
-      #echo HAZELCAST_MC_HOME=$HAZELCAST_MC_HOME
-      #echo JET_HOME=$JET_HOME
-      #echo JET_MC_HOME=$JET_MC_HOME
-      #echo SNAPPYDATA_HOME=$SNAPPYDATA_HOME
-      #echo SPARK_HOME=$SPARK_HOME
-      #echo GEMFIRE_HOME=$GEMFIRE_HOME
+      if [ ! -d "$HADOOP_HOME" ]; then
+         HADOOP_HOME=""
+      fi
    fi
 }
 
@@ -369,6 +387,10 @@ if [ "$__PRODUCT_HOME" == "" ]; then
       __PRODUCT_HOME="$SNAPPYDATA_HOME"
    elif [ "$PRODUCT" == "spark" ]; then
       __PRODUCT_HOME="$SPARK_HOME"
+   elif [ "$PRODUCT" == "kafka" ]; then
+      __PRODUCT_HOME="$KAFKA_HOME"
+   elif [ "$PRODUCT" == "hadoop" ]; then
+      __PRODUCT_HOME="$HADOOP_HOME"
    else
       __PRODUCT_HOME=""
    fi
@@ -402,6 +424,12 @@ if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
       fi
       if [ "$SPARK_HOME" != "" ]; then
          echo "   $SPARK_HOME"
+      fi
+      if [ "$KAFKA_HOME" != "" ]; then
+         echo "   $KAFKA_HOME"
+      fi
+      if [ "$HADOOP_HOME" != "" ]; then
+         echo "   $HADOOP_HOME"
       fi
       echo "[$__PRODUCT_HOME]:"
       read -p "" INPUT
@@ -455,13 +483,15 @@ echo "QUIET=\"$QUIET\"" >> $TMP_ENV_FILE
 # product homes
 echo "PADO_HOME=\"$PADO_HOME\"" >> $TMP_ENV_FILE
 echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
+echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
 echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
 echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
 echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
 echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
 echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
 echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
-echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
+echo "KAFKA_HOME=\"$KAFKA_HOME\"" >> $TMP_ENV_FILE
+echo "HADOOP_HOME=\"$HADOOP_HOME\"" >> $TMP_ENV_FILE
 echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
 
 # Initialize the product RWE environment.

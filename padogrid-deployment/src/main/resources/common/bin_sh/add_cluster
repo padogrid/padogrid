@@ -49,7 +49,7 @@ DESCRIPTION
 
 OPTIONS
    -product product_name
-             Cluser product name. The specified group's default product is assigned.
+             Cluster product name. The specified group's default product is assigned.
              This command will abort if the specified product is not installed for the current
              workspace. To add or update product installations, set the appropriate '*_HOME'
              environment varibles in the RWE or workspace 'setenv.sh' file. Note that workspace
@@ -107,7 +107,16 @@ if [ "$CLUSTER_NAME" == "" ]; then
    fi
 fi
 
-PRODUCT_NAME=$(getProperty "$GROUP_FILE" "group.product")
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$(getInstalledProducts)" "$PRODUCT_ARG")" == "false" ]; then
+      echo >&2 -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+      exit 1
+   fi
+   PRODUCT_NAME=$PRODUCT_ARG
+else
+   PRODUCT_NAME=$(getProperty "$GROUP_FILE" "group.product")
+fi
+
 TYPE=$(getProperty "$GROUP_FILE" "group.type")
 FIRST_PORT=$(getProperty "$GROUP_FILE" "group.firstPort")
 
