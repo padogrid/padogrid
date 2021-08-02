@@ -213,6 +213,7 @@ function getProductKeyValue
    local product=${bundleName#bundle-}
    product=${product%%-*}
    version=${bundleName#bundle-$product-}
+   version=${version#training-}
    version=${version%%-*}
    version=${version/n/,} 
    echo "$product=$version"
@@ -362,6 +363,8 @@ if [ "$DOWNLOAD" == "true" ]; then
             && [[ "$keyvalue" != "gemfire"* ]] \
             && [[ "$keyvalue" != "snappydata"* ]] \
             && [[ "$keyvalue" != "spark"* ]] \
+            && [[ "$keyvalue" != "kafka"* ]] \
+            && [[ "$keyvalue" != "hadoop"* ]] \
             && [[ "$keyvalue" != "coherence"* ]]; then
             echo -e >&2 "${CLightRed}ERROR:${CNone} Unsupported bundle product name [$keyvalue]. Command aborted."
             exit 1
@@ -404,6 +407,12 @@ if [ "$DOWNLOAD" == "true" ]; then
             elif [ "$PRODUCT" == "spark" ]; then
                found=$(isProductExist "$PRODUCT" "$SPARK_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="standalone"
+            elif [ "$PRODUCT" == "kafka" ]; then
+               found=$(isProductExist "$PRODUCT" "$KAFKA_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="kraft"
+            elif [ "$PRODUCT" == "hadoop" ]; then
+               found=$(isProductExist "$PRODUCT" "HADOOP_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="pseudo"
             elif [ "$PRODUCT" == "coherence" ]; then
                found=$(isProductExist "$PRODUCT" "$COHERENCE_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="coherence"
