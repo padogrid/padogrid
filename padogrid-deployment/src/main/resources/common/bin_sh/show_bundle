@@ -41,7 +41,13 @@ NAME
    $EXECUTABLE - List online bundles or display bundle descriptions
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-githost github|gitea] [-all | [-product bundle_product_name] | [-list|-header|-catalog] ] [-console] [bundle_file_name]
+   $EXECUTABLE [-user git_user_name]
+               [-githost github|gitea]
+               [-connect https | ssh]
+               [-all | [-product bundle_product_name] | [-list|-header|-catalog]]
+               [-console]
+               [bundle_file_name]
+               [-?]
 
 DESCRIPTION
    Lists online bundles or displays the specified bundle's README.md file in the browser. If
@@ -207,7 +213,6 @@ fi
 
 BUNDLE_FILE_PATH=${@: -1}
 ARG1=${@: -2}
-
 if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-product "* ]] || [[ "$ARG1" == "-user "* ]]; then
    # If bundle file not specified... 
    echo ""
@@ -226,7 +231,7 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
       NEXT_URL=$BUNDLE_REPOS
       let BUNDLE_INDEX=0
       while [ "$NEXT_URL" != "" ]; do
-         BUFFER=$(curl -sS $NEXT_URL)
+         BUFFER=$(curl -sSL $NEXT_URL)
          NEXT_URL=$(echo "$BUFFER" | grep "Next" | grep "$GITHUB_USER_HOME?after=" | sed -e 's/.*href="//' -e 's/">Next.*$//')
 
          for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
@@ -297,11 +302,12 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
       echo "---------------"
    fi
 
-   echo "   View catalog (use cases): show_bundle -catalog"
-   echo "   View bundle instructions: show_bundle bundle_file_name"
-   echo "    Preview bundle contents: install_bundle -download -preview bundle_file_name"
-   echo "             Install bundle: install_bundle -download bundle_file_name"
-   echo "Install bundle as workspace: install_bundle -download -workspace bundle_file_name"
+   echo "    View catalog (use cases): show_bundle -catalog"
+   echo "    View bundle instructions: show_bundle bundle_name"
+   echo "     Preview bundle contents: install_bundle -download -preview bundle_name"
+   echo "              Install bundle: install_bundle -download bundle_name"
+   echo " Install bundle as workspace: install_bundle -download -workspace bundle_name"
+   echo "Checkout bundle as workspace: install_bundle -checkout bundle_name"
    echo ""
 else
    # If bundle file specified... 

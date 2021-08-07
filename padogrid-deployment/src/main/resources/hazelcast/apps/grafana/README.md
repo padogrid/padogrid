@@ -145,7 +145,7 @@ Include Grafana in your `PATH` and run the following (`GRAFANA_HOME` is the Graf
 
 ```bash
 export GRAFANA_HOME=<grafana-installation-directory>
-export PATH=$PATH:$GRAFANA_HOME
+export PATH=$PATH:$GRAFANA_HOME/bin
 grafana-server -homepath $GRAFANA_HOME
 ```
 
