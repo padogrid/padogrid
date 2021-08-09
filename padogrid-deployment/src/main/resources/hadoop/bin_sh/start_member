@@ -1,0 +1,562 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -fg -simulate -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start a Hadoop member (datanode) in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-simulate] [-?]
+
+DESCRIPTION
+   Starts a Hadoop member (datanode) in the specified cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -fg
+             This option is only applicable for RUN_SCRIPT. If RUN_SCRIPT is defined, then the
+             script is run in the foreground.
+
+   -num member_number
+             Member number 1-99.
+
+   -simulate
+             If specified then it only displays the member information and does
+             not run the member.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MEMBER_NUM
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*member* *datanode*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+POD=`getClusterProperty "pod.name" "local"`
+
+# Set FG_OPT
+if [ "$SIMULATE" == "true" ]; then
+   FG_OPT="-fg"
+else
+   FG_OPT=""
+fi
+# Set -simulate if specified
+if [ "$SIMULATE" == "true" ]; then
+   SIMULATE_OPT="-simulate"
+else
+   SIMULATE_OPT=""
+fi
+# Set -create_script if specified
+if [ "$CREATE_SCRIPT" == "true" ]; then
+   CREATE_SCRIPT_OPT="-create-script"
+else
+   CREATE_SCRIPT_OPT=""
+fi
+
+#
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_NAMENODE_HOSTS=$(getClusterProperty "vm.namenode.hosts")
+      if [ "$VM_NAMENODE_HOSTS" == "" ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "    ERROR: VM namenode hosts undefined. Set 'vm.namenode.hosts' in the following cluster.properties file."  
+         echo >&2 "           $ETC_DIR/cluster.properties"
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_HOSTS=$(getClusterProperty "vm.hosts")
+      if [ "$VM_HOSTS" == "" ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+         echo >&2 "           $ETC_DIR/cluster.properties"
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+      NAMENODE_START_PORT=`getClusterProperty "namenode.tcp.startPort" $DEFAULT_NAMENODE_START_PORT`
+      # Replace , with space
+      __VM_NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_NAMENODE_HOSTS; do
+         if [ "$NAMENODE_TCP_LIST" == "" ]; then
+            NAMENODE_TCP_LIST="$VM_HOST[$NAMENODE_START_PORT]"
+         else
+            NAMENODE_TCP_LIST="$NAMENODE_TCP_LIST,$VM_HOST[$NAMENODE_START_PORT]"
+         fi
+      done
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+
+      # Determine the host
+      __MEMBER_NUMBER=0
+      __FOUND="false"
+      
+      for VM_HOST in $__VM_HOSTS; do
+         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+            __FOUND="true"
+            if [ "$POD" == "local" ]; then
+               NUM=1
+            else
+               let NUM=__MEMBER_NUMBER
+            fi
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            break;
+         fi
+      done
+      FIRST_NUMBER=1
+      LAST_NUMBER=$__MEMBER_NUMBER
+      if [ "$__FOUND" == "false" ]; then
+         echo >&2 "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+if [ "$VM_ENABLED" == "true" ]; then
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
+   MEMBER=`getVmMemberName`
+else
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+fi
+MEMBER_DIR=$RUN_DIR/$MEMBER
+
+if  [ ! -d "$CLUSTER_DIR" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ ! -d "$MEMBER_DIR" ]; then
+   if [ "$REMOTE_SPECIFIED" == "true" ]; then
+      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Member: $MEMBER"
+      echo "   Status: This member has not been configured. Please run the add_member command to configure"
+      echo "           new members."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# If the member is already running, then exit.
+if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
+   PID=`getMemberPid $MEMBER $WORKSPACE`
+   if [ -n "${PID}" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Member: $MEMBER"
+      echo "   Status: This member is already running [Member: $MEMBER, PID=$PID]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# Member port number
+NAMENODE_START_PORT=`getClusterProperty "namenode.tcp.startPort" $DEFAULT_NAMENODE_START_PORT`
+MEMBER_PROPERTIES=""
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+# Increment port numbers for host OS
+PORT_INCR=$DEFAULT_DATANODE_PORT_INCR
+let PORT_DIFF=NAMENODE_START_PORT-DEFAULT_NAMENODE_START_PORT
+let PORT_DIFF=$((PORT_DIFF+(PORT_INCR*(MEMBER_NUMBER-1))))
+let MEMBER_PORT=MEMBER_START_PORT+PORT_DIFF
+let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
+MEMBER_WEBUI_START_PORT=`getClusterProperty "webui.startPort" $DEFAULT_MEMBER_WEBUI_START_PORT`
+let MEMBER_WEBUI_PORT=MEMBER_WEBUI_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+NAMENODE_TCP_LIST=""
+MEMBER_TCP_LIST=""
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+BIND_ADDRESS=""
+HOSTNAME_FOR_CLIENTS=""
+REDUNDANCY_ZONE=""
+if [ "$VM_ENABLED" == "true" ]; then
+
+   VM_NAMENODE_HOSTS=$(getClusterProperty "vm.namenode.hosts")
+   if [ "$VM_NAMENODE_HOSTS" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: VM namenode hosts undefined. Set 'vm.namenode.hosts' in the following cluster.properties file."  
+      echo >&2 "           $ETC_DIR/cluster.properties"
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo >&2 "           $ETC_DIR/cluster.properties"
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   # Replace , with space
+   __NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
+   for VM_HOST in $__NAMENODE_HOSTS; do
+      BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress" "$VM_HOST"`
+      if [ "$NAMENODE_TCP_LIST" == "" ]; then
+         NAMENODE_TCP_LIST="$BIND_ADDRESS[$NAMENODE_START_PORT]"
+      else
+         NAMENODE_TCP_LIST="$NAMENODE_TCP_LIST,$BIND_ADDRESS[$NAMENODE_START_PORT]"
+      fi
+   done
+   VM_HOST=$REMOTE
+   BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients"`
+   REDUNDANCY_ZONE=`getClusterProperty "vm.${VM_HOST}.redundancyZone"`
+
+elif [ "$POD" == "local" ]; then
+
+   HOST_NAME=`hostname`
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+   NAMENODE_PREFIX=`getNameNodePrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${NAMENODE_PREFIX}*; do
+      if [ -d "$i" ]; then
+         __NAMENODE=$i
+         __NAMENODE_NUM=${__NAMENODE##$NAMENODE_PREFIX}
+         __NAMENODE_NUM=$(trimLeadingZero $__NAMENODE_NUM)
+	 let __NAMENODE_PORT=NAMENODE_START_PORT+__NAMENODE_NUM-1
+         if [ "$NAMENODE_TCP_LIST" == "" ]; then
+            NAMENODE_TCP_LIST="$BIND_ADDRESS[$__NAMENODE_PORT]"
+         else
+            NAMENODE_TCP_LIST="$NAMENODE_TCP_LIST,$BIND_ADDRESS[$__NAMENODE_PORT]"
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+
+else
+
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NAMENODE_COUNT=`getNameNodeCount`
+   PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   NAMENODE_TCP_LIST="$PRIMARY_NODE_LOCAL[$NAMENODE_START_PORT]"
+
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   BIND_ADDRESS=$NODE_LOCAL
+   HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+   
+fi
+
+# Debug parameters.
+DEBUG_ENABLED=`getClusterProperty "debug.enabled" $DEFAULT_DEBUG_ENABLED`
+DEBUG=""
+if [ "$DEBUG_ENABLED" == "true" ]; then
+   DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUMBER-1
+   else
+      DEBUG_PORT=$DEBUG_START_PORT
+   fi
+   DEBUG="-Xdebug '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT'"
+else
+   DEBUG_PORT="Disabled"
+   DEBUG=""
+fi
+
+# JMX parameters
+JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
+JMX_PARAMETERS=""
+if [ "$JMX_ENABLED" == "true" ]; then
+   JMX_START_PORT=`getClusterProperty "jmx.startPort" $DEFAULT_JMX_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let JMX_PORT=JMX_START_PORT+MEMBER_NUMBER-1
+   else
+      JMX_PORT=$JMX_START_PORT
+   fi
+   JMX_PARAMETERS="-Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dspark.jmx=true"
+else
+   JMX_PORT="Disabled"
+   JMX_PARAMETERS=""
+fi
+
+# Set LOG_FILE in the log directory.
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   __LOG_DIR="$(cygpath -wp "$LOG_DIR")"
+else
+   __LOG_DIR=$LOG_DIR
+fi
+STATS_FILE_NAME=${MEMBER}.gfs
+STATS_FILE=$STATS_DIR/${STATS_FILE_NAME}
+export LOG_FILE_NAME=${MEMBER}.log
+export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   MEMBER_DIR="$(cygpath -wp "$MEMBER_DIR")"
+fi
+
+# Set heap to the "heap.min/heap.max" values found in the $ETC_DIR/cluster.properties file.
+MIN_HEAP_SIZE=`getClusterProperty "heap.min" $DEFAULT_MIN_HEAP_SIZE`
+MAX_HEAP_SIZE=`getClusterProperty "heap.max" $DEFAULT_MAX_HEAP_SIZE`
+
+# Set JAVA_OPTS.
+JAVA_OPTS="$JAVA_OPTS $JMX_PARAMETERS"
+JAVA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE $JAVA_OPTS"
+JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
+
+# Set PROMETHEUS paths
+PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
+if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+   PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let PROMETHEUS_PORT=PROMETHEUS_START_PORT+MEMBER_NUMBER-1
+   else
+      PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+   fi
+   PROMETHEUS_CONFIG_FILE_PATH="$ETC_DIR/prometheus.yml"
+   PROMETHEUS_JAR_PATH=`find $PADOGRID_HOME/lib -name jmx_prometheus_javaagent*.jar`
+
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      PROMETHEUS_JAR_PATH="$(cygpath -wp "$PROMETHEUS_JAR_PATH")"
+      PROMETHEUS_CONFIG_FILE_PATH="$(cygpath -wp "$PROMETHEUS_CONFIG_FILE_PATH")"
+      # Remove the disk drive letter from the path. A workaround to a bug in the prometheus exporter.
+      PROMETHEUS_CONFIG_FILE_PATH=${PROMETHEUS_CONFIG_FILE_PATH:2}
+   fi
+   JAVA_OPTS="$JAVA_OPTS -javaagent:$PROMETHEUS_JAR_PATH=$PROMETHEUS_PORT:$PROMETHEUS_CONFIG_FILE_PATH"
+else
+   PROMETHEUS_PORT="Disabled"
+fi
+
+# Set GC log
+GC_LOG_ENABLED=`getClusterProperty "gc.log.enabled" $DEFAULT_GC_LOG_ENABLED`
+GC_LOG_FILE_ENABLED=`getClusterProperty "gc.log.file.enabled" $DEFAULT_GC_LOG_FILE_ENABLED`
+if [ $GC_LOG_ENABLED == "true" ]; then
+   if [ $GC_LOG_FILE_ENABLED == "true" ]; then
+      GC_LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
+      if [[ ${OS_NAME} == CYGWIN* ]]; then
+         GC_LOG_FILE="$(cygpath -wp "$GC_LOG_FILE")"
+      fi
+      if [[ $JAVA_VERSION == 1.8* ]]; then
+         JAVA_OPTS="$JAVA_OPTS -Xloggc:$GC_LOG_FILE -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+      else
+         JAVA_OPTS="$JAVA_OPTS -Xlog:gc=info:file=$GC_LOG_FILE:time,uptime,pid:filecount=5,filesize=4096"
+      fi
+   fi
+fi
+
+#if [[ $JAVA_VERSION == 1.8* ]]; then
+#   JAVA_OPTS="$JAVA_OPTS \
+#      -XX:+UseParNewGC \
+#      -XX:+UseConcMarkSweepGC \
+#      -XX:CMSInitiatingOccupancyFraction=75"
+#fi
+
+#JAVA_OPTS="$JAVA_OPTS -DLOG_FILE=$LOG_FILE"
+
+# For Arrow related features. This prevents java.lang.UnsupportedOperationException: 
+# sun.misc.Unsafe or java.nio.DirectByteBuffer.(long, int) not available when Apache Arrow
+# uses Netty internally.
+#if [ "$JAVA_MAJOR_VERSION_NUMBER" == "11" ]; then
+#   JAVA_OPTS="$JAVA_OPTS -Dio.netty.tryReflectionSetAccessible=true"
+#fi
+
+# NameNode URL
+BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+NAMENODE_START_PORT=`getClusterProperty "namenode.tcp.startPort" $DEFAULT_NAMENODE_START_PORT`
+NAMENODE_NUMBER=1
+let NAMENODE_PORT=NAMENODE_START_PORT+NAMENODE_NUMBER-1
+let NAMENODE_END_PORT=NAMENODE_START_PORT+MAX_NAMENODE_COUNT-1
+NAMENODE_URL="hdfs://$BIND_ADDRESS:$NAMENODE_PORT"
+
+# Start the member
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+export LOG_DIR=$__LOG_DIR
+
+# Export JAVA_OPTS and CLASSPATH so that RUN_SCRIPT can hijack the executable.
+export JAVA_OPTS
+export CLASSPATH
+export JAVA
+
+POD=`getClusterProperty "pod.name" $POD`
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   exit
+elif [ "$SIMULATE" == "true" ]; then
+   PID="Simulated"
+elif [ "$CREATE_SCRIPT" == "true" ]; then
+   PID="Script"
+else
+   # LOG_FILE might not exist if a VM bundle has been deployed.
+   if  [ ! -d "$LOG_DIR" ]; then
+      mkdir -p $LOG_DIR
+   fi
+   if [ "$RUN_SCRIPT" != "" ]; then
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         $RUN_SCRIPT >> $LOG_FILE
+      else
+         nohup $RUN_SCRIPT >> $LOG_FILE &
+      fi
+   else
+       MEMBER_PREFIX=`getMemberPrefix` 
+       MEMBER_COUNT=`getMemberCount`
+
+       RUNNING_MEMBER_COUNT=$(getActiveMemberCount $WORKSPACE $CLUSTER)
+       if [ $RUNNING_MEMBER_COUNT -lt $MEMBER_COUNT ]; then
+
+          HADOOP_CONF_DIR=$ETC_DIR/$MEMBER
+          HADOOP_PID_DIR=$RUN_DIR/pid/$MEMBER
+          HADOOP_LOG_DIR=$LOG_DIR/$MEMBER
+          HADOOP_HEAPSIZE_MIN=$MIN_HEAP_SIZE
+          HADOOP_HEAPSIZE_MAX=$MAX_HEAP_SIZE
+          HDFS_DATANODE_OPTS="$JAVA_OPTS"
+
+          echo "Starting datanode for $MEMBER..."
+          HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
+          HADOOP_PID_DIR=$HADOOP_PID_DIR \
+          HADOOP_LOG_DIR=$HADOOP_LOG_DIR \
+          HADOOP_HEAPSIZE_MIN=$HADOOP_HEAPSIZE_MIN \
+          HADOOP_HEAPSIZE_MAX=$HADOOP_HEAPSIZE_MAX \
+          HDFS_DATANODE_OPTS=$HDFS_DATANODE_OPTS \
+          hdfs --config $HADOOP_CONF_DIR --daemon start datanode  
+       fi
+   fi
+   PID=`getMemberPid $MEMBER $WORKSPACE`
+fi
+
+# JMX_URL
+JMX_URL="service:jmx:rmi:///jndi/rmi://$HOSTNAME_FOR_CLIENTS:$JMX_PORT/jmxrmi"
+
+echo "----------------------------------------------------------------"
+echo "         WORKSPACE: $PADOGRID_WORKSPACE"
+echo "           Cluster: $CLUSTER"
+if [ "$VM_SPECIFIED" == "true" ] || [ "$VM_ENABLED" == "true" ]; then
+echo "        Deployment: VM"
+else
+echo "               Pod: $POD"
+fi
+echo "            Member: $MEMBER"
+if [ "$FG_SPECIFIED" != "true" ]; then
+echo "               PID: $PID"
+fi
+echo "      CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "       WORKING_DIR: $MEMBER_DIR"
+echo "        CONFIG_DIR: $ETC_DIR"
+echo "           LOG_DIR: $LOG_DIR"
+echo "          LOG_FILE: $LOG_FILE"
+echo "       MEMBER_PORT: $MEMBER_PORT"
+echo "  MEMBER_HTTP_PORT: $MEMBER_HTTP_PORT"
+echo "        DEBUG_PORT: $DEBUG_PORT"
+echo "   PROMETHEUS_PORT: $PROMETHEUS_PORT"
+echo "          JMX_PORT: $JMX_PORT"
+if [ "$JMX_ENABLED" == "true" ]; then
+echo "           JMX_URL: $JMX_URL"
+fi
+echo "              JAVA: $JAVA"
+if [ "$RUN_SCRIPT" != "" ]; then
+echo -e "        RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
+fi
+echo "   HADOOP_CONF_DIR: $HADOOP_CONF_DIR"
+echo "    HADOOP_PID_DIR: $HADOOP_PID_DIR"
+echo "    HADOOP_LOG_DIR: $HADOOP_LOG_DIR"
+echo "HDFS_DATANODE_OPTS: "$HDFS_DATANODE_OPTS
+echo "         CLASSPATH: $CLASSPATH"
+echo "----------------------------------------------------------------"
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "JAVA_OPTS"
+   echo "---------"
+   printJavaOpts "$JAVA_OPTS"
+   echo ""
+   echo "CLASSPATH"
+   echo "---------"
+   printClassPath "$CLASSPATH"
+   echo ""
+   echo "Environment Variable(s)"
+   echo "-----------------------"
+   echo "LOG_FILE=$LOG_FILE"
+   echo ""
+fi

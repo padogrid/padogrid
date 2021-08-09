@@ -5,9 +5,10 @@ https://github.com/padogrid
 
 ## Version 0.9.9-SNAPSHOT
 
-### Release Date: 07/27/21
+### Release Date: 08/09/21
 
 - Added preliminary support for Kafka. Kafka support is limited to the new RAFT mode and hence requires Kafka 2.8.0 or a later version.
+- Added preliminary support for Hadoop running in the pseudo mode with mutiple data nodes.
 
 ----
 

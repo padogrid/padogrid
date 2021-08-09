@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Add a new namenode to the specified cluster in the current padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num namenode_number] [-all] [-?]
+
+DESCRIPTION
+   Adds a new Hadoop namenode to the specified cluster. If namenodes already exist,
+   then it adds a namenode with the next available namenode number.
+
+   If the cluster is a VM cluster, then only one (1) namenode is allowed per VM.
+   Please note that this is a padogrid restriction, not a Hadoop product
+   limitation.
+ 
+   For VM clusters, the namenode number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
+   (Run 'show_cluster -long' to see the VM namenode numbers that map to hosts.)
+
+OPTIONS
+   -cluster cluster_name
+             If the -cluster option is present, it starts the namenode in the specified
+             cluster; otherwise, it starts the namenode in the default cluster.
+
+   -num namenode_number
+             NameNode number starting from 1.
+
+   -all      
+             This option applies to VM clusters only. If specified, it adds a namenode
+             to all namenode VMs in the cluster. namenode_number is ignored.
+
+NOTES
+   For Vagrant, the namenode number is assigned to the node (VM) number. This
+   means you can create multiple clusters, each with their own set of nodes
+   identified by the namenode numbers.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*namenode*" $EXECUTABLE
+   exit
+fi
+
+#
+# VM cluster
+#
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_HOSTS=`getClusterProperty "vm.namenode.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         echo "ERROR: VM hosts undefined. Set 'vm.namenode.hosts' in the following cluster.properties file."  
+         echo "       $ETC_DIR/cluster.properties"
+         echo "       Command aborted."
+         exit 1
+      fi
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+      if [ "$ALL" == "true" ]; then
+         for VM_HOST in $__VM_HOSTS; do
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/add_namenode -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE -num 1"
+         done
+      else
+         # Determine the host
+         __NAMENODE_NUMBER=0
+         __FOUND="false"
+         
+         for VM_HOST in $__VM_HOSTS; do
+            let __NAMENODE_NUMBER=__NAMENODE_NUMBER+1
+            if [ $__NAMENODE_NUMBER -eq $NAMENODE_NUM_NO_LEADING_ZERO ]; then
+               __FOUND="true"
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/add_namenode -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE -num 1"
+               break;
+            fi
+         done
+         FIRST_NUMBER=1
+         LAST_NUMBER=$__NAMENODE_NUMBER
+         if [ "$__FOUND" == "false" ]; then
+            echo "ERROR: Invalid namenode number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+         fi
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" $POD`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+NAMENODE_PREFIX=`getNameNodePrefix`
+NAMENODE_PREFIX_LEN=${#NAMENODE_PREFIX}
+CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+RUN_DIR=$CLUSTER_DIR/run
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "    ERROR: This cluster has not been created. Please run the create_cluster command"
+   echo "           to create the cluster before running this command. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+
+if [ "$REMOTE_SPECIFIED" == "true" ]; then
+   NEW_NAMENODE_NUMBER=1
+else
+   pushd $RUN_DIR > /dev/null 2>&1
+   PREV_NAMENODE_NUMBER=0
+   for i in ${NAMENODE_PREFIX}*; do
+      if [ -d "$i" ]; then
+        NAMENODE_NUMBER=${i:$NAMENODE_PREFIX_LEN}
+        NAMENODE_NUMBER=$(trimLeadingZero $NAMENODE_NUMBER)
+        let __NUM=PREV_NAMENODE_NUMBER+1
+        if [ $NAMENODE_NUMBER -gt $__NUM ]; then
+           NAMENODE_NUMBER=$PREV_NAMENODE_NUMBER
+           break;
+        else
+           PREV_NAMENODE_NUMBER=$NAMENODE_NUMBER
+        fi
+      fi
+   done
+   popd > /dev/null 2>&1
+   if [ "$NAMENODE_NUM_SPECIFIED" == "true" ]; then
+      let NEW_NAMENODE_NUMBER=$NAMENODE_NUM_NO_LEADING_ZERO
+   else
+      let NEW_NAMENODE_NUMBER=NAMENODE_NUMBER+1
+   fi
+fi
+NEW_NAMENODE=`getNameNodeName $NEW_NAMENODE_NUMBER`
+NEW_NAMENODE_DIR=$RUN_DIR/$NEW_NAMENODE
+
+NAMENODE_EXISTS="false"
+if [ -d $NEW_NAMENODE_DIR ]; then
+   NAMENODE_EXISTS="true"
+else
+   mkdir -p $NEW_NAMENODE_DIR
+fi
+
+echo "----------------------------------------------------------------"
+echo "      WORKSPACE: $PADOGRID_WORKSPACE"
+echo "        Cluster: $CLUSTER"
+if [ "$NAMENODE_EXISTS" == "true" ]; then
+echo "NameNode Exists: $NEW_NAMENODE"
+else
+echo " NameNode Added: $NEW_NAMENODE"
+fi
+echo "    Working Dir: $NEW_NAMENODE_DIR"
+echo "----------------------------------------------------------------"

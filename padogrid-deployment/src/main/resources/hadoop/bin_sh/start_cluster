@@ -1,0 +1,316 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start all inactive members in the specified padogrid cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name]
+
+DESCRIPTION
+   Starts all inactive (or stopped) members in the specified cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_NAMENODE_HOSTS=$(getClusterProperty "vm.namenode.hosts")
+   if [ "$VM_NAMENODE_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM local hosts undefined. Set 'vm.local.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_HOSTS=$(getClusterProperty "vm.hosts")
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   # Start namenodes
+   __NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   #VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   VM_KEY=$VM_PRIVATE_KEY_FILE
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+
+   # namenode count
+   NAMENODE_COUNT=0
+   for VM_HOST in $__NAMENODE_HOSTS; do
+      let NAMENODE_COUNT=NAMENODE_COUNT+1
+   done
+
+   COUNT=0
+   for VM_HOST in $__NAMENODE_HOSTS; do
+      let COUNT=COUNT+1
+      if [ $COUNT -lt $NAMENODE_COUNT ]; then
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE" &
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE"
+      fi
+   done
+
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   for VM_HOST in $__VM_HOSTS; do
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE"
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE" &
+      fi
+   done
+   exit
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+__NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
+NAMENODE_PREFIX=`getHadoopPrefix namenode`
+NAMENODE_PREFIX_LEN=${#NAMENODE_PREFIX}
+NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+
+NODE_COUNT=`getPodProperty "node.count" 0` 
+MEMBER_COUNT=`getMemberCount`
+
+# Show warning message if the member count is greater than the pod size.
+if [ "$POD" != "local" ]; then
+   if [ "$MEMBER_COUNT" -gt "$NODE_COUNT" ]; then
+       echo "WARNING: The cluster member count ($MEMBER_COUNT) exceeds the data node count ($NODE_COUNT) in the pod."
+       echo "         Only $NODE_COUNT member will be started."
+   fi
+fi
+
+if [ "$(isClusterExist $CLUSTER)" == "false" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "    ERROR: This cluster has not been created. Please run the create_cluster command"
+   echo "           to create the cluster before running this command. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+# TODO: The following assumes that the member numbers exist consecutively.
+#       Need a way to pass the node number to start_member.
+
+
+# Start namenodes
+pushd $RUN_DIR > /dev/null 2>&1
+# namenode count
+let NAMENODE_COUNT=0
+for VM_HOST in $__NAMENODE_HOSTS; do
+   let NAMENODE_COUNT=NAMENODE_COUNT+1
+done
+
+COUNT=0
+for i in ${NAMENODE_PREFIX}*; do
+   if [ -d "$i" ]; then
+      let COUNT=COUNT+1
+      pushd $i > /dev/null 2>&1
+      NAMENODE_NUMBER=${i:$NAMENODE_PREFIX_LEN}
+      if [ $COUNT -lt $NAMENODE_COUNT ]; then
+         start_namenode -cluster $CLUSTER -num $NAMENODE_NUMBER &
+      else
+         start_namenode -cluster $CLUSTER -num $NAMENODE_NUMBER
+      fi
+      popd > /dev/null 2>&1
+   fi
+   if [ "$POD" != "local" ]; then
+      if [ "$COUNT" -ge "$NODE_COUNT" ]; then
+         break;
+       fi
+   fi
+done
+
+# Use the first member's config dir
+NAMENODE=`getNameNodeName 1`
+MEMBER_NAME=`getMemberName 1`
+HADOOP_CONF_DIR=$ETC_DIR/$MEMBER_NAME
+HADOOP_PID_DIR=$RUN_DIR/pid/$NAMENODE
+HADOOP_LOG_DIR=$LOG_DIR/$NAMENODE
+HADOOP_HEAPSIZE_MIN=$(getClusterProperty "heap.min" $DEFAULT_MIN_HEAP_SIZE)
+HADOOP_HEAPSIZE_MAX=$(getClusterProperty "heap.max" $DEFAULT_MAX_HEAP_SIZE)
+
+IS_SECONDARYNAMENODE_ENABLED=$(getClusterProperty secondarynamenode.enabled "false")
+IS_NODEMANAGER_ENABLED=$(getClusterProperty nodemanager.enabled "false")
+IS_RESOURCEMANAGER_ENABLED=$(getClusterProperty resourcemanager.enabled "false")
+IS_HISTORYSERVER_ENABLED=$(getClusterProperty historyserver.enabled "false")
+
+if [ "$IS_SECONDARYNAMENODE_ENABLED" = "true" ]; then
+   SECONDARYNAMENODE="$(getHadoopPrefix secondarynamenode)01"
+   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE_NAME`
+   if [ "$PID" == "" ]; then
+      echo "Starting secondarynamenode..."
+      HDFS_SECONDARYNAMENODE_OPTS="-Dpado.vm.id=$SECONDARYNAMENODE -Dpadogrid.workspace=$WORKSPACE_NAME"
+      HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
+      HADOOP_PID_DIR=$HADOOP_PID_DIR \
+      HADOOP_LOG_DIR=$HADOOP_LOG_DIR \
+      HADOOP_HEAPSIZE_MIN=$HADOOP_HEAPSIZE_MIN \
+      HADOOP_HEAPSIZE_MAX=$HADOOP_HEAPSIZE_MAX \
+      HDFS_SECONDARYNAMENODE_OPTS=$HDFS_SECONDARYNAMENODE_OPTS \
+      hdfs --daemon start secondarynamenode
+   fi
+fi
+if [ "$IS_NODEMANAGER_ENABLED" = "true" ]; then
+   NODEMANAGER="$(getHadoopPrefix nodemanager)01"
+   PID=`getNameNodePid $NODEMANAGER $WORKSPACE_NAME`
+   if [ "$PID" == "" ]; then
+      echo "Starting nodemanager..."
+      YARN_NODEMANAGER_OPTS="-Dpado.vm.id=$NODEMANAGER -Dpadogrid.workspace=$WORKSPACE_NAME"
+      HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
+      HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS \
+      HDFS_DATANODE_OPTS=$HDFS_DATANODE_OPTS \
+      HADOOP_PID_DIR=$HADOOP_PID_DIR \
+      HADOOP_LOG_DIR=$HADOOP_LOG_DIR \
+      HADOOP_HEAPSIZE_MIN=$HADOOP_HEAPSIZE_MIN \
+      HADOOP_HEAPSIZE_MAX=$HADOOP_HEAPSIZE_MAX \
+      YARN_NODEMANAGER_OPTS=$YARN_NODEMANAGER_OPTS \
+      yarn --daemon start nodemanager
+   fi
+fi
+if [ "$IS_RESOURCEMANAGER_ENABLED" = "true" ]; then
+   RESOURCEMANAGER="$(getHadoopPrefix resourcemanager)01"
+   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE_NAME`
+   if [ "$PID" == "" ]; then
+      echo "Starting resourcemanager..."
+      YARN_RESOURCEMANAGER_OPTS="-Dpado.vm.id=$RESOURCEMANAGER -Dpadogrid.workspace=$WORKSPACE_NAME"
+      HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
+      HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS \
+      HDFS_DATANODE_OPTS=$HDFS_DATANODE_OPTS \
+      HADOOP_PID_DIR=$HADOOP_PID_DIR \
+      HADOOP_LOG_DIR=$HADOOP_LOG_DIR \
+      HADOOP_HEAPSIZE_MIN=$HADOOP_HEAPSIZE_MIN \
+      HADOOP_HEAPSIZE_MAX=$HADOOP_HEAPSIZE_MAX \
+      YARN_RESOURCEMANAGER_OPTS=$YARN_RESOURCEMANAGER_OPTS \
+      yarn --daemon start resourcemanager
+   fi
+fi
+if [ "$IS_HISTORYSERVER_ENABLED" = "true" ]; then
+   HISTORYSERVER="$(getHadoopPrefix historyserver)01"
+   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE_NAME`
+   if [ "$PID" == "" ]; then
+      echo "Starting historyserver..."
+      MAPRED_HISTORYSERVER_OPTS="-Dpado.vm.id=$HISTORYSERVER -Dpadogrid.workspace=$WORKSPACE_NAME"
+      HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
+      HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS \
+      HDFS_DATANODE_OPTS=$HDFS_DATANODE_OPTS \
+      HADOOP_PID_DIR=$HADOOP_PID_DIR \
+      HADOOP_LOG_DIR=$HADOOP_LOG_DIR \
+      HADOOP_HEAPSIZE_MIN=$HADOOP_HEAPSIZE_MIN \
+      HADOOP_HEAPSIZE_MAX=$HADOOP_HEAPSIZE_MAX \
+      MAPRED_HISTORYSERVER_OPTS=$MAPRED_HISTORYSERVER_OPTS \
+      mapred --daemon start historyserver
+   fi
+fi
+
+# Start members in background
+COUNT=0
+for i in ${MEMBER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      let COUNT=COUNT+1
+      pushd $i > /dev/null 2>&1
+      MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+      start_member -cluster $CLUSTER -num $MEMBER_NUMBER $*
+      popd > /dev/null 2>&1
+   fi
+   if [ "$POD" != "local" ]; then
+      if [ "$COUNT" -ge "$NODE_COUNT" ]; then
+         break;
+       fi
+   fi
+done
+popd > /dev/null 2>&1
+
+if [ "$MEMBER_NUMBER" == "" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "     INFO: Cluster has no members defined: [$CLUSTER]. Please add members by executing the 'add_member' command."
+   echo "----------------------------------------------------------------"
+fi

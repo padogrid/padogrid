@@ -65,7 +65,7 @@ VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 export VERSION
 
-PRODUCTS="geode hazelcast snappydata spark kafka"
+PRODUCTS="geode hazelcast snappydata spark kafka hadoop"
 
 if [ "$COHERENCE_SPECIFIED" == "true" ]; then
    PRODUCTS="$PRODUCTS coherence"

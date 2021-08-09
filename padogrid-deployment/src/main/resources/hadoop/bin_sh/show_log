@@ -42,7 +42,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster <cluster-name>] [-num <member-number>]
-               [-all | -full] [-log [data|controller|gc]] [-?]
+               [-all | -full] [-log [data|gc|locator]] [-?]
 
 DESCRIPTION
    Displays the specified member's log file. By default, follows the tail
@@ -66,8 +66,8 @@ DESCRIPTION
    -full
               Display the entire log file using 'less'
 
-   -log [data|controller|gc]
-              Display data (server), controller, or GC log file. Default: data
+   -log [data|gc|locator]
+              Display data, GC, or locator log file. Default: data
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -107,11 +107,19 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
    fi
-   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$LOG" == "locator" ]; then
+      VM_HOSTS=`getClusterProperty "vm.locator.hosts"`
+   else
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+   fi
    if [ "$VM_HOSTS" == "" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      if [ "$LOG" == "locator" ]; then
+      echo "    ERROR: VM locator hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
+      else
       echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      fi
       echo "           $ETC_DIR/cluster.properties"
       echo "           Command aborted."
       echo "----------------------------------------------------------------"
@@ -147,10 +155,24 @@ fi
 POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
-MEMBER_PREFIX=`getMemberPrefix`
-MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
-MEMBER=`getMemberName $MEMBER_NUMBER`
-MEMBER_DIR=$RUN_DIR/$MEMBER
+case "$LOG" in 
+namenode|secondarynamenode|nodemanager|resourcemanager|historyserver)
+   # For pod clusters. If non-pod, the following variables are ignored.
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   MEMBER_NUMBER=$NAMENODE_NUM_NO_LEADING_ZERO
+   NAMENODE=`getNameNodeName $MEMBER_NUMBER`
+   MEMBER_DIR=$RUN_DIR/$NAMENODE
+   ;;
+
+*)
+   MEMBER_PREFIX=`getMemberPrefix`
+   MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+   MEMBER_DIR=$RUN_DIR/$MEMBER
+   ;;
+
+esac
 
 if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
@@ -166,39 +188,48 @@ if [ ! -d $MEMBER_DIR ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
    echo "  Cluster: $CLUSTER"
+   if [ "$LOG" == "locator" ]; then
+   echo "  NameNode: $MEMBER"
+   echo "   Status: This namenode has not been configured. Please run the add_namenode command to configure"
+   echo "           new locators."
+   else
    echo "   Member: $MEMBER"
    echo "   Status: This member has not been configured. Please run the add_member command to configure"
    echo "           new members."
+   fi
    echo "----------------------------------------------------------------"
    exit 1
 fi
 
+USER_NAME=$(whoami)
+
 case "$LOG" in 
-controller)
+namenode|secondarynamenode|nodemanager|resourcemanager|historyserver)
    if [ "$ALL" == "true" ]; then
-      CONTROLLER_LOG="server-??/controller.log"
+      NAMENODE_LOG="hadoop-$USER_NAME-$LOG-`hostname`.log"
+      LOG_FILE=$LOG_DIR/$NAMENODE_PREFIX*/${NAMENODE_LOG}
    else
-      CONTROLLER_LOG="server-$MEMBER_NUM/controller.log"
+      NAMENODE_LOG="hadoop-$USER_NAME-$LOG-`hostname`.log"
+      LOG_FILE=$LOG_DIR/$NAMENODE/${NAMENODE_LOG}
    fi
-   LOG_FILE=$LOG_DIR/${CONTROLLER_LOG}
    ;;
 
 gc)
    if [ "$ALL" == "true" ]; then
-      GC_LOG="server-??/kafkaServer-gc.log.0.current"
+      LOG_FILE=$LOG_DIR/${MEMBER_PREFIX}??-gc.log
    else
-      GC_LOG="server-$MEMBER_NUM/kafkaServer-gc.log.0.current"
+      LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
    fi
-   LOG_FILE=$LOG_DIR/${GC_LOG}
    ;;
 
 *)
    if [ "$ALL" == "true" ]; then
-      MEMBER_LOG="server-??/server.log"
+      MEMBER_LOG="hadoop-$USER_NAME-datanode-`hostname`.log"
+      LOG_FILE=$LOG_DIR/$MEMBER_PREFIX*/${MEMBER_LOG}
    else
-      MEMBER_LOG="server-$MEMBER_NUM/server.log"
+      MEMBER_LOG="hadoop-$USER_NAME-datanode-`hostname`.log"
+      LOG_FILE=$LOG_DIR/$MEMBER/${MEMBER_LOG}
    fi
-   LOG_FILE=$LOG_DIR/${MEMBER_LOG}
    ;;
 
 esac

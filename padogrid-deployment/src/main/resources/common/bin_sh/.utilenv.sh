@@ -810,6 +810,8 @@ function getMemberPrefix
       echo "${__CLUSTER}-${__NODE_NAME_PREFIX}-"
    elif [ "$PRODUCT" == "spark" ]; then
       echo "${__CLUSTER}-worker-`hostname`-"
+   elif [ "$PRODUCT" == "hadoop" ]; then
+      echo "${__CLUSTER}-datanode-`hostname`-"
    else
       echo "${__CLUSTER}-`hostname`-"
    fi
@@ -3563,6 +3565,12 @@ function determineClusterProduct
       elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
          PRODUCT="spark"
          CLUSTER_TYPE="standalone"
+      elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
+         PRODUCT="spark"
+         CLUSTER_TYPE="standalone"
+      elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then   
+         PRODUCT="hadoop"
+         CLUSTER_TYPE="pseudo"
       fi
    fi
 }

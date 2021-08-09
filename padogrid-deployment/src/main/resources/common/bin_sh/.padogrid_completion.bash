@@ -128,10 +128,12 @@ __padogrid_complete()
       	case "$PRODUCT" in
          geode|snappydata)
             type_list="$DEFAULT_LOCATOR_START_PORT";;
-         hazelcast|coherence)
+         hazelcast|coherence|kafka)
             type_list="$DEFAULT_MEMBER_START_PORT";;
          spark)
             type_list="$DEFAULT_MASTER_START_PORT";;
+         hadoop)
+            type_list="$DEFAULT_NAMENODE_START_PORT";;
          esac
       elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list="8888"
@@ -323,6 +325,8 @@ __padogrid_complete()
          type_list="data gc";;
       kafka)
          type_list="data gc controller";;
+      hadoop)
+         type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
       esac
       ;;
 
@@ -998,6 +1002,8 @@ __command_complete()
          type_list="data gc";;
       kafka)
          type_list="data gc controller";;
+      hadoop)
+         type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
       esac
      ;;
    -num)
@@ -1008,10 +1014,12 @@ __command_complete()
          case "$PRODUCT" in
          geode|snappydata)
             type_list="$DEFAULT_LOCATOR_START_PORT";;
-         hazelcast|coherence)
+         hazelcast|coherence|kafka)
             type_list="$DEFAULT_MEMBER_START_PORT";;
          spark)
             type_list="$DEFAULT_MASTER_START_PORT";;
+         hadoop)
+            type_list="$DEFAULT_NAMENODE_START_PORT";;
          esac
       elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list="8888"

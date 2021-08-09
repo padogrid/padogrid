@@ -1,0 +1,116 @@
+#!/usr/bin/env bash 
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-product -app -name -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+PRODUCT_OPTIONS=$(echo "$APP_PRODUCT_LIST" | sed 's/ /|/g')
+PRODUCTS_SUPPORTED=$(echo "$APP_PRODUCT_LIST" | sed 's/ /, /g')
+THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+APP_OPTIONS="$(echo $(getAppOptions $THIS_PRODUCT) | sed 's/ /|/g')"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+    $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Create a new app by installing the specified app that is part of the
+                 padogrid distribution
+
+SYNOPSIS
+   $EXECUTABLE [-product $PRODUCT_OPTIONS]
+              [-app app_name]
+              [-name new_app_name]
+              [-?]
+
+DESCRIPTION
+   Creates a new app by installing the specified app that is part of the padogrid
+   distribution. This command creates a new app directory in the workspace 'apps' directory.
+
+   You are encouraged to create and configure as many apps as you need by specifying
+   different names using the '-name' option. By doing so, you minimize the reconfiguration
+   efforts.
+
+OPTIONS
+   -product $PRODUCT_OPTIONS
+             Product name. Supported products are $PRODUCTS_SUPPORTED.
+
+   -app app_name
+             Name of the app to create. Use <tab><tab> to see available apps. If not
+             specified, then it defaults to 'perf_test'.
+
+   -name new_app_name
+             New name of the app. If not specified, then it defaults to 'perf_test' or
+             the specified app_name.
+
+DEFAULT
+EOF
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+cat <<EOF
+   $EXECUTABLE -app jet_demo -name jet_demo
+EOF
+else
+cat <<EOF
+   $EXECUTABLE -app perf_test -name perf_test
+EOF
+fi
+cat <<EOF
+
+FILES
+   $PADOGRID_WORKSPACE/apps
+             The current workspace apps directory where all the apps are stored.
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*app*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target app command if the product is different.
+#
+PRODUCT="$THIS_PRODUCT"
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$APP_PRODUCT_LIST" "$PRODUCT_ARG")" == "false" ]; then
+      >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+      exit 1
+   fi
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
+      if [ "$PRODUCT_ARG" == "jet" ]; then
+         PRODUCT_ARG="hazelcast"
+      fi
+      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+      exit
+   fi
+fi
+
+echo "$EXECUTABLE not supported for $THIS_PRODUCT in this PadoGrid release. Use '-product' to specify another product."
