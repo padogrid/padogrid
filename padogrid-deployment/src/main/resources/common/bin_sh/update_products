@@ -275,6 +275,9 @@ for i in $(seq 0 $LAST_INDEX); do
   PRODUCT_EVAL_ARRAY[$i]="none"
 done
 
+__JAVA_HOME=$JAVA_HOME
+NEW_JAVA_HOME=$JAVA_HOME
+
 REDO="true"
 while [ "$REDO" == "true" ]; do
    # PadoGrid
@@ -284,6 +287,36 @@ while [ "$REDO" == "true" ]; do
       SELECTED_INDEX_PADOGRID=$SELECTED_INDEX
       PRODUCT_EVAL_ARRAY[$INDEX_PADOGRID]=${__PADOGRID_VERSIONS[$SELECTED_INDEX]}
    fi
+
+   # Java
+   __REDO=true
+   while [ "$__REDO" == "true" ]; do
+      echo "Enter Java home path."
+      if [[ $OS_NAME == CYGWIN* ]]; then
+         echo "Enter only Unix absolute path. Windows path not allowed."
+      fi
+      echo "[$__JAVA_HOME]:"
+      read -p "" INPUT
+      # trim string
+      INPUT=`echo "$INPUT" | xargs`
+      if [ "$INPUT" != "" ]; then
+         __JAVA_HOME="$INPUT"
+      fi
+      if [[ $OS_NAME == CYGWIN* ]]; then
+         __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
+      fi
+      __JAVA_HOME="$(trimString "$__JAVA_HOME")"
+      if [[ ! -d "$__JAVA_HOME" ]]; then
+         echo "Directory does not exist or not a directory."
+         __JAVA_HOME="$JAVA_HOME_ARG"
+         __REDO=true
+      elif [ "$__JAVA_HOME" == "" ]; then
+         __REDO=true
+      else
+         __REDO=false
+      fi
+   done
+   NEW_JAVA_HOME="$__JAVA_HOME"
    
    # Pado
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
@@ -487,6 +520,7 @@ while [ "$REDO" == "true" ]; do
    echo ""
    echo "You have selected the following products to add or update:"
    echo "   PadoGrid: ${__PADOGRID_VERSIONS[$SELECTED_INDEX_PADOGRID]}"
+   echo "       Java: ${NEW_JAVA_HOME}"
    echo "       Pado: ${__PADO_VERSIONS[$SELECTED_INDEX_PADO]}"
    echo "    GemFire: ${__GEMFIRE_VERSIONS[$SELECTED_INDEX_GEMFIRE]}"
    echo "      Geode: ${__GEODE_VERSIONS[$SELECTED_INDEX_GEODE]}"
@@ -567,7 +601,7 @@ function getProductDirName
       ;;
     $INDEX_HAZELCAST_MC ) DIR_NAME="hazelcast-management-center-$VERSION";;
     $INDEX_JET )
-       if [ "$IS_ENTERPRISE" == "true" ; then 
+       if [ "$IS_ENTERPRISE" == "true" ]; then 
           DIR_NAME="hazelcast-jet-enterprise-$VERSION"
        else
           DIR_NAME="hazelcast-jet-$VERSION"
@@ -609,15 +643,32 @@ function updateEVAL_RWE
    local PRODUCT_DIR_NAME=$(getProductDirName $INDEX $VERSION $IS_ENTERPRISE)
    local ENV_HOME_PATH=$PRODUCTS_DIR/$PRODUCT_DIR_NAME
 
+   updateEVAL_RWE_HOME_PATH "$ENV_HOME" "$ENV_HOME_PATH" "$SETENV_PATH"
+}
+
+#
+# Upates EVAL_RWE variable with the specified product home path.
+#
+# @param homeEnvVar      Home environment variable, e.g. PADOGRID_HOME
+# @param productHomePath Product home path
+# @param setenvPath      setenv.sh path
+# @required PRODUCTS_DIR Products directory path
+#
+function updateEVAL_RWE_HOME_PATH
+{
+   local ENV_HOME="$1"
+   local ENV_HOME_PATH="$2"
+   local SETENV_PATH="$3"
+
    if [ "$(grep "$ENV_HOME" $SETENV_PATH)" == "" ]; then
       # If env var not found in setenv.sh, then insert this one before PRODUCT_HOME.
-      EVAL_RWE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\"${ENV_HOME_PATH}\"'\'$'\n''\1|'"
+      EVAL_RWE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'\'$'\n''\1|'"
    elif [ "$(grep "^.*#.*export $ENV_HOME" $SETENV_PATH)" != "" ]; then
       # Replace commented env var
-      EVAL_RWE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|   export $ENV_HOME='\"${ENV_HOME_PATH}\"'|'"
+      EVAL_RWE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
    else
       # Replace the existing env var
-      EVAL_RWE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\"${ENV_HOME_PATH}\"'|'"
+      EVAL_RWE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
    fi
 }
 
@@ -632,15 +683,33 @@ function updateEVAL_WORKSPACE
    local PRODUCT_DIR_NAME=$(getProductDirName $INDEX $VERSION $IS_ENTERPRISE)
    local ENV_HOME_PATH=$PRODUCTS_DIR/$PRODUCT_DIR_NAME
 
+   updateEVAL_WORKSPACE_HOME_PATH "$ENV_HOME" "$ENV_HOME_PATH" "$SETENV_PATH"
+}
+
+#
+# Upates EVAL_WORKSPACE variable with the specified product home path.
+#
+# @param homeEnvVar      Home environment variable, e.g. PADOGRID_HOME
+# @param productHomePath Product home path
+# @param setenvPath      setenv.sh path
+# @required PRODUCTS_DIR Products directory path
+#
+function updateEVAL_WORKSPACE_HOME_PATH
+{
+   local ENV_HOME="$1"
+   local ENV_HOME_PATH="$2"
+   local SETENV_PATH="$3"
+
    if [ "$(grep "$ENV_HOME" $SETENV_PATH)" == "" ]; then
       # If env var not found in setenv.sh, then insert this one before PRODUCT_HOME.
-      EVAL_WORKSPACE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\"${ENV_HOME_PATH}\"'\'$'\n''\1|'"
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'\'$'\n''\1|'"
    elif [ "$(grep "^.*#.*export $ENV_HOME" $SETENV_PATH)" != "" ]; then
       # Replace commented env var
-      EVAL_WORKSPACE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|   export $ENV_HOME='\"${ENV_HOME_PATH}\"'|'"
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
    else
       # Replace the existing env var
-      EVAL_WORKSPACE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\"${ENV_HOME_PATH}\"'|'"
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
+      #EVAL_WORKSPACE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\"${ENV_HOME_PATH}\"'|'"
    fi
 }
 
@@ -661,6 +730,9 @@ if [ "$UPDATE_RWE" == "true" ]; then
       fi
       let PRODUCT_INDEX=PRODUCT_INDEX+1
    done
+   if [ "$NEW_JAVA_HOME" != "" ] && [ "$NEW_JAVA_HOME" != "$JAVA_HOME" ]; then
+      updateEVAL_RWE_HOME_PATH "JAVA_HOME" "$NEW_JAVA_HOME" "$RWE_SETENV"
+   fi
    if [ "$EVAL_RWE" != "" ]; then
       eval "sed -i $__SED_BACKUP $EVAL_RWE \"$RWE_SETENV\""
       echo -e "      Updated RWE: ${CLightGreen}$RWE_NAME${CNone}"
@@ -692,6 +764,9 @@ for WORKSPACE in $WORKSPACES; do
       fi
       let PRODUCT_INDEX=PRODUCT_INDEX+1
    done
+   if [ "$NEW_JAVA_HOME" != "" ] && [ "$NEW_JAVA_HOME" != "$JAVA_HOME" ]; then
+      updateEVAL_WORKSPACE_HOME_PATH "JAVA_HOME" "$NEW_JAVA_HOME" "$WORKSPACE_SETENV"
+   fi
    if [ "$EVAL_WORKSPACE" != "" ]; then
       eval "sed -i $__SED_BACKUP $EVAL_WORKSPACE \"$WORKSPACE_SETENV\""
       echo -e "Updated Workspace: ${CLightGreen}$WORKSPACE${CNone}"
