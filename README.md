@@ -12,11 +12,11 @@ You can install PadoGrid and the supported data grid products by simply running 
 curl -sO https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid
 chmod 755 install_padogrid
 
-# To install all the latest product releases in the default directory, i.e., ~/Padogrid:
-./install_padogrid -quiet
-
 # To install interactively:
 ./install_padogrid
+
+# To view the usage:
+./install_padogrid -?
 ```
 
 :pencil2: *Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
