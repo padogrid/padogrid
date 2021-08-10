@@ -58,10 +58,10 @@ SYNOPSIS
    $EXECUTABLE [-product product_name] [-?]
 
 DESCRIPTION
-   Interactively add or update the current PadoGrid environment (RWE) with the installed product
-   versions. This command extracts product versions from the PadoGrid products directory where the
-   products are installed. If you have products installed in other directories, then you can use
-   the 'change_version' command or manually enter them in the RWE and/or workspace setenv.sh file.
+   Interactively add or update the current PadoGrid environment (RWE) with the installed
+   product versions. This command extracts product versions from the PadoGrid products
+   directory where the products are installed. You can also manually update them in the
+   RWE and/or workspace 'setenv.sh' file.
 
 OPTIONS
    -product product_name
@@ -289,34 +289,36 @@ while [ "$REDO" == "true" ]; do
    fi
 
    # Java
-   __REDO=true
-   while [ "$__REDO" == "true" ]; do
-      echo "Enter Java home path."
-      if [[ $OS_NAME == CYGWIN* ]]; then
-         echo "Enter only Unix absolute path. Windows path not allowed."
-      fi
-      echo "[$__JAVA_HOME]:"
-      read -p "" INPUT
-      # trim string
-      INPUT=`echo "$INPUT" | xargs`
-      if [ "$INPUT" != "" ]; then
-         __JAVA_HOME="$INPUT"
-      fi
-      if [[ $OS_NAME == CYGWIN* ]]; then
-         __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
-      fi
-      __JAVA_HOME="$(trimString "$__JAVA_HOME")"
-      if [[ ! -d "$__JAVA_HOME" ]]; then
-         echo "Directory does not exist or not a directory."
-         __JAVA_HOME="$JAVA_HOME_ARG"
-         __REDO=true
-      elif [ "$__JAVA_HOME" == "" ]; then
-         __REDO=true
-      else
-         __REDO=false
-      fi
-   done
-   NEW_JAVA_HOME="$__JAVA_HOME"
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "java" ]; then
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         echo "Enter Java home path."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$__JAVA_HOME]:"
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __JAVA_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
+         fi
+         __JAVA_HOME="$(trimString "$__JAVA_HOME")"
+         if [[ ! -d "$__JAVA_HOME" ]]; then
+            echo "Directory does not exist or not a directory."
+            __JAVA_HOME="$JAVA_HOME_ARG"
+            __REDO=true
+         elif [ "$__JAVA_HOME" == "" ]; then
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      NEW_JAVA_HOME="$__JAVA_HOME"
+   fi
    
    # Pado
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
