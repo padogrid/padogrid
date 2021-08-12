@@ -239,15 +239,15 @@ DEFAULT_JMX_ENABLED=true
 # when a new cluster is created using the 'create_cluster' command. You can change them later
 # in the cluster.properties file.
 #
-DEFAULT_MASTER_WEBUI_START_PORT=8080
-DEFAULT_MEMBER_WEBUI_START_PORT=8081
+DEFAULT_MASTER_WEBUI_START_PORT=8580
+DEFAULT_MEMBER_WEBUI_START_PORT=8581
 
 # 
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-DEFAULT_MASTER_DEBUG_START_PORT=9201
-DEFAULT_DEBUG_START_PORT=9101
+DEFAULT_MASTER_DEBUG_START_PORT=9601
+DEFAULT_DEBUG_START_PORT=9701
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the JMX start port number to
@@ -266,8 +266,8 @@ DEFAULT_PROMETHEUS_ENABLED=true
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the Prometheus start port number to
 # determine the member's Prometheus port number.
 #
-DEFAULT_MASTER_PROMETHEUS_START_PORT=8191
-DEFAULT_PROMETHEUS_START_PORT=8091
+DEFAULT_MASTER_PROMETHEUS_START_PORT=8591
+DEFAULT_PROMETHEUS_START_PORT=8691
 
 #
 # The max number of masters per cluster. The port number ranges are determined by this value.

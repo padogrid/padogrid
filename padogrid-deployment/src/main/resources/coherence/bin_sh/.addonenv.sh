@@ -239,7 +239,7 @@ DEFAULT_MEMBER_HTTP_START_PORT=7080
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-DEFAULT_DEBUG_START_PORT=9601
+DEFAULT_DEBUG_START_PORT=9501
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the JMX start port number to

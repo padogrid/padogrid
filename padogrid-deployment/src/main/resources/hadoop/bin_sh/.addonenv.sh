@@ -213,7 +213,7 @@ CLASSPATH=""
 # Default namenode TCP start port. The value of ($NAMENODE_NUM-1) is added to the start port number to
 # determine the namenode's TCP port number.
 #
-DEFAULT_NAMENODE_START_PORT=9000
+DEFAULT_NAMENODE_START_PORT=19000
 
 #Daemon                   Default Port  Configuration Parameter
 #-----------------------  ------------ ----------------------------------
@@ -282,15 +282,15 @@ DEFAULT_JOURNALNODE_HTTPS_PORT=8481
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-DEFAULT_NAMENODE_DEBUG_START_PORT=9201
-DEFAULT_DEBUG_START_PORT=9101
+DEFAULT_NAMENODE_DEBUG_START_PORT=9951
+DEFAULT_DEBUG_START_PORT=9901
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the JMX start port number to
 # determine the member's JMX port number.
 #
-DEFAULT_NAMENODE_JMX_START_PORT=12601
-DEFAULT_JMX_START_PORT=12501
+DEFAULT_NAMENODE_JMX_START_PORT=12851
+DEFAULT_JMX_START_PORT=12801
 
 #
 # Default PROMETHEUS enable/disable flag.
@@ -302,8 +302,8 @@ DEFAULT_PROMETHEUS_ENABLED=true
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the Prometheus start port number to
 # determine the member's Prometheus port number.
 #
-DEFAULT_NAMENODE_PROMETHEUS_START_PORT=8191
-DEFAULT_PROMETHEUS_START_PORT=8091
+DEFAULT_NAMENODE_PROMETHEUS_START_PORT=8991
+DEFAULT_PROMETHEUS_START_PORT=8891
 
 #
 # The max number of namenodes per cluster. The port number ranges are determined by this value.

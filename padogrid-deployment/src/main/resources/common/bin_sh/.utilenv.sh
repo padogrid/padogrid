@@ -1986,6 +1986,9 @@ function switch_cluster
    fi
    __switch_cluster $@
    cd_cluster $@
+   if [ "$PRODUCT" == "hadoop" ]; then
+      export HADOOP_CONF_DIR="$(pwd)/etc/pseudo"
+   fi
  }
 
 # 

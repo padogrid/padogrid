@@ -19,7 +19,9 @@
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 if [ -f "$SCRIPT_DIR/.addonenv.sh" ] && [ -f "$SCRIPT_DIR/.argenv.sh" ]; then
    . $SCRIPT_DIR/.addonenv.sh
+   IS_STANDALONE_SCRIPT="false"
 else
+   IS_STANDALONE_SCRIPT="true"
    PRODUCT_SPECIFIED="false"
    PRODUCT_ARG=""
    QUIET="false" 
@@ -244,9 +246,11 @@ NOTES
    PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0 or
    a later version.
 
-SEE ALSO
 EOF
+if [ "$IS_STANDALONE_SCRIPT" == "false" ]; then
+echo "SEE ALSO"
    printSeeAlsoList "change_version show_products update_products" $EXECUTABLE
+fi
    exit
 fi
 
@@ -729,7 +733,7 @@ function doUserInput
    for i in ${PRODUCT_DOWNLOAD_VERSIONS[@]}; do
       __INSTALLED="false"
       for j in ${INSTALLED_VERSIONS[@]}; do
-         if [[ "$j" == "$i"* ]]; then
+         if [[ "$j" == "$i" ]]; then
             __INSTALLED="true"
             break;
          fi
@@ -1127,6 +1131,7 @@ while [ "$REDO" == "true" ]; do
             fi
          done
       fi
+      echo ""
    fi
 
    # Kafka
@@ -1135,7 +1140,7 @@ while [ "$REDO" == "true" ]; do
       PRODUCT_DOWNLOAD_VERSIONS=("${KAFKA_DOWNLOAD_VERSIONS[@]}")
       INSTALLED_VERSIONS=$KAFKA_VERSIONS
       echo -e "Kafka ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
-      echo -e "(Note that PadoGrid currently ${CLightGreen}supports only Kafka 2.8.0 and above.${CNone} Non-supported versions require manual management.)"
+      echo -e "(PadoGrid currently ${CLightGreen}supports only Kafka 2.8.0 and above.${CNone} Unsupported versions require manual management.)"
       doUserInput
       if [ "$INSTALL_VERSION" != "" ]; then
          let INSTALL_COUNT=INSTALL_COUNT+1

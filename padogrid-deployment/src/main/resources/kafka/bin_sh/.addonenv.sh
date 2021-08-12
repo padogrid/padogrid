@@ -221,24 +221,17 @@ DEFAULT_DEBUG_ENABLED=true
 #
 DEFAULT_JMX_ENABLED=true
 
-#
-# Default Web UI port numbers. This values are initially set in $ETC_DIR/cluster.properties
-# when a new cluster is created using the 'create_cluster' command. You can change them later
-# in the cluster.properties file.
-#
-DEFAULT_MEMBER_WEBUI_START_PORT=8080
-
 # 
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-DEFAULT_DEBUG_START_PORT=9101
+DEFAULT_DEBUG_START_PORT=9801
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the JMX start port number to
 # determine the member's JMX port number.
 #
-DEFAULT_JMX_START_PORT=12501
+DEFAULT_JMX_START_PORT=12701
 
 #
 # Default PROMETHEUS enable/disable flag.
@@ -249,7 +242,7 @@ DEFAULT_PROMETHEUS_ENABLED=true
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the Prometheus start port number to
 # determine the member's Prometheus port number.
 #
-DEFAULT_PROMETHEUS_START_PORT=8091
+DEFAULT_PROMETHEUS_START_PORT=8791
 
 #
 # The max number of members per cluster. The port number ranges are determined
