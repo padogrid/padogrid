@@ -555,7 +555,13 @@ function sortVersionList
    for i in $VERSION_LIST; do
       echo "$i" >> $TMP_FILE
    done
-   SORTED_VERSIONS=$(sort -rV $TMP_FILE)
+   
+   # The -V option may not be available for some OS's.
+   SORTED_VERSIONS=$(sort -rV $TMP_FILE 2> /dev/null)
+   case ${?} in
+   0) echo ;;
+   *) SORTED_VERSIONS=$(sort -r $TMP_FILE) ;;
+   esac
    rm $TMP_FILE
    echo $SORTED_VERSIONS
 }
