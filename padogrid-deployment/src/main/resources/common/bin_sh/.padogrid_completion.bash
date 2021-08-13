@@ -312,6 +312,16 @@ __padogrid_complete()
       ;;
 
    -log)
+      local __product=$PRODUCT
+      local __cluster_type=$CLUSTER_TYPE
+      local cluster=$CLUSTER
+      for i in $(seq 1 $len); do
+         if [ "${COMP_WORDS[i]}" == "-cluster" ]; then
+            cluster="${COMP_WORDS[i+1]}"
+            break;
+         fi
+      done
+      determineClusterProduct $cluster
       case "$PRODUCT" in
       geode)
          type_list="data gc locator";;
@@ -328,6 +338,8 @@ __padogrid_complete()
       hadoop)
          type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
       esac
+      PRODUCT=$__product
+      CLUSTER_TYPE=$__cluster_type
       ;;
 
    -num)
@@ -989,6 +1001,16 @@ __command_complete()
       type_list="https ssh"
       ;;
    -log)
+      local __product=$PRODUCT
+      local __cluster_type=$CLUSTER_TYPE
+      local cluster=$CLUSTER
+      for i in $(seq 1 $len); do
+         if [ "${COMP_WORDS[i]}" == "-cluster" ]; then
+            cluster="${COMP_WORDS[i+1]}"
+            break;
+         fi
+      done
+      determineClusterProduct $cluster
       case "$PRODUCT" in
       geode)
          type_list="data gc locator";;
@@ -1005,6 +1027,8 @@ __command_complete()
       hadoop)
          type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
       esac
+      PRODUCT=$__product
+      CLUSTER_TYPE=$__cluster_type
      ;;
    -num)
       type_list="1 2 3 4 5 6 7 8 9"

@@ -1471,6 +1471,34 @@ function retrieveClusterEnvFile
       # For backward compatibility (0.9.6)
       . "$__CLUSTER_PATH/.cluster"
       rm "$__CLUSTER_PATH/.cluster"
+   else
+      if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then
+         # Without the .clusterenv.sh file, we cannot determine whether geode or gemfire.
+         # Set it to geode for now.
+         PRODUCT="geode"
+         CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then
+         PRODUCT="hazelcast"
+         CLUSTER_TYPE="jet"
+      elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then
+         PRODUCT="hazelcast"
+         CLUSTER_TYPE="imdg"
+      elif [ -f "$CLUSTER_DIR/etc/gemfirexd.properties" ]; then
+         PRODUCT="snappydata"
+         CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then
+         PRODUCT="coherence"
+         CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then
+         PRODUCT="spark"
+         CLUSTER_TYPE="standalone"
+      elif [ -f "$CLUSTER_DIR/etc/server.properties" ]; then
+         PRODUCT="kafka"
+         CLUSTER_TYPE="kraft"
+      elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then
+         PRODUCT="hadoop"
+         CLUSTER_TYPE="pseudo"
+      fi
    fi
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
    # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
@@ -3460,6 +3488,8 @@ function determineInstalledProductVersions
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
+#                   set to kraft if PRODUCT is kafka,
+#                   set to pseudo if PRODUCT is hadoop,
 #                   set to PRODUCT for all others.
 #   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy, myspark
 #                   only if CLUSTER is not set.
@@ -3469,6 +3499,8 @@ function determineInstalledProductVersions
 #   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is jet.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 #   SPARK_HOME      Set to PRODUCT_HOME if PRODUCT is spark.
+#   KAFKA_HOME      Set to PRODUCT_HOME if PRODUCT is kafka.
+#   HADOOP_HOME     Set to PRODUCT_HOME if PRODUCT is hadoop.
 #
 # @required PRODUCT_HOME Product home path (installation path)
 #
@@ -3518,6 +3550,16 @@ function determineProduct
       PRODUCT_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="standalone"
       CLUSTER=$DEFAULT_SPARK_CLUSTER
+   elif [[ "$PRODUCT_HOME" == *"kafka"* ]]; then
+      PRODUCT="kafka"
+      PRODUCT_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="kraft"
+      CLUSTER=$DEFAULT_KAFKA_CLUSTER
+   elif [[ "$PRODUCT_HOME" == *"hadoop"* ]]; then
+      PRODUCT="hadoop"
+      PRODUCT_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="pseudo"
+      CLUSTER=$DEFAULT_HADOOP_CLUSTER
    else
       PRODUCT=""
    fi
@@ -3541,74 +3583,6 @@ function determineClusterProduct
    fi
    local CLUSTER_DIR=$CLUSTERS_DIR/$__CLUSTER
    retrieveClusterEnvFile "$CLUSTER_DIR"
-   if [ -f "$CLUSTER_DIR/.cluster/clusterenv.sh" ]; then
-      . "$CLUSTER_DIR/.cluster/clusterenv.sh"
-   elif [ -f "$CLUSTER_DIR/.cluster" ]; then
-      # For backward compatibility (0.9.6)
-      . "$CLUSTER_DIR/.cluster"
-      updateClusterEnvFile
-   else
-      if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then   
-         # Without the .clusterenv.sh file, we cannot determine whether geode or gemfire.
-         # Set it to geode for now.
-         PRODUCT="geode"
-         CLUSTER_TYPE=$PRODUCT
-      elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then   
-         PRODUCT="hazelcast"
-         CLUSTER_TYPE="jet"
-      elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then   
-         PRODUCT="hazelcast"
-         CLUSTER_TYPE="imdg"
-      elif [ -f "$CLUSTER_DIR/etc/gemfirexd.properties" ]; then   
-         PRODUCT="snappydata"
-         CLUSTER_TYPE=$PRODUCT
-      elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then   
-         PRODUCT="coherence"
-         CLUSTER_TYPE=$PRODUCT
-      elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
-         PRODUCT="spark"
-         CLUSTER_TYPE="standalone"
-      elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
-         PRODUCT="spark"
-         CLUSTER_TYPE="standalone"
-      elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then   
-         PRODUCT="hadoop"
-         CLUSTER_TYPE="pseudo"
-      fi
-   fi
-}
-
-#
-# Determines the product by examining cluster files. The following environment variables
-# are set after invoking this function.
-#   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
-#   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
-#                   set to standalone if PRODUCT is spark,
-#                   set to PRODUCT for all others.
-#
-# @required CLUSTER_DIR Cluster directory path
-#
-function determineClusterProduct2
-{
-   if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then   
-      PRODUCT="geode"
-      CLUSTER_TYPE=$PRODUCT
-   elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then   
-      PRODUCT="hazelcast"
-      CLUSTER_TYPE="imdg"
-   elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then   
-      PRODUCT="hazelcast"
-      CLUSTER_TYPE="jet"
-   elif [ -f "$CLUSTER_DIR/etc/gemfirexd.properties" ]; then   
-      PRODUCT="snappydata"
-      CLUSTER_TYPE=$PRODUCT
-   elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then   
-      PRODUCT="coherence"
-      CLUSTER_TYPE=$PRODUCT
-   elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then   
-      PRODUCT="spark"
-      CLUSTER_TYPE="standalone"
-   fi
 }
 
 #
