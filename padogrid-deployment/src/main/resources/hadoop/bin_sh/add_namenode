@@ -99,7 +99,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
    if [ "$VM_ENABLED" == "true" ]; then
       VM_HOSTS=`getClusterProperty "vm.namenode.hosts"`
       if [ "$VM_HOSTS" == "" ]; then
-         echo "ERROR: VM hosts undefined. Set 'vm.namenode.hosts' in the following cluster.properties file."  
+         echo -e "${CLightRed}ERROR:${CNone}: VM hosts undefined. Set 'vm.namenode.hosts' in the following cluster.properties file."  
          echo "       $ETC_DIR/cluster.properties"
          echo "       Command aborted."
          exit 1
@@ -132,7 +132,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          FIRST_NUMBER=1
          LAST_NUMBER=$__NAMENODE_NUMBER
          if [ "$__FOUND" == "false" ]; then
-            echo "ERROR: Invalid namenode number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+            echo -e "${CLightRed}ERROR:${CNone} Invalid namenode number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
          fi
       fi
       exit
@@ -154,7 +154,7 @@ if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
    echo "  Cluster: $CLUSTER"
-   echo "    ERROR: This cluster has not been created. Please run the create_cluster command"
+   echo -e "    ${CLightRed}ERROR:${CNone} This cluster has not been created. Please run the create_cluster command"
    echo "           to create the cluster before running this command. Command aborted."
    echo "----------------------------------------------------------------"
    exit 1
@@ -186,6 +186,13 @@ else
       let NEW_NAMENODE_NUMBER=NAMENODE_NUMBER+1
    fi
 fi
+
+if [ $NEW_NAMENODE_NUMBER -gt 1 ]; then
+   echo -e "${CLightRed}ERROR:${CNone} Hadoop runs in semi-pseduo mode which allows only one (1) NameNode instance and"
+   echo "       the cluster already has one (1) NameNode configured. Command aborted."
+   exit 1
+fi
+
 NEW_NAMENODE=`getNameNodeName $NEW_NAMENODE_NUMBER`
 NEW_NAMENODE_DIR=$RUN_DIR/$NEW_NAMENODE
 
