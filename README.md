@@ -258,6 +258,14 @@ PadoGrid natively supports the following data grid and analytics products.
   <img src="images/spark.png" width="200" hspace="10" alt="Spark" />
   </a> 
 </p>
+<p align="center">
+  <a href="https://hadoop.apache.org/">
+  <img src="images/hadoop.jpg" width="200"  hspace="10" alt="Hadoop" />
+  </a>
+  <a href="https://kafka.apache.org/">
+  <img src="images/kafka.png" width="200" hspace="10" alt="Kafka" />
+  </a> 
+</p> 
 
 ---
 
