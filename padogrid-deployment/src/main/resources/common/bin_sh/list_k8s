@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-?"
+   echo "-rwe -workspace -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -35,13 +35,21 @@ if [ "$HELP" == "true" ]; then
 cat <<EOF
 
 NAME
-   $EXECUTABLE - List all the Kubernetes clusters in the current padogrid workspace
+   $EXECUTABLE - List all the Kubernetes clusters in the specified workspace
 
 SYNOPSIS
-   $EXECUTABLE [-?]
+   $EXECUTABLE [-rwe rwe_name] [-workspace workspace_name] [-?]
 
 DESCRIPTION
-   Lists all the Kubernetes clusters in the current workspace.
+   Lists all the Kubernetes clusters in the specified workspace.
+
+OPTIONS
+   -rwe rwe_name
+             RWE name. If not specified, then the current RWE is used. If specified, then 
+             the '-workspace' option must be specified also.
+
+   -workspace workspace_name
+             Workspace name. If not specified, then it displays Kubernetes clusters in the current workspace.
 
 DEFAULT
    $EXECUTABLE
@@ -63,16 +71,52 @@ if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
    exit 1
 fi
 
-if [ "$PADOGRID_WORKSPACE" == "" ]; then
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+if [ "$RWE_ARG" != "" ]; then
+   if [ "$WORKSPACE_ARG" == "" ]; then
+      if [ "$RWE_ARG" != "$RWE_NAME" ]; then
+         echo >&2 "ERROR: Specified RWE is not the current RWE. Use '-workspace' to specify the workspace."
+         echo >&2 "       Command aborted."
+         exit 1
+      fi
+   fi
+fi
+
+# rwe path
+if [ "$RWE_ARG" == "" ]; then
+   __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+else
+   RWE_PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+   __RWE_PATH="$RWE_PARENT_DIR/$RWE_ARG"
+   RWE_NAME=$RWE_ARG
+   if [ ! -d "$__RWE_PATH" ]; then
+      echo >&2 "ERROR: Specified RWE does not exist [$RWE_ARG]. Command aborted."
+      exit 1
+   elif [ "$(isValidRwe $RWE_ARG)" == "false" ]; then
+      echo >&2 "ERROR: Specified RWE is not valid [$RWE_ARG]. Command aborted."
+      exit 1
+   fi
+fi
+# workspace path
+if [ "$WORKSPACE_ARG" == "" ]; then
+   WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
+else
+   WORKSPACE_NAME="$WORKSPACE_ARG"
+fi
+__WORKSPACE_PATH="$__RWE_PATH/$WORKSPACE_NAME"
+
+if [ "$__WORKSPACE_PATH" == "" ]; then
    >&2 echo "ERROR: Workspace undefined. Please first create a workspace."
    >&2 echo "       Command aborted."
    exit 1
 fi
-if [ ! -d "$PADOGRID_WORKSPACE" ]; then
+if [ ! -d "$__WORKSPACE_PATH" ]; then
    >&2 echo "ERROR: Invalid workspace. Directory does not exist."
-   >&2 echo "       $PADOGRID_WORKSPACE"
+   >&2 echo "       $__WORKSPACE_PATH"
    >&2 echo "       Command aborted."
    exit 1
 fi
 
-ls $PADOGRID_WORKSPACE/k8s
+if [ -d "$__WORKSPACE_PATH/k8s" ]; then
+   ls $__WORKSPACE_PATH/k8s
+fi

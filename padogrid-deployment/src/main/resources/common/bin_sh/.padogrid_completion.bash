@@ -252,7 +252,11 @@ __padogrid_complete()
    -workspace)
       if [ "$command" == "install_bundle" ]; then
          type_list="default "`getWorkspaces`
-      elif [ "$command" == "open_vscode" ]; then
+      elif [ "$command" == "open_vscode" ]  \
+        || [ "$command" == "list_apps" ]  \
+        || [ "$command" == "list_clusters" ]  \
+        || [ "$command" == "list_docker" ]  \
+        || [ "$command" == "list_k8s" ]; then
          # If -rwe specified then get the rwe's workspaces
          __getArrayElementIndex "-rwe" "${COMP_WORDS[@]}"
          local index=$?
@@ -923,7 +927,11 @@ __command_complete()
    -workspace)
       if [ "$command" == "install_bundle" ]; then
          type_list="default "`getWorkspaces`
-      elif [ "$command" == "open_vscode" ]; then
+      elif [ "$command" == "open_vscode" ]  \
+        || [ "$command" == "list_apps" ]  \
+        || [ "$command" == "list_clusters" ]  \
+        || [ "$command" == "list_docker" ]  \
+        || [ "$command" == "list_k8s" ]; then
          # If -rwe specified then get the rwe's workspaces
          __getArrayElementIndex "-rwe" "${COMP_WORDS[@]}"
          local index=$?
