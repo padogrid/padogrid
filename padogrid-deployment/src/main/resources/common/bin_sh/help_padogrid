@@ -82,13 +82,13 @@ SUMMARY
       cp_ (Hazelcast CP Subsystem), t_(tools), vm_.
 
    Postfix
-      _app, _bundle, _cluster, _docker, _group, _jutyper, _k8s, _leader, _locator, _master, _member,
-      _pod, _rwe, _vm, _worker, _workspace.
+      _app, _bundle, _cluster, _datanode, _docker, _group, _jutyper, _k8s, _leader, _locator, _master, _member,
+      _namenode, _pod, _rwe, _vm, _worker, _workspace.
 
 EOF
 
-HEADERS="APP BUNDLE CLUSTER DOCKER GROUP JUPYTER K8S LEADER LOCATOR MASTER MEMBER POD RWE VM WORKER WORKSPACE"
-COMMANDS="*_app *_bundle *_cluster *_docker *_group *_jupyter *_k8s *_leader *_locator *_master *_member *_pod *_rwe vm_* *_worker *_workspace"
+HEADERS="APP BUNDLE CLUSTER DATANODE DOCKER GROUP K8S LEADER LOCATOR MASTER MEMBER NAMENODE POD RWE VM WORKER WORKSPACE"
+COMMANDS="*_app *_bundle *_cluster *_datanode *_docker *_group *_k8s *_leader *_locator *_master *_member *_namenode *_pod *_rwe vm_* *_worker *_workspace"
 
 HEADERS_ARRAY=($HEADERS)
 COMMANDS_ARRAY=($COMMANDS)
@@ -144,6 +144,8 @@ for i in $(seq 0 $LAST_INDEX); do
       HEADER="$HEADER (SnappyData/ComputeDB)"
    elif [ "$HEADER" == "MASTER" ] || [ "$HEADER" == "WORKER" ]; then
       HEADER="$HEADER (Spark)"
+   elif [ "$HEADER" == "NAMENODE" ] || [ "$HEADER" == "DATANODE" ]; then
+      HEADER="$HEADER (Hadoop)"
    elif [ "$HEADER" == "RWE" ]; then
       COMMAND="$COMMAND list_rwes"
    elif [ "$HEADER" == "WORKSPACE" ]; then
@@ -162,6 +164,8 @@ for i in $(seq 0 $LAST_INDEX); do
       displayCommands "$PADOGRID_HOME/snappydata/bin_sh" "${COMMAND}"
    elif [[ "$HEADER" == *"Spark"* ]]; then
       displayCommands "$PADOGRID_HOME/spark/bin_sh" "${COMMAND}"
+   elif [[ "$HEADER" == *"Hadoop"* ]]; then
+      displayCommands "$PADOGRID_HOME/hadoop/bin_sh" "${COMMAND}"
    else
       displayCommands "$PADOGRID_HOME/geode/bin_sh" "${COMMAND}"
    fi
@@ -178,6 +182,12 @@ echo "   TOOLS (Hazelcast)"
 displayCommands "$PADOGRID_HOME/hazelcast/bin_sh/tools" "*"
 echo ""
 
+# tools
+echo "   TOOLS (Others)"
+displayCommands "$PADOGRID_HOME/geode/bin_sh" "*_jupyter"
+displayCommands "$PADOGRID_HOME/geode/bin_sh" "*_vscode"
+echo ""
+
 # cp_sub
 echo "   CP SUBSYSTEM (Hazelcast)"
 displayCommands "$PADOGRID_HOME/hazelcast/bin_sh/cp_sub" "*"
@@ -185,5 +195,5 @@ echo ""
 
 # misc
 echo "   MISCELLANEOUS"
-displayCommands "$PADOGRID_HOME/geode/bin_sh" "find_padogrid help_padogrid install_padogrid *_products *_vscode"
+displayCommands "$PADOGRID_HOME/geode/bin_sh" "find_padogrid help_padogrid install_padogrid *_products"
 echo ""

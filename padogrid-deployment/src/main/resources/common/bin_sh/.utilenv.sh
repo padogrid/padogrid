@@ -1702,7 +1702,7 @@ function switch_workspace
    EXECUTABLE=switch_workspace
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Switch to the specified padogrid workspace"
+      echo "   $EXECUTABLE - Switch to the specified workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [workspace_name[/directory_name/...]] [-?]"
@@ -1850,7 +1850,7 @@ function switch_group
    EXECUTABLE=switch_group
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Switch to the specified group in the current padogrid workspace"
+      echo "   $EXECUTABLE - Switch to the specified group in the current workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [group_name[/directory_name/...]] [-?]"
@@ -1973,7 +1973,7 @@ function switch_cluster
    EXECUTABLE=switch_cluster
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Switch to the specified cluster in the current padogrid workspace"
+      echo "   $EXECUTABLE - Switch to the specified cluster in the current workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [cluster_name[/directory_name/...]] [-?]"
@@ -2126,7 +2126,7 @@ function switch_pod
    EXECUTABLE=switch_pod
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Switch to the specified pod in the current padogrid workspace"
+      echo "   $EXECUTABLE - Switch to the specified pod in the current workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [pod_name[/directory_name/...]] [-?]"
@@ -2299,7 +2299,7 @@ function cd_workspace
    EXECUTABLE=cd_workspace
    if [ "$1" == "-?" ]; then
       echo "NAME"
-      echo "   $EXECUTABLE - Change directory to the specified padogrid workspace"
+      echo "   $EXECUTABLE - Change directory to the specified workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [workspace_name [/directory_name/...]] [-?]"
@@ -2810,7 +2810,7 @@ function cd_app
    if [ "$1" == "-?" ]; then
       echo ""
       echo "NAME"
-      echo "   $EXECUTABLE - Change directory to the specified app in the current padogrid workspace"
+      echo "   $EXECUTABLE - Change directory to the specified app in the current workspace"
       echo ""
       echo "SYNOPSIS"
       echo "   $EXECUTABLE [app_name[/directory_name/...]] [-?]"
