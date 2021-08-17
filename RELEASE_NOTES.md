@@ -16,7 +16,7 @@ https://github.com/padogrid
 - Added preliminary support for Kafka. Kafka support is limited to the new RAFT mode and hence requires Kafka 2.8.0 or a later version. Kafka support is limited to local clusters.
 - Added preliminary support for Hadoop running in the semi-pseudo mode with support for mutiple data nodes. Hadoop support is limited to local clusters.
 - Added java support in `update_products`, which is now preferred over `change_version`.
-- Reassigned default ports to prevent port conficts between clusters. See [**Default Prot Numbers**](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers) for details.
+- Reassigned default ports to prevent port conficts between clusters. See [**Default Port Numbers**](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers) for details.
 - Added full support for Jupyter and VS Code. They are no longer expermimental. Please see the [Integrated Tools](https://github.com/padogrid/padogrid/wiki/Integrated-Tools) section for details.
 - The `list_*` commands now support `-rwe` for listing components in a specific RWE and workspace.
 
