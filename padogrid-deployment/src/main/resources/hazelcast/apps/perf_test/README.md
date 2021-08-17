@@ -302,7 +302,7 @@ The Hibernate configuration file path must be provided before you start the clus
 vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/bin_sh/setenv.sh
 
 # Set JAVA_OPTS in setenv.sh
-JAVA_OPTS="$JAVA_OPTS -Dpadogrid.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
+JAVA_OPTS="$JAVA_OPTS -Dhazelcast-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
 ```
 
 You can now run the cluster.

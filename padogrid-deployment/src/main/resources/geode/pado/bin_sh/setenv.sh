@@ -14,7 +14,7 @@
 # if [[ ${OS_NAME} == CYGWIN* ]]; then
 #    HIBERNATE_CONFIG_FILE="$(cygpath -wp "$HIBERNATE_CONFIG_FILE")"
 # fi
-# JAVA_OPTS=" --J=-Dpadogrid.hibernate.config="
+# JAVA_OPTS=" --J=-Dgeode-addon.hibernate.config="
 
 # To use Hibernate backed CacheWriterLoaderPkDbImpl, set the following property and
 # configure CacheWriterLoaderPkDbImpl in the $CLUSTER_DIR/etc/cache.xml file.
@@ -25,8 +25,8 @@
 # directory. CLASSPATH includes all the jar files in that directory for
 # the apps and clusters running in this workspace.
 #
-#JAVA_OPTS="$JAVA_OPTS -Dpadogrid.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
-#JAVA_OPTS="$JAVA_OPTS -Dpadogrid.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml"
 
 #
 # Set RUN_SCRIPT. Absolute path required.
