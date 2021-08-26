@@ -5,6 +5,8 @@ https://github.com/padogrid
 
 ## Version 0.9.9-B2
 
+### Release Date: 08/26/21
+
 - This is an emergency patch release that overrides 0.9.9 and still downloadable as 0.9.9.
 - Fixed the bug that improperly initializes PadoGrid. In the previous release, if an app is run immediately after the rwe `initenv.sh` is directly sourced in from `.bashrc`, for example, then the app does not recognize the cluster product and fails with a "not found" error.
 - The fix only applies to new RWEs created by this release. If you have existing RWE's then you must append the following at the end of their `initenv.sh` file.
