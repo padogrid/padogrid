@@ -54,6 +54,20 @@ export PATH="$CLEANED_PATH"
 . $PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash
 
 #
+# Need to reset here for the direct call, i.e., from .bashrc
+#
+if [ -f "$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh" ]; then
+   . "$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh"
+fi
+if [ -f "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster/clusterenv.sh" ]; then
+   . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster/clusterenv.sh"
+fi
+export CLUSTER
+export CLUSTER_TYPE
+export POD
+export PRODUCT
+
+#
 # Display initialization info
 #
 if [ "$1" == "" ] || [ "$1" != "-quiet" ]; then
