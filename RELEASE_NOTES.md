@@ -7,8 +7,7 @@ https://github.com/padogrid
 
 ### Release Date: 08/26/21
 
-- Fixed the bug that improperly initializes PadoGrid. In the previous release, if an app is run immediately after the rwe `initenv.sh` is directly sourced in from `.bashrc`, for example, then the app does not recognize the cluster product and fails with a "not found" error.
-- The fix only applies to new RWEs created by this release. If you have existing RWE's then you must append the following at the end of their `initenv.sh` file.
+- Fixed a bug that improperly initialized PadoGrid. In the previous release, if an app is run immediately after the rwe `initenv.sh` is directly sourced in from `.bashrc`, for example, then the app does not recognize the cluster product and fails with a "not found" error. This fix only applies to new RWEs created by this release. If you have existing RWE's then you must append the following at the end of their `initenv.sh` file.
 
 ```bash
 if [ -f "$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh" ]; then
@@ -22,6 +21,10 @@ export CLUSTER_TYPE
 export POD
 export PRODUCT
 ```
+- Fixed a Linux bug in `update_products` that printed the following message.
+  ```console
+  sed: can't read 0: No such file or directory
+  ```
 
 ---
 
