@@ -3,11 +3,10 @@
 ©2020-2021 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
-## Version 0.9.9-B2
+## Version 0.9.10
 
 ### Release Date: 08/26/21
 
-- This is an emergency patch release that overrides 0.9.9 and still downloadable as 0.9.9.
 - Fixed the bug that improperly initializes PadoGrid. In the previous release, if an app is run immediately after the rwe `initenv.sh` is directly sourced in from `.bashrc`, for example, then the app does not recognize the cluster product and fails with a "not found" error.
 - The fix only applies to new RWEs created by this release. If you have existing RWE's then you must append the following at the end of their `initenv.sh` file.
 
@@ -24,7 +23,7 @@ export POD
 export PRODUCT
 ```
 
-----
+---
 
 ## Version 0.9.9
 
@@ -33,7 +32,7 @@ export PRODUCT
 - Added preliminary support for Kafka. Kafka support is limited to the new RAFT mode and hence requires Kafka 2.8.0 or a later version. Kafka support is limited to local clusters.
 - Added preliminary support for Hadoop running in the semi-pseudo mode with support for mutiple data nodes. Hadoop support is limited to local clusters.
 - Added java support in `update_products`, which is now preferred over `change_version`.
-- Reassigned default ports to prevent port conficts between clusters. See [**Default Prot Numbers**](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers) for details.
+- Reassigned default ports to prevent port conficts between clusters. See [**Default Port Numbers**](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers) for details.
 - Added full support for Jupyter and VS Code. They are no longer expermimental. Please see the [Integrated Tools](https://github.com/padogrid/padogrid/wiki/Integrated-Tools) section for details.
 - The `list_*` commands now support `-rwe` for listing components in a specific RWE and workspace.
 
