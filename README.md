@@ -182,6 +182,8 @@ podman run -it --rm padogrid/padogrid /bin/bash
 Once you are in the container, initialize PadoGrid as follows. Note that this is only required if you are running PadoGrid with `docker` or `podman`. This is not required for Kubernetes.
 
 ```bash
+# This is required for padogrid/padogrid:0.9.9 and older versions only.
+# padogrid/padogrid:0.9.10 and later versions do not require this step.
 ./padogrid_start -init
 . ~/.bashrc
 ```
