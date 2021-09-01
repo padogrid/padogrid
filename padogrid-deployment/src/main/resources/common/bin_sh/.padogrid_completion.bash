@@ -37,6 +37,39 @@ complete -r cluster.sh > /dev/null 2>&1
 complete -r jet.sh > /dev/null 2>&1
 complete -r jet > /dev/null 2>&1
 
+__arrayContainsElement ()
+{
+  local e match="$1"
+  shift
+  for e; do
+    [[ "$e" == "$match" ]] && echo "true" && return 0
+  done
+  echo "false"
+  return 1
+}
+
+#
+# Returns the index number of the specified array if the specified element is found, otherwise,
+# returns 255.
+# Example:
+#    __getArrayElementIndex "submit" "${COMP_WORDS[@]}"
+#    index=$?
+#
+# @param element - Element value to search
+# @param array - Array
+#
+__getArrayElementIndex ()
+{
+  local e match="$1"
+  shift
+  local index=0
+  for e; do
+    [[ "$e" == "$match" ]] && return $index
+    let index=index+1
+  done
+  return 255
+}
+
 __get_pod()
 {
    local __found=false

@@ -206,39 +206,6 @@ __cluster_complete()
    return 0
 }
 
-__arrayContainsElement ()
-{
-  local e match="$1"
-  shift
-  for e; do
-    [[ "$e" == "$match" ]] && echo "true" && return 0
-  done
-  echo "false"
-  return 1
-}
-
-#
-# Returns the index number of the specified array if the specified element is found, otherwise,
-# returns 255.
-# Example: 
-#    __getArrayElementIndex "submit" "${COMP_WORDS[@]}"
-#    index=$?
-#
-# @param element - Element value to search
-# @param array - Array
-#
-__getArrayElementIndex ()
-{
-  local e match="$1"
-  shift
-  local index=0
-  for e; do
-    [[ "$e" == "$match" ]] && return $index
-    let index=index+1
-  done
-  return 255
-}
-
 __jet_complete()
 {
    local cur_word prev_word type_list commands len before_prev_word
