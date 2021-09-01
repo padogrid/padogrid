@@ -3,6 +3,15 @@
 ©2020-2021 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
+## Version 0.9.11-SNAPSHOT
+
+### Release Date: 08/31/21
+
+- Added Hazelcast app instance names. You can now see PadoGrid apps in the management center as `PadoGrid-perf_test` and `hazelcast-desktop`.
+- Refactored initialization scripts.
+
+----
+
 ## Version 0.9.10
 
 ### Release Date: 08/26/21
@@ -25,6 +34,8 @@ export PRODUCT
   ```console
   sed: can't read 0: No such file or directory
   ```
+
+----
 
 ## Version 0.9.9
 

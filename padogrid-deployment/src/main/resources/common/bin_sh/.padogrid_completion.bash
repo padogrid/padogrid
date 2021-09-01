@@ -235,7 +235,7 @@ __padogrid_complete()
       elif [ "$command" == "install_padogrid" ]; then 
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "update_products" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS jet-mc"
+         type_list="$DOWNLOADABLE_PRODUCTS pado jet-mc"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -914,7 +914,7 @@ __command_complete()
       elif [ "$command" == "install_padogrid" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "update_products" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS jet-mc"
+         type_list="$DOWNLOADABLE_PRODUCTS pado jet-mc"
       else
          is_path="true"
       fi
