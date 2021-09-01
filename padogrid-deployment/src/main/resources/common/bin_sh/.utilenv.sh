@@ -3484,7 +3484,7 @@ function determineInstalledProductVersions
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, spark
+#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, hadoop, kafka, spark
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
@@ -3657,14 +3657,14 @@ function createProductEnvFile
    if [ "$WORKSPACES_HOME" == "" ]; then
       WORKSPACES_HOME="$PADOGRID_WORKSPACES_HOME"
    fi
-   if [ "$PRODUCT_NAME" == "geode" ]; then
+   if [ "$PRODUCT_NAME" == "geode" ] || [ "$PRODUCT_NAME" == "gemfire" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.geodeenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.geodeenv.sh
          echo "# Enter Geode/GemFire product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
          echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
       fi
-   elif [ "$PRODUCT_NAME" == "hazelcast" ]; then
+   elif [ "$PRODUCT_NAME" == "hazelcast" ] || [ "$PRODUCT_NAME" == "jet" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.hazelcastenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.hazelcastenv.sh
          echo "# Enter Hazelcast product specific environment variables and initialization" >> $WORKSPACES_HOME/.hazelcastenv.sh

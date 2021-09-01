@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # ========================================================================
-# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ OPTIONS
              A new RWE name.
 
    -product product_home_path
-             Kafka installation directory path.
+             Absolute path of the installed product directory.
 
    -java JAVA_HOME_path
              JDK home path.
@@ -80,7 +80,6 @@ cat <<EOF
 
    -cluster default_cluster
              Default cluster name.
-             Default: $DEFAULT_KAFKA_CLUSTER
 
    -vm
              Specify '-vm' to enable VM cluster.
@@ -165,11 +164,7 @@ fi
 if [ "$JAVA_HOME_ARG" == "" ]; then
    JAVA_HOME_ARG="$JAVA_HOME"
 fi
-if [ "$PRODUCT_ARG" == "" ]; then
-   PRODUCT_ARG="$KAFKA_HOME"
-else
-   PRODUCT_HOME="$PRODUCT_ARG"
-fi
+PRODUCT_HOME="$PRODUCT_HOME_ARG"
 
 # Default cluster
 if [ $CLUSTER_SPECIFIED == "false" ]; then
@@ -205,7 +200,7 @@ else
    __RWE_HOME="$RWE_HOME"
    __RWE_NAME="$RWE_NAME"
    __JAVA_HOME="$JAVA_HOME_ARG"
-   __PRODUCT_HOME="$PRODUCT_ARG"
+   __PRODUCT_HOME="$PRODUCT_HOME_ARG"
    __WORKSPACE="$WORKSPACE"
    REDO=true
    while [ "$REDO" == "true" ]; do
@@ -313,7 +308,7 @@ else
       __REDO=true
       while [ "$__REDO" == "true" ]; do
 
-         echo "Enter Kafka home directory path."
+         echo "Enter product ($PRODUCT) home directory path."
          if [[ $OS_NAME == CYGWIN* ]]; then
        echo "Enter only Unix absoulte path. Windows path not allowed."
          fi
@@ -336,7 +331,7 @@ else
                read -p "Enter 'c' to skip this question and continue, 'r' to re-enter, 'q' to quit: " INPUT
                case $INPUT in
                   [Cc]* ) __REDO=false; INNER_LOOP=false; __PRODUCT_HOME="";;
-                  [Rr]* ) __REDO=true; INNER_LOOP=false; __PRODUCT_HOME="$PRODUCT_ARG";;
+                  [Rr]* ) __REDO=true; INNER_LOOP=false; __PRODUCT_HOME="$PRODUCT_HOME_ARG";;
                   [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
                esac
             done
@@ -345,6 +340,10 @@ else
          fi
       done
       PRODUCT_HOME="$__PRODUCT_HOME"
+
+      # Set the default cluster name for the selected product
+      #CLUSTER=""
+      #determineProduct
 
       # Default workspace
       __REDO=true
@@ -421,6 +420,11 @@ popd > /dev/null 2>&1
 
 # Create env file for 'create_workspace' to source in.
 TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
+if [ "$CLUSTER" == "" ]; then
+   CLUSTER_SPECIFIED="false"
+else
+   CLUSTER_SPECIFIED="true"
+fi
 echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" > $TMP_ENV_FILE
 echo "CLUSTER_SPECIFIED=\"$CLUSTER_SPECIFIED\"" >> $TMP_ENV_FILE
 echo "CLUSTER=\"$CLUSTER\"" >> $TMP_ENV_FILE
@@ -444,8 +448,42 @@ rm $TMP_ENV_FILE
 # Create setenv.sh
 #
 if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
-   TEMPLATE_PRODUCT_HOME="\$KAFKA_HOME"
-
+   case "$PRODUCT" in
+   hazelcast)
+   	  if [ "$CLUSTER_TYPE" == "jet" ]; then
+         JET_HOME=$PRODUCT_HOME
+         TEMPLATE_PRODUCT_HOME="\$JET_HOME"
+      else
+         HAZELCAST_HOME=$PRODUCT_HOME
+         TEMPLATE_PRODUCT_HOME="\$HAZELCAST_HOME"
+      fi
+      ;;
+   geode)
+      if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+         GEMFIRE_HOME=$PRODUCT_HOME
+         TEMPLATE_PRODUCT_HOME="\$GEMFIRE_HOME"
+      else
+         GEODE_HOME=$PRODUCT_HOME
+         TEMPLATE_PRODUCT_HOME="\$GEODE_HOME"
+      fi
+      ;;
+   snappydata)
+      TEMPLATE_PRODUCT_HOME="\$SNAPPYDATA_HOME"
+      ;;
+   coherence)
+      TEMPLATE_PRODUCT_HOME="\$COHERENCE_HOME"
+      ;;
+   hadoop)
+      TEMPLATE_PRODUCT_HOME="\$HADOOP_HOME"
+      ;;
+   kafka)
+      TEMPLATE_PRODUCT_HOME="\$KAFKA_HOME"
+      ;;
+   spark)
+      TEMPLATE_PRODUCT_HOME="\$SPARK_HOME"
+      ;;
+   esac
+   
    # PadoGrid product dir
    PARENT_DIR="$(dirname "$BASE_DIR")"
 
@@ -485,8 +523,8 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
        > "$WORKSPACES_HOME/setenv.sh"
 fi
 
-# Create .kafkaenv.sh
-createProductEnvFile "kafka" "$WORKSPACES_HOME"
+# Create .${PRODUCT}env.sh (gemfire->.geodeenv.sh, jet->.hazelcastenv.sh)
+createProductEnvFile "$PRODUCT" "$WORKSPACES_HOME"
 
 #
 # Copy initenv.sh
@@ -565,7 +603,7 @@ echo "                their components inherit the rwe environment variables."
 echo ""
 echo "   .addonenv.sh - A hidden file containing the workspaces metadata information."
 echo ""
-if [ "$JAVA_HOME" == "" ] || [ "$KAFKA_HOME" == "" ]; then
+if [ "$JAVA_HOME" == "" ] || [ "$PRODUCT_HOME" == "" ]; then
    echo ""
    echo "The following environment variable(s) are not set. Although they are not"
    echo "required, you should set them in the 'setenv.sh' file so that you don't"
@@ -574,9 +612,53 @@ if [ "$JAVA_HOME" == "" ] || [ "$KAFKA_HOME" == "" ]; then
    if [ "$JAVA_HOME" == "" ]; then
       echo "   JAVA_HOME"
    fi
-   if  [ "$KAFKA_HOME" == "" ]; then
-      echo "   KAFKA_HOME"
-   fi
+   case $PRODUCT in
+   hazelcast)
+      if  [ "$HAZELCAST_HOME" == "" ]; then
+         echo "   HAZELCAST_HOME"
+      fi
+      ;;
+   jet)
+      if  [ "$JET_HOME" == "" ]; then
+         echo "   JET_HOME"
+      fi
+      ;;
+   geode)
+      if  [ "$GEODE_HOME" == "" ]; then
+         echo "   GEODE_HOME"
+      fi
+      ;;
+   gemfire)
+      if  [ "$GEMFIRE_HOME" == "" ]; then
+         echo "   GEMFIRE_HOME"
+      fi
+      ;;
+   snappydata)
+      if  [ "$SNAPPYDATA_HOME" == "" ]; then
+         echo "   SNAPPYDATA_HOME"
+      fi
+      ;;
+   coherence)
+      if  [ "$COHERENCE_HOME" == "" ]; then
+         echo "   COHERENCE_HOME"
+      fi
+      ;;
+   hadoop)
+      if  [ "$HADOOP_HOME" == "" ]; then
+         echo "   HADOOP_HOME"
+      fi
+      ;;
+   kafka)
+      if  [ "$KAFKA_HOME" == "" ]; then
+         echo "   KAFKA_HOME"
+      fi
+      ;;
+   spark)
+      if  [ "$SPARK_HOME" == "" ]; then
+         echo "   SPARK_HOME"
+      fi
+      ;;
+   esac
 fi
 
 # Display workspace and cluster info.
@@ -592,6 +674,18 @@ echo "PADOGRID_WORKSPACES_HOME: $PADOGRID_WORKSPACES_HOME"
 echo "      PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
 echo "     Default Cluster Dir: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
 echo ""
+case $PRODUCT in
+hazelcast|jet)
+   if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+      echo "License Keys:"
+      echo "-------------"
+      echo "Make sure to set your enterprise license keys (IMDG and/or Jet) in the following file:"
+      echo -e "   ${CLightRed}$PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh${CNone}"
+      echo ""
+   fi
+   ;;
+esac
+
 echo "IMPORTANT:"
 echo "----------"
 echo "To use this root workspaces environment (rwe), if you haven't done so already with"
