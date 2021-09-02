@@ -107,6 +107,8 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
+POD=`getClusterProperty "pod.name" "local"`
+
 # 
 # VM cluster
 #
@@ -155,7 +157,15 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       exit 1
    fi
 
-   ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_log -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $* -num 1"
+   if [ "$ALL" == "true" ]; then
+      COMMAND_TAIL=""
+   elif [ "$POD" != "local" ]; then
+      COMMAND_TAIL="-num $MEMBER_NUM"
+   else
+      COMMAND_TAIL="-num 1"
+   fi
+
+   ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_log -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $@ $COMMAND_TAIL"
    exit
 fi
 
@@ -163,7 +173,6 @@ fi
 # Local cluster
 #
 
-POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 case "$LOG" in 
