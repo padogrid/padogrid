@@ -5,10 +5,11 @@ https://github.com/padogrid
 
 ## Version 0.9.11-SNAPSHOT
 
-### Release Date: 08/31/21
+### Release Date: 09/06/21
 
 - Added Hazelcast app instance names. You can now see PadoGrid apps in the management center as `PadoGrid-perf_test` and `hazelcast-desktop`.
 - Refactored initialization scripts.
+- Added PadoWeb support.
 
 ----
 

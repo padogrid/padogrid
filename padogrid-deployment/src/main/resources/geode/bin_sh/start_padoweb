@@ -1,0 +1,222 @@
+#!/bin/bash
+
+# ========================================================================
+# Copyright (c) 2013-2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+#
+# Source in the env files from the pado directory
+#
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start PadoWeb in Tomcat server
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Starts PadoWeb in Tomcat server. PadoWeb requires a Pado cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+PROPERTIES
+   The padoweb and pado (system) properties can be set in the 'cluster.properties' file.
+   Padoweb property names begin with 'padoweb.' and Pado propety names begin with 'pado.'.
+
+   etc/cluster.properties
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "pado"
+   exit
+fi
+
+if [ "$PADOWEB_HOME" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} PadoWeb not found. You must set PADOWEB_HOME with the PadoWeb installation path in the following"
+   echo >&2 "       workspace 'setenv.sh' file."
+   echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+
+# Get the padoweb war file
+for i in $PADOWEB_HOME/*.war; do
+   PADOWEB_WAR=$i
+   break;
+done
+
+if [ "$PADOWEB_WAR" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} PadoWeb war file not found in $PADOWEB_HOME."
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+#
+# VM cluster
+#
+THIS_HOST_NAME=`hostname`
+PADOWEB_HOST=`getClusterProperty "padoweb.host" $DEFAULT_PADOWEB_HOST`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_PADOWEB_HOST" ]; then
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then
+         VM_KEY="-i $VM_KEY"
+      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
+      fi
+      # For Vagrant VMs, run local if '.local' is suffix
+      if [ "$PADOWEB_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
+         ssh -q -n $VM_KEY $VM_USER@$PADOWEB_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/geode/bin_sh/start_padoweb -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
+         exit
+      fi
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+# Determine the node host name for URL
+POD=`getClusterProperty "pod.name" $POD`
+NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+if [ "$POD" == "local" ]; then
+   NODE=`hostname`
+else
+   NODE="`hostname`.local"
+fi
+
+LOCATOR_START_PORT=$(getClusterProperty "locator.tcp.startPort" "10334")
+HOSTNAME_FOR_CLIENTS=$(getClusterProperty "cluster.hostnameForClients" "localhost")
+LOCATOR_PREFIX=`getLocatorPrefix`
+LOCATOR_COUNT=`getLocatorCount`
+
+PORT=$LOCATOR_START_PORT
+LOCATORS=""
+for i in $(seq 1 $LOCATROR_COUNT); do
+  if [ $i -gt 1 ]; then
+     LOCATORS="$LOCATORS,"
+  fi
+  LOCATORS="$HOSTNAME_FOR_CLIENTS:$PORT" 
+  let PORT=PORT+1
+done
+
+PADOWEB_HTTP_PORT=`getClusterProperty "padoweb.http.port" 8080`
+PADOWEB_HTTPS_PORT=`getClusterProperty "padoweb.https.port" 8443`
+PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" "false"`
+PADOWEB_CONTEXT_PATH=`getClusterProperty "padoweb.contextPath" "/"`
+
+if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
+   PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTPS_PORT}
+else
+   PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}
+fi
+
+PID=$(getPadowebPid "$PADOWEB_NAME" "$WORKSPACE")
+
+if [ "$PID" != "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} PadoWeb already running [PID=$PID]. Command aborted."
+   exit 1
+fi
+   
+PADOWEB_PROPERTIES_FILE="$CLUSTER_DIR/etc/cluster.properties"
+
+
+WORKING_DIR=$RUN_DIR/$PADOWEB_NAME
+export LOG_FILE=$LOG_DIR/${PADOWEB_NAME}.log
+if [ ! -d "$WORKING_DIR" ]; then
+   mkdir -p "$WORKING_DIR"
+fi
+PADOWEB_BASE_DIR="$WORKING_DIR/tmp"
+PADOWEB_APP_BASE="$WORKING_DIR"
+
+CLASSPATH=$PADOWEB_HOME/lib/*
+
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+   WORKING_DIR="$(cygpath -wp "$WORKING_DIR")"
+fi
+
+JAVA_OPTS="-Dpadoweb.name=$PADOWEB_NAME \
+  -Dpadogrid.workspace=$WORKSPACE \
+  -Dexecutable.name=$EXECUTABLE \
+  -Dpado.security.client.locators=$LOCATORS \
+  -Dpadoweb.propertiesFile=$PADOWEB_PROPERTIES_FILE \
+  -Dpadoweb.baseDir=$PADOWEB_BASE_DIR \
+  -Dpadoweb.appBase=$PADOWEB_APP_BASE \
+"
+ARGS=$PADOWEB_WAR
+
+JAVA="$JAVA_HOME/bin/java"
+
+"$JAVA" $JAVA_OPTS com.netcrest.pado.web.TomcatServer $ARGS > $LOG_FILE 2>&1 &
+PID=$!
+
+echo "----------------------------------------------------------------"
+echo "        WORKSPACE: $PADOGRID_WORKSPACE"
+echo "             Name: $PADOWEB_NAME"
+echo "          Cluster: $CLUSTER"
+if [ "$PADOWEB_HTTPS_ENABLED" == "false" ]; then
+echo "              URL: http://${NODE}:${PADOWEB_HTTP_PORT}${PADOWEB_CONTEXT_PATH}"
+else
+echo "              URL: https://${NODE}:${PADOWEB_HTTPS_PORT}${PADOWEB_CONTEXT_PATH}"
+fi
+echo "              PID: $PID"
+echo "      WORKING_DIR: $WORKING_DIR"
+if [ "$PADOWEB_HTTPS_ENABLED" == "false" ]; then
+echo "        HTTP_PORT: $PADOWEB_HTTP_PORT"
+else
+echo "       HTTPS_PORT: $PADOWEB_HTTPS_PORT"
+fi
+echo "          LOG_DIR: $LOG_DIR"
+echo "         LOG_FILE: $LOG_FILE"
+echo "             JAVA: $JAVA"
+echo "        JAVA_OPTS: $JAVA_OPTS"
+echo "        CLASSPATH: $CLASSPATH"
+echo "        Arguments: $ARGS"
+echo "----------------------------------------------------------------"
+echo "PadoWeb started."

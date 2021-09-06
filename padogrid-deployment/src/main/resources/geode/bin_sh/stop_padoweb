@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Stop PadoWeb in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Stops PadoWeb in the specified cluster. If the cluster name is not specified then
+   it stops PadoWeb running in the current cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "pado" $EXECUTABLE
+   exit
+fi
+
+DEFAULT_PADOWEB_HOST="localhost"
+
+#
+# VM cluster
+#
+THIS_HOST_NAME=`hostname`
+PADOWEB_HOST=`getClusterProperty "padoweb.host" $DEFAULT_PADOWEB_HOST`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_PADOWEB_HOST" ]; then
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then
+         VM_KEY="-i $VM_KEY"
+      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
+      fi
+      # For Vagrant VMs, run local if '.local' is suffix
+      if [ "$PADOWEB_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
+         ssh -q -n $VM_KEY $VM_USER@$PADOWEB_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_padoweb -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
+         exit
+      fi
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+# Determine the node host name for URL
+POD=`getClusterProperty "pod.name" "local"`
+NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+if [ "$POD" == "local" ]; then
+   NODE=`hostname`
+else
+   NODE="`hostname`.local"
+fi
+
+PADOWEB_HTTP_PORT=`getClusterProperty "padoweb.http.port" $DEFAULT_PADOWEB_HTTP_PORT`
+PADOWEB_HTTPS_PORT=`getClusterProperty "padoweb.https.port" $DEFAULT_PADOWEB_HTTPS_PORT`
+PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" "false"`
+if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
+   PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTPS_PORT}
+else
+   PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}
+fi
+WORKING_DIR=$RUN_DIR/$PADOWEB_NAME
+LOG_FILE=$LOG_DIR/${PADOWEB_NAME}.log
+PID=`getPadowebPid $PADOWEB_NAME $WORKSPACE`
+
+if [ -z $PID ]; then
+   echo "PadoWeb not running [$CLUSTER]. Command aborted."
+   exit
+else
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      taskkill /f /pid "${PID}"
+   else
+      kill -9 "${PID}"
+   fi
+
+   echo "----------------------------------------------------------------"
+   echo "        WORKSPACE $PADOGRID_WORKSPACE"
+   echo "  PadoWeb Stopped: $PADOWEB_NAME"
+   echo "          Cluster: $CLUSTER"
+   if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
+   echo "              URL: https://${NODE}:${PADOWEB_HTTPS_PORT}"
+   else
+   echo "              URL: http://${NODE}:${PADOWEB_HTTP_PORT}"
+   fi
+   echo "              PID: $PID"
+   echo "      WORKING_DIR: ${WORKING_DIR}"
+   if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
+   echo "       HTTPS_PORT: $PADOWEB_HTTPS_PORT"
+   else
+   echo "        HTTP_PORT: $PADOWEB_HTTP_PORT"
+   fi
+   echo "          LOG_DIR: $LOG_DIR"
+   echo "         LOG_FILE: $LOG_FILE"
+   echo "----------------------------------------------------------------"
+fi
