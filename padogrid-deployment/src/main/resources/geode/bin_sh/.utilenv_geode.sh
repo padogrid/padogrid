@@ -380,3 +380,24 @@ function printJavaOpts()
       echo "$token"
    done
 }
+
+#
+# Returns the PadoWeb Tomcat server PID if it is running.
+# @param padowebName    Unique Padoweb name
+# @param workspaceName  Workspace name
+#
+function getPadowebPid
+{
+   __PADOWEB=$1
+   __WORKSPACE=$2
+   # Use eval to handle commands with spaces
+   local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep padoweb.name=$__PADOWEB"
+   padowebs=$(eval $__COMMAND)
+   padowebs=$(echo $padowebs | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
+   spids=""
+   for j in $padowebs; do
+      spids="$j $spids"
+   done
+   spids=`trimString $spids`
+   echo $spids
+}

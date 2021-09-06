@@ -385,9 +385,6 @@ if [ -f "$ETC_DIR/master.properties" ]; then
    fi
 fi
 
-if [ "$BIND_ADDRESS" != "" ]; then
-   SPARK_OPTS="$SPARK_OPTS --bind-address=$BIND_ADDRESS"
-fi
 POD=`getClusterProperty "pod.name" $POD`
 if [ "$SIMULATE" == "true" ]; then
    PID="Simulated"
@@ -401,17 +398,25 @@ else
    if [ "$RUN_SCRIPT" != "" ]; then
       $RUN_SCRIPT >> $LOG_FILE &
    else
-      #SPARK_CONF_DIR="$ETC_DIR start-master.sh
-      #SPARK_CONF_DIR=$ETC_DIR start-master.sh
+      echo SPARK_CONF_DIR=$ETC_DIR
+      echo SPARK_MASTER_HOST=$BIND_ADDRESS
+      echo SPARK_MASTER_PORT=$MASTER_START_PORT
+      echo SPARK_MASTER_WEBUI_PORT=$MASTER_WEBUI_START_PORT
+      echo SPARK_LOCAL_DIRS=$CLUSTER_DIR/scratch
+      echo SPARK_LOG_DIR=$LOG_DIR
+      echo SPARK_PID_DIR=$RUN_DIR/pids
+      echo SPARK_MASTER_OPTS=$JAVA_OPTS
+      echo ""
+      echo start-master.sh
 
-SPARK_CONF_DIR=$ETC_DIR \
-SPARK_MASTER_HOST=localhost \
-SPARK_MASTER_PORT=$MASTER_START_PORT \
-SPARK_MASTER_WEBUI_PORT=$MASTER_WEBUI_START_PORT \
-SPARK_LOCAL_DIRS=$CLUSTER_DIR/scratch \
-SPARK_LOG_DIR=$LOG_DIR \
-SPARK_PID_DIR=$RUN_DIR/pids \
-SPARK_MASTER_OPTS=$JAVA_OPTS start-master.sh
+      SPARK_CONF_DIR=$ETC_DIR \
+      SPARK_MASTER_HOST=$BIND_ADDRESS \
+      SPARK_MASTER_PORT=$MASTER_START_PORT \
+      SPARK_MASTER_WEBUI_PORT=$MASTER_WEBUI_START_PORT \
+      SPARK_LOCAL_DIRS=$CLUSTER_DIR/scratch \
+      SPARK_LOG_DIR=$LOG_DIR \
+      SPARK_PID_DIR=$RUN_DIR/pids \
+      SPARK_MASTER_OPTS=$JAVA_OPTS  start-master.sh
 
       PID=`getMasterPid $MASTER $WORKSPACE`
    fi
@@ -419,7 +424,7 @@ fi
 
 # MASTER_URL
 MASTER_URL="spark://$BIND_ADDRESS:$MASTER_PORT"
-WEBUI_URL="http://$BIND_ADDRESS:$HTTP_PORT"
+WEBUI_URL="http://$BIND_ADDRESS:$MASTER_WEBUI_START_PORT"
 
 # JMX_URL
 JMX_URL="service:jmx:rmi:///jndi/rmi://padomac.local:$JMX_PORT/jmxrmi"
@@ -440,7 +445,8 @@ echo "      CONFIG_DIR: $ETC_DIR"
 echo "     CONFIG_FILE: $CONFIG_FILE"
 echo "         LOG_DIR: $LOG_DIR"
 echo "        LOG_FILE: $LOG_FILE"
-echo "    MASTER_PORT: $MASTER_PORT"
+echo "     MASTER_PORT: $MASTER_PORT"
+echo "       WBUI_PORT: $MASTER_WEBUI_START_PORT"
 echo "      DEBUG_PORT: $DEBUG_PORT"
 echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
 echo "        JMX_PORT: $JMX_PORT"
@@ -453,7 +459,6 @@ echo "            JAVA: $JAVA"
 if [ "$RUN_SCRIPT" != "" ]; then
 echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
 fi
-echo "       SPARK_OPTS: $SPARK_OPTS"
 echo "       JAVA_OPTS: $JAVA_OPTS"
 echo "       CLASSPATH: $CLASSPATH"
 echo "----------------------------------------------------------------"
