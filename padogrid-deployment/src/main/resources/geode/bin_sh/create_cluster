@@ -27,7 +27,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -type -pod -vm -locator -port -?"
+   echo "-cluster -type -pod -vm -locator -padoweb -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -50,6 +50,7 @@ SYNOPSIS
                [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-locator comma_separated_locator_hosts]
+               [-padoweb padoweb_host]
                [-port first_locator_port_number] [-?]
 
 DESCRIPTION
@@ -91,6 +92,12 @@ OPTIONS
 
              If this option is not specified but the '-vm' option is specified, then
              the first host from the '-vm' host list is selected for the locator.
+
+   -padoweb padoweb_host
+             PadoWeb host name. This option is meaningful only if the '-vm' option
+             is specified. If this option is not specified but the '-vm' option is
+             specified, then the first host from the '-vm' host list is selected
+             for PadoWeb.
 
    -port first_locator_port_number
              First locator's port number. Port number is incremented
@@ -348,6 +355,15 @@ function writeCluster()
    echo "# Default GC log file flag. If true then GC information is logged in a separate log file." >> $ETC_DIR/cluster.properties
    echo "gc.log.file.enabled=$DEFAULT_GC_LOG_FILE_ENABLED" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
+   if [ "$TYPE_ARG" == "pado" ]; then
+      echo "# PadoWeb properties" >> $ETC_DIR/cluster.properties
+      echo "padoweb.host=$PADOWEB_HOST" >> $ETC_DIR/cluster.properties
+      echo "padoweb.http.port=$NEW_PADOWEB_HTTP_PORT" >> $ETC_DIR/cluster.properties
+      echo "padoweb.https.port=$NEW_PADOWEB_HTTPS_PORT" >> $ETC_DIR/cluster.properties
+      echo "padoweb.https.enabled=false" >> $ETC_DIR/cluster.properties
+      echo "padoweb.contextPath=$DEFAULT_PADOWEB_CONTEXT_PATH" >> $ETC_DIR/cluster.properties
+      echo "" >> $ETC_DIR/cluster.properties
+   fi
    
    # VM
    echo "# Enable/disable VM cluster" >> $ETC_DIR/cluster.properties
@@ -433,12 +449,26 @@ if [ "$VM_ENABLED" == "true" ]; then
       echo "WARNING: VM locator host\(s\) undefined. Configuring with this host."
       VM_LOCATOR_HOSTS=`hostname`
    fi
+   
+   # PadoWeb
+   if [ "$PADOWEB" == "" ]; then
+      # Extract the first host from the VM host list
+      VM_PADOWEB_HOSTS=${VM_HOSTS%%,*}
+   else
+      VM_PADOWEB_HOSTS=$PADOWEB
+   fi
+   if [ "$VM_PADOWEB_HOSTS" == "" ]; then
+      echo "WARNING: VM padoweb host\(s\) undefined. Configuring with this host."
+      VM_PADOWEB_HOSTS=`hostname`
+   fi
+
    if [ "$VM_HOSTS" == "" ]; then
       echo "WARNING: VM hosts undefined. Configuring with this host."
       VM_HOSTS=`hostname`
    fi
 else
    VM_LOCATOR_HOSTS=`hostname`
+   VM_PADOWEB_HOSTS=`hostname`
    VM_HOSTS=`hostname`
 fi
 
@@ -473,6 +503,8 @@ if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "
    NEW_PROMETHEUS_START_PORT=$DEFAULT_PROMETHEUS_START_PORT
    NEW_JMX_MANAGER_HTTP_START_PORT=$DEFAULT_JMX_MANAGER_HTTP_START_PORT
    NEW_JMX_MANAGER_START_PORT=$DEFAULT_JMX_MANAGER_START_PORT
+   NEW_PADOWEB_HTTP_PORT=$DEFAULT_PADOWEB_HTTP_PORT
+   NEW_PADOWEB_HTTPS_PORT=$DEFAULT_PADOWEB_HTTPS_PORT
 else
    NEW_LOCATOR_START_PORT=$PORT_ARG
    let PORT_DIFF=$NEW_LOCATOR_START_PORT-DEFAULT_LOCATOR_START_PORT
@@ -486,6 +518,8 @@ else
    let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_HTTP_START_PORT=DEFAULT_JMX_MANAGER_HTTP_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_START_PORT=DEFAULT_JMX_MANAGER_START_PORT+PORT_DIFF
+   let NEW_PADOWEB_HTTP_PORT=DEFAULT_PADOWEB_HTTP_PORT+PORT_DIFF
+   let NEW_PADOWEB_HTTPS_PORT=DEFAULT_PADOWEB_HTTPS_PORT+PORT_DIFF
 fi
 
 # Create the cluster sub-directories and files.
@@ -521,6 +555,7 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "POD" == "local" ]; then
       POD_TYPE="local"
    fi
+   PADOWEB_HOST=$VM_PADOWEB_HOSTS
 elif [ "$POD" == "local" ]; then
    LOCATOR_1=`getLocatorName 1`
    LOCATOR_1_DIR=$CLUSTER_DIR/run/$LOCATOR_1
@@ -532,6 +567,7 @@ elif [ "$POD" == "local" ]; then
    mkdir -p $MEMBER_1_DIR
    mkdir -p $MEMBER_2_DIR
    POD_TYPE="local" 
+   PADOWEB_HOST="localhost"
 fi
 
 if [ "$POD" != "local" ]; then
@@ -573,6 +609,8 @@ if [ "$POD" != "local" ]; then
       else
          NODE_NAME_PRIMARY="localhost"
       fi
+      PADOWEB_HOST=$NODE_NAME_PRIMARY
+
       for i in $(seq 1 $NODE_COUNT); do
         __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
         NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
@@ -614,6 +652,7 @@ if [ "$POD" != "local" ]; then
       BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
       BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
       NODE_NAME_PRIMARY=${BASE_PRIVATE_IP}
+      PADOWEB_HOSTS=$NODE_NAME_PRIMARY
       for i in $(seq 1 $NODE_COUNT); do
          let NODE_OCTET=i+BASE_PRIVATE_IP_LAST_OCTET
          NODE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${NODE_OCTET}
@@ -658,6 +697,10 @@ echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
 echo "JMX_MANAGER_HTTP_START_PORT: $NEW_JMX_MANAGER_HTTP_START_PORT"
 echo "     JMX_MANAGER_START_PORT: $NEW_JMX_MANAGER_START_PORT"
 echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
+if [ "$TYPE_ARG" == "pado" ]; then
+echo "          PADOWEB_HTTP_PORT: $NEW_PADOWEB_HTTP_PORT"
+echo "         PADOWEB_HTTPS_PORT: $NEW_PADOWEB_HTTPS_PORT"
+fi
 echo ""
 echo "The default config.xml file has been placed in the CONFIG_DIR directory."
 echo "Modify or replace it with the appropriate file."

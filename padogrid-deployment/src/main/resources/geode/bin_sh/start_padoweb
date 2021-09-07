@@ -70,7 +70,7 @@ fi
 cat <<EOF
 SEE ALSO
 EOF
-   printSeeAlsoList "pado"
+   printSeeAlsoList "*padoweb pado" $EXECUTABLE
    exit
 fi
 
@@ -117,6 +117,11 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
    fi
 fi
 
+if [ "$RUN_TYPE" != "pado" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid run type. PadoWeb requires a Pado cluster. Command aborted."
+   exit 1
+fi
+
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
@@ -144,10 +149,10 @@ for i in $(seq 1 $LOCATROR_COUNT); do
   let PORT=PORT+1
 done
 
-PADOWEB_HTTP_PORT=`getClusterProperty "padoweb.http.port" 8080`
-PADOWEB_HTTPS_PORT=`getClusterProperty "padoweb.https.port" 8443`
-PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" "false"`
-PADOWEB_CONTEXT_PATH=`getClusterProperty "padoweb.contextPath" "/"`
+PADOWEB_HTTP_PORT=`getClusterProperty "padoweb.http.port" $DEFAULT_PADOWEB_HTTP_PORT`
+PADOWEB_HTTPS_PORT=`getClusterProperty "padoweb.https.port" $DEFAULT_PADOWEB_HTTPS_PORT`
+PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" $DEFAULT_PADOWEB_HTTPS_ENABLED`
+PADOWEB_CONTEXT_PATH=`getClusterProperty "padoweb.contextPath" $DEFAULT_PADOWEB_CONTEXT_PATH`
 
 if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
    PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTPS_PORT}

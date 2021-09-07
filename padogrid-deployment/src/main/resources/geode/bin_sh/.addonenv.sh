@@ -234,6 +234,21 @@ DEFAULT_LOCATOR_JMX_ENABLED=false
 DEFAULT_JMX_ENABLED=true
 
 #
+# Enable/disable PadoWeb HTTPS
+#
+DEFAULT_PADOWEB_HTTPS_ENABLED=false
+
+#
+# Default PadoWeb host and ports. These values are initially set
+# in $ETC_DIR/cluster.properties when a new cluster is created using the 'create_cluster'
+# command. You can change them later in the cluster.properties file.
+#
+DEFAULT_PADOWEB_HOST=localhost
+DEFAULT_PADOWEB_HTTP_PORT=8080
+DEFAULT_PADOWEB_HTTPS_PORT=8443
+DEFAULT_PADOWEB_CONTEXT_PATH="/"
+
+#
 # Default Pulse port numbers. These values are initially set in $ETC_DIR/cluster.properties
 # when a new cluster is created using the 'create_cluster' command. You can change them later
 # in the cluster.properties file.

@@ -95,6 +95,11 @@ fi
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
+if [ "$RUN_TYPE" != "pado" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid run type. PadoWeb requires a Pado cluster. Command aborted."
+   exit 1
+fi
+
 # Determine the node host name for URL
 POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
@@ -106,7 +111,7 @@ fi
 
 PADOWEB_HTTP_PORT=`getClusterProperty "padoweb.http.port" $DEFAULT_PADOWEB_HTTP_PORT`
 PADOWEB_HTTPS_PORT=`getClusterProperty "padoweb.https.port" $DEFAULT_PADOWEB_HTTPS_PORT`
-PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" "false"`
+PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" $DEFAULT_PADOWEB_HTTPS_ENABLED`
 if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
    PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTPS_PORT}
 else
