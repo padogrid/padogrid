@@ -107,27 +107,27 @@ function displayPadowebShort()
    LOG_FILE=$LOG_DIR/${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}.log
    PID=`getPadowebPid $PADOWEB_NAME $WORKSPACE`
 
-   echo "         CLUSTER: $CLUSTER"
+   echo "    CLUSTER: $CLUSTER"
    if [ "$SHORT" == "false" ]; then
-   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
-   echo "            Name: $PADOWEB_NAME"
+   echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "       Name: $PADOWEB_NAME"
    fi
    if [ "$PID" == "" ]; then
-   echo -e "           STATE: ${CLightRed}Down${CNone}"
+   echo -e "      STATE: ${CLightRed}Down${CNone}"
    if [ "$SHORT" == "false" ]; then
-   echo "             PID: N/A"
+   echo "        PID: N/A"
    fi
    else
-   echo -e "           STATE: ${CLightGreen}Running${CNone}"
+   echo -e "      STATE: ${CLightGreen}Running${CNone}"
    if [ "$SHORT" == "false" ]; then
-   echo "             PID: $PID"
+   echo "        PID: $PID"
    fi
    fi
    if [ "$SHORT" == "false" ]; then
    if [ "$VM_ENABLED" == "true" ]; then
-   echo "      Deployment: VM"
+   echo " Deployment: VM"
    fi
-   echo -e "             URL: $CUrl$PADOWEB_URL$CNone"
+   echo -e "        URL: $CUrl$PADOWEB_URL$CNone"
    fi
 }
 
@@ -159,25 +159,25 @@ function displayPadowebLong()
    PID=`getPadowebPid $PADOWEB_NAME $WORKSPACE`
 
    echo "----------------------------------------------------------------"
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "            Name: $PADOWEB_NAME"
+   echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "       Name: $PADOWEB_NAME"
    if [ "$PID" == "" ]; then
-   echo -e "          STATE: ${CLightRed}Down${CNone}"
-   echo "             PID: N/A"
+   echo -e "      STATE: ${CLightRed}Down${CNone}"
+   echo "        PID: N/A"
    else
-   echo -e "           STATE: ${CLightGreen}Running${CNone}"
-   echo "             PID: $PID"
+   echo -e "      STATE: ${CLightGreen}Running${CNone}"
+   echo "        PID: $PID"
    fi
-   echo "         Cluster: $CLUSTER"
-   echo -e "            URL: $CUrl$PADOWEB_URL$CNone"
-   echo "     WORKING_DIR: $WORKING_DIR"
+   echo "    Cluster: $CLUSTER"
+   echo -e "        URL: $CUrl$PADOWEB_URL$CNone"
+   echo "WORKING_DIR: $WORKING_DIR"
    if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
-   echo "      HTTPS_PORT: $PADOWEB_HTTPS_PORT"
+   echo " HTTPS_PORT: $PADOWEB_HTTPS_PORT"
    else
-   echo "       HTTP_PORT: $PADOWEB_HTTP_PORT"
+   echo "  HTTP_PORT: $PADOWEB_HTTP_PORT"
    fi
-   echo "         LOG_DIR: $LOG_DIR"
-   echo "        LOG_FILE: $LOG_FILE"
+   echo "    LOG_DIR: $LOG_DIR"
+   echo "   LOG_FILE: $LOG_FILE"
    echo "----------------------------------------------------------------"
 }
 
@@ -222,18 +222,20 @@ if [ "$ALL" == "true" ]; then
    COUNT=0
    for i in *; do
       if [ -d "$i" ]; then
-         let COUNT=COUNT+1
-         if [ $COUNT -eq 1 ]; then
-            CLUSTERS="$i"
-         else
-            CLUSTERS="$CLUSTERS $i"
+         if [ "$(isPadoCluster $i)" == "true" ]; then
+            let COUNT=COUNT+1
+            if [ $COUNT -eq 1 ]; then
+               CLUSTERS="$i"
+            else
+               CLUSTERS="$CLUSTERS $i"
+            fi
          fi
       fi
    done
    popd > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "     Clusters: $CLUSTERS"
+   echo "Pado Clusters: $CLUSTERS"
    echo "----------------------------------------------------------------"
    echo ""
 
@@ -248,6 +250,10 @@ if [ "$ALL" == "true" ]; then
          displayPadowebLong
       done
    fi
+   echo ""
+   echo "----------------------------------------------------------------"
+   echo "Pado Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
 
 else
 

@@ -3793,3 +3793,45 @@ function getDefaultStartPortNumber
       echo "$DEFAULT_MEMBRER_START_PORT"
    fi
 }
+
+#
+# Returns "true" if the specified cluster is a Pado cluster; "false", otherwise.
+#
+# @required PADOGRID_WORKSPACE Current PadoGrid workspace path.
+# @param    clusterName        Optional cluster name. If not specified, then it
+#                              assumes the current cluster.
+#
+function isPadoCluster
+{
+   local __CLUSTER="$1"
+   if [ "$__CLUSTER" == "" ]; then
+      __CLUSTER=$CLUSTER
+   fi
+   local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
+   if [ -f "$__CLUSTER_DIR/bin_sh/import_csv" ]; then
+      echo "true" 
+   else
+      echo "false" 
+   fi
+}
+
+#
+# Returns "true" if the specified cluster is a Hazelcast cluster; "false", otherwise.
+#
+# @required PADOGRID_WORKSPACE Current PadoGrid workspace path.
+# @param    clusterName        Optional cluster name. If not specified, then it
+#                              assumes the current cluster.
+#
+function isHazelcastCluster
+{
+   local __CLUSTER="$1"
+   if [ "$__CLUSTER" == "" ]; then
+      __CLUSTER=$CLUSTER
+   fi
+   local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
+   if [ -f "$__CLUSTER_DIR/etc/hazelcast.xml" ]; then
+      echo "true" 
+   else
+      echo "false" 
+   fi
+}
