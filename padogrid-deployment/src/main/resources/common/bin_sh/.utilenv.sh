@@ -595,7 +595,7 @@ function getAppOptions
    elif [ "$__PRODUCT" == "jet" ]; then
       echo "desktop jet_demo"
    elif [ "$__PRODUCT" == "geode" ]; then
-      echo "grafana perf_test"
+      echo "grafana padodesktop perf_test"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "perf_test"
    else
