@@ -135,28 +135,30 @@ padogrid-deployment/target/assembly/padogrid-all_<version>.zip
 Inflate one of the distribution files in your file system. For example,
 
 ```bash
-mkdir ~/Padogrid/snapshots
-tar -C ~/Padogrid/snapshots/ -xzf padogrid_0.9.8-SNAPSHOT.tar.gz
-cd ~/Padogrid/snapshots
-tree -L 1 padogrid_0.9.8-SNAPSHOT
+mkdir -p ~/Padogrid/products
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.11-SNAPSHOT.tar.gz
+cd ~/Padogrid/products
+tree -L 1 padogrid_0.9.11-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.8-SNAPSHOT
+padogrid_0.9.11-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
-├── RELEASE_NOTES.txt
 ├── bin_sh
 ├── coherence
 ├── etc
 ├── geode
+├── hadoop
 ├── hazelcast
+├── kafka
 ├── lib
 ├── pods
-└── snappydata
+├── snappydata
+└── spark
 ```
 
 ## Initializing PadoGrid
@@ -164,12 +166,12 @@ padogrid_0.9.8-SNAPSHOT
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/snapshots/padogrid_0.9.8-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.11-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid on Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.8-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.11-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 ```bash
 # docker
@@ -215,7 +217,7 @@ If you have a Hazelcast cluster running in the same namespace (project) as PadoG
 ```bash
 export NAMESPACE=<Kubernetes namespace/project>
 export HAZELCAST_SERVICE=<Hazelcast Kubernetes service>
-# The default cluster name is "dev".
+# Default cluster name is "dev".
 export HAZELCAST_CLUSTER_NAME=<cluster name>
 create_app
 cd_app perf_test; cd bin_sh
