@@ -196,10 +196,10 @@ You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores
 
 ```bash
 # kubctl
-kubectl create deployment padogid --image=docker.io/padogrid/padogrid
+kubectl create deployment padogrid --image=docker.io/padogrid/padogrid
 
 # oc
-oc create deployment padogid --image=docker.io/padogrid/padogrid
+oc create deployment padogrid --image=docker.io/padogrid/padogrid
 ```
 
 To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
