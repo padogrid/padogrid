@@ -97,7 +97,7 @@ echo "#!/bin/bash" > $NODEENV_FILE
 echo "" >> $NODEENV_FILE
 echo "export PRODUCT=$PRODUCT" >> $NODEENV_FILE
 echo "export HOST_OS_HOSTNAME=`hostname`" >> $NODEENV_FILE
-echo "export COHERENCE_HOME=$COHERENCE_HOME" >> $NODEENV_FILE
+echo "export GEODE_HOME=$GEODE_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_HOME=$VAGRANT_PADOGRID_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_WORKSPACES_HOME=$GUEST_PADOGRID_WORKSPACES_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_WORKSPACE=$GUEST_PADOGRID_WORKSPACE" >> $NODEENV_FILE
@@ -134,14 +134,14 @@ if [[ $OS_NAME == CYGWIN* ]]; then
    PADOGRID_HOME="${PADOGRID_HOME//\\/\\\\\\\\}"
 
    # Replace '/' to avoid expansion for the subsequent use.
-   POD_BOX_IMAGE="${POD_BOX_IMAGE//\//\\/}"
+   POD_BOX_IMAGE=$(echo $POD_BOX_IMAGE | sed 's/\//\\\//g')
 else
    # Replace '/' to avoid expansion for the subsequent use.
-   HOST_PRODUCTS_DIR="${HOST_PRODUCTS_DIR//\//\/}"
-   PADOGRID_WORKSPACES_HOME="${PADOGRID_WORKSPACES_HOME//\//\/}"
-   VAGRANT_PADOGRID_HOME="${VAGRANT_PADOGRID_HOME//\//\/}"
-   PADOGRID_HOME="${PADOGRID_HOME//\//\/}"
-   POD_BOX_IMAGE="${POD_BOX_IMAGE//\//\/}"
+   HOST_PRODUCTS_DIR=$(echo $HOST_PRODUCTS_DIR | sed 's/\//\\\//g')
+   PADOGRID_WORKSPACES_HOME=$(echo $PADOGRID_WORKSPACES_HOME | sed 's/\//\\\//g')
+   VAGRANT_PADOGRID_HOME=$(echo $VAGRANT_PADOGRID_HOME | sed 's/\//\\\//g')
+   PADOGRID_HOME=$(echo $PADOGRID_HOME | sed 's/\//\\\//g')
+   POD_BOX_IMAGE=$(echo $POD_BOX_IMAGE | sed 's/\//\\\//g')
 fi
 
 # Extract the first three octets from the primary IP.
