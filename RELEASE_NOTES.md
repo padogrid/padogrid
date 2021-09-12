@@ -5,11 +5,12 @@ https://github.com/padogrid
 
 ## Version 0.9.11-SNAPSHOT
 
-### Release Date: 09/06/21
+### Release Date: 09/09/21
 
 - Added Hazelcast app instance names. You can now see PadoGrid apps in the management center as `PadoGrid-perf_test` and `hazelcast-desktop`.
 - Refactored initialization scripts.
 - Added PadoWeb support that includes the new commands, `start_padoweb`, `stop_padoweb`, and `show_padoweb`. These commands are accessible from the Geode/GemFire clusters only. The `update_products` command now includes support for PadoWeb. PadoWeb provides IBiz web services to Pado clients.
+- Added preliminary support for PadoDesktop which can now be installed by running `create_app -app padodesktop`.
 - The Hazelcast management center (mc) and padoweb commands now pertain to their relevant clusters. For example, `start_mc -cluster mygeode` will fail if the specified cluster, `mygeode`, is not a Hazelcast cluster.
 
 ----
