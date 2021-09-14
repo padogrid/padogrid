@@ -4,13 +4,6 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 
-## PadoGrid Container
-
-To run PadoGrid as a container, please follow the instructions in the links below.
-
-- [Running PadoGrid using Docker and Podman](#running-padogrid-using-docker-and-podman)
-- [Running PadoGrid in Kubernetes](#running-padogrid-in-kubernetes)
-
 ## Installation
 
 You can install PadoGrid and the supported data grid products by simply running the [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script.
@@ -30,6 +23,14 @@ chmod 755 install_padogrid
 :pencil2: *Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
 
 [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
+
+## PadoGrid Container
+
+To run PadoGrid as a container, please follow the instructions in the links below.
+
+- [Running PadoGrid using Docker and Podman](#running-padogrid-using-docker-and-podman)
+- [Running PadoGrid in Kubernetes](#running-padogrid-in-kubernetes)
+
 
 ## Downloads
 
