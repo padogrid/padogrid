@@ -380,7 +380,7 @@ DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 K8S_PRODUCT_LIST="geode hazelcast jet"
 
 # Supported App Products
-APP_PRODUCT_LIST="coherence geode hazelcast jet"
+APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
