@@ -4,6 +4,13 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 
+## PadoGrid Container
+
+To run PadoGrid as a container, please follow the instructions in the links below.
+
+- [Running PadoGrid using Docker and Podman](#running-padogrid-using-docker-and-podman)
+- [Running PadoGrid in Kubernetes](#running-padogrid-in-kubernetes)
+
 ## Installation
 
 You can install PadoGrid and the supported data grid products by simply running the [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script.
@@ -169,7 +176,7 @@ Run the `create_rwe` command to create the first RWE (Root Workspace Environment
 ~/Padogrid/products/padogrid_0.9.11-SNAPSHOT/bin_sh/create_rwe
 ```
 
-## Running PadoGrid on Docker and Podman
+## Running PadoGrid using Docker and Podman
 
 PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.11-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
@@ -190,26 +197,26 @@ Once you are in the container, initialize PadoGrid as follows. Note that this is
 . ~/.bashrc
 ```
 
-## Running PadoGrid on Kubernetes
+## Running PadoGrid in Kubernetes
 
-You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
+You can run PadoGrid in Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
 # kubctl
-kubectl create deployment padogrid --image=docker.io/padogrid/padogrid
+kubectl run padogrid --image=docker.io/padogrid/padogrid
 
 # oc
-oc create deployment padogrid --image=docker.io/padogrid/padogrid
+oc run padogrid --image=docker.io/padogrid/padogrid
 ```
 
-To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
+To login to the PadoGrid pod, make sure to specify the command, `bash`, as follows.
 
 ```bash
 # kubctl
-kubectl exec -it <padogrid-pod-name> -- bash
+kubectl exec -it padogrid -- bash
 
 # oc
-oc exec -it <padogrid-pod-name> -- bash
+oc exec -it padogrid -- bash
 ```
 
 If you have a Hazelcast cluster running in the same namespace (project) as PadoGrid, then you can run the `perf_test` app as follows.
@@ -222,6 +229,16 @@ export HAZELCAST_CLUSTER_NAME=<cluster name>
 create_app
 cd_app perf_test; cd bin_sh
 ./test_ingestion -run
+```
+
+To delete the PadoGrid pod:
+
+```bash
+# kubctl
+kubectl delete pod paodgrid
+
+# oc
+oc delete pod padogrid
 ```
 
 ## Data Grid Products
