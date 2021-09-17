@@ -744,7 +744,7 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
    fi
 else
    if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
-      __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib:$__CLASSPATH:$HAZELCAST_HOME/lib/*:$$HAZELCAST_HOME/user-lib:HAZELCAST_HOME/user-lib/*"
+      __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib:$__CLASSPATH:$HAZELCAST_HOME/lib/*:$HAZELCAST_HOME/user-lib:$HAZELCAST_HOME/user-lib/*"
    elif [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
       __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-enterprise-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/user-lib/*"
    else
