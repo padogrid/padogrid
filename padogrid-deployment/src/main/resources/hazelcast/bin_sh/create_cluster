@@ -159,7 +159,8 @@ fi
 #
 if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
    if [ "$CLUSTER_TYPE" == "jet" ] && [ "$JET_LICENSE_KEY" == "" ] ||
-      [ "$CLUSTER_TYPE" == "imdg" ] && [ "$IMDG_LICENSE_KEY" == "" ]; then
+      [ "$CLUSTER_TYPE" == "imdg" ] && [ "$IMDG_LICENSE_KEY" == "" ] ||
+      [ "$CLUSTER_TYPE" == "hazelcast" ] && [ "$IMDG_LICENSE_KEY" == "" ]; then
       echo "WORKSPACE"
       echo "   $PADOGRID_WORKSPACE"
       echo ""
@@ -182,40 +183,54 @@ fi
 
 function writeCluster() 
 {
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      # Update cluster env file with PRODUCT and CLUSTER_TYPE
-      updateClusterEnvFile
-
-      # Copy the template hazelcast.xml file
-      cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
-      # Copy the template hazelcast-jet.xml file
-      cp $BASE_DIR/etc/template-hazelcast-jet-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-jet.xml
-      # Copy the template Jet MC application.properties file
-      cp $BASE_DIR/etc/template-jet-mc-application.properties $ETC_DIR/jet-mc-application.properties
-
-      # Insert cluster member list in hazelcast-client.xml
-      JET_CLUSTER_MEMBERS=""
-      HOST_IP="localhost"
-      HOST_SERVER_PORT=$NEW_MEMBER_START_PORT
-      COUNT=2
-      for i in $(seq 1 $COUNT); do   
-         if [ $i -lt $COUNT ]; then
-            JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
-         else
-            JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
-         fi
-	 let HOST_SERVER_PORT=HOST_SERVER_PORT+1
-      done
-      sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
-   else
-      # Update cluster env file with PRODUCT and CLUSTER_TYPE
-      updateClusterEnvFile
-
-      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
-         cp $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         sed 's/\${JET_ENABLED}/true/g' $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast.xml
       else
-         cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
-       fi
+         sed 's/\${JET_ENABLED}/false/g' $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast.xml
+      fi
+
+      # Change cluster type to hazelcast. "jet" and "imdg" are for keep the cluster creating
+      # steps consistent and for setting the initial config file only.
+      CLUSTER_TYPE="hazelcast"
+      # Update cluster env file with PRODUCT and CLUSTER_TYPE
+      updateClusterEnvFile
+   else
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         # Update cluster env file with PRODUCT and CLUSTER_TYPE
+         updateClusterEnvFile
+   
+         # Copy the template hazelcast.xml file
+         cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+         # Copy the template hazelcast-jet.xml file
+         cp $BASE_DIR/etc/template-hazelcast-jet-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-jet.xml
+         # Copy the template Jet MC application.properties file
+         cp $BASE_DIR/etc/template-jet-mc-application.properties $ETC_DIR/jet-mc-application.properties
+   
+         # Insert cluster member list in hazelcast-client.xml
+         JET_CLUSTER_MEMBERS=""
+         HOST_IP="localhost"
+         HOST_SERVER_PORT=$NEW_MEMBER_START_PORT
+         COUNT=2
+         for i in $(seq 1 $COUNT); do   
+            if [ $i -lt $COUNT ]; then
+               JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
+            else
+               JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
+            fi
+            let HOST_SERVER_PORT=HOST_SERVER_PORT+1
+         done
+         sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
+      else
+         # Update cluster env file with PRODUCT and CLUSTER_TYPE
+         updateClusterEnvFile
+   
+         if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
+            cp $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
+         else
+            cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+          fi
+      fi
    fi
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties

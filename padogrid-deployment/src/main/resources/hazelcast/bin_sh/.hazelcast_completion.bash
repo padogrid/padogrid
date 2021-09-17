@@ -46,7 +46,9 @@ __get_jet_jobs()
       fi
       __PREV_WORD=$__WORD
    done
-   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+      __JOBS=$(hz-cli $__ADDRESSES list-jobs)
+   elif [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 4 ]; then
       __JOBS=$(jet $__ADDRESSES list-jobs)
    else
       __JOBS=$(jet.sh $__ADDRESSES list-jobs)
@@ -337,9 +339,137 @@ __jet_complete()
    return 0
 }
 
+__hz-cli_complete()
+{
+   local cur_word prev_word type_list commands len before_prev_word
+
+   # COMP_WORDS is an array of words in the current command line.
+   # COMP_CWORD is the index of the current word (the one the cursor is
+   # in). So COMP_WORDS[COMP_CWORD] is the current word.
+   len=${#COMP_WORDS[@]}
+   second_word="${COMP_WORDS[1]}"
+   third_word="${COMP_WORDS[2]}"
+   cur_word="${COMP_WORDS[COMP_CWORD]}"
+   prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+   local type_path="false"
+
+   # If submit then default the next word to file name
+   __getArrayElementIndex "submit" "${COMP_WORDS[@]}"
+   local index=$?
+   if [ $index -ne 255 ]; then
+      let last_index=len-2
+      if [ $index -eq $last_index ]; then
+         type_path="true"
+      fi
+      if [ "$type_path" == "true" ]; then
+         COMPREPLY=( $( compgen -f -- "$cur_word" ))
+         return 0
+      fi
+      return 0
+   fi
+
+   if [ $len -gt 2 ]; then
+      before_prev_word="${COMP_WORDS[COMP_CWORD-2]}"
+   fi
+   case "$before_prev_word" in
+      help|cancel|cluster|delete-snapshot|list-jobs|list-snapshots|restart|resume|save-snapshot|submit|suspend)
+      type_list=""
+      ;;
+   *)
+      type_list="-t --targets -h --help -V --version -f --config -v --verbosity -n -c --class -s --snapshot help cancel cluster console delete-snapshot list-jobs list-snapshots restart resume save-snapshot sql submit suspend"
+
+      for ((i = 0; i < ${#COMP_WORDS[@]}; i++)); do
+         __WORD="${COMP_WORDS[$i]}"
+         if [ "$__WORD" != "$cur_word" ]; then
+            type_list=${type_list/$__WORD/}
+            if [ "$__WORD" == "-g" ]; then
+               type_list=${type_list/--group/}
+            elif [ "$__WORD" == "--group" ]; then
+               type_list=${type_list/-g/}
+            elif [ "$__WORD" == "-n" ]; then
+               type_list=${type_list/--cluster-name/}
+            elif [ "$__WORD" == "-v" ]; then
+               type_list=${type_list/--version/}
+            elif [ "$__WORD" == "--version" ]; then
+               type_list=${type_list/-v/}
+            elif [ "$__WORD" == "-f" ]; then
+               type_list=${type_list/--config/}
+            elif [ "$__WORD" == "--config" ]; then
+               type_list=${type_list/-f/}
+            elif [ "$__WORD" == "-c" ]; then
+               type_list=${type_list/--class/}
+            elif [ "$__WORD" == "--class" ]; then
+               type_list=${type_list/-c/}
+            elif [ "$__WORD" == "-s" ]; then
+               type_list=${type_list/--snapshot/}
+            elif [ "$__WORD" == "--snapshot" ]; then
+               type_list=${type_list/-s/}
+            elif [ "$__WORD" == "-v" ]; then
+               type_list=${type_list/--verbosity/}
+            elif [ "$__WORD" == "--verbosity" ]; then
+               type_list=${type_list/-v/}
+            elif [ "$__WORD" == "-b" ]; then
+               type_list=${type_list/--help/}
+            elif [ "$__WORD" == "--help" ]; then
+               type_list=${type_list/-h/}
+            fi
+         fi
+      done
+      ;;
+   esac
+
+   case "$prev_word" in
+   -t|--targets)
+     type_list="dev@localhost:5701"
+     ;;
+   -f|--config)
+      type_list=""
+      ;;
+   -h|--help)
+      type_list=""
+      ;;
+   help)
+      type_list="help cancel cluster console delete-snapshot list-jobs list-snapshots restart resume save-snapshot sql submit suspend"
+      ;;
+   cancel)
+      type_list=$(__get_jet_jobs)
+      ;;
+   restart|suspend)
+      type_list=$(__get_jet_jobs "RUNNING")
+      ;;
+   resume)
+      type_list=$(__get_jet_jobs "SUSPENDED")
+      ;;
+   cluster)
+      type_list=""
+      ;;
+   save-snapshot)
+      type_list="" ;;
+   delete-snapshot)
+      type_list="$(__get_jet_snapshots)"
+      for iter in $type_list; do
+         # only reply with completions
+         if [[ $iter =~ ^$cur ]]; then
+             # swap back our escaped spaces
+             COMPREPLY+=( "${iter//|/ }" )
+         fi
+      done
+      return 0
+      ;;
+   *)
+      ;;
+   esac
+
+   if [ "${type_list}" != "" ]; then
+      COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+   fi
+   return 0
+}
+
 # Register cluster.sh
 complete -F __cluster_complete -o bashdefault cluster.sh
 
 # Register jet.sh
 complete -F __jet_complete -o bashdefault jet.sh
 complete -F __jet_complete -o bashdefault jet
+complete -F __hz-cli_complete -o bashdefault hz-cli

@@ -5,8 +5,10 @@ https://github.com/padogrid
 
 ## Version 0.9.11-SNAPSHOT
 
-### Release Date: 09/09/21
+### Release Date: 09/17/21
 
+- Added support for Hazelcast 5.x. Hazelcast 5.x unifies IMDG and Jet into a single product. With this support, PadoGrid also combines IMDG and Jet specifics into a single library. PadoGrid supports Hazelcast 3.x, 4.x, and 5.x as well as Jet 3.x and 4.x.
+- For Hazelcast 5.x, the cluster type is now always "hazelcast". The "imdg" and "jet" cluster types are not no longer supported if a Hazelcast 5.x cluster is created.
 - Added Hazelcast app instance names. You can now see PadoGrid apps in the management center as `PadoGrid-perf_test` and `hazelcast-desktop`.
 - Refactored initialization scripts.
 - Added PadoWeb support that includes the new commands, `start_padoweb`, `stop_padoweb`, and `show_padoweb`. These commands are accessible from the Geode/GemFire clusters only. The `update_products` command now includes support for PadoWeb. PadoWeb provides IBiz web services to Pado clients.

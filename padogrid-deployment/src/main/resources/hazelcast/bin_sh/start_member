@@ -422,6 +422,11 @@ if [ $GC_LOG_ENABLED == "true" ]; then
    fi
 fi
 
+if [[ $JAVA_VERSION != 1.8* ]]; then
+   # Extracted from Hazelcast start.sh:
+   JAVA_OPTS="$JAVA_OPTS --add-modules java.se --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.management/sun.management=ALL-UNNAMED --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED"
+fi
+
 # Start the member
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"
