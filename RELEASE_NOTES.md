@@ -15,7 +15,7 @@ https://github.com/padogrid
 - Added PadoWeb support that includes the new commands, `start_padoweb`, `stop_padoweb`, and `show_padoweb`. These commands are accessible from the Geode/GemFire clusters only. The `update_products` command now includes support for PadoWeb. PadoWeb provides IBiz web services to Pado clients.
 - Added preliminary support for PadoDesktop which can now be installed by running `create_app -app padodesktop`.
 - The Hazelcast management center (mc) and padoweb commands now pertain to their relevant clusters. For example, `start_mc -cluster mygeode` will fail if the specified cluster, `mygeode`, is not a Hazelcast cluster.
-- Fixed Vagrant VM member numbering issues. The member numbers were incorrectly incremented which led to non-default port numbers and missing workding directories.
+- Fixed Vagrant VM member numbering issues. The member numbers were incorrectly incremented which led to non-default port numbers and missing working directories.
 - Fixed the `start_mc` command that ignored HTTPS configuration. This was due to a typo in the script.
 
 ----
