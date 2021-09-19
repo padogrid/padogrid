@@ -63,14 +63,14 @@ public class Region implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("regionId", regionId);
-		writer.writeUTF("regionDescription", regionDescription);
+		writer.writeString("regionId", regionId);
+		writer.writeString("regionDescription", regionDescription);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.regionId = reader.readUTF("regionId");
-		this.regionDescription = reader.readUTF("regionDescription");
+		this.regionId = reader.readString("regionId");
+		this.regionDescription = reader.readString("regionDescription");
 	}
     
 	@Override

@@ -90,20 +90,20 @@ public class Category implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("categoryId", categoryId);
-		writer.writeUTF("categoryName", categoryName);
-		writer.writeUTF("description", description);
-		writer.writeUTF("tag", tag);
-		writer.writeUTF("picture", picture);
+		writer.writeString("categoryId", categoryId);
+		writer.writeString("categoryName", categoryName);
+		writer.writeString("description", description);
+		writer.writeString("tag", tag);
+		writer.writeString("picture", picture);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.categoryId = reader.readUTF("categoryId");
-		this.categoryName = reader.readUTF("categoryName");
-		this.description = reader.readUTF("description");
-		this.tag = reader.readUTF("tag");
-		this.picture = reader.readUTF("picture");
+		this.categoryId = reader.readString("categoryId");
+		this.categoryName = reader.readString("categoryName");
+		this.description = reader.readString("description");
+		this.tag = reader.readString("tag");
+		this.picture = reader.readString("picture");
 	}
     
 	@Override

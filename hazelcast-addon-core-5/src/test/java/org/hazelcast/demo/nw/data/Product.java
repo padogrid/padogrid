@@ -135,11 +135,11 @@ public class Product implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("productId", productId);
-		writer.writeUTF("productName", productName);
-		writer.writeUTF("supplierId", supplierId);
-		writer.writeUTF("categoryId", categoryId);
-		writer.writeUTF("quantityPerUnit", quantityPerUnit);
+		writer.writeString("productId", productId);
+		writer.writeString("productName", productName);
+		writer.writeString("supplierId", supplierId);
+		writer.writeString("categoryId", categoryId);
+		writer.writeString("quantityPerUnit", quantityPerUnit);
 		writer.writeDouble("unitPrice", unitPrice);
 		writer.writeInt("unitsInStock", unitsInStock);
 		writer.writeInt("unitsOnOrder", unitsOnOrder);
@@ -149,11 +149,11 @@ public class Product implements VersionedPortable
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.productId = reader.readUTF("productId");
-		this.productName = reader.readUTF("productName");
-		this.supplierId = reader.readUTF("supplierId");
-		this.categoryId = reader.readUTF("categoryId");
-		this.quantityPerUnit = reader.readUTF("quantityPerUnit");
+		this.productId = reader.readString("productId");
+		this.productName = reader.readString("productName");
+		this.supplierId = reader.readString("supplierId");
+		this.categoryId = reader.readString("categoryId");
+		this.quantityPerUnit = reader.readString("quantityPerUnit");
 		this.unitPrice = reader.readDouble("unitPrice");
 		this.unitsInStock = reader.readInt("unitsInStock");
 		this.unitsOnOrder = reader.readInt("unitsOnOrder");

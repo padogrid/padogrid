@@ -194,9 +194,9 @@ public class Order implements VersionedPortable, Comparable<Order>
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("orderId", orderId);
-		writer.writeUTF("customerId", customerId);
-		writer.writeUTF("employeeId", employeeId);
+		writer.writeString("orderId", orderId);
+		writer.writeString("customerId", customerId);
+		writer.writeString("employeeId", employeeId);
 		if (this.orderDate == null) {
 			writer.writeLong("orderDate", -1L);
 		} else {
@@ -212,21 +212,21 @@ public class Order implements VersionedPortable, Comparable<Order>
 		} else {
 			writer.writeLong("shippedDate", this.shippedDate.getTime());
 		}
-		writer.writeUTF("shipVia", shipVia);
+		writer.writeString("shipVia", shipVia);
 		writer.writeDouble("freight", freight);
-		writer.writeUTF("shipName", shipName);
-		writer.writeUTF("shipAddress", shipAddress);
-		writer.writeUTF("shipCity", shipCity);
-		writer.writeUTF("shipRegion", shipRegion);
-		writer.writeUTF("shipPostalCode", shipPostalCode);
-		writer.writeUTF("shipCountry", shipCountry);
+		writer.writeString("shipName", shipName);
+		writer.writeString("shipAddress", shipAddress);
+		writer.writeString("shipCity", shipCity);
+		writer.writeString("shipRegion", shipRegion);
+		writer.writeString("shipPostalCode", shipPostalCode);
+		writer.writeString("shipCountry", shipCountry);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.orderId = reader.readUTF("orderId");
-		this.customerId = reader.readUTF("customerId");
-		this.employeeId = reader.readUTF("employeeId");
+		this.orderId = reader.readString("orderId");
+		this.customerId = reader.readString("customerId");
+		this.employeeId = reader.readString("employeeId");
 		long l = reader.readLong("orderDate");
 		if (l != -1L) {
 			this.orderDate = new Date(l);
@@ -239,14 +239,14 @@ public class Order implements VersionedPortable, Comparable<Order>
 		if (l != -1L) {
 			this.shippedDate = new Date(l);
 		}
-		this.shipVia = reader.readUTF("shipVia");
+		this.shipVia = reader.readString("shipVia");
 		this.freight = reader.readDouble("freight");
-		this.shipName = reader.readUTF("shipName");
-		this.shipAddress = reader.readUTF("shipAddress");
-		this.shipCity = reader.readUTF("shipCity");
-		this.shipRegion = reader.readUTF("shipRegion");
-		this.shipPostalCode = reader.readUTF("shipPostalCode");
-		this.shipCountry = reader.readUTF("shipCountry");
+		this.shipName = reader.readString("shipName");
+		this.shipAddress = reader.readString("shipAddress");
+		this.shipCity = reader.readString("shipCity");
+		this.shipRegion = reader.readString("shipRegion");
+		this.shipPostalCode = reader.readString("shipPostalCode");
+		this.shipCountry = reader.readString("shipCountry");
 	}
     
 	@Override

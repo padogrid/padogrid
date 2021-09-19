@@ -207,11 +207,11 @@ public class Employee implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("employeeId", employeeId);
-		writer.writeUTF("lastName", lastName);
-		writer.writeUTF("firstName", firstName);
-		writer.writeUTF("title", title);
-		writer.writeUTF("titleOfCourtesy", titleOfCourtesy);
+		writer.writeString("employeeId", employeeId);
+		writer.writeString("lastName", lastName);
+		writer.writeString("firstName", firstName);
+		writer.writeString("title", title);
+		writer.writeString("titleOfCourtesy", titleOfCourtesy);
 		if (this.birthDate == null) {
 			writer.writeLong("birthDate", -1L);
 		} else {
@@ -222,26 +222,26 @@ public class Employee implements VersionedPortable
 		} else {
 			writer.writeLong("hireDate", this.hireDate.getTime());
 		}
-		writer.writeUTF("address", address);
-		writer.writeUTF("city", city);
-		writer.writeUTF("region", region);
-		writer.writeUTF("postalCode", postalCode);
-		writer.writeUTF("country", country);
-		writer.writeUTF("homePhone", homePhone);
-		writer.writeUTF("extension", extension);
-		writer.writeUTF("photo", photo);
-		writer.writeUTF("notes", notes);
-		writer.writeUTF("reportsTo", reportsTo);
-		writer.writeUTF("photoPath", photoPath);
+		writer.writeString("address", address);
+		writer.writeString("city", city);
+		writer.writeString("region", region);
+		writer.writeString("postalCode", postalCode);
+		writer.writeString("country", country);
+		writer.writeString("homePhone", homePhone);
+		writer.writeString("extension", extension);
+		writer.writeString("photo", photo);
+		writer.writeString("notes", notes);
+		writer.writeString("reportsTo", reportsTo);
+		writer.writeString("photoPath", photoPath);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.employeeId = reader.readUTF("employeeId");
-		this.lastName = reader.readUTF("lastName");
-		this.firstName = reader.readUTF("firstName");
-		this.title = reader.readUTF("title");
-		this.titleOfCourtesy = reader.readUTF("titleOfCourtesy");
+		this.employeeId = reader.readString("employeeId");
+		this.lastName = reader.readString("lastName");
+		this.firstName = reader.readString("firstName");
+		this.title = reader.readString("title");
+		this.titleOfCourtesy = reader.readString("titleOfCourtesy");
 		long l = reader.readLong("birthDate");
 		if (l != -1L) {
 			this.birthDate = new Date(l);
@@ -250,17 +250,17 @@ public class Employee implements VersionedPortable
 		if (l != -1L) {
 			this.hireDate = new Date(l);
 		}
-		this.address = reader.readUTF("address");
-		this.city = reader.readUTF("city");
-		this.region = reader.readUTF("region");
-		this.postalCode = reader.readUTF("postalCode");
-		this.country = reader.readUTF("country");
-		this.homePhone = reader.readUTF("homePhone");
-		this.extension = reader.readUTF("extension");
-		this.photo = reader.readUTF("photo");
-		this.notes = reader.readUTF("notes");
-		this.reportsTo = reader.readUTF("reportsTo");
-		this.photoPath = reader.readUTF("photoPath");
+		this.address = reader.readString("address");
+		this.city = reader.readString("city");
+		this.region = reader.readString("region");
+		this.postalCode = reader.readString("postalCode");
+		this.country = reader.readString("country");
+		this.homePhone = reader.readString("homePhone");
+		this.extension = reader.readString("extension");
+		this.photo = reader.readString("photo");
+		this.notes = reader.readString("notes");
+		this.reportsTo = reader.readString("reportsTo");
+		this.photoPath = reader.readString("photoPath");
 	}
     
 	@Override

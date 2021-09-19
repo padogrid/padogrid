@@ -72,16 +72,16 @@ public class Territory implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("territoryId", territoryId);
-		writer.writeUTF("territoryDescription", territoryDescription);
-		writer.writeUTF("regionId", regionId);
+		writer.writeString("territoryId", territoryId);
+		writer.writeString("territoryDescription", territoryDescription);
+		writer.writeString("regionId", regionId);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.territoryId = reader.readUTF("territoryId");
-		this.territoryDescription = reader.readUTF("territoryDescription");
-		this.regionId = reader.readUTF("regionId");
+		this.territoryId = reader.readString("territoryId");
+		this.territoryDescription = reader.readString("territoryDescription");
+		this.regionId = reader.readString("regionId");
 	}
     
 	@Override

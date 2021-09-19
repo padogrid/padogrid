@@ -63,14 +63,14 @@ public class EmployeeTerritory implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("employeeId", employeeId);
-		writer.writeUTF("territoryId", territoryId);
+		writer.writeString("employeeId", employeeId);
+		writer.writeString("territoryId", territoryId);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.employeeId = reader.readUTF("employeeId");
-		this.territoryId = reader.readUTF("territoryId");
+		this.employeeId = reader.readString("employeeId");
+		this.territoryId = reader.readString("territoryId");
 	}
     
 	@Override

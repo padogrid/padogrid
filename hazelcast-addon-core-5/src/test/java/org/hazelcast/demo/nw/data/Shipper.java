@@ -72,16 +72,16 @@ public class Shipper implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("shipperId", shipperId);
-		writer.writeUTF("companyName", companyName);
-		writer.writeUTF("phone", phone);
+		writer.writeString("shipperId", shipperId);
+		writer.writeString("companyName", companyName);
+		writer.writeString("phone", phone);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.shipperId = reader.readUTF("shipperId");
-		this.companyName = reader.readUTF("companyName");
-		this.phone = reader.readUTF("phone");
+		this.shipperId = reader.readString("shipperId");
+		this.companyName = reader.readString("companyName");
+		this.phone = reader.readString("phone");
 	}
     
 	@Override

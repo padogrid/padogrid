@@ -90,8 +90,8 @@ public class OrderDetail implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("orderId", orderId);
-		writer.writeUTF("productId", productId);
+		writer.writeString("orderId", orderId);
+		writer.writeString("productId", productId);
 		writer.writeDouble("unitPrice", unitPrice);
 		writer.writeInt("quantity", quantity);
 		writer.writeDouble("discount", discount);
@@ -99,8 +99,8 @@ public class OrderDetail implements VersionedPortable
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.orderId = reader.readUTF("orderId");
-		this.productId = reader.readUTF("productId");
+		this.orderId = reader.readString("orderId");
+		this.productId = reader.readString("productId");
 		this.unitPrice = reader.readDouble("unitPrice");
 		this.quantity = reader.readInt("quantity");
 		this.discount = reader.readDouble("discount");

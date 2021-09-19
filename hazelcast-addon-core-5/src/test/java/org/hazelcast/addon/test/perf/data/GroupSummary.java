@@ -90,9 +90,9 @@ public class GroupSummary implements DataSerializable {
 
 	@Override
 	public void writeData(ObjectDataOutput out) throws IOException {
-		out.writeUTF(groupNumber);
-		out.writeUTF(carrierNumber);
-		out.writeUTF(contractNumber);
+		out.writeString(groupNumber);
+		out.writeString(carrierNumber);
+		out.writeString(contractNumber);
 		out.writeInt(memberCount);
 		out.writeLong(totalBlobSize);
 		out.writeLong(writtenTime.getTime());
@@ -100,9 +100,9 @@ public class GroupSummary implements DataSerializable {
 
 	@Override
 	public void readData(ObjectDataInput in) throws IOException {
-		groupNumber = in.readUTF();
-		carrierNumber = in.readUTF();
-		contractNumber = in.readUTF();
+		groupNumber = in.readString();
+		carrierNumber = in.readString();
+		contractNumber = in.readString();
 		memberCount = in.readInt();
 		totalBlobSize = in.readLong();
 		writtenTime = new Date(in.readLong());

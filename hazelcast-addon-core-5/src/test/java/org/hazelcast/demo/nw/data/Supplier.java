@@ -153,34 +153,34 @@ public class Supplier implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
-		writer.writeUTF("supplierId", supplierId);
-		writer.writeUTF("companyName", companyName);
-		writer.writeUTF("contactName", contactName);
-		writer.writeUTF("contactTitle", contactTitle);
-		writer.writeUTF("address", address);
-		writer.writeUTF("city", city);
-		writer.writeUTF("region", region);
-		writer.writeUTF("postalCode", postalCode);
-		writer.writeUTF("country", country);
-		writer.writeUTF("phone", phone);
-		writer.writeUTF("fax", fax);
-		writer.writeUTF("homePage", homePage);
+		writer.writeString("supplierId", supplierId);
+		writer.writeString("companyName", companyName);
+		writer.writeString("contactName", contactName);
+		writer.writeString("contactTitle", contactTitle);
+		writer.writeString("address", address);
+		writer.writeString("city", city);
+		writer.writeString("region", region);
+		writer.writeString("postalCode", postalCode);
+		writer.writeString("country", country);
+		writer.writeString("phone", phone);
+		writer.writeString("fax", fax);
+		writer.writeString("homePage", homePage);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
-		this.supplierId = reader.readUTF("supplierId");
-		this.companyName = reader.readUTF("companyName");
-		this.contactName = reader.readUTF("contactName");
-		this.contactTitle = reader.readUTF("contactTitle");
-		this.address = reader.readUTF("address");
-		this.city = reader.readUTF("city");
-		this.region = reader.readUTF("region");
-		this.postalCode = reader.readUTF("postalCode");
-		this.country = reader.readUTF("country");
-		this.phone = reader.readUTF("phone");
-		this.fax = reader.readUTF("fax");
-		this.homePage = reader.readUTF("homePage");
+		this.supplierId = reader.readString("supplierId");
+		this.companyName = reader.readString("companyName");
+		this.contactName = reader.readString("contactName");
+		this.contactTitle = reader.readString("contactTitle");
+		this.address = reader.readString("address");
+		this.city = reader.readString("city");
+		this.region = reader.readString("region");
+		this.postalCode = reader.readString("postalCode");
+		this.country = reader.readString("country");
+		this.phone = reader.readString("phone");
+		this.fax = reader.readString("fax");
+		this.homePage = reader.readString("homePage");
 	}
     
 	@Override

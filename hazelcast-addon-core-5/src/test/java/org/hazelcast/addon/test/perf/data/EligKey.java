@@ -201,8 +201,8 @@ public class EligKey implements DataSerializable, PartitionAware<String>
 	 */
 	@Override
 	public void writeData(ObjectDataOutput out) throws IOException {
-		out.writeUTF(memberNumber);
-		out.writeUTF(groupNumber);
+		out.writeString(memberNumber);
+		out.writeString(groupNumber);
 		out.writeShort(personNumber);
 		out.writeLong(effectiveDate.getTime());
 		out.writeLong(termDate.getTime());
@@ -217,8 +217,8 @@ public class EligKey implements DataSerializable, PartitionAware<String>
 	 */
 	@Override
 	public void readData(ObjectDataInput in) throws IOException {
-		memberNumber = in.readUTF();
-		groupNumber = in.readUTF();
+		memberNumber = in.readString();
+		groupNumber = in.readString();
 		personNumber = in.readShort();
 		effectiveDate = new Date(in.readLong());
 		termDate = new Date(in.readLong());
