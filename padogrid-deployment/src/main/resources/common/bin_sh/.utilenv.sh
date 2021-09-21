@@ -3333,6 +3333,7 @@ function determineInstalledProductVersions
 {
    PADOGRID_VERSIONS=""
    PADO_VERSIONS=""
+   PADODEKSTOP_VERSIONS=""
    PADOWEB_VERSIONS=""
    GEMFIRE_VERSIONS=""
    GEODE_VERSIONS=""
@@ -3371,6 +3372,14 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       PADO_VERSIONS=$(sortVersionList "$__versions")
+
+      # PadoDesktop
+      __versions=""
+      for i in pado-desktop_*; do
+         __version=${i#pado-desktop_}
+         __versions="$__versions $__version "
+      done
+      PADODEKSTOP_VERSIONS=$(sortVersionList "$__versions")
 
       # PadoWeb
       __versions=""

@@ -72,6 +72,7 @@ for i in $DOWNLOADABLE_PRODUCTS; do
    echo "             $i"
 done
    echo "             pado"
+   echo "             padodesktop"
    echo "             padoweb"
    echo "             jet-mc"
 cat <<EOF
@@ -90,12 +91,13 @@ fi
 
 # Exit if invalid product specified
 if [ "$PRODUCT_ARG" != "" ]; then
-   if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS pado padoweb jet-mc" "$PRODUCT_ARG")" == "false" ]; then
+   if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS pado padodesktop padoweb jet-mc" "$PRODUCT_ARG")" == "false" ]; then
       echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid product name: [$PRODUCT_ARG]. Please enter one of the following products."
       for i in $DOWNLOADABLE_PRODUCTS; do
          echo >&2 "          $i"
       done
       echo >&2 "          pado"
+      echo >&2 "          padodesktop"
       echo >&2 "          padoweb"
       echo >&2 "          jet-mc"
       echo >&2 "       Command aborted."
@@ -107,6 +109,7 @@ function getProductVersions
 {
    __PADOGRID_VERSION=${PADOGRID_HOME#*padogrid_}
    __PADO_VERSION=${PADO_HOME#*pado_}
+   __PADODESKTOP_VERSION=${PADODESKTOP_HOME#*pado-desktop_}
    __PADOWEB_VERSION=${PADOWEB_HOME#*padoweb_}
    __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
    __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
@@ -192,6 +195,7 @@ getProductVersions
 # Add "(none)"
 PADOGRID_VERSIONS="(none) $PADOGRID_VERSIONS"
 PADO_VERSIONS="(none) $PADO_VERSIONS"
+PADODEKSTOP_VERSIONS="(none) $PADODEKSTOP_VERSIONS"
 PADOWEB_VERSIONS="(none) $PADOWEB_VERSIONS"
 GEMFIRE_VERSIONS="(none) $GEMFIRE_VERSIONS"
 GEODE_VERSIONS="(none) $GEODE_VERSIONS"
@@ -209,6 +213,7 @@ HADOOP_VERSIONS="(none) $HADOOP_VERSIONS"
 # Convert to array
 __PADOGRID_VERSIONS=($PADOGRID_VERSIONS)
 __PADO_VERSIONS=($PADO_VERSIONS)
+__PADODEKSTOP_VERSIONS=($PADODEKSTOP_VERSIONS)
 __PADOWEB_VERSIONS=($PADOWEB_VERSIONS)
 __GEMFIRE_VERSIONS=($GEMFIRE_VERSIONS)
 __GEODE_VERSIONS=($GEODE_VERSIONS)
@@ -233,6 +238,8 @@ echo ""
 
 SELECTED_INDEX_PADOGRID=""
 SELECTED_INDEX_PADO=""
+SELECTED_INDEX_PADODESKTOP=""
+SELECTED_INDEX_PADOWEB=""
 SELECTED_INDEX_GEMFIRE=""
 SELECTED_INDEX_GEODE=""
 SELECTED_INDEX_HAZELCAST_ENTERPRISE=""
@@ -249,33 +256,37 @@ SELECTED_INDEX_HADOOP=""
 # Product PRODUCT_EVAL_ARRAY.
 INDEX_PADOGRID=0
 INDEX_PADO=1
-INDEX_GEMFIRE=2
-INDEX_GEODE=3
-INDEX_HAZELCAST=4
-INDEX_HAZELCAST_MC=5
-INDEX_JET=6
-INDEX_JET_MC=7
-INDEX_SNAPPYDATA=8
-INDEX_SPARK=9
-INDEX_KAFKA=10
-INDEX_HADOOP=11
+INDEX_PADODESKTOP=2
+INDEX_PADOWEB=3
+INDEX_GEMFIRE=4
+INDEX_GEODE=5
+INDEX_HAZELCAST=6
+INDEX_HAZELCAST_MC=7
+INDEX_JET=8
+INDEX_JET_MC=9
+INDEX_SNAPPYDATA=10
+INDEX_SPARK=11
+INDEX_KAFKA=12
+INDEX_HADOOP=13
 
 # PRODUCT_HOME_ARRAY contains an ordered list of product home environment variable names
-PRODUCT_HOME_ARRAY=(PADOGRID_HOME PADO_HOME GEMFIRE_HOME GEODE_HOME HAZELCAST_HOME HAZELCAST_MC_HOME JET_HOME JET_MC_HOME SNAPPYDATA_HOME SPARK_HOME KAFKA_HOME HADOOP_HOME)
+PRODUCT_HOME_ARRAY=(PADOGRID_HOME PADO_HOME PADODESKTOP_HOME PADOWEB_HOME GEMFIRE_HOME GEODE_HOME HAZELCAST_HOME HAZELCAST_MC_HOME JET_HOME JET_MC_HOME SNAPPYDATA_HOME SPARK_HOME KAFKA_HOME HADOOP_HOME)
 
 # PRODUCT_EVAL_ARRAY is an ordered list of selected product versions. See INDEX_ variables above.
 # [0] PADOGRID
 # [1] PADO
-# [2] GEMFIRE
-# [3] GEODE
-# [4] HAZELCAST - (use IS_HAZELCAST_ENTERPRISE to determine enterprise or oss)
-# [5] HAZELCAST_MC 
-# [6] JET (use IS_JET_ENTERPRISE to determine enterprise or oss)
-# [7] JET_MC
-# [8] SNAPPYDATA
-# [9] SPARK
-# [10] KAFKA
-# [11] HADOOP
+# [2] PADODESKTOP
+# [3] PADOWEB
+# [4] GEMFIRE
+# [5] GEODE
+# [6] HAZELCAST - (use IS_HAZELCAST_ENTERPRISE to determine enterprise or oss)
+# [7] HAZELCAST_MC 
+# [8] JET (use IS_JET_ENTERPRISE to determine enterprise or oss)
+# [9] JET_MC
+# [10] SNAPPYDATA
+# [11] SPARK
+# [12] KAFKA
+# [13] HADOOP
 # "none" indicates no product selection
 unset PRODUCT_EVAL_ARRAY
 let LAST_INDEX=${#PRODUCT_HOME_ARRAY[@]}-1
@@ -337,12 +348,21 @@ while [ "$REDO" == "true" ]; do
       echo ""
    fi
 
+   # PadoDesktop
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+      doUserInput "PadoDesktop" "$PADODEKSTOP_VERSIONS" "$__PADODESKTOP_VERSION" "$SELECTED_INDEX_PADODESKTOP"
+      echo "Selected: [$SELECTED_INDEX] ${__PADODEKSTOP_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_PADODESKTOP=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_PADODESKTOP]=${__PADODEKSTOP_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
    # PadoWeb
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
       doUserInput "PadoWeb" "$PADOWEB_VERSIONS" "$__PADOWEB_VERSION" "$SELECTED_INDEX_PADOWEB"
       echo "Selected: [$SELECTED_INDEX] ${__PADOWEB_VERSIONS[$SELECTED_INDEX]}"
       SELECTED_INDEX_PADOWEB=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_PADO]=${__PADOWEB_VERSIONS[$SELECTED_INDEX]}
+      PRODUCT_EVAL_ARRAY[$INDEX_PADOWEB]=${__PADOWEB_VERSIONS[$SELECTED_INDEX]}
       echo ""
    fi
    
@@ -541,6 +561,7 @@ while [ "$REDO" == "true" ]; do
    echo "   PadoGrid: ${__PADOGRID_VERSIONS[$SELECTED_INDEX_PADOGRID]}"
    echo "       Java: ${NEW_JAVA_HOME}"
    echo "       Pado: ${__PADO_VERSIONS[$SELECTED_INDEX_PADO]}"
+   echo "PadoDesktop: ${__PADODESKTOP_VERSIONS[$SELECTED_INDEX_PADODESKTOP]}"
    echo "    PadoWeb: ${__PADOWEB_VERSIONS[$SELECTED_INDEX_PADOWEB]}"
    echo "    GemFire: ${__GEMFIRE_VERSIONS[$SELECTED_INDEX_GEMFIRE]}"
    echo "      Geode: ${__GEODE_VERSIONS[$SELECTED_INDEX_GEODE]}"
@@ -610,6 +631,8 @@ function getProductDirName
   case $INDEX in
     $INDEX_PADOGRID ) DIR_NAME="padogrid_$VERSION";;
     $INDEX_PADO ) DIR_NAME="pado_$VERSION";;
+    $INDEX_PADODESKTOP ) DIR_NAME="pado-desktop_$VERSION";;
+    $INDEX_PADOWEB ) DIR_NAME="padoweb_$VERSION";;
     $INDEX_GEMFIRE ) DIR_NAME="pivotal-gemfire-$VERSION";;
     $INDEX_GEODE ) DIR_NAME="apache-geode-$VERSION";;
     $INDEX_HAZELCAST )
