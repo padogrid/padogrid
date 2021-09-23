@@ -317,7 +317,7 @@ MAX_MEMBER_COUNT=20
 #
 # Source in setenv.sh that contains user configured variables
 #
-if [ -f $SCRIPT_DIR/setenv.sh ]; then
+if [ -f "$SCRIPT_DIR/setenv.sh" ]; then
    # CLUSTER and POD options override setenv.sh
    __CLUSTER=$CLUSTER
    __POD=$POD
@@ -620,7 +620,7 @@ JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 # GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
 # Geode and GemFire share the same 'geode' prefix for jar names.
 GEODE_VERSION=""
-for file in $PRODUCT_HOME/lib/geode-core-*; do
+for file in "$PRODUCT_HOME/lib/geode-core-"*; do
    file=${file##*geode\-core\-}
    GEODE_VERSION=${file%.jar}
 done
@@ -674,6 +674,6 @@ export CLASSPATH="$__CLASSPATH"
 # Source in cluster specific setenv.sh
 #
 RUN_SCRIPT=
-if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
-   . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
+if [ -f "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh" ] && [ "$1" != "-options" ]; then
+   . "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh"
 fi

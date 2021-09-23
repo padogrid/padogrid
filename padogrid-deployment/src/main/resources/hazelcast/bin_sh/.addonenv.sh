@@ -609,27 +609,39 @@ IS_HAZELCAST_ENTERPRISE=false
 
 if [ "$CLUSTER_TYPE" == "jet" ]; then
    if [ "$HAZELCAST_HOME" != "" ]; then
-      if [ -f $HAZELCAST_HOME/lib/hazelcast-enterprise-* ]; then
-         for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-*; do
+     if [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"*; do
+            file=${file##*hazelcast\-enterprise\-all\-}
+            HAZELCAST_VERSION=${file%.jar}
+         done
+     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-"*; do
             file=${file##*hazelcast\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
          done
-      elif [ -f $HAZELCAST_HOME/lib/hazelcast-all-* ]; then
-         for file in $HAZELCAST_HOME/lib/hazelcast-all-*; do
+     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-all-"*; do
             file=${file##*hazelcast\-all\-}
             HAZELCAST_VERSION=${file%.jar}
          done
       fi
    elif [ "$JET_HOME" != "" ]; then
-      if [ -f $JET_HOME/lib/hazelcast-jet-enterprise-* ]; then
-         for file in $JET_HOME/lib/hazelcast-jet-enterprise-*; do
+      if [ `ls -1 "$JET_HOME/lib/hazelcast-jet-enterprise-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$JET_HOME/lib/hazelcast-jet-enterprise-all-"*; do
+            file=${file##*hazelcast\-jet\-enterprise\-all\-}
+            HAZELCAST_VERSION=${file%.jar}
+            IS_HAZELCAST_ENTERPRISE=true
+            break;
+         done
+      elif [ `ls -1 "$JET_HOME/lib/hazelcast-jet-enterprise-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$JET_HOME/lib/hazelcast-jet-enterprise-"*; do
             file=${file##*hazelcast\-jet\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
             IS_HAZELCAST_ENTERPRISE=true
             break;
          done
-      else
-         for file in $JET_HOME/lib/hazelcast-jet-*; do
+      elif [ `ls -1 "$JET_HOME/lib/hazelcast-jet-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$JET_HOME/lib/hazelcast-jet-"*; do
             file=${file##*hazelcast\-jet\-}
             file=${file##*-}
             HAZELCAST_VERSION=${file%%.jar}
@@ -641,7 +653,7 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
    # Set Jet MC jar
    if [ "$JET_MC_HOME" != "" ]; then
       if [[ "$JET_MC_HOME" == **"202"** ]]; then
-         for file in $JET_MC_HOME/hazelcast-management-center-*; do
+         for file in "$JET_MC_HOME/hazelcast-management-center-"*; do
             file=${file##*hazelcast\-management\-center\-}
             JET_MC_VERSION=${file%.jar}
             break;
@@ -649,7 +661,7 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
          JET_MC_JAR=hazelcast-management-center-${JET_MC_VERSION}.jar
       else
          # TODO: Drop the following support before 2021 ends
-         for file in $JET_MC_HOME/hazelcast-jet-management-center-*; do
+         for file in "$JET_MC_HOME/hazelcast-jet-management-center-"*; do
             file=${file##*hazelcast\-jet\-management\-center\-}
             JET_MC_VERSION=${file%.jar}
             break;
@@ -659,18 +671,18 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
    fi
 else
    if [ "$HAZELCAST_HOME" != "" ]; then
-      if [ -f $HAZELCAST_HOME/lib/hazelcast-enterprise-all-* ]; then
+      if [ -f "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"* ]; then
          for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-all-*; do
             file=${file##*hazelcast\-enterprise\-all\-}
             HAZELCAST_VERSION=${file%.jar}
             IS_HAZELCAST_ENTERPRISE=true
          done
-      elif [ -f $HAZELCAST_HOME/lib/hazelcast-enterprise-* ]; then
+      elif [ -f "$HAZELCAST_HOME/lib/hazelcast-enterprise-"* ]; then
          for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-*; do
             file=${file##*hazelcast\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
          done
-      elif [ -f $HAZELCAST_HOME/lib/hazelcast-all-* ]; then
+      elif [ -f "$HAZELCAST_HOME/lib/hazelcast-all-"* ]; then
          for file in $HAZELCAST_HOME/lib/hazelcast-all-*; do
             file=${file##*hazelcast\-all\-}
             HAZELCAST_VERSION=${file%.jar}
@@ -678,8 +690,8 @@ else
       else
          # hazelcast- is not unique. scan 5-10 versions
          for i in $(seq 5 10); do
-            if [ -f $HAZELCAST_HOME/lib/hazelcast-$i.* ]; then
-               for file in $HAZELCAST_HOME/lib/hazelcast-$i.*; do
+            if [ -f "$HAZELCAST_HOME/lib/hazelcast-$i."* ]; then
+               for file in "$HAZELCAST_HOME/lib/hazelcast-$i."*; do
                   file=${file##*hazelcast\-}
                   HAZELCAST_VERSION=${file%.jar}
                   break;
@@ -690,7 +702,7 @@ else
       fi
    fi
    if [ "$HAZELCAST_MC_HOME" != "" ]; then
-      for file in $HAZELCAST_MC_HOME/hazelcast-management-center-*; do
+      for file in "$HAZELCAST_MC_HOME/hazelcast-management-center-"*; do
          file=${file##*hazelcast\-management\-center\-}
          HAZELCAST_MC_VERSION=${file%.jar}
          break;
@@ -757,6 +769,6 @@ export CLASSPATH="$__CLASSPATH"
 # Source in cluster specific setenv.sh
 #
 RUN_SCRIPT=
-if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
-   . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
+if [ -f "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh" ] && [ "$1" != "-options" ]; then
+   . "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh"
 fi
