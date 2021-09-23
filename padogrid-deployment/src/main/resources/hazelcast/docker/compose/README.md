@@ -88,6 +88,15 @@ Management Center URLs are as follows:
 ![Hazelcast 4.x: host-os-ip-address](images/mc-manage-clusters.png)
 
 
+## Log Files
+
+The log files are generated in the `padogrid/log` directory. The following example tails the first member's log file.
+
+```bash
+cd_docker mydocker
+tail -f padogrid/log/mydocker-server1.log
+```
+
 ## Run `perf_test`
 
 If you have not changed the Hazelcast cluster name, you can run `perf_test` as is without modifications.
@@ -107,7 +116,7 @@ If you have changed the Hazelcast cluster name, then add the `<cluster-name>` el
 ...
 </hazelcast>
 ```
- 
+
 ## Tear Down
 
 Ctrl-C from the `docker compose up` command and prune the containers.
