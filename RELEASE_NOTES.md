@@ -3,9 +3,9 @@
 ©2020-2021 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
-## Version 0.9.11-SNAPSHOT
+## Version 0.9.11
 
-### Release Date: 09/19/21
+### Release Date: 09/25/21
 
 - Updated most of the online bundles to support Hazelcast 5.x.
 - Added support for Hazelcast 5.x. Hazelcast 5.x unifies IMDG and Jet into a single product. With this support, PadoGrid also combines IMDG and Jet specifics into a single library. PadoGrid supports Hazelcast 3.x, 4.x, and 5.x as well as Jet 3.x and 4.x.
