@@ -483,7 +483,14 @@ function getDownloadableHazelcastEnterpriseVersions
 
 function getDownloadableHazelcastOssVersions
 {
-  local ALL_HAZELCAST_OSS_VERSIONS=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
+  local ALL_HAZELCAST_OSS_VERSIONS_5=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "Platform 5" | sed -e 's/.*Platform 5/5/' -e 's/<.*//')
+  local ALL_HAZELCAST_OSS_VERSIONS_5_SLIM=""
+  for i in $ALL_HAZELCAST_OSS_VERSIONS_5; do
+     ALL_HAZELCAST_OSS_VERSIONS_5_SLIM="$ALL_HAZELCAST_OSS_VERSIONS_5_SLIM $i-slim"
+  done
+  local ALL_HAZELCAST_OSS_VERSIONS_4=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
+  local ALL_HAZELCAST_OSS_VERSIONS_3=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 3" | sed -e 's/.*IMDG 3/3/' -e 's/<.*//')
+  ALL_HAZELCAST_OSS_VERSIONS="$ALL_HAZELCAST_OSS_VERSIONS_5 $ALL_HAZELCAST_OSS_VERSIONS_5_SLIM $ALL_HAZELCAST_OSS_VERSIONS_4 $ALL_HAZELCAST_OSS_VERSIONS_3"
   unique_words "$ALL_HAZELCAST_OSS_VERSIONS"
 }
 
@@ -1322,7 +1329,7 @@ function installProduct
       else
       # --------------
       # Download PadoGrid
-      echo "+ Downloading $PADOGRID_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
       else
@@ -1346,7 +1353,7 @@ function installProduct
       else
       # --------------
       # Download Pado
-      echo "+ Downloading $PADO_TAR_BALL to $PADO_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADO_DOWNLOADS_PATH/$PADO_TAR_BALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADO_DOWNLOADS_PATH/$PADO_TARBALL" "https://github.com/netcrest/pado2/releases/download/$PADO_RELEASE/$PADO_TARBALL"
       else
@@ -1370,7 +1377,7 @@ function installProduct
       else
       # --------------
       # Download Geode
-      echo "+ Downloading $GEODE_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$GEODE_TARBALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GEODE_TARBALL" "https://archive.apache.org/dist/geode/$GEODE_VERSION/$GEODE_TARBALL"
       else
@@ -1394,11 +1401,16 @@ function installProduct
       else
       # --------------
       # Download Hazelcast OSS
-      echo "+ Downloading $HAZELCAST_OSS_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_OSS_TARBALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_OSS_TARBALL" "https://download.hazelcast.com/download.jsp?version=$HAZELCAST_OSS_RELEASE&type=tar&p="
       else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_OSS_TARBALL" "https://download.hazelcast.com/download.jsp?version=$HAZELCAST_OSS_RELEASE&type=tar&p="
+         if [[ "$HAZELCAST_OSS_RELEASE" == *"slim" ]]; then
+            HEADER_VERSION="${HAZELCAST_OSS_RELEASE%-slim}"
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_OSS_TARBALL" "https://download.hazelcast.com/download.jsp?version=${HEADER_VERSION}&type=tar&variant=slim&p="
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_OSS_TARBALL" "https://download.hazelcast.com/download.jsp?version=$HAZELCAST_OSS_RELEASE&type=tar&p="
+         fi
       fi
       
       # Install Hazelcast OSS
@@ -1418,7 +1430,7 @@ function installProduct
       else
       # --------------
       # Download Hazelcast Enterprise
-      echo "+ Downloading $HAZELCAST_ENTERPRISE_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_ENTERPRISE_TARBALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_ENTERPRISE_TARBALL" "https://download.hazelcast.com/enterprise/$HAZELCAST_ENTERPRISE_TARBALL"
       else
@@ -1442,7 +1454,7 @@ function installProduct
       else
       # --------------
       # Download Hazelcast Management Center
-      echo "+ Downloading $HAZELCAST_MC_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL" "https://download.hazelcast.com/management-center/$HAZELCAST_MC_TARBALL"
       else
@@ -1466,7 +1478,7 @@ function installProduct
       else
       # --------------
       # Download Jet OSS
-      echo "+ Downloading $JET_OSS_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$JET_OSS_TARBALL..."
       local __JET_OSS_VERSION=${JET_OSS_VERSION%-slim}
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_OSS_TARBALL" "https://github.com/hazelcast/hazelcast-jet/releases/download/v$__JET_OSS_VERSION/$JET_OSS_TARBALL"
@@ -1491,7 +1503,7 @@ function installProduct
       else
       # --------------
       # Download Jet Enterprise
-      echo "+ Downloading $JET_ENTERPRISE_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL" "https://download.hazelcast.com/jet-enterprise/$JET_ENTERPRISE_TARBALL"
       else
@@ -1515,7 +1527,7 @@ function installProduct
       else
       # --------------
       # Download SnappyData
-      echo "+ Downloading $SNAPPYDATA_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$SNAPPYDATA_TARBALL..."
       if [ "$__SIMULATE" == "simulate" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SNAPPYDATA_TARBALL" "https://github.com/TIBCOSoftware/snappydata/releases/download/v$SNAPPYDATA_VERSION/$SNAPPYDATA_TARBALL"
       else
@@ -1539,7 +1551,7 @@ function installProduct
       else
          # --------------
          # Download Spark
-         echo "+ Downloading $SPARK_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL..."
          if [ "$__SIMULATE" == "simulate" ]; then
             echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SPARK_TARBALL" "https://archive.apache.org/dist/spark/$SPARK_RELEASE/$SPARK_TARBALL"
          else
@@ -1563,7 +1575,7 @@ function installProduct
       else
          # --------------
          # Download Kafka
-         echo "+ Downloading $KAFKA_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$KAFKA_TARBALL..."
          if [ "$__SIMULATE" == "simulate" ]; then
             echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$KAFKA_TARBALL" "https://archive.apache.org/dist/kafka/$KAFKA_RELEASE/$KAFKA_TARBALL"
          else
@@ -1587,7 +1599,7 @@ function installProduct
       else
          # --------------
          # Download Hadoop
-         echo "+ Downloading $HADOOP_TARBALL to $PADOGRID_DOWNLOADS_PATH/..."
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$HADOOP_TARBALL..."
          echo "  Hadoop is known to take a long time (~50 minutes) to download."
          if [ "$__SIMULATE" == "simulate" ]; then
             echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HADOOP_TARBALL" "https://archive.apache.org/dist/hadoop/common/$HADOOP_RELEASE/$HADOOP_TARBALL"
