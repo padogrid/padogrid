@@ -203,7 +203,7 @@ fi
 
 if [ ! -d "$MEMBER_DIR" ]; then
    if [ "$REMOTE_SPECIFIED" == "true" ]; then
-      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
+      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE -num $MEMBER_NUMBER
    else
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -246,6 +246,7 @@ let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
 let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
 MEMBER_TCP_LIST=""
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+
 if [ "$VM_ENABLED" == "true" ]; then
    VM_HOSTS=`getClusterProperty "vm.hosts"`
    if [ "$VM_HOSTS" == "" ]; then
@@ -266,6 +267,8 @@ if [ "$VM_ENABLED" == "true" ]; then
          MEMBER_TCP_LIST="$MEMBER_TCP_LIST,$VM_HOST:$MEMBER_START_PORT"
       fi
    done
+    # One member per VM -> same port number
+    MEMBER_PORT=$MEMBER_START_PORT
 elif [ "$POD" == "local" ]; then
    HOST_NAME=`hostname`
    HOST_NAME=`getClusterProperty "bind.address" "$HOST_NAME"`
@@ -420,6 +423,11 @@ if [ $GC_LOG_ENABLED == "true" ]; then
          JAVA_OPTS="$JAVA_OPTS -Xlog:gc=info:file=$GC_LOG_FILE:time,uptime,pid:filecount=5,filesize=4096"
       fi
    fi
+fi
+
+if [[ $JAVA_VERSION != 1.8* ]]; then
+   # Extracted from Hazelcast start.sh:
+   JAVA_OPTS="$JAVA_OPTS --add-modules java.se --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.management/sun.management=ALL-UNNAMED --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED"
 fi
 
 # Start the member

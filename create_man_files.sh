@@ -142,6 +142,10 @@ for PRODUCT in $PRODUCTS; do
             section="FILES"
             echo ".SH $section" >> $MAN_FILE
             continue
+         elif [ "$line" == "PROPERTIES" ]; then
+            section="PROPERTIES"
+            echo ".SH $section" >> $MAN_FILE
+            continue
          elif [ "$line" == "EXAMPLES" ]; then
             section="EXAMPLES"
             echo ".SH $section" >> $MAN_FILE

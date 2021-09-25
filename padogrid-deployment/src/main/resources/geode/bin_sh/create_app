@@ -120,8 +120,13 @@ if [ "$NAME_ARG" == "" ]; then
    NAME_ARG=$APP
 fi
 
+echo "debug: $PADOGRID_HOME/$PRODUCT/apps/$APP"
 if [ ! -d "$PADOGRID_HOME/$PRODUCT/apps/$APP" ]; then
    >&2 echo "ERROR: The specified app name does not exist. Command aborted."
+   exit 1
+fi
+if [ "$APP" == "padodesktop" ] && [ ! -d "$PADODESKTOP_HOME" ]; then
+   >&2 echo "ERROR: Pado Desktop not found. Command aborted."
    exit 1
 fi
 
@@ -141,8 +146,15 @@ fi
 cp -r $PADOGRID_HOME/$PRODUCT/apps/$APP $APP_DIR
 
 # Copy versioned config files to the etc/ dir
-if [ -d "$APP_DIR/etc/v${GEODE_MAJOR_VERSION_NUMBER}" ]; then
-   cp $APP_DIR/etc/v${GEODE_MAJOR_VERSION_NUMBER}/* $APP_DIR/etc/
+if [ "$APP" == "padodesktop" ]; then
+   cp -r "$PADODESKTOP_HOME/etc" $APP_DIR
+   cp -r "$PADODESKTOP_HOME/security" $APP_DIR
+   mkdir "$APP_DIR/lib"
+   mkdir "$APP_DIR/plugins"
+else
+   if [ -d "$APP_DIR/etc/v${GEODE_MAJOR_VERSION_NUMBER}" ]; then
+      cp $APP_DIR/etc/v${GEODE_MAJOR_VERSION_NUMBER}/* $APP_DIR/etc/
+   fi
 fi
 
 # Make bin_sh scripts executables

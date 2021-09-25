@@ -177,29 +177,30 @@ if  [ ! -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ "$REMOTE_SPECIFIED" == "true" ]; then
-   NEW_MEMBER_NUMBER=1
+if [ "$MEMBER_NUM_SPECIFIED" == "true" ]; then
+   NEW_MEMBER_NUMBER=$MEMBER_NUM
 else
-   pushd $RUN_DIR > /dev/null 2>&1
-   PREV_MEMBER_NUMBER=0
-   for i in ${MEMBER_PREFIX}*; do
-      if [ -d "$i" ]; then
-        MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
-        MEMBER_NUMBER=$(trimLeadingZero $MEMBER_NUMBER)
-        let __NUM=PREV_MEMBER_NUMBER+1
-        if [ $MEMBER_NUMBER -gt $__NUM ]; then
-           MEMBER_NUMBER=$PREV_MEMBER_NUMBER
-           break;
-        else
-           PREV_MEMBER_NUMBER=$MEMBER_NUMBER
-        fi
-      fi
-   done
-   popd > /dev/null 2>&1
-   if [ "$MEMBER_NUM_SPECIFIED" == "true" ]; then
-      let NEW_MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+   if [ "$REMOTE_SPECIFIED" == "true" ]; then
+      NEW_MEMBER_NUMBER=1
    else
+      # Find the next available number
+      pushd $RUN_DIR > /dev/null 2>&1
+      PREV_MEMBER_NUMBER=0
+      for i in ${MEMBER_PREFIX}*; do
+         if [ -d "$i" ]; then
+           MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+           MEMBER_NUMBER=$(trimLeadingZero $MEMBER_NUMBER)
+           let __NUM=PREV_MEMBER_NUMBER+1
+           if [ $MEMBER_NUMBER -gt $__NUM ]; then
+              MEMBER_NUMBER=$PREV_MEMBER_NUMBER
+              break;
+           else
+              PREV_MEMBER_NUMBER=$MEMBER_NUMBER
+           fi
+         fi
+      done
       let NEW_MEMBER_NUMBER=MEMBER_NUMBER+1
+      popd > /dev/null 2>&1
    fi
 fi
 NEW_MEMBER=`getMemberName $NEW_MEMBER_NUMBER`

@@ -13,18 +13,37 @@ cd bin_sh
 
 ## Running jet_demo
 
-Upon successful build, you can submit any of the jar files in the `lib` directory to Jet using the `jet` executable. You must have a Jet cluster running before you can run `jet`. For `padogrid`, you can simply create a Jet workspace and start a cluster from there as described in the [Jet Workspace](padogrid#jet-workspace) section.
+Upon successful build, you can submit any of the jar files in the `lib` directory to Jet using the `jet` executable. You must have a Jet a Jet cluster running before you can submit jobs.
 
-:exclamation: Note that the default ports for Jet clusters in PadoGrid starts from 6701.
+## Jobs
+
+`WordCountJob` is a command-line version of `WordCount` sample code found in the `https://github.com/hazelcast/hazelcast-jet-code-samples.git` repo. It counts and outputs the most frequent words from the specified file(s). The `build_app` copies the downloaded books in the `books` directory. Try submitting the `WordCountJob` with some of the books as arguments.
+
+### Hazelcast 5.x
 
 ```console
 cd_app jet_demo
 
-# Submit WordCountJob to localhost:6701 (run jet.sh if 3.x or 4.0)
-jet -a localhost:6701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+# Submit WordCountJob to localhost:5701  (-a to specify different member)
+hz-cli submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+```
 
-# Submit WordCountJob to localhost:5701 (run jet.sh if 3.x or 4.0)
+### Jet 4.1+
+
+```console
+cd_app jet_demo
+
+# Submit WordCountJob to localhost:5701  (-a to specify different member)
 jet submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+```
+
+### Jet 3.x, 4.0
+
+```console
+cd_app jet_demo
+
+# Submit WordCountJob to localhost:5701  (-a to specify different member)
+jet.sh submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 ```
 
 ## Monitoring Jobs
@@ -40,22 +59,4 @@ show_log -num 2
 
 # View Jet cluster myjet, member 1
 show_log -cluster myjet -num 1
-```
-
-## Jobs
-
-### WordCountJob.jar
-
-`WordCountJob` is a command-line version of `WordCount` sample code found in the `https://github.com/hazelcast/hazelcast-jet-code-samples.git` repo. It counts and outputs the most frequent words from the specified file(s). The `build_app` copies the downloaded books in the `books` directory. Try submitting the `WordCountJob` with some of the books as arguments.
-
-```console
-# Set the system property outputWords to output words being filtered
-# by each member into thier log files
-export JAVA_OPTS=-DoutputWords=true
-
-# Submit books for counting most frequent words on localhost:5701
-jet -v submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
-
-# Submit books for counting most frequent words on localhost:6701
-jet -v -a localhost:6701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 ```

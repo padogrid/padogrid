@@ -24,6 +24,14 @@ chmod 755 install_padogrid
 
 [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
 
+## PadoGrid Container
+
+To run PadoGrid as a container, please follow the instructions in the links below.
+
+- [Running PadoGrid using Docker and Podman](#running-padogrid-using-docker-and-podman)
+- [Running PadoGrid in Kubernetes](#running-padogrid-in-kubernetes)
+
+
 ## Downloads
 
 PadoGrid binary downloads are available from the *Releases* page. If your host does not have access to the Internet and you are unable to run `install_padogrid` then you can download a version from this link and install it manually.
@@ -135,28 +143,30 @@ padogrid-deployment/target/assembly/padogrid-all_<version>.zip
 Inflate one of the distribution files in your file system. For example,
 
 ```bash
-mkdir ~/Padogrid/snapshots
-tar -C ~/Padogrid/snapshots/ -xzf padogrid_0.9.8-SNAPSHOT.tar.gz
-cd ~/Padogrid/snapshots
-tree -L 1 padogrid_0.9.8-SNAPSHOT
+mkdir -p ~/Padogrid/products
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.11-SNAPSHOT.tar.gz
+cd ~/Padogrid/products
+tree -L 1 padogrid_0.9.11-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.8-SNAPSHOT
+padogrid_0.9.11-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
-├── RELEASE_NOTES.txt
 ├── bin_sh
 ├── coherence
 ├── etc
 ├── geode
+├── hadoop
 ├── hazelcast
+├── kafka
 ├── lib
 ├── pods
-└── snappydata
+├── snappydata
+└── spark
 ```
 
 ## Initializing PadoGrid
@@ -164,12 +174,12 @@ padogrid_0.9.8-SNAPSHOT
 Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
 
 ```bash
-~/Padogrid/snapshots/padogrid_0.9.8-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.11-SNAPSHOT/bin_sh/create_rwe
 ```
 
-## Running PadoGrid on Docker and Podman
+## Running PadoGrid using Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.8-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.11-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 ```bash
 # docker
@@ -182,30 +192,32 @@ podman run -it --rm padogrid/padogrid /bin/bash
 Once you are in the container, initialize PadoGrid as follows. Note that this is only required if you are running PadoGrid with `docker` or `podman`. This is not required for Kubernetes.
 
 ```bash
+# This is required for padogrid/padogrid:0.9.9 and older versions only.
+# padogrid/padogrid:0.9.10 and later versions do not require this step.
 ./padogrid_start -init
 . ~/.bashrc
 ```
 
-## Running PadoGrid on Kubernetes
+## Running PadoGrid in Kubernetes
 
-You can run PadoGrid on Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
+You can run PadoGrid in Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
 # kubctl
-kubectl create deployment padogid --image=docker.io/padogrid/padogrid
+kubectl run padogrid --image=docker.io/padogrid/padogrid
 
 # oc
-oc create deployment padogid --image=docker.io/padogrid/padogrid
+oc run padogrid --image=docker.io/padogrid/padogrid
 ```
 
-To login to the PadoGrid container, make sure to specify the command, `bash`, as follows.
+To login to the PadoGrid pod, make sure to specify the command, `bash`, as follows.
 
 ```bash
 # kubctl
-kubectl exec -it <padogrid-pod-name> -- bash
+kubectl exec -it padogrid -- bash
 
 # oc
-oc exec -it <padogrid-pod-name> -- bash
+oc exec -it padogrid -- bash
 ```
 
 If you have a Hazelcast cluster running in the same namespace (project) as PadoGrid, then you can run the `perf_test` app as follows.
@@ -213,11 +225,21 @@ If you have a Hazelcast cluster running in the same namespace (project) as PadoG
 ```bash
 export NAMESPACE=<Kubernetes namespace/project>
 export HAZELCAST_SERVICE=<Hazelcast Kubernetes service>
-# The default cluster name is "dev".
+# Default cluster name is "dev".
 export HAZELCAST_CLUSTER_NAME=<cluster name>
 create_app
 cd_app perf_test; cd bin_sh
 ./test_ingestion -run
+```
+
+To delete the PadoGrid pod:
+
+```bash
+# kubctl
+kubectl delete pod paodgrid
+
+# oc
+oc delete pod padogrid
 ```
 
 ## Data Grid Products

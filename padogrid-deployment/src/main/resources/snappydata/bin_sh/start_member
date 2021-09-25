@@ -206,7 +206,7 @@ fi
 
 if [ ! -d "$MEMBER_DIR" ]; then
    if [ "$REMOTE_SPECIFIED" == "true" ]; then
-      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
+      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE -num $MEMBER_NUMBER
    else
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -283,6 +283,12 @@ if [ "$VM_ENABLED" == "true" ]; then
    VM_HOST=$REMOTE
    BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients"`
+   if [ "$BIND_ADDRESS" == "" ]; then
+      BIND_ADDRESS=$HOSTNAME_FOR_CLIENTS
+   fi
+   if [ "$HOSTNAME_FOR_CLIENTS" == "" ]; then
+      HOSTNAME_FOR_CLIENTS=$BIND_ADDRESS
+   fi
    REDUNDANCY_ZONE=`getClusterProperty "vm.${VM_HOST}.redundancyZone"`
 
 elif [ "$POD" == "local" ]; then

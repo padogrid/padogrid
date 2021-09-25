@@ -135,16 +135,6 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          echo >&2 "----------------------------------------------------------------"
          exit 1
       fi
-      MASTER_START_PORT=`getClusterProperty "master.tcp.startPort" $DEFAULT_MASTER_START_PORT`
-      # Replace , with space
-      __VM_MASTER_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
-      for VM_HOST in $__VM_MASTER_HOSTS; do
-         if [ "$MASTER_TCP_LIST" == "" ]; then
-            MASTER_TCP_LIST="$VM_HOST[$MASTER_START_PORT]"
-         else
-            MASTER_TCP_LIST="$MASTER_TCP_LIST,$VM_HOST[$MASTER_START_PORT]"
-         fi
-      done
 
       # Replace , with space
       __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
@@ -208,7 +198,7 @@ fi
 
 if [ ! -d "$MEMBER_DIR" ]; then
    if [ "$REMOTE_SPECIFIED" == "true" ]; then
-      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
+      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE -num $MEMBER_NUMBER
    else
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -279,9 +269,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    for VM_HOST in $__MASTER_HOSTS; do
       BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress" "$VM_HOST"`
       if [ "$MASTER_TCP_LIST" == "" ]; then
-         MASTER_TCP_LIST="$BIND_ADDRESS[$MASTER_START_PORT]"
+         MASTER_TCP_LIST="$BIND_ADDRESS:$MASTER_START_PORT"
       else
-         MASTER_TCP_LIST="$MASTER_TCP_LIST,$BIND_ADDRESS[$MASTER_START_PORT]"
+         MASTER_TCP_LIST="$MASTER_TCP_LIST,$BIND_ADDRESS:$MASTER_START_PORT"
       fi
    done
    VM_HOST=$REMOTE
@@ -301,11 +291,11 @@ elif [ "$POD" == "local" ]; then
          __MASTER=$i
          __MASTER_NUM=${__MASTER##$MASTER_PREFIX}
          __MASTER_NUM=$(trimLeadingZero $__MASTER_NUM)
-	 let __MASTER_PORT=MASTER_START_PORT+__MASTER_NUM-1
+	     let __MASTER_PORT=MASTER_START_PORT+__MASTER_NUM-1
          if [ "$MASTER_TCP_LIST" == "" ]; then
-            MASTER_TCP_LIST="$BIND_ADDRESS[$__MASTER_PORT]"
+            MASTER_TCP_LIST="$BIND_ADDRESS:$__MASTER_PORT"
          else
-            MASTER_TCP_LIST="$MASTER_TCP_LIST,$BIND_ADDRESS[$__MASTER_PORT]"
+            MASTER_TCP_LIST="$MASTER_TCP_LIST,$BIND_ADDRESS:$__MASTER_PORT"
          fi
       fi
    done
@@ -323,7 +313,7 @@ else
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    MASTER_COUNT=`getMasterCount`
    PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
-   MASTER_TCP_LIST="$PRIMARY_NODE_LOCAL[$MASTER_START_PORT]"
+   MASTER_TCP_LIST="$PRIMARY_NODE_LOCAL:$MASTER_START_PORT"
 
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
    BIND_ADDRESS=$NODE_LOCAL
@@ -459,12 +449,14 @@ if [ "$JAVA_MAJOR_VERSION_NUMBER" == "11" ]; then
 fi
 
 # Master URL
-BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
-MASTER_START_PORT=`getClusterProperty "master.tcp.startPort" $DEFAULT_MASTER_START_PORT`
-MASTER_NUMBER=1
-let MASTER_PORT=MASTER_START_PORT+MASTER_NUMBER-1
-let MASTER_END_PORT=MASTER_START_PORT+MAX_MASTER_COUNT-1
-MASTER_URL="spark://$BIND_ADDRESS:$MASTER_PORT"
+#MASTER_START_PORT=`getClusterProperty "master.tcp.startPort" $DEFAULT_MASTER_START_PORT`
+#MASTER_NUMBER=1
+#let MASTER_PORT=MASTER_START_PORT+MASTER_NUMBER-1
+#let MASTER_END_PORT=MASTER_START_PORT+MAX_MASTER_COUNT-1
+#MASTER_URL="spark://$BIND_ADDRESS:$MASTER_PORT"
+
+IFS=','; for ENDPOINT in $MASTER_TCP_LIST; do MASTER_URL="spark://$ENDPOINT"; break; done
+IFS=' '
 
 # Start the member
 if [[ ${OS_NAME} == CYGWIN* ]]; then
@@ -508,11 +500,13 @@ else
           CLASS="org.apache.spark.deploy.worker.Worker"
 
           echo SPARK_CONF_DIR=$ETC_DIR
+          echo SPARK_LOCAL_IP=$BIND_ADDRESS
           echo SPARK_WORKER_PORT=$MEMBER_PORT
           echo SPARK_WORKER_DIR=$RUN_DIR/$MEMBER
           echo SPARK_LOG_DIR=$LOG_DIR
           echo SPARK_PID_DIR=$RUN_DIR/pids
           echo SPARK_WORKER_OPTS=$JAVA_OPTS
+          echo ""
           echo ${SPARK_HOME}/sbin/spark-daemon.sh start \
           $CLASS $MEMBER_NUM_NO_LEADING_ZERO \
           --webui-port "$MEMBER_WEBUI_PORT" \
@@ -520,6 +514,7 @@ else
           $MASTER_URL
 
           SPARK_CONF_DIR=$ETC_DIR \
+          SPARK_LOCAL_IP=$BIND_ADDRESS \
           SPARK_WORKER_PORT=$MEMBER_PORT \
           SPARK_WORKER_DIR=$RUN_DIR/$MEMBER \
           SPARK_LOG_DIR=$LOG_DIR \
@@ -556,7 +551,7 @@ echo "      CONFIG_DIR: $ETC_DIR"
 echo "         LOG_DIR: $LOG_DIR"
 echo "        LOG_FILE: $LOG_FILE"
 echo "     MEMBER_PORT: $MEMBER_PORT"
-echo "MEMBER_HTTP_PORT: $MEMBER_HTTP_PORT"
+echo "      WEBUI_PORT: $MEMBER_WEBUI_PORT"
 echo "      DEBUG_PORT: $DEBUG_PORT"
 echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
 echo "        JMX_PORT: $JMX_PORT"
@@ -585,9 +580,7 @@ if [ "$SIMULATE" == "true" ]; then
    echo "-----------------------"
    echo "LOG_FILE=$LOG_FILE"
    echo ""
-fi
-
-#
+fi #
 # Create script
 #
 if [ "$CREATE_SCRIPT" == "true" ]; then
@@ -874,9 +867,6 @@ function writeBottomBody()
    echo "--masters=$\MASTERS \\" >> $__SCRIPT_FILE
    echo "--dir=\$RUN_DIR/\$INSTANCE_NAME \\" >> $__SCRIPT_FILE
    echo "--port=\$MASTER_TCP_PORT \\" >> $__SCRIPT_FILE
-   if [ "$BIND_ADDRESS" != "" ]; then
-   echo "--bind-address=$BIND_ADDRESS \\" >> $__SCRIPT_FILE
-   fi
    echo "\""  >> $__SCRIPT_FILE
    echo "" >> $__SCRIPT_FILE
    echo "#" >> $__SCRIPT_FILE

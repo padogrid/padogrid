@@ -230,7 +230,7 @@ function determineInstalledProducts
             __versions="$__versions $__version "
          done
          __version=$(getLatestProductVersion "$__versions")
-         GEMFIRE__HOME=$PADOGRID_ENV_BASE_PATH/products/pivotal-gemfire-$__version
+         GEMFIRE_HOME=$PADOGRID_ENV_BASE_PATH/products/pivotal-gemfire-$__version
       fi
 
       # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
@@ -368,10 +368,10 @@ function determineInstalledProducts
    fi
 }
 
-# Determinet products by scanning the products directory
+# Determine products by scanning the products directory
 determineInstalledProducts
 
-# Determin the default product
+# Determine the default product
 if [ "$__PRODUCT_HOME" == "" ]; then
    if [ "$PRODUCT" == "hazelcast" ]; then
       if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -465,11 +465,11 @@ if [ `isValidProduct "$PRODUCT"` == "false" ]; then
   exit 1
 fi
 
-# Create env file for the 'init_' command to source in.
+# Create env file for the '.init_padpgrid' command to source in.
 TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
 echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" > $TMP_ENV_FILE
 echo "PRODUCT_HOME_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
-echo "PRODUCT_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
+echo "PRODUCT_ARG=\"$PRODUCT\"" >> $TMP_ENV_FILE
 echo "JAVA_HOME_ARG=\"$JAVA_HOME_ARG\"" >> $TMP_ENV_FILE
 echo "PATH_ARG=\"$PATH_ARG\"" >> $TMP_ENV_FILE
 echo "RWE_ARG=\"$RWE_ARG\"" >> $TMP_ENV_FILE
@@ -495,5 +495,5 @@ echo "HADOOP_HOME=\"$HADOOP_HOME\"" >> $TMP_ENV_FILE
 echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
 
 # Initialize the product RWE environment.
-$BASE_DIR/${PRODUCT}/bin_sh/.init_${PRODUCT} -env $TMP_ENV_FILE
+$BASE_DIR/${PRODUCT}/bin_sh/.init_padogrid -env $TMP_ENV_FILE
 rm $TMP_ENV_FILE

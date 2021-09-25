@@ -90,6 +90,8 @@ GRID_SPECIFIED=false
 SITE_SPECIFIED=false
 LOCATOR=
 LOCATOR_SPECIFIED=false
+PADOWEB=
+PADOWEB_SPECIFIED=false
 MC=
 MC_SPECIFIED=false
 MEMBER=
@@ -259,6 +261,8 @@ do
       SITE=$i
    elif [ "$PREV" == "-locator" ]; then
       LOCATOR=$i
+   elif [ "$PREV" == "-padoweb" ]; then
+      PADOWEB=$i
    elif [ "$PREV" == "-mc" ]; then
       MC=$i
    elif [ "$PREV" == "-member" ]; then
@@ -361,6 +365,8 @@ do
       GRID_SPECIFIED=true
    elif [ "$i" == "-site" ]; then
       SITE_SPECIFIED=true
+   elif [ "$i" == "-padoweb" ]; then
+      PADOWEB_SPECIFIED=true
    elif [ "$i" == "-mc" ]; then
       MC_SPECIFIED=true
    elif [ "$i" == "-member" ]; then

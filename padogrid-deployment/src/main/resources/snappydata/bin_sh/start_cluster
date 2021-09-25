@@ -135,12 +135,16 @@ if [ "$VM_ENABLED" == "true" ]; then
       let LOCATOR_COUNT=LOCATOR_COUNT+1
    done
    COUNT=0
+   MEMBER_NUM=1
    for VM_HOST in $__LOCATOR_HOSTS; do
       let COUNT=COUNT+1
       if [ $COUNT -lt $LOCATOR_COUNT ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE" &
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      fi
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
       fi
    done
 
@@ -154,6 +158,7 @@ if [ "$VM_ENABLED" == "true" ]; then
       let MEMBER_COUNT=MEMBER_COUNT+1
    done
    COUNT=0
+   MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
       let COUNT=COUNT+1
       if [ $COUNT -eq $MEMBER_COUNT ]; then
@@ -161,22 +166,28 @@ if [ "$VM_ENABLED" == "true" ]; then
       else
          FG=""
       fi
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $FG"
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $FG -num $MEMBER_NUM"
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
    done
 
    # Start leaders
    # Replace , with space
    __VM_LEADER_HOSTS=$(echo "$VM_LEADER_HOSTS" | sed "s/,/ /g")
    COUNT=0
+   MEMBER_NUM=1
    for VM_HOST in $__VM_LEADER_HOSTS; do
       if [ $COUNT -eq 1 ]; then
          FG="-fg"
       else
          FG=""
       fi
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_leader -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $FG"
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_leader -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $FG -num $MEMBER_NUM"
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
    done
-
    exit
 fi
 

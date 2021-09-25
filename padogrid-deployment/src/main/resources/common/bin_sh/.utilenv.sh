@@ -594,8 +594,8 @@ function getAppOptions
       echo "dekstop grafana perf_test"
    elif [ "$__PRODUCT" == "jet" ]; then
       echo "desktop jet_demo"
-   elif [ "$__PRODUCT" == "geode" ]; then
-      echo "grafana perf_test"
+   elif [ "$__PRODUCT" == "geode" ] || [ "$__PRODUCT" == "gemfire" ]; then
+      echo "grafana padodesktop perf_test"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "perf_test"
    else
@@ -3333,6 +3333,8 @@ function determineInstalledProductVersions
 {
    PADOGRID_VERSIONS=""
    PADO_VERSIONS=""
+   PADODEKSTOP_VERSIONS=""
+   PADOWEB_VERSIONS=""
    GEMFIRE_VERSIONS=""
    GEODE_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
@@ -3370,6 +3372,22 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       PADO_VERSIONS=$(sortVersionList "$__versions")
+
+      # PadoDesktop
+      __versions=""
+      for i in pado-desktop_*; do
+         __version=${i#pado-desktop_}
+         __versions="$__versions $__version "
+      done
+      PADODEKSTOP_VERSIONS=$(sortVersionList "$__versions")
+
+      # PadoWeb
+      __versions=""
+      for i in padoweb_*; do
+         __version=${i#padoweb_}
+         __versions="$__versions $__version "
+      done
+      PADOWEB_VERSIONS=$(sortVersionList "$__versions")
 
       # GemFire
       __versions=""
@@ -3484,7 +3502,7 @@ function determineInstalledProductVersions
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, spark
+#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, hadoop, kafka, spark
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
@@ -3657,14 +3675,14 @@ function createProductEnvFile
    if [ "$WORKSPACES_HOME" == "" ]; then
       WORKSPACES_HOME="$PADOGRID_WORKSPACES_HOME"
    fi
-   if [ "$PRODUCT_NAME" == "geode" ]; then
+   if [ "$PRODUCT_NAME" == "geode" ] || [ "$PRODUCT_NAME" == "gemfire" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.geodeenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.geodeenv.sh
          echo "# Enter Geode/GemFire product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
          echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
       fi
-   elif [ "$PRODUCT_NAME" == "hazelcast" ]; then
+   elif [ "$PRODUCT_NAME" == "hazelcast" ] || [ "$PRODUCT_NAME" == "jet" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.hazelcastenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.hazelcastenv.sh
          echo "# Enter Hazelcast product specific environment variables and initialization" >> $WORKSPACES_HOME/.hazelcastenv.sh
@@ -3782,5 +3800,47 @@ function getDefaultStartPortNumber
    else
       # DEFAULT_LOCATOR_START_PORT for geode/gemfire/snappydata
       echo "$DEFAULT_MEMBRER_START_PORT"
+   fi
+}
+
+#
+# Returns "true" if the specified cluster is a Pado cluster; "false", otherwise.
+#
+# @required PADOGRID_WORKSPACE Current PadoGrid workspace path.
+# @param    clusterName        Optional cluster name. If not specified, then it
+#                              assumes the current cluster.
+#
+function isPadoCluster
+{
+   local __CLUSTER="$1"
+   if [ "$__CLUSTER" == "" ]; then
+      __CLUSTER=$CLUSTER
+   fi
+   local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
+   if [ -f "$__CLUSTER_DIR/bin_sh/import_csv" ]; then
+      echo "true" 
+   else
+      echo "false" 
+   fi
+}
+
+#
+# Returns "true" if the specified cluster is a Hazelcast cluster; "false", otherwise.
+#
+# @required PADOGRID_WORKSPACE Current PadoGrid workspace path.
+# @param    clusterName        Optional cluster name. If not specified, then it
+#                              assumes the current cluster.
+#
+function isHazelcastCluster
+{
+   local __CLUSTER="$1"
+   if [ "$__CLUSTER" == "" ]; then
+      __CLUSTER=$CLUSTER
+   fi
+   local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
+   if [ -f "$__CLUSTER_DIR/etc/hazelcast.xml" ]; then
+      echo "true" 
+   else
+      echo "false" 
    fi
 }

@@ -117,8 +117,8 @@ function displayVmClusterShort()
    RUNNING_WORKER_COUNT=0
    for VM_HOST in ${VM_HOSTS}; do
       let WORKER_COUNT=WORKER_COUNT+1
-      WORKER=`getVmWorkerName $VM_HOST`
-      pid=`getVmWorkerPid $VM_HOST $WORKER $WORKSPACE`
+      WORKER=`getVmMemberName $VM_HOST`
+      pid=`getVmMemberPid $VM_HOST $WORKER $WORKSPACE`
       if [ "$pid" != "" ]; then
           let RUNNING_WORKER_COUNT=RUNNING_WORKER_COUNT+1
       fi
@@ -256,7 +256,7 @@ function displayVmClusterLong()
    RUNNING_WORKER_COUNT=0
    DOWN_WORKER_COUNT=0
    for VM_HOST in ${VM_HOSTS}; do
-      WORKER=`getVmWorkerName $VM_HOST`
+      WORKER=`getVmMemberName $VM_HOST`
       let WORKER_COUNT=WORKER_COUNT+1
       WORKER_DIR=$RUN_DIR/$WORKER
 
@@ -285,7 +285,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM        Worker: $WORKER"
 
-      pid=`getVmWorkerPid $VM_HOST $WORKER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $WORKER $WORKSPACE`
       if [ -z $pid ]; then
          let DOWN_WORKER_COUNT=DOWN_WORKER_COUNT+1
          echo -e "           STATE: ${CLightRed}Down${CNone}"

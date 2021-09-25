@@ -234,6 +234,21 @@ DEFAULT_LOCATOR_JMX_ENABLED=false
 DEFAULT_JMX_ENABLED=true
 
 #
+# Enable/disable PadoWeb HTTPS
+#
+DEFAULT_PADOWEB_HTTPS_ENABLED=false
+
+#
+# Default PadoWeb host and ports. These values are initially set
+# in $ETC_DIR/cluster.properties when a new cluster is created using the 'create_cluster'
+# command. You can change them later in the cluster.properties file.
+#
+DEFAULT_PADOWEB_HOST=localhost
+DEFAULT_PADOWEB_HTTP_PORT=8080
+DEFAULT_PADOWEB_HTTPS_PORT=8443
+DEFAULT_PADOWEB_CONTEXT_PATH="/"
+
+#
 # Default Pulse port numbers. These values are initially set in $ETC_DIR/cluster.properties
 # when a new cluster is created using the 'create_cluster' command. You can change them later
 # in the cluster.properties file.
@@ -302,7 +317,7 @@ MAX_MEMBER_COUNT=20
 #
 # Source in setenv.sh that contains user configured variables
 #
-if [ -f $SCRIPT_DIR/setenv.sh ]; then
+if [ -f "$SCRIPT_DIR/setenv.sh" ]; then
    # CLUSTER and POD options override setenv.sh
    __CLUSTER=$CLUSTER
    __POD=$POD
@@ -403,7 +418,7 @@ DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 K8S_PRODUCT_LIST="geode hazelcast jet"
 
 # Supported App Products
-APP_PRODUCT_LIST="coherence geode hazelcast jet"
+APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
@@ -605,7 +620,7 @@ JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 # GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
 # Geode and GemFire share the same 'geode' prefix for jar names.
 GEODE_VERSION=""
-for file in $PRODUCT_HOME/lib/geode-core-*; do
+for file in "$PRODUCT_HOME/lib/geode-core-"*; do
    file=${file##*geode\-core\-}
    GEODE_VERSION=${file%.jar}
 done
@@ -659,6 +674,6 @@ export CLASSPATH="$__CLASSPATH"
 # Source in cluster specific setenv.sh
 #
 RUN_SCRIPT=
-if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
-   . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
+if [ -f "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh" ] && [ "$1" != "-options" ]; then
+   . "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh"
 fi

@@ -137,16 +137,6 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          echo >&2 "----------------------------------------------------------------"
          exit 1
       fi
-      LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
-      # Replace , with space
-      __VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
-      for VM_HOST in $__VM_LOCATOR_HOSTS; do
-         if [ "$LOCATOR_TCP_LIST" == "" ]; then
-            LOCATOR_TCP_LIST="$VM_HOST[$LOCATOR_START_PORT]"
-         else
-            LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$VM_HOST[$LOCATOR_START_PORT]"
-         fi
-      done
 
       # Replace , with space
       __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
@@ -210,7 +200,7 @@ fi
 
 if [ ! -d "$MEMBER_DIR" ]; then
    if [ "$REMOTE_SPECIFIED" == "true" ]; then
-      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
+      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE -num $MEMBER_NUMBER
    else
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -245,7 +235,6 @@ MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP
 let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
 let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
 let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
-LOCATOR_TCP_LIST=""
 MEMBER_TCP_LIST=""
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 BIND_ADDRESS=""
