@@ -20,9 +20,9 @@ import java.util.Random;
 import java.util.Set;
 
 import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaBuilder.In;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
-import javax.persistence.criteria.CriteriaBuilder.In;
 
 import org.hazelcast.addon.cluster.util.HibernatePool;
 import org.hazelcast.addon.test.perf.data.Blob;
@@ -31,15 +31,19 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
+import com.hazelcast.cache.ICache;
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.core.IQueue;
+import com.hazelcast.core.ITopic;
+import com.hazelcast.core.ReplicatedMap;
 
 /**
  * GroupTest is a test tool for capturing the throughput and average latency of
- * multiple Hazelcast IMap operations performed as a single operation. This is
- * achieved by allowing you to group one or more operations and invoke them as a
- * single call.
+ * multiple Hazelcast data structure operations performed as a single atomic
+ * operation. This is achieved by allowing you to group one or more operations
+ * and invoke them as a single call.
  * <p>
  * <table>
  * <thead>
@@ -66,8 +70,14 @@ import com.hazelcast.core.IMap;
  * <td>{@linkplain #DEFAULT_threadCount}</td>
  * </tr>
  * <tr>
+ * <td>Data Structures</td>
+ * <td>map | rmap | cache | topic | rtopic | queue</td>
+ * <td>{@linkplain #DEFAULT_testCase}</td>
+ * </tr>
+ * <tr>
  * <td>testCase</td>
- * <td>eligibility: getall | tx, profile: getall | get</td>
+ * <td>set | put | putall | get | getall | publish | offer | poll | peek | take
+ * </td>
  * <td>{@linkplain #DEFAULT_testCase}</td>
  * </tr>
  * </table>
@@ -85,8 +95,12 @@ public class GroupTest implements Constants {
 
 	private HazelcastInstance hazelcastInstance;
 
+	enum DataStructureEnum {
+		map, rmap, cache, topic, rtopic, queue, sleep
+	}
+
 	enum TestCaseEnum {
-		set, put, putall, get, getall;
+		set, put, putall, get, getall, publish, offer, poll, peek, take;
 
 		static TestCaseEnum getTestCase(String testCaseName) {
 			if (set.name().equalsIgnoreCase(testCaseName)) {
@@ -97,8 +111,20 @@ public class GroupTest implements Constants {
 				return putall;
 			} else if (get.name().equalsIgnoreCase(testCaseName)) {
 				return get;
-			} else {
+			} else if (getall.name().equalsIgnoreCase(testCaseName)) {
 				return getall;
+			} else if (publish.name().equalsIgnoreCase(testCaseName)) {
+				return publish;
+			} else if (offer.name().equalsIgnoreCase(testCaseName)) {
+				return offer;
+			} else if (poll.name().equalsIgnoreCase(testCaseName)) {
+				return poll;
+			} else if (peek.name().equalsIgnoreCase(testCaseName)) {
+				return peek;
+			} else if (take.name().equalsIgnoreCase(testCaseName)) {
+				return take;
+			} else {
+				return putall;
 			}
 		}
 	}
@@ -116,8 +142,14 @@ public class GroupTest implements Constants {
 	static class Operation {
 		String name;
 		String ref;
-		String mapName;
+		String dsName;
+		int sleep;
 		IMap imap;
+		ICache icache;
+		ReplicatedMap rmap;
+		IQueue iqueue;
+		ITopic itopic;
+		DataStructureEnum ds;
 		TestCaseEnum testCase;
 		int totalEntryCount = -1; // for putall and getall
 		int payloadSize = -1;
@@ -132,8 +164,14 @@ public class GroupTest implements Constants {
 			Operation op = new Operation();
 			op.name = name;
 			op.ref = ref;
-			op.mapName = mapName;
+			op.dsName = dsName;
+			op.sleep = sleep;
 			op.imap = imap;
+			op.icache = icache;
+			op.rmap = rmap;
+			op.iqueue = iqueue;
+			op.itopic = itopic;
+			op.ds = ds;
 			op.testCase = testCase;
 			op.totalEntryCount = totalEntryCount;
 			op.payloadSize = payloadSize;
@@ -170,7 +208,7 @@ public class GroupTest implements Constants {
 						totalInvocationCount += thread.operationCount;
 					}
 				}
-				System.out.println("[" + timeElapsedInSec + " sec] Invocation Count (" + group.name + "): "
+				writeLine("[" + timeElapsedInSec + " sec] Invocation Count (" + group.name + "): "
 						+ totalInvocationCount);
 			}
 		}
@@ -186,7 +224,7 @@ public class GroupTest implements Constants {
 		Date startTime = new Date();
 		File file = new File(resultsDir, "group-" + group.name + "-" + format.format(startTime) + ".txt");
 
-		System.out.println("   " + file.getAbsolutePath());
+		writeLine("   " + file.getAbsolutePath());
 
 		int countPerThread = group.totalInvocationCount / group.threadCount;
 
@@ -336,121 +374,288 @@ public class GroupTest implements Constants {
 			int keyIndexes[] = new int[group.operations.length];
 			for (int i = 0; i < keyIndexes.length; i++) {
 				Operation operation = group.operations[i];
-				operation.imap = hazelcastInstance.getMap(operation.mapName);
+				switch (operation.ds) {
+				case map:
+					operation.imap = hazelcastInstance.getMap(operation.dsName);
+					break;
+				case rmap:
+					operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
+					break;
+				case cache:
+					operation.icache = hazelcastInstance.getCacheManager().getCache(operation.dsName);
+					break;
+				case queue:
+					operation.iqueue = hazelcastInstance.getQueue(operation.dsName);
+					break;
+				case topic:
+					operation.itopic = hazelcastInstance.getTopic(operation.dsName);
+					break;
+				case rtopic:
+					operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
+					break;
+				}
+
 				int entryCount = operation.totalEntryCount / group.threadCount;
 				keyIndexes[i] = (threadNum - 1) * entryCount;
 			}
 
 			long startTime = System.currentTimeMillis();
-			for (int i = threadStartIndex; i <= threadStopIndex; i++) {
+			try {
+				for (int i = threadStartIndex; i <= threadStopIndex; i++) {
 
-				for (int j = 0; j < group.operations.length; j++) {
-					Operation operation = group.operations[j];
-					switch (operation.testCase) {
-					case set: {
-						int idNum = operation.startNum + i - 1;
-						if (operation.dataObjectFactory == null) {
-							String key = operation.keyPrefix + idNum;
-							Blob blob = new Blob(new byte[operation.payloadSize]);
-							operation.imap.set(key, blob);
-						} else {
-							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
-							operation.imap.set(entry.key, entry.value);
-						}
-					}
-						break;
+					for (int j = 0; j < group.operations.length; j++) {
+						Operation operation = group.operations[j];
 
-					case put: {
-						int idNum = operation.startNum + i - 1;
-						Object value;
-						if (operation.dataObjectFactory == null) {
-							String key = operation.keyPrefix + idNum;
-							Blob blob = new Blob(new byte[operation.payloadSize]);
-							operation.imap.put(key, blob);
-						} else {
-							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
-							operation.imap.put(entry.key, entry.value);
-						}
-					}
-						break;
+						switch (operation.ds) {
 
-					case get: {
-						int val = operation.random.nextInt(operation.totalEntryCount);
-						int idNum = operation.startNum + val;
-						Object key;
-						Object value;
-						if (operation.dataObjectFactory == null) {
-							key = operation.keyPrefix + idNum;
-							value = operation.imap.get(key);
-						} else {
-							key = operation.dataObjectFactory.getKey(idNum);
-							value = operation.imap.get(key);
-						}
-						if (value == null) {
-							System.out.println(threadNum + ". [" + group.name + "." + operation.mapName + "."
-									+ operation.testCase + "] key=" + key + " value=null");
-						}
-					}
-						break;
+						case rmap:
+							switch (operation.testCase) {
 
-					case getall: {
-						HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
-						if (operation.dataObjectFactory == null) {
-							for (int k = 0; k < operation.batchSize; k++) {
-								int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-								String key = operation.keyPrefix + (operation.startNum + keyIndex);
-								keys.add(key);
-							}
-						} else {
-							for (int k = 0; k < operation.batchSize; k++) {
-								int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-								Object key = operation.dataObjectFactory.getKey(keyIndex);
-								keys.add(key);
-							}
-						}
-						Map<Object, Object> map = operation.imap.getAll(keys);
-						if (map == null) {
-							System.out.println(threadNum + ". [" + group.name + "." + operation.mapName + "."
-									+ operation.testCase + "] returned null");
-						} else if (map.size() < keys.size()) {
-							System.out.println(threadNum + ". [" + group.name + "." + operation.mapName + "."
-									+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
-						}
-					}
-						break;
-
-					case putall:
-					default: {
-						int entryCount = operation.totalEntryCount / group.threadCount;
-						HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
-						int keyIndex = keyIndexes[j];
-						if (operation.dataObjectFactory == null) {
-							for (int k = 0; k < operation.batchSize; k++) {
-								String key = operation.keyPrefix + (operation.startNum + keyIndex);
-								keyIndex++;
-								map.put(key, new Blob(new byte[operation.payloadSize]));
-								if (keyIndex >= threadNum * entryCount) {
-									keyIndex = (threadNum - 1) * entryCount;
+							case put: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.rmap.put(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.rmap.put(entry.key, entry.value);
 								}
 							}
-						} else {
-							for (int k = 0; k < operation.batchSize; k++) {
-								int idNum = operation.startNum + keyIndex;
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
-								keyIndex++;
-								map.put(entry.key, entry.value);
-								if (keyIndex >= threadNum * entryCount) {
-									keyIndex = (threadNum - 1) * entryCount;
+								break;
+
+							case get: {
+								int val = operation.random.nextInt(operation.totalEntryCount);
+								int idNum = operation.startNum + val;
+								Object key;
+								Object value;
+								if (operation.dataObjectFactory == null) {
+									key = operation.keyPrefix + idNum;
+									value = operation.rmap.get(key);
+								} else {
+									key = operation.dataObjectFactory.getKey(idNum);
+									value = operation.rmap.get(key);
+								}
+								if (value == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] key=" + key + " value=null");
 								}
 							}
+								break;
+
+							case putall:
+							default: {
+								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
+								operation.rmap.putAll(map);
+							}
+								break;
+							}
+							break;
+
+						case cache:
+							switch (operation.testCase) {
+							case put: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.icache.put(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.icache.put(entry.key, entry.value);
+								}
+							}
+								break;
+
+							case get: {
+								int val = operation.random.nextInt(operation.totalEntryCount);
+								int idNum = operation.startNum + val;
+								Object key;
+								Object value;
+								if (operation.dataObjectFactory == null) {
+									key = operation.keyPrefix + idNum;
+									value = operation.icache.get(key);
+								} else {
+									key = operation.dataObjectFactory.getKey(idNum);
+									value = operation.icache.get(key);
+								}
+								if (value == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] key=" + key + " value=null");
+								}
+							}
+								break;
+
+							case getall: {
+								HashSet<Object> keys = createGetAllKeySet(operation);
+								Map<Object, Object> map = operation.icache.getAll(keys);
+								if (map == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned null");
+								} else if (map.size() < keys.size()) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+								}
+							}
+								break;
+							case putall:
+							default: {
+								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
+								operation.icache.putAll(map);
+							}
+								break;
+							}
+							break;
+
+						case queue:
+							switch (operation.testCase) {
+
+							case poll: {
+								operation.iqueue.poll();
+							}
+								break;
+
+							case peek: {
+								operation.iqueue.peek();
+							}
+								break;
+
+							case take: {
+								try {
+									operation.iqueue.take();
+								} catch (InterruptedException e) {
+									int idNum = operation.startNum + i - 1;
+									writeLine(e.getClass().getSimpleName() + ": IQueue.take() interrupted [" + idNum
+											+ ". " + operation.name + ", " + operation.dsName + "].");
+								}
+							}
+								break;
+
+							case offer:
+							default: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.iqueue.offer(blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.iqueue.offer(entry.value);
+								}
+							}
+								break;
+							}
+							break;
+
+						case topic:
+						case rtopic:
+							switch (operation.testCase) {
+
+							case publish:
+							default: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.itopic.publish(blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.itopic.publish(entry.value);
+								}
+							}
+								break;
+							}
+							break;
+
+						case sleep:
+							Thread.sleep(operation.sleep);
+							break;
+
+						case map:
+						default:
+							switch (operation.testCase) {
+							case set: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.imap.set(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.imap.set(entry.key, entry.value);
+								}
+							}
+								break;
+
+							case put: {
+								int idNum = operation.startNum + i - 1;
+								if (operation.dataObjectFactory == null) {
+									String key = operation.keyPrefix + idNum;
+									Blob blob = new Blob(new byte[operation.payloadSize]);
+									operation.imap.put(key, blob);
+								} else {
+									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
+											null);
+									operation.imap.put(entry.key, entry.value);
+								}
+							}
+								break;
+
+							case get: {
+								int val = operation.random.nextInt(operation.totalEntryCount);
+								int idNum = operation.startNum + val;
+								Object key;
+								Object value;
+								if (operation.dataObjectFactory == null) {
+									key = operation.keyPrefix + idNum;
+									value = operation.imap.get(key);
+								} else {
+									key = operation.dataObjectFactory.getKey(idNum);
+									value = operation.imap.get(key);
+								}
+								if (value == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] key=" + key + " value=null");
+								}
+							}
+								break;
+
+							case getall: {
+								HashSet<Object> keys = createGetAllKeySet(operation);
+								Map<Object, Object> map = operation.imap.getAll(keys);
+								if (map == null) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned null");
+								} else if (map.size() < keys.size()) {
+									writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "."
+											+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+								}
+							}
+								break;
+
+							case putall:
+							default: {
+								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
+								operation.imap.putAll(map);
+							}
+								break;
+							}
+							break;
 						}
-						operation.imap.putAll(map);
-						keyIndexes[j] = keyIndex;
 					}
-						break;
-					}
+					operationCount++;
 				}
-				operationCount++;
+			} catch (InterruptedException e) {
+				// ignore
 			}
 			long stopTime = System.currentTimeMillis();
 
@@ -458,14 +663,60 @@ public class GroupTest implements Constants {
 		}
 	}
 
+	private int createPutAllMap(HashMap<Object, Object> map, Operation operation, int keyIndex, int threadNum,
+			int threadCount) {
+		int entryCount = operation.totalEntryCount / threadCount;
+		if (operation.dataObjectFactory == null) {
+			for (int k = 0; k < operation.batchSize; k++) {
+				String key = operation.keyPrefix + (operation.startNum + keyIndex);
+				keyIndex++;
+				map.put(key, new Blob(new byte[operation.payloadSize]));
+				if (keyIndex >= threadNum * entryCount) {
+					keyIndex = (threadNum - 1) * entryCount;
+				}
+			}
+		} else {
+			for (int k = 0; k < operation.batchSize; k++) {
+				int idNum = operation.startNum + keyIndex;
+				DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
+				keyIndex++;
+				map.put(entry.key, entry.value);
+				if (keyIndex >= threadNum * entryCount) {
+					keyIndex = (threadNum - 1) * entryCount;
+				}
+			}
+		}
+
+		return keyIndex;
+	}
+
+	private HashSet<Object> createGetAllKeySet(Operation operation) {
+		HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
+		if (operation.dataObjectFactory == null) {
+			for (int k = 0; k < operation.batchSize; k++) {
+				int keyIndex = operation.random.nextInt(operation.totalEntryCount);
+				String key = operation.keyPrefix + (operation.startNum + keyIndex);
+				keys.add(key);
+			}
+		} else {
+			for (int k = 0; k < operation.batchSize; k++) {
+				int keyIndex = operation.random.nextInt(operation.totalEntryCount);
+				Object key = operation.dataObjectFactory.getKey(keyIndex);
+				keys.add(key);
+			}
+		}
+		return keys;
+	}
+
 	/**
 	 * GroupDbTestThread applies group tasks to the DB configured by Hibernate.
+	 * 
 	 * @author dpark
 	 *
 	 */
 	class GroupDbTestThread extends AbstractThread {
-		public GroupDbTestThread(int threadNum, int threadStartIndex, int entryCountPerThread, Group group) {
-			super(threadNum, threadStartIndex, entryCountPerThread, group);
+		public GroupDbTestThread(int threadNum, int threadStartIndex, int invocationCountPerThread, Group group) {
+			super(threadNum, threadStartIndex, invocationCountPerThread, group);
 		}
 
 		@SuppressWarnings("unchecked")
@@ -498,10 +749,34 @@ public class GroupTest implements Constants {
 					case set:
 					case put: {
 						int idNum = operation.startNum + i - 1;
-						DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+						DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
 						Transaction transaction = session.beginTransaction();
 						session.saveOrUpdate(entry.value);
 						transaction.commit();
+
+						// Child objects
+						if (operation.dataObjectFactory.isEr()) {
+							int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
+							Operation childOperation = operationMap
+									.get(operation.dataObjectFactory.getErOperationName());
+							int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
+							int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
+							startErKeyIndex = i * maxErKeys + 1;
+							if (childOperation != null) {
+								boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
+								if (isErMaxRandom) {
+									maxErKeys = operation.random.nextInt(maxErKeys) + 1;
+								}
+								for (int k = 0; k < maxErKeys; k++) {
+									int childIdNum = startErKeyIndex + k;
+									DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory
+											.createEntry(childIdNum, entry.key);
+									Transaction childTransaction = session.beginTransaction();
+									session.saveOrUpdate(childEntry.value);
+									childTransaction.commit();
+								}
+							}
+						}
 					}
 						break;
 
@@ -512,8 +787,8 @@ public class GroupTest implements Constants {
 						Object key = operation.dataObjectFactory.getKey(idNum);
 						Object value = session.find(entityClass, key);
 						if (value == null) {
-							System.out.println(threadNum + ". [" + group.name + "." + operation.mapName + "."
-									+ operation.testCase + "] key=" + key + " value=null");
+							writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "." + operation.testCase
+									+ "] key=" + key + " value=null");
 						}
 					}
 						break;
@@ -577,8 +852,8 @@ public class GroupTest implements Constants {
 							}
 						}
 						if (map.size() < keys.size()) {
-							System.out.println(threadNum + ". [" + group.name + "." + operation.mapName + "."
-									+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+							writeLine(threadNum + ". [" + group.name + "." + operation.dsName + "." + operation.testCase
+									+ "] returned " + map.size() + "/" + keys.size());
 						}
 					}
 						break;
@@ -590,7 +865,7 @@ public class GroupTest implements Constants {
 						int keyIndex = keyIndexes[j];
 						for (int k = 0; k < operation.batchSize; k++) {
 							int idNum = operation.startNum + keyIndex;
-							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+							DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum, null);
 							keyIndex++;
 							map.put(entry.key, entry.value);
 							if (keyIndex >= threadNum * entryCount) {
@@ -623,6 +898,84 @@ public class GroupTest implements Constants {
 		}
 	}
 
+	private void deleteDataStructures(boolean delete) {
+		for (Group[] groups : concurrentGroupList) {
+			String groupNames = getGroupNames(groups);
+			writeLine();
+			writeLine("Running Group(s): " + groupNames);
+			writeLine();
+			for (Group group : groups) {
+				writeLine("group: " + group.name);
+				for (Operation operation : group.operations) {
+					switch (operation.ds) {
+					case map:
+						operation.imap = hazelcastInstance.getMap(operation.dsName);
+						int size = operation.imap.size();
+						if (delete) {
+							operation.imap.destroy();
+						}
+						writeLine("  - name: " + operation.dsName);
+						writeLine("    data: IMap");
+						writeLine("    size: " + size);
+						writeLine("    deleted: " + delete);
+						break;
+					case rmap:
+						operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
+						size = operation.rmap.size();
+						if (delete) {
+							operation.rmap.destroy();
+						}
+						writeLine("  - name: " + operation.dsName);
+						writeLine("    data: ReplicatedMap");
+						writeLine("    size: " + size);
+						writeLine("    deleted: " + delete);
+						break;
+					case cache:
+						operation.icache = hazelcastInstance.getCacheManager().getCache(operation.dsName);
+						size = operation.icache.size();
+						if (delete) {
+							operation.icache.destroy();
+						}
+						writeLine("  - name: " + operation.dsName);
+						writeLine("    data: ICache");
+						writeLine("    size: " + size);
+						writeLine("    deleted: " + operation.icache.isDestroyed());
+						break;
+					case queue:
+						operation.iqueue = hazelcastInstance.getQueue(operation.dsName);
+						size = operation.iqueue.size();
+						if (delete) {
+							operation.iqueue.destroy();
+						}
+						writeLine("  - name: " + operation.dsName);
+						writeLine("    data: IQueue");
+						writeLine("    size: " + size);
+						writeLine("    deleted: " + delete);
+						break;
+					case topic:
+						operation.itopic = hazelcastInstance.getTopic(operation.dsName);
+						if (delete) {
+							operation.itopic.destroy();
+						}
+						writeLine("  - name: " + operation.dsName);
+						writeLine("    data: ITopic");
+						writeLine("    deleted: " + delete);
+						break;
+					case rtopic:
+						operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
+						if (delete) {
+							operation.itopic.destroy();
+						}
+						writeLine("  - name: " + operation.dsName);
+						writeLine("    data: ReliableTopic");
+						writeLine("    deleted: " + delete);
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	public void close() {
 		HazelcastClient.shutdownAll();
 	}
@@ -646,7 +999,7 @@ public class GroupTest implements Constants {
 		String resultsDirStr = System.getProperty(PROPERTY_resultsDir, DEFAULT_resultsDir);
 		writeLine();
 		writeLine("Usage:");
-		writeLine("   " + executableName + " [-run] [-prop <properties-file>] [-?]");
+		writeLine("   " + executableName + " [-run|-list] [-db|-delete] [-prop <properties-file>] [-?]");
 		writeLine();
 		writeLine("   Displays or runs group test cases specified in the properties file.");
 		writeLine("   A group represents a function that executes one or more Hazelcast IMap");
@@ -654,19 +1007,33 @@ public class GroupTest implements Constants {
 		writeLine("   of group (or function) executions.");
 		writeLine("   The default properties file is");
 		writeLine("      " + DEFAULT_groupPropertiesFile);
-		writeLine("");
-		writeLine("       -run              Run test cases.");
-		writeLine("       -db               Run test cases on database instead of Hazelcast. To use this");
+		writeLine();
+		writeLine("       -run              Runs test cases.");
+		writeLine();
+		writeLine("       -list             Lists data structures and their sizes.");
+		writeLine();
+		writeLine("       -db               Runs test cases on database instead of Hazelcast. To use this");
 		writeLine("                         option, each test case must supply a data object factory class");
 		writeLine("                         by specifying the 'factory.class' property and Hibernate must");
 		writeLine("                         be configured by running the 'build_app' command.");
+		writeLine();
+		writeLine("       -delete           Deletes (destroys) all the data structures pertaining to the group");
+		writeLine("                         test cases that were created in the Hazelcast cluster. If the '-run'");
+		writeLine("                         option is not specified, then it has the same effect as the '-list'");
+		writeLine("                         option. It only lists data strcutures and their without deleting them.");
+		writeLine();
 		writeLine("       -failover         Configure failover client using the following config file:");
 		writeLine("                           ../etc/hazelcast-client-failover.xml");
+		writeLine();
 		writeLine("       <properties-file> Optional properties file path.");
 		writeLine();
 		writeLine("   To run the the test cases, specify the '-run' option. Upon run completion, the results");
 		writeLine("   will be outputted in the following directory:");
 		writeLine("      " + resultsDirStr);
+		writeLine();
+		writeLine("Notes:");
+		writeLine("   ICache requires explicit configuration. It will fail if you run it without first configuring");
+		writeLine("   the cluster with caches.");
 		writeLine();
 	}
 
@@ -694,60 +1061,88 @@ public class GroupTest implements Constants {
 				String operationsStr = System.getProperty(groupName + ".operations", "putall");
 				group.operationsStr = operationsStr;
 				String[] split = operationsStr.split(",");
-				Operation[] operations = new Operation[split.length];
+				ArrayList<Operation> operationList = new ArrayList<Operation>(split.length);
 				for (int k = 0; k < split.length; k++) {
 					String operationName = split[k];
 					operationName = operationName.trim();
+					String dsName = null;
+					DataStructureEnum ds = null;
+					for (DataStructureEnum ds2 : DataStructureEnum.values()) {
+						dsName = System.getProperty(operationName + "." + ds2.name());
+						if (dsName != null) {
+							ds = ds2;
+							break;
+						}
+					}
 					Operation operation = operationMap.get(operationName);
 					if (operation == null) {
 						operation = new Operation();
 						operation.name = operationName;
 						operationMap.put(operationName, operation);
-						operation.ref = System.getProperty(operationName + ".ref");
-						operation.mapName = System.getProperty(operationName + ".map");
-						String testCase = System.getProperty(operationName + ".testCase");
-						if (testCase != null) {
-							operation.testCase = TestCaseEnum.getTestCase(testCase);
-						}
-						Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
-						if (payloadSize != null) {
-							operation.payloadSize = payloadSize;
-						}
-						operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
-						Integer startNum = Integer.getInteger(operationName + ".key.startNum");
-						if (startNum != null) {
-							operation.startNum = startNum;
-						}
-						Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
-						if (totalEntryCount != null) {
-							operation.totalEntryCount = totalEntryCount;
-						}
-						Integer batchSize = Integer.getInteger(operationName + ".batchSize");
-						if (batchSize != null) {
-							operation.batchSize = batchSize;
-						}
-						Long randomSeed = Long.getLong(operationName + ".randomSeed");
-						if (randomSeed != null) {
-							operation.random = new Random(randomSeed);
-						}
-						String factoryClassName = System.getProperty(operationName + ".factory.class");
-						if (factoryClassName != null) {
-							Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class.forName(factoryClassName);
-							operation.dataObjectFactory = clazz.newInstance();
-							Properties factoryProps = getFactoryProps(operationName);
-							operation.dataObjectFactory.initialize(factoryProps);
+						operation.ds = ds;
+						if (ds == DataStructureEnum.sleep) {
+							try {
+								operation.sleep = Integer.parseInt(dsName);
+								if (operation.sleep <= 0) {
+									operation = null;
+								}
+							} catch (Exception ex) {
+								throw new RuntimeException("Parsing error: " + operation.name + ".sleep=" + dsName, ex);
+							}
+						} else {
+							operation.ref = System.getProperty(operationName + ".ref");
+							operation.dsName = dsName;
+
+							String testCase = System.getProperty(operationName + ".testCase");
+							if (testCase != null) {
+								operation.testCase = TestCaseEnum.getTestCase(testCase);
+							}
+							Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
+							if (payloadSize != null) {
+								operation.payloadSize = payloadSize;
+							}
+							operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
+							Integer startNum = Integer.getInteger(operationName + ".key.startNum");
+							if (startNum != null) {
+								operation.startNum = startNum;
+							}
+							Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
+							if (totalEntryCount != null) {
+								operation.totalEntryCount = totalEntryCount;
+							}
+							Integer batchSize = Integer.getInteger(operationName + ".batchSize");
+							if (batchSize != null) {
+								operation.batchSize = batchSize;
+							}
+							Long randomSeed = Long.getLong(operationName + ".randomSeed");
+							if (randomSeed != null) {
+								operation.random = new Random(randomSeed);
+							}
+							String factoryClassName = System.getProperty(operationName + ".factory.class");
+							if (factoryClassName != null) {
+								Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class
+										.forName(factoryClassName);
+								operation.dataObjectFactory = clazz.newInstance();
+								Properties factoryProps = getFactoryProps(operationName);
+								operation.dataObjectFactory.initialize(factoryProps);
+							}
 						}
 					}
-					operations[k] = operation;
+					if (operation != null) {
+						operationList.add(operation);
+					}
 				}
 
 				// Set references
-				for (Operation operation : operations) {
+				for (Operation operation : operationList) {
 					if (operation.ref != null) {
 						Operation refOperation = operationMap.get(operation.ref);
 						if (refOperation != null) {
-							if (operation.mapName == null) {
-								operation.mapName = refOperation.mapName;
+							if (operation.dsName == null) {
+								operation.dsName = refOperation.dsName;
+							}
+							if (operation.ds == null) {
+								operation.ds = refOperation.ds;
 							}
 							if (operation.testCase == null) {
 								operation.testCase = refOperation.testCase;
@@ -772,12 +1167,18 @@ public class GroupTest implements Constants {
 							}
 						}
 					}
+					if (operation.ds == null) {
+						operation.ds = DataStructureEnum.map;
+					}
 				}
 
 				// Set default values if not defined.
-				for (Operation operation : operations) {
-					if (operation.mapName == null) {
-						operation.mapName = "map1";
+				for (Operation operation : operationList) {
+					if (operation.ds == DataStructureEnum.sleep) {
+						continue;
+					}
+					if (operation.dsName == null) {
+						operation.dsName = "map1";
 					}
 					if (operation.testCase == null) {
 						operation.testCase = TestCaseEnum.putall;
@@ -802,7 +1203,7 @@ public class GroupTest implements Constants {
 					}
 				}
 
-				group.operations = operations;
+				group.operations = operationList.toArray(new Operation[0]);
 				group.comment = System.getProperty(groupName + ".comment", "");
 			}
 		}
@@ -843,6 +1244,8 @@ public class GroupTest implements Constants {
 	public static void main(String args[]) throws Exception {
 		boolean showConfig = true;
 		boolean runDb = false;
+		boolean delete = false;
+		boolean list = false;
 		String perfPropertiesFilePath = null;
 		String arg;
 		for (int i = 0; i < args.length; i++) {
@@ -852,8 +1255,12 @@ public class GroupTest implements Constants {
 				System.exit(0);
 			} else if (arg.equals("-run")) {
 				showConfig = false;
+			} else if (arg.equals("-list")) {
+				list = true;
 			} else if (arg.equals("-db")) {
 				runDb = true;
+			} else if (arg.equals("-delete")) {
+				delete = true;
 			} else if (arg.equals("-failover")) {
 				IS_FAILOVER_CLIENT = true;
 			} else if (arg.equals("-prop")) {
@@ -862,6 +1269,16 @@ public class GroupTest implements Constants {
 				}
 			}
 		}
+
+		// Exit if more than one run option specified
+		if (runDb && delete) {
+			if (!showConfig || delete) {
+				System.err.println("ERROR: Must specify only one of -db or -delete.");
+				System.err.println("       Command aborted.");
+				System.exit(1);
+			}
+		}
+
 		if (perfPropertiesFilePath == null) {
 			perfPropertiesFilePath = DEFAULT_groupPropertiesFile;
 		}
@@ -888,13 +1305,15 @@ public class GroupTest implements Constants {
 
 		String dbHeader = "";
 		if (runDb) {
-			dbHeader=" (Database)";
+			dbHeader = " (Database)";
 			for (Group[] groups : concurrentGroupList) {
 				for (Group group : groups) {
 					for (Operation operation : group.operations) {
 						if (operation.dataObjectFactory == null) {
-							System.err.println("ERROR: data object factory not set for group " + group.name + ", operation " + operation.name + ".");
-							System.err.println("       Set '" + operation.name + ".factory.class' in the propertie file," + perfPropertiesFilePath  + ".");
+							System.err.println("ERROR: data object factory not set for group " + group.name
+									+ ", operation " + operation.name + ".");
+							System.err.println("       Set '" + operation.name
+									+ ".factory.class' in the propertie file," + perfPropertiesFilePath + ".");
 							System.err.println("       Command aborted.");
 							System.exit(1);
 						}
@@ -902,104 +1321,119 @@ public class GroupTest implements Constants {
 				}
 			}
 		}
-		System.out.println();
-		System.out.println("***************************************");
+		writeLine();
+		writeLine("***************************************");
 		if (showConfig) {
-			System.out.println("Group Test Configuration" + dbHeader);
+			writeLine("Group Test Configuration" + dbHeader);
 		} else {
-			System.out.println("Group Test" + dbHeader);
+			writeLine("Group Test" + dbHeader);
 		}
-		System.out.println("***************************************");
-		System.out.println();
+		writeLine("***************************************");
+		writeLine();
 		if (file.exists()) {
-			System.out.println("Configuration File: " + file.getAbsolutePath());
+			writeLine("Configuration File: " + file.getAbsolutePath());
 		} else {
-			System.out.println("Configuration File: N/A");
+			writeLine("Configuration File: N/A");
 		}
 
-		System.out.println();
-		System.out.println("             Test Run Count: " + TEST_COUNT);
-		System.out.println("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
+		if (!delete) {
+			writeLine();
+			writeLine("             Test Run Count: " + TEST_COUNT);
+			writeLine("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 
-		for (Group[] groups : concurrentGroupList) {
-			String groupNames = getGroupNames(groups);
-			System.out.println();
-			System.out.println("- Concurrent Group(s): " + groupNames);
-			for (int i = 0; i < groups.length; i++) {
-				Group group = groups[i];
-				int countPerThread = group.totalInvocationCount / group.threadCount;
-				System.out.println("                               Group Name: " + group.name);
-				System.out.println("                                  Comment: " + group.comment);
-				System.out.println("                               Operations: " + group.operationsStr);
-				System.out.println("          Total Invocation Count Per Test: " + group.totalInvocationCount);
-				System.out.println("                             Thread Count: " + group.threadCount);
-				System.out.println("              Invocation Count Per Thread: " + countPerThread);
-				System.out.println("   Actual Total Invocation Count Per Test: " + countPerThread * group.threadCount);
-				System.out.println("");
+			for (Group[] groups : concurrentGroupList) {
+				String groupNames = getGroupNames(groups);
+				writeLine();
+				writeLine("- Concurrent Group(s): " + groupNames);
+				for (int i = 0; i < groups.length; i++) {
+					Group group = groups[i];
+					int countPerThread = group.totalInvocationCount / group.threadCount;
+					writeLine("                               Group Name: " + group.name);
+					writeLine("                                  Comment: " + group.comment);
+					writeLine("                               Operations: " + group.operationsStr);
+					writeLine("          Total Invocation Count Per Test: " + group.totalInvocationCount);
+					writeLine("                             Thread Count: " + group.threadCount);
+					writeLine("              Invocation Count Per Thread: " + countPerThread);
+					writeLine("   Actual Total Invocation Count Per Test: " + countPerThread * group.threadCount);
+					writeLine("");
+				}
 			}
 		}
 
-		System.out.println();
+		writeLine();
 
 		if (showConfig) {
-			System.out.println("To run the test, specify the option, '-run'.");
-			System.out.println();
+			if (delete || list) {
+				// Show data structures only
+				GroupTest groupTest = new GroupTest(false);
+				groupTest.deleteDataStructures(false);
+				groupTest.close();
+				writeLine();
+			}
+			writeLine("To run the test, specify the option, '-run'.");
+			writeLine();
 			return;
 		}
 
-		System.out.println("Please wait until done. This may take some time. Status printed in every "
+		writeLine("Please wait until done. This may take some time. Status printed in every "
 				+ PRINT_STATUS_INTERVAL_IN_SEC + " sec.");
-		System.out.println("Results:");
+		writeLine("Results:");
 
 		final GroupTest groupTest = new GroupTest(runDb);
-		final boolean __runDb = runDb;
 
-		for (Group[] groups : concurrentGroupList) {
-			String groupNames = getGroupNames(groups);
-			System.out.println();
-			System.out.println("Running Group(s): " + groupNames);
-			System.out.println();
+		if (delete) {
+			groupTest.deleteDataStructures(true);
+		} else {
 
-			threadsComplete = new boolean[groups.length];
+			final boolean __runDb = runDb;
 
-			for (int i = 0; i < groups.length; i++) {
-				final Group group = groups[i];
-				final int index = i;
-				new Thread(new Runnable() {
-					public void run() {
-						try {
-							groupTest.runTest(groupNames, group, __runDb);
-							threadsComplete[index] = true;
-						} catch (Exception e) {
-							e.printStackTrace();
+			for (Group[] groups : concurrentGroupList) {
+				String groupNames = getGroupNames(groups);
+				writeLine();
+				writeLine("Running Group(s): " + groupNames);
+				writeLine();
+
+				threadsComplete = new boolean[groups.length];
+
+				for (int i = 0; i < groups.length; i++) {
+					final Group group = groups[i];
+					final int index = i;
+					new Thread(new Runnable() {
+						public void run() {
+							try {
+								groupTest.runTest(groupNames, group, __runDb);
+								threadsComplete[index] = true;
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					}).start();
+				}
+
+				int loopCount = 0;
+				while (true) {
+					int threadsCompleteCount = 0;
+					loopCount++;
+					for (int i = 0; i < threadsComplete.length; i++) {
+						if (threadsComplete[i]) {
+							threadsCompleteCount++;
 						}
 					}
-				}).start();
-			}
-
-			int loopCount = 0;
-			while (true) {
-				int threadsCompleteCount = 0;
-				loopCount++;
-				for (int i = 0; i < threadsComplete.length; i++) {
-					if (threadsComplete[i]) {
-						threadsCompleteCount++;
+					if (threadsCompleteCount == threadsComplete.length) {
+						groupTest.printTotalInvocations(groups, loopCount);
+						break;
 					}
+					if (loopCount % PRINT_STATUS_INTERVAL_IN_SEC == 0) {
+						groupTest.printTotalInvocations(groups, loopCount);
+					}
+					Thread.sleep(1000);
 				}
-				if (threadsCompleteCount == threadsComplete.length) {
-					groupTest.printTotalInvocations(groups, loopCount);
-					break;
-				}
-				if (loopCount % PRINT_STATUS_INTERVAL_IN_SEC == 0) {
-					groupTest.printTotalInvocations(groups, loopCount);
-				}
-				Thread.sleep(1000);
 			}
 		}
 		groupTest.close();
-		System.out.println();
-		System.out.println("GroupTest complete");
-		System.out.println();
+		writeLine();
+		writeLine("GroupTest complete");
+		writeLine();
 		System.exit(0);
 	}
 }

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -all -long -?"
+   echo "-cluster -short -long -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,11 +38,10 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Display the status of Management Center in the specified cluster
-                 in the current padogrid workspace
+   $EXECUTABLE - Display the status of Management Center in the specified cluster in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster <cluster-name>] [-all] [-long] [-?]
+   $EXECUTABLE [-cluster <cluster-name>] [=short | -long] [-all] [-?]
 
 DESCRIPTION
    Displays Management Center status.
@@ -50,12 +49,14 @@ DESCRIPTION
 OPTIONS
    -cluster cluster_name
              Cluster name.
+   -short
+             Displays running status only.
 
    -long
-             Display detailed information.
+             Displays detailed information.
 
    -all
-             Display all management centers in the workspace clusters
+             Displays all management centers in the workspace clusters
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -105,27 +106,37 @@ function displayMcShort()
       fi
    fi
    MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
-   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
    WORKING_DIR=$RUN_DIR/$MC_NAME
    LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
    PID=`getMcPid $MC_NAME $WORKSPACE`
 
-   echo "----------------------------------------------------------------"
-   echo "        WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "             Name: $MC_NAME"
+   echo "    CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "       Name: $MC_NAME"
+   fi
    if [ "$PID" == "" ]; then
-   echo -e "            STATE: ${CLightRed}Down${CNone}"
-   echo "              PID: N/A"
+   echo -e "      STATE: ${CLightRed}Down${CNone}"
+   if [ "$SHORT" == "false" ]; then
+   echo "        PID: N/A"
+   fi
    else
-   echo -e "            STATE: ${CLightGreen}Running${CNone}"
-   echo "              PID: $PID"
+   echo -e "      STATE: ${CLightGreen}Running${CNone}"
+   if [ "$SHORT" == "false" ]; then
+   echo "        PID: $PID"
    fi
-   echo "          Cluster: $CLUSTER"
+   fi
+   if [ "$SHORT" == "false" ]; then
    if [ "$VM_ENABLED" == "true" ]; then
-   echo "       Deployment: VM"
+   echo " Deployment: VM"
    fi
-   echo "              URL: $MC_URL"
-   echo "----------------------------------------------------------------"
+   echo -e "        URL: $CUrl$MC_URL$CNone"
+   fi
 }
 
 # Displays long status of a management center.
@@ -155,30 +166,38 @@ function displayMcLong()
    fi
    MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
    MC_JMX_URL="service:jmx:rmi:///jndi/rmi://${MC_HOST}:${MC_JMX_PORT}/jmxrmi"
-   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
    WORKING_DIR=$RUN_DIR/$MC_NAME
    LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
    PID=`getMcPid $MC_NAME $WORKSPACE`
 
    echo "----------------------------------------------------------------"
-   echo "        WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "             Name: $MC_NAME"
+   echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "       Name: $MC_NAME"
    if [ "$PID" == "" ]; then
-   echo -e "            STATE: ${CLightRed}Down${CNone}"
-   echo "              PID: N/A"
+   echo -e "      STATE: ${CLightRed}Down${CNone}"
+   echo "        PID: N/A"
    else
-   echo -e "            STATE: ${CLightGreen}Running${CNone}"
-   echo "              PID: $PID"
+   echo -e "      STATE: ${CLightGreen}Running${CNone}"
+   echo "        PID: $PID"
    fi
-   echo "          Cluster: $CLUSTER"
-   echo "Management Center: hazelcast-mancenter"
-   echo "              URL: $MC_URL"
-   echo "          JMX_URL: $MC_JMX_URL"
-   echo "      WORKING_DIR: $WORKING_DIR"
-   echo "        HTTP_PORT: $MC_HTTP_PORT"
-   echo "         JMX_PORT: $MC_JMX_PORT"
-   echo "          LOG_DIR: $LOG_DIR"
-   echo "         LOG_FILE: $LOG_FILE"
+   echo "    Cluster: $CLUSTER"
+   echo " Man Center: hazelcast-mancenter"
+   echo -e "        URL: $CUrl$MC_URL$CNone"
+   echo "    JMX_URL: $MC_JMX_URL"
+   echo "WORKING_DIR: $WORKING_DIR"
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   echo " HTTPS_PORT: $MC_HTTPS_PORT"
+   else
+   echo "  HTTP_PORT: $MC_HTTP_PORT"
+   fi
+   echo "   JMX_PORT: $MC_JMX_PORT"
+   echo "    LOG_DIR: $LOG_DIR"
+   echo "   LOG_FILE: $LOG_FILE"
    echo "----------------------------------------------------------------"
 }
 
@@ -195,10 +214,12 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
       if [ "$VM_KEY" != "" ]; then
          VM_KEY="-i $VM_KEY"
+      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
-         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_mc -remote -workspace $VM_PADOGRID_WORKSPACE $@"
+         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_mc -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
          exit
       fi
    fi
@@ -216,18 +237,20 @@ if [ "$ALL" == "true" ]; then
    COUNT=0
    for i in *; do
       if [ -d "$i" ]; then
-         let COUNT=COUNT+1
-         if [ $COUNT -eq 1 ]; then
-            CLUSTERS="$i"
-         else
-            CLUSTERS="$CLUSTERS $i"
+         if [ "$(isHazelcastCluster $i)" == "true" ]; then
+            let COUNT=COUNT+1
+            if [ $COUNT -eq 1 ]; then
+               CLUSTERS="$i"
+            else
+               CLUSTERS="$CLUSTERS $i"
+            fi
          fi
       fi
    done
    popd > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "     Clusters: $CLUSTERS"
+   echo "Hazelcast Clusters: $CLUSTERS"
    echo "----------------------------------------------------------------"
    echo ""
 
@@ -242,6 +265,11 @@ if [ "$ALL" == "true" ]; then
          displayMcLong
       done
    fi
+
+   echo ""
+   echo "----------------------------------------------------------------"
+   echo "Hazelcast Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
 
 else
 

@@ -14,7 +14,7 @@
 # if [[ ${OS_NAME} == CYGWIN* ]]; then
 #    HIBERNATE_CONFIG_FILE="$(cygpath -wp "$HIBERNATE_CONFIG_FILE")"
 # fi
-# JAVA_OPTS=" --J=-Dpadogrid.hibernate.config="
+# JAVA_OPTS=" --J=-Dgeode-addon.hibernate.config="
 
 # To use Hibernate backed CacheWriterLoaderPkDbImpl, set the following property and
 # configure CacheWriterLoaderPkDbImpl in the $CLUSTER_DIR/etc/cache.xml file.
@@ -25,8 +25,8 @@
 # directory. CLASSPATH includes all the jar files in that directory for
 # the apps and clusters running in this workspace.
 #
-#JAVA_OPTS="$JAVA_OPTS -Dpadogrid.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
-#JAVA_OPTS="$JAVA_OPTS -Dpadogrid.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml"
 
 #
 # Set RUN_SCRIPT. Absolute path required.
@@ -49,35 +49,38 @@
 . $PADOGRID_HOME/geode/bin_sh/.padoenv.sh
 
 # Locators
-LOCATOR_START_PORT=$(getClusterProperty "locator.tcp.startPort")
-let LOCATOR_PORT=LOCATOR_START_PORT+LOCATOR_NUMBER-1
-let LOCATOR_END_PORT=LOCATOR_START_PORT+MAX_LOCATOR_COUNT-1
-LOCATOR_TCP_LIST=""
+if [ "$LOCATORS" == "" ]; then
+   LOCATOR_START_PORT=$(getClusterProperty "locator.tcp.startPort")
+   let LOCATOR_PORT=LOCATOR_START_PORT+LOCATOR_NUMBER-1
+   let LOCATOR_END_PORT=LOCATOR_START_PORT+MAX_LOCATOR_COUNT-1
+   LOCATOR_TCP_LIST=""
 
-if [ "$POD" == "local" ]; then
-   HOST_NAME=`hostname`
-   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
-   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
-   LOCATOR_PREFIX=`getLocatorPrefix`
-   pushd $RUN_DIR > /dev/null 2>&1
-   for i in ${LOCATOR_PREFIX}*; do
-      if [ -d "$i" ]; then
-         __LOCATOR=$i
-         __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
-         __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
-         let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
-         if [ "$LOCATOR_TCP_LIST" == "" ]; then
-            LOCATOR_TCP_LIST="$BIND_ADDRESS[$__LOCATOR_PORT]"
-         else
-            LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$BIND_ADDRESS[$__LOCATOR_PORT]"
+   if [ "$POD" == "local" ]; then
+      HOST_NAME=`hostname`
+      BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+      HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+      LOCATOR_PREFIX=`getLocatorPrefix`
+      pushd $RUN_DIR > /dev/null 2>&1
+      for i in ${LOCATOR_PREFIX}*; do
+         if [ -d "$i" ]; then
+            __LOCATOR=$i
+            __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
+            __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
+            let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
+            if [ "$LOCATOR_TCP_LIST" == "" ]; then
+               LOCATOR_TCP_LIST="$BIND_ADDRESS[$__LOCATOR_PORT]"
+            else
+               LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$BIND_ADDRESS[$__LOCATOR_PORT]"
+            fi
          fi
-      fi
-   done
-   popd > /dev/null 2>&1
+      done
+      popd > /dev/null 2>&1
+   fi
+   LOCATORS=$(echo $LOCATOR_TCP_LIST | sed -e "s/\[/:/g"  -e "s/\]//g")
+   GEODE_LOCATORS=$LOCATOR_TCP_LIST
+else
+   GEODE_LOCATORS=$(echo $LOCATORS | sed -e "s/:/\[/g"  -e "s/,/\]/g" -e "s/$/\]/")
 fi
-
-LOCATORS=$(echo $LOCATOR_TCP_LIST | sed -e "s/\[/:/g"  -e "s/\]//g")
-GEODE_LOCATORS=$LOCATOR_TCP_LIST
 SECURITY_DIR=$CLUSTER_DIR/security
 
 if [ "$GEMFIRE_SECURITY_PROPERTY_FILE" == "" ]; then

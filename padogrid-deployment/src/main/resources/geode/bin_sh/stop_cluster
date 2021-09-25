@@ -38,7 +38,7 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Stop all running members in the current padogrid workspace
+   $EXECUTABLE - Stop all running members in the current workspace
 
 WARNING
    This command does not wait for migration operations to complete before
@@ -74,6 +74,19 @@ EOF
    exit
 fi
 
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
 # 
 # VM cluster
 #
@@ -107,16 +120,24 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
    fi
+   MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
    done
 
    if [ "$ALL" == "true" ]; then
       # Locators
       __LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+      MEMBER_NUM=1
       for VM_HOST in $__LOCATOR_HOSTS; do
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_locator -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_locator -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
       done
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
    fi
    exit
 fi

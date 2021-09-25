@@ -17,35 +17,38 @@
 # ========================================================================
 
 # Locators
-LOCATOR_START_PORT=$(getClusterProperty "locator.tcp.startPort")
-let LOCATOR_PORT=LOCATOR_START_PORT+LOCATOR_NUMBER-1
-let LOCATOR_END_PORT=LOCATOR_START_PORT+MAX_LOCATOR_COUNT-1
-LOCATOR_TCP_LIST=""
+if [ "$LOCATORS" == "" ]; then
+   LOCATOR_START_PORT=$(getClusterProperty "locator.tcp.startPort")
+   let LOCATOR_PORT=LOCATOR_START_PORT+LOCATOR_NUMBER-1
+   let LOCATOR_END_PORT=LOCATOR_START_PORT+MAX_LOCATOR_COUNT-1
+   LOCATOR_TCP_LIST=""
 
-if [ "$POD" == "local" ]; then
-   HOST_NAME=`hostname`
-   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
-   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
-   LOCATOR_PREFIX=`getLocatorPrefix`
-   pushd $RUN_DIR > /dev/null 2>&1
-   for i in ${LOCATOR_PREFIX}*; do
-      if [ -d "$i" ]; then
-         __LOCATOR=$i
-         __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
-         __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
-         let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
-         if [ "$LOCATOR_TCP_LIST" == "" ]; then
-            LOCATOR_TCP_LIST="$BIND_ADDRESS[$__LOCATOR_PORT]"
-         else
-            LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$BIND_ADDRESS[$__LOCATOR_PORT]"
+   if [ "$POD" == "local" ]; then
+      HOST_NAME=`hostname`
+      BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+      HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+      LOCATOR_PREFIX=`getLocatorPrefix`
+      pushd $RUN_DIR > /dev/null 2>&1
+      for i in ${LOCATOR_PREFIX}*; do
+         if [ -d "$i" ]; then
+            __LOCATOR=$i
+            __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
+            __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
+            let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
+            if [ "$LOCATOR_TCP_LIST" == "" ]; then
+               LOCATOR_TCP_LIST="$BIND_ADDRESS[$__LOCATOR_PORT]"
+            else
+               LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$BIND_ADDRESS[$__LOCATOR_PORT]"
+            fi
          fi
-      fi
-   done
-   popd > /dev/null 2>&1
+      done
+      popd > /dev/null 2>&1
+   fi
+   LOCATORS=$(echo $LOCATOR_TCP_LIST | sed -e "s/\[/:/g"  -e "s/\]//g")
+   GEODE_LOCATORS=$LOCATOR_TCP_LIST
+else
+   GEODE_LOCATORS=$(echo $LOCATORS | sed -e "s/:/\[/g"  -e "s/,/\]/g" -e "s/$/\]/")
 fi
-
-LOCATORS=$(echo $LOCATOR_TCP_LIST | sed -e "s/\[/:/g"  -e "s/\]//g")
-GEODE_LOCATORS=$LOCATOR_TCP_LIST
 SECURITY_DIR=$CLUSTER_DIR/security
 
 if [ "$GEMFIRE_SECURITY_PROPERTY_FILE" == "" ]; then
@@ -82,4 +85,4 @@ if [ "$SECURITY_ENABLED" == "true" ]; then
 fi
 SECURITY_PROPERTIES="$SECURITY_PROPERTIES $GEMFIRE_SECURITY_PROPERTY_SYSTEM"
 
-PADO_PROPERTIES="-Dpado.home.dir=$PADO_HOME -Dpado.server=false -Dpado.properties=$ETC_DIR/client/pado.properties -Dpado.command.jar.path=$BASE_DIR/lib/pado-tools.jar -Dpado.security.aes.userCertificate=$SECURITY_DIR/user.cer -Dpado.security.keystore.path=$SECURITY_DIR/client/client-user.keystore"
+PADO_PROPERTIES="-Dpado.home.dir=$PADO_HOME -Dpado.server=false -Dpado.locators=$LOCATORS -Dpado.properties=$ETC_DIR/client/pado.properties -Dpado.command.jar.path=$BASE_DIR/lib/pado-tools.jar -Dpado.security.aes.userCertificate=$SECURITY_DIR/user.cer -Dpado.security.keystore.path=$SECURITY_DIR/client/client-user.keystore"

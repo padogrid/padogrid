@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-product -cluster -pod -vm -port -type -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Make a new product cluster in the current workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name]
+                [-product product_name]
+                [-type default|pado]
+                [-pod pod_name]
+                [-vm [comma_separated_hosts]]
+                [-port first_port_number] [-?]
+ 
+DESCRIPTION
+   Makes a new product cluster in the current workspace. Once the cluster is made,
+   you can change the settings in the following file:
+
+   etc/cluster.properties
+
+   Unlike 'create_cluster' which is specific to the default product, this command
+   allows creation of clusters for any supported products in the same workspace.
+
+OPTIONS
+   -cluster cluster_name
+             Unique cluster name. The cluster name is prepended
+             to all member names.
+
+   -product product_name
+             Cluser product name. If unspecified then the current cluster's product is assigned.
+             This command will abort, if the specified product is not installed for the current
+             workspace. To add or update product installations, set the appropriate '*_HOME'
+             environment varibles in the RWE or workspace 'setenv.sh' file. Note that workspace
+             'setenv.sh' inherits RWE 'setenv.sh'.
+
+   -type default|pado
+             If the 'pado' option is specified, then it creates a Pado cluster that includes
+             full support for grid federation. The 'default' option creates a normal cluster
+             without any Pado dependencies. Note that Pado supports only Geode and GemFire
+             at this time. For other products, this option is ignored.
+
+   -pod pod_name
+             Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
+             option. 
+             Default: local
+
+   -vm [comma_separated_hosts]
+             A list of VM hosts or addresses separated by comma. If the list
+             contains spaces then enclose it in quotes. If this option is not
+             specified, then the host list defined by VM_HOSTS in the workspace
+             'setenv.sh' file is applied.
+             
+             If the '-pod' option is specified then this option is suppressed.
+             
+   -port first_port_number
+             First member's port number. Port number is incremented
+             starting from this port number for the subsquent members.
+             
+             This option applies only for a cluster running locally. It is ignored
+             for creating non-local pod and VM clusters.
+             
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -pod $POD
+
+FILES
+   $PADOGRID_WORKSPACE/setenv.sh
+             The current workspace configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+if [ "$PRODUCT_ARG" == "" ]; then
+   PRODUCT_ARG=$PRODUCT
+fi
+
+PRODUCT_EXISTS="false"
+if [ "$PRODUCT_ARG" == "geode" ]; then
+   if [ "$GEODE_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_GEODE_CLUSTER"
+      fi
+      if [ "$TYPE_ARG" == "pado" ]; then
+         CLUSTER="$DEFAULT_PADO_CLUSTER"
+      fi
+      $PADOGRID_HOME/geode/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type geode "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "gemfire" ]; then
+   if [ "$GEMFIRE_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_GEMFIRE_CLUSTER"
+      fi
+      if [ "$TYPE_ARG" == "pado" ]; then
+         CLUSTER="$DEFAULT_PADO_CLUSTER"
+      fi
+      $PADOGRID_HOME/geode/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type gemfire "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "hazelcast" ]; then
+   if [ "$HAZELCAST_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_HAZELCAST_CLUSTER"
+      fi
+      $PADOGRID_HOME/hazelcast/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type imdg "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "jet" ]; then
+   if [ "$JET_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_JET_CLUSTER"
+      fi
+      $PADOGRID_HOME/hazelcast/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type jet "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "snappydata" ]; then
+   if [ "$SNAPPYDATA_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_SNAPPYDATA_CLUSTER"
+      fi
+      $PADOGRID_HOME/snappydata/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type snappydata "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "spark" ]; then
+   if [ "$SPARK_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_SPARK_CLUSTER"
+      fi
+      $PADOGRID_HOME/spark/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type standalone "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "coherence" ]; then
+   if [ "$COHERENCE_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_COHERENCE_CLUSTER"
+      fi
+      $PADOGRID_HOME/coherence/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type coherence "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "kafka" ]; then
+   if [ "$KAFKA_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_KAFKA_CLUSTER"
+      fi
+      $PADOGRID_HOME/kafka/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type kraft "$@"
+   fi
+elif [ "$PRODUCT_ARG" == "hadoop" ]; then
+   if [ "$HADOOP_HOME" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_HADOOP_CLUSTER"
+      fi
+      $PADOGRID_HOME/hadoop/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type pseudo "$@"
+   fi
+fi
+
+if [ "$PRODUCT_EXISTS" == "false" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} The specified product has not been installed or configured: [$PRODUCT_ARG]"
+   if [ "$PRODUCT_ARG" = "gemfire" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
+      echo -e >&2 "       Please download and install the product in the following directory:"
+      echo >&2 "          $PADOGRID_WORKSPACES_HOME/products"
+      echo >&2 "       You must also set its home path in one of the following 'setenv.sh' files:"
+   else
+      echo -e >&2 "       To install a product release, run ${CLightGreen}install_padogrid${CNone} and set its"
+      echo >&2 "       home path in one of the following 'setenv.sh' files:"
+   fi
+   echo >&2 "                RWE: $PADOGRID_WORKSPACES_HOME/setenv.sh"
+   echo >&2 "          Workspace: $PADOGRID_WORKSPACE/setenv.sh"
+   echo >&2 "       Command aborted."
+   exit 1
+fi

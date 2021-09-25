@@ -40,19 +40,19 @@ ENV_ARG=
 RWE_ARG=
 RWE_SPECIFIED=false
 WORKSPACE_ARG=
+CHECKOUT_ARG=
 WORKSPACE_SPECIFIED=false
+CHECKOUT_SPECIFIED=false
 JAVA_HOME_ARG=
-COHERENCE_ARG=
-GEODE_ARG=
-HAZELCAST_ARG=
 PATH_ARG=
+JAR_ARG=
 CLASSPATH_ARG=
-DATAGRID_ARG=
 JET_ARG=
 NAME_ARG=
 PORT_ARG=
 CREATE_SCRIPT=false
 POD_SPECIFIED=false
+AVAHI_SPECIFIED=false
 POD_TYPE=
 TYPE_ARG=
 REFID=
@@ -61,23 +61,24 @@ K8S_SPECIFIED=false
 DOCKER=
 DOCKER_SPECIFIED=false
 HOST=
+HOST_SPECIFIED=false
 COUNT=
+INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_SPECIFIED=false
+CLUSTER_TYPE_SPECIFIED=false
 FG_SPECIFIED=false
 MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
 REMOTE=
 REMOTE_SPECIFIED=false
+PRODUCT_CLUSTER=
+PRODUCT_CLUSTER_SPECIFIED=false
 MIRROR_SPECIFIED=false
 VM_SPECIFIED=false
 VM_HOSTS_ARG=
 VM_JAVA_HOME_ARG=
-VM_COHERENCE_HOME_ARG=
-VM_GEODE_HOME_ARG=
-VM_HAZELCAST_HOME_ARG=
-VM_JET_HOME_ARG=
 VM_PADOGRID_HOME_ARG=
 VM_PADOGRID_WORKSPACES_HOME_ARG=
 VM_USER_ARG=
@@ -89,6 +90,8 @@ GRID_SPECIFIED=false
 SITE_SPECIFIED=false
 LOCATOR=
 LOCATOR_SPECIFIED=false
+PADOWEB=
+PADOWEB_SPECIFIED=false
 MC=
 MC_SPECIFIED=false
 MEMBER=
@@ -118,6 +121,9 @@ TREE=false
 OVERWRITE=false
 ALL=false
 OSS=false
+RHEL=false
+WAN=false
+WAN_ARG=
 PID=
 PIDONLY=
 BEGIN_NUM=1
@@ -128,6 +134,7 @@ DIR=
 CLEAN=
 LOCAL=false
 QUIET=false
+SHORT=false
 LONG=false
 DATASOURCE=
 FOLDER=
@@ -145,33 +152,30 @@ do
    if [ "$PREV" == "-product" ]; then
       PRODUCT_ARG=$i
       PRODUCT_HOME_ARG=$i
+   elif [ "$PREV" == "-product-cluster" ]; then
+      PRODUCT_CLUSTER_ARG=$i
    elif [ "$PREV" == "-rwe" ]; then
       RWE_ARG=$i
    elif [ "$PREV" == "-env" ]; then
       ENV_ARG=$i
    elif [ "$PREV" == "-workspace" ]; then
       WORKSPACE_ARG=$i
+   elif [ "$PREV" == "-checkout" ]; then
+      CHECKOUT_ARG=$i
    elif [ "$PREV" == "-java" ]; then
       JAVA_HOME_ARG=$i
-   elif [ "$PREV" == "-coherence" ]; then
-      COHERENCE_ARG=$i
-   elif [ "$PREV" == "-geode" ]; then
-      GEODE_ARG=$i
-   elif [ "$PREV" == "-hazelcast" ]; then
-      HAZELCAST_ARG=$i
    elif [ "$PREV" == "-path" ]; then
       PATH_ARG=$i
+   elif [ "$PREV" == "-jar" ]; then
+      JAR_ARG=$i
    elif [ "$PREV" == "-classpath" ]; then
       CLASSPATH_ARG=$i
-   elif [ "$PREV" == "-datagrid" ]; then
-      DATAGRID_ARG=$i
    elif [ "$PREV" == "-jet" ]; then
       JET_ARG=$i
    elif [ "$PREV" == "-name" ]; then
       NAME_ARG=$i
    elif [ "$PREV" == "-pod" ]; then
       POD=$i
-      POD_SPECIFIED=true
    elif [ "$PREV" == "-port" ]; then
       PORT_ARG=$i
    elif [ "$PREV" == "-type" ]; then
@@ -195,18 +199,17 @@ do
       COUNT=$i
    elif [ "$PREV" == "-cluster" ]; then
       CLUSTER=$i
-      CLUSTER_SPECIFIED=true
+   elif [ "$PREV" == "-cluster-type" ]; then
+      CLUSTER_TYPE=$i
+      CLUSTER_TYPE_SPECIFIED="true"
    elif [ "$PREV" == "-num" ]; then
       MEMBER_NUM=$i
-      MEMBER_NUM_SPECIFIED=true
    elif [ "$PREV" == "-password" ]; then
       PASSWORD=$i
    elif [ "$PREV" == "-k8s" ]; then
       K8S=$i
-      K8S_SPECIFIED=true
    elif [ "$PREV" == "-docker" ]; then
       DOCKER=$i
-      DOCKER_SPECIFIED=true
    elif [ "$PREV" == "-host" ]; then
       HOST=$i
    elif [ "$PREV" == "-group" ]; then
@@ -229,6 +232,9 @@ do
       BRANCH=$i
    elif [ "$PREV" == "-connect" ]; then
       CONNECT=$i
+   elif [ "$PREV" == "-wan" ]; then
+      WAN_ARG=$i
+      WAN=true
    elif [ "$PREV" == "-vm" ]; then
       if [[ "$i" != "-"* ]]; then
          VM_HOSTS_ARG=$i
@@ -249,22 +255,18 @@ do
       KEY=$i
    elif [ "$PREV" == "-app" ]; then
       APP=$i
-      APP_SPECIFIED=true
    elif [ "$PREV" == "-grid" ]; then
       GRID=$i
-      GRID_SPECIFIED=true
    elif [ "$PREV" == "-site" ]; then
       SITE=$i
-      SITE_SPECIFIED=true
    elif [ "$PREV" == "-locator" ]; then
       LOCATOR=$i
-      LOCATOR_SPECIFIED=true
+   elif [ "$PREV" == "-padoweb" ]; then
+      PADOWEB=$i
    elif [ "$PREV" == "-mc" ]; then
       MC=$i
-      MC_SPECIFIED=true
    elif [ "$PREV" == "-member" ]; then
       MEMBER=$i
-      MEMBER_SPECIFIED=true
    elif [ "$PREV" == "-log" ]; then
       LOG=$i
    elif [ "$PREV" == "-begin" ]; then
@@ -281,6 +283,8 @@ do
       DATASOURCE=$i
 
 # options with no value
+   elif [ "$i" == "-init" ]; then
+      INIT_SPECIFIED=true
    elif [ "$i" == "-version" ]; then
       VERSION_SPECIFIED=true
    elif [ "$i" == "-man" ]; then
@@ -295,6 +299,8 @@ do
       DOWNLOAD=true
    elif [ "$i" == "-workspace" ]; then
       WORKSPACE_SPECIFIED=true
+   elif [ "$i" == "-checkout" ]; then
+      CHECKOUT_SPECIFIED=true
    elif [ "$i" == "-list" ]; then
       LIST=true
    elif [ "$i" == "-header" ]; then
@@ -317,6 +323,10 @@ do
       ALL=true
    elif [ "$i" == "-oss" ]; then
       OSS=true
+   elif [ "$i" == "-rhel" ]; then
+      RHEL=true
+   elif [ "$i" == "-wan" ]; then
+      WAN=true
    elif [ "$i" == "-kill" ]; then
       KILL=true
    elif [ "$i" == "-debug" ]; then
@@ -331,8 +341,38 @@ do
       LOCAL=true
    elif [ "$i" == "-quiet" ]; then
       QUIET=true
+   elif [ "$i" == "-short" ]; then
+      SHORT=true
    elif [ "$i" == "-long" ]; then
       LONG=true
+   elif [ "$i" == "-num" ]; then
+      MEMBER_NUM_SPECIFIED=true
+   elif [ "$i" == "-pod" ]; then
+      POD_SPECIFIED=true
+   elif [ "$i" == "-avahi" ]; then
+      AVAHI_SPECIFIED=true
+   elif [ "$i" == "-cluster" ]; then
+      CLUSTER_SPECIFIED=true
+   elif [ "$i" == "-k8s" ]; then
+      K8S_SPECIFIED=true
+   elif [ "$i" == "-docker" ]; then
+      DOCKER_SPECIFIED=true
+   elif [ "$i" == "-app" ]; then
+      APP_SPECIFIED=true
+   elif [ "$i" == "-host" ]; then
+      HOST_SPECIFIED="true"      
+   elif [ "$i" == "-grid" ]; then
+      GRID_SPECIFIED=true
+   elif [ "$i" == "-site" ]; then
+      SITE_SPECIFIED=true
+   elif [ "$i" == "-padoweb" ]; then
+      PADOWEB_SPECIFIED=true
+   elif [ "$i" == "-mc" ]; then
+      MC_SPECIFIED=true
+   elif [ "$i" == "-member" ]; then
+      MEMBER_SPECIFIED=true
+   elif [ "$i" == "-locator" ]; then
+      LOCATOR_SPECIFIED=true
    elif [ "$i" == "-vm" ]; then
       VM_SPECIFIED=true
    elif [ "$i" == "-rwe" ]; then
@@ -341,6 +381,8 @@ do
       MIRROR_SPECIFIED=true
    elif [ "$i" == "-remote" ]; then
       REMOTE_SPECIFIED=true
+   elif [ "$i" == "-product-cluster" ]; then
+      PRODUCT_CLUSTER_SPECIFIED=true
    elif [ "$i" == "-tree" ]; then
       TREE=true
    elif [ "$i" == "-overwrite" ]; then
@@ -359,8 +401,12 @@ while [[ $MEMBER_NUM_NO_LEADING_ZERO == 0* ]]; do
 done
 MEMBER_NUM=$MEMBER_NUM_NO_LEADING_ZERO
 LOCATOR_NUM_NO_LEADING_ZERO=$MEMBER_NUM_NO_LEADING_ZERO
+MASTER_NUM_NO_LEADING_ZERO=$MEMBER_NUM_NO_LEADING_ZERO
+NAMENODE_NUM_NO_LEADING_ZERO=$MEMBER_NUM_NO_LEADING_ZERO
 
 let LAST_LOCATOR_NUM=MAX_LOCATOR_COUNT-1
+let LAST_MASTER_NUM=MAX_LOCATOR_COUNT-1
+let LAST_NAMENODE_NUM=MAX_LOCATOR_COUNT-1
 let LAST_MEMBER_NUM=MAX_MEMBER_COUNT-1
 
 # Determine the member number
@@ -446,3 +492,26 @@ fi
 if [ "$ENV_ARG" != "" ]; then
    . $ENV_ARG
 fi
+
+DOWNLOADABLE_PRODUCTS="padogrid java geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss snappydata spark kafka hadoop"
+
+# Bash color code
+CNone='\033[0m' # No Color
+CBlack='\033[0;30m'
+CDarkGray='\033[1;30m'
+CRed='\033[0;31m'
+CLightRed='\033[1;31m'
+CGreen='\033[0;32m'
+CLightGreen='\033[1;32m'
+CBrownOrange='\033[0;33m'
+CYellow='\033[1;33m'
+CBlue='\033[0;34m'
+CLightBlue='\033[1;34m'
+CPurple='\033[0;35m'
+CLightPurple='\033[1;35m'
+CCyan='\033[0;36m'
+CLightCyan='\033[1;36m'
+CLightGray='\033[0;37m'
+CWhite='\033[1;37m'
+CUnderline='\033[4m'
+CUrl=$CBlue$CUnderline

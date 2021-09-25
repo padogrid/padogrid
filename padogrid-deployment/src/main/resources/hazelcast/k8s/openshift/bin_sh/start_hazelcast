@@ -8,43 +8,26 @@ if [ "$HELP" == "true" ]; then
 cat <<EOF
 
 NAME
-   $EXECUTABLE - Start a Hazelcast using Helm charts
+   $EXECUTABLE [-oss | -rhel] [-?]
 
 SYNOPSIS
-   $EXECUTABLE [-oss | -rhel] [-wan [endpoints]] [-?]
+   $EXECUTABLE [-?]
 
 DESCRIPTION
-   Starts a Hazelcast cluster. If IMDG_LICENSE_KEY is defined then it starts Hazelcast Enterprise, otherwise,
-   it defaults to Hazelcast Open Source, i.e., '-oss'. If no option is specified, then it launches the
-   docker.io Hazelccast image.
-
-   Hazelcast is setup as follows:
-      Hazelcast member count: 3
-      Load balancer nodePort: 30001
-
-   If you want to launch Haelcast with WAN replication configured, then specified the '-wan' option.
+   Starts the Hazelcast cluster configured by the 'build_app' script. If no options are specified then
+   it automatically determines the environment based on the workspace setup. If IMDG_LICENSE_KEY is defined
+   then it run docker.io Hazelcast Enterprise. To turn RHEL, specify the '-rhel' option. Note that if
+   IMDG_LICENSE_KEY is not defined then it runs Hazelcast OSS regardless of any options specified.
 
 OPTIONS
    -oss
-             If specified then launches Hazelcast OSS.
+             If specified then starts Hazelcast OSS. 
 
    -rhel
              If specified then launches the image downloaded from Hazelcast Enterprise Red Hat. To use this option,
-             you must first create an OpenShift secrets for image pull. Please see the accompanied READEM-crc.md
+             you must first create an OpenShift secret for image pull. Please see the accompanied READE.md
              for details. If IMDG_LICENSE_KEY is not defined then this option is ignored and the '-oss' option
-             5is used instead.
-
-   -wan [endpoints]
-             This option is for Hazelcast Enterprise only. It is ignored if the '-oss' option is specified.
-             If specified then launches Hazelcast with the WAN replication configuration file
-             (see hazelcast/wan/hazelcast*.yaml) If endpoints is not specified then to prevent port conflicts,
-             30002 is set for the targent endpoints as follwos.
-
-                <master-node>:30002
-
-             To use the default endpoints, you must create a load balancer with the node port 30002. You can
-             also set the endpoints in the 'setenv.sh' file using the WAN_TARGET_ENDPOINTS environment varialbe
-             instead. Note that the endpoints set by this option overrides WAN_TARGET_ENDPOINTS.
+             is used instead.
 
 DEFAULT:
    ./$EXECUTABLE
@@ -55,6 +38,8 @@ SEE ALSO
 EOF
 exit
 fi
+
+echo -e "Project: ${CLightGreen}${APP_NAME}${CNone}"
 
 CURRENT_PROJECT=$(oc project -q)
 if [ "$CURRENT_PROJECT" != "$APP_NAME" ]; then
@@ -74,62 +59,51 @@ else
   HAZELCAST_YAML="hazelcast-enterprise.yaml"
 fi
 
-if [ "$WAN" == "true" ] && [ "$IS_ENTERPRISE" == "true" ]; then
-   HAZELCAST_YAML="wan/$HAZELCAST_YAML"
-   if [ "$WAN_ARG" != "" ]; then
-      WAN_TARGET_ENDPOINTS="$WAN_ARG"
-   elif [ "$WAN_TARGET_ENDPOINTS" == "" ]; then
-      WAN_TARGET_ENDPOINTS="$MASTER_NODE:30000"
-   else
-      WAN_TARGET_ENDPOINTS="$WAN_TARGET_ENDPOINTS"
-   fi
-fi
-
-echo ""
-echo "Starting Hazelcast..."
-echo ""
-
 # Create cluster role
 echo "Applying RBAC..."
 oc apply -f rbac.yaml
 
+echo ""
 echo -e "Hazelcast configuration: ${CLightGreen}hazelcast/${HAZELCAST_YAML}${CNone}"
-if [ "$WAN_TARGET_ENDPOINTS" != "" ]; then
-   echo -e "   WAN target endpoints: ${CLightGreen}${WAN_TARGET_ENDPOINTS}${CNone}"
-fi
 echo ""
 if [ "$IS_ENTERPRISE" == "true" ]; then
+   if [ "$RHEL" == "true" ]; then
+      echo -e "Starting ${CLightGreen}Hazelcast Enterprise RHEL${CNone}..."
+   else
+      echo -e "Starting ${CLightGreen}Hazelcast Enterprise${CNone}..."
+   fi
    oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
-   # Update wan endpoints
-   sed -i${__SED_BACKUP} "s/target-endpoints:.*$/target-endpoints: ${WAN_TARGET_ENDPOINTS}/" $HAZELCAST_YAML
-   oc new-app -f $HAZELCAST_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=3
+   oc new-app -f $HAZELCAST_YAML -p NAMESPACE=$(oc project -q) -p ENTERPRISE_LICENSE_KEY=$IMDG_LICENSE_KEY -p HAZELCAST_REPLICAS=$MEMBER_COUNT
 else
+   echo -e "Starting ${CLightGreen}Hazelcast OSS${CNone}..."
+   oc create secret generic hz-enterprise-license --from-literal=key=$IMDG_LICENSE_KEY
    oc new-app -f hazelcast.yaml -p NAMESPACE=$(oc project -q)
 fi
 
 # Create the load balancer service
 echo "Creating services..."
 oc apply -f service-lb.yaml
-oc apply -f service-pods.yaml
+oc apply -f service-lb-pods.yaml
 
 # Expose the Hazelcast and Management Center service.
 echo "Exposing services (routes)..."
 oc expose svc/hazelcast-service-lb
-oc expose svc/hazelcast-service-0
-oc expose svc/hazelcast-service-1
-oc expose svc/hazelcast-service-2
+let LAST_MEMBER_NUM=MEMBER_COUNT-1
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   oc expose svc/hazelcast-service-$i
+done
 if [ "$IMDG_LICENSE_KEY" != "" ] && [ "$OSS" == "false" ]; then
    oc expose svc/management-center-service
 fi
 echo ""
-echo "One (1) service for headless cluster IP and three (3) services for pods exposed."
+echo "One (1) service for headless cluster IP and $MEMBER_COUNT services for pods exposed."
 echo "In addition to these services, to expose NodePort services, execute the following:"
 echo "   oc apply -f ../hazelcast/service-nodeport.yaml"
-echo "   oc apply -f ../hazelcast/service-pods-nodeports.yaml"
+echo "   oc apply -f ../hazelcast/service-nodeport-pods.yaml"
 echo "   oc expose svc/hazelcast-service-nodeport"
-echo "   oc expose svc/hazelcast-service-nodeport-0"
-echo "   oc expose svc/hazelcast-service-nodeport-1"
-echo "   oc expose svc/hazelcast-service-nodeport-2"
+for i in $(seq 0 $LAST_MEMBER_NUM); do
+   echo "   oc expose svc/hazelcast-service-nodeport-$i"
+done
 echo ""
 echo "Services expose external IPs so that external applications can connect to the Hazelcast cluster by"
 echo "configuring Smart Client. If Smart Client does not work, then your OpenShift cluster has been"

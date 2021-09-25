@@ -1,5 +1,5 @@
 #
-# .padoenv.sh file is souced in by start_member to intialize the Pado environment. Pado is
+# .padoenv.sh file is sourced in by start_member to intialize the Pado environment. Pado is
 # enabled only if PADO_HOME is defined. PADO_HOME must be set in the workspace's setenv.sh file.
 #
 
@@ -13,18 +13,23 @@ if [ "$PADO_ENABLED" == "false" ]; then
   return 0
 fi
 
-# parseFileName parses file names found in the lib directory
-# to drop the version postfix from the select file names.
-# Input:
-#    arg1 fileName - file name
-#    arg2 delimiterCount - delimiter count of postfix for determining the index number
-# Output:
-#    FILE_HEAD - File header without the postfix.
+#
+# parseFileName parses the specified file name to replace '.'  with '-'
+# based on the file name that includes the dot notation based version number
+# For example, the file name, 'parseFileName pado-biz-gemfire-0.6.0-B1.jar 2'
+# returns FILE_HEAD=pado-biz-gemfire-0-6, replacing the first '.' with '-' end
+# ending it at the seoncd '.'.
+#
+# @param fileName       file name
+# @param delimiterCount dot delimiter count where to end the file name
+# @return FILE_HEAD     File head with '.' replaced with '-' up to the specified dot
+#                       delimiter count, but not including the last dot.
+#
 function parseFileName
 {
    local FILE_NAME=$1
    local DELIMITER_COUNT=$2
-   IFS='.'; vector=($FILE_NAME); unset IFS;
+   local IFS='.'; vector=($FILE_NAME); unset IFS;
    let LAST_INDEX=${#vector[@]}-1
    let FILE_HEAD_LAST_INDEX=LAST_INDEX-DELIMITER_COUNT
    FILE_HEAD=
@@ -58,7 +63,11 @@ do
 done
 popd > /dev/null 2>&1
 
-export CLASSPATH=$CLASSPATH:$PLUGIN_JARS:$PADO_HOME/lib/*:$GEODE_HOME/lib/antlr-2.7.7.jar:$GEODE_HOME/lib/gfsh-dependencies.jar
+if [ "$CLUSTER_TYPE" == "geode" ]; then
+   export CLASSPATH=$CLASSPATH:$PLUGIN_JARS:$PADO_HOME/lib/*:$GEODE_HOME/lib/antlr-2.7.7.jar:$GEODE_HOME/lib/gfsh-dependencies.jar
+else
+   export CLASSPATH=$CLASSPATH:$PLUGIN_JARS:$PADO_HOME/lib/*:$GEMFIRE_HOME/lib/antlr-2.7.7.jar:$GEMFIRE_HOME/lib/gfsh-dependencies.jar
+fi
 
 
 GFSH_OPTS2="--cache-xml-file=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/etc/cache.xml --dir=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/run/mygrid-member-padomac.local-01 --initial-heap=1g --max-heap=1g --disable-default-server=true --name=mygrid-member-padomac.local-01 --locators=localhost[10334] --statistic-archive-file=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/stats/mygrid-member-padomac.local-01.gfs --bind-address=localhost --hostname-for-clients=localhost --start-rest-api=true --http-service-port=7080 --http-service-bind-address=localhost"

@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$WORKSPACE_ARG" != "" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+else
+   WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Kill all running clusters in the specified workspace
+
+WARNING
+   This command forcifully kills all clusters in the workspace that may lead to data corruption.
+
+SYNOPSIS
+   $EXECUTABLE [-workspace workspace_name | -all] [-?]
+
+DESCRIPTION
+   Kills all running clusters by executing 'kill_cluster' on each cluster in the
+   specified workspace.
+
+OPTIONS
+   -workspace workspace_name
+             Workspace name. If not specified, then kills the current workspace.
+
+   -all
+             Kills all running processes in each cluster. This options is passed on to each
+             cluster, i.e., 'kill_cluster -all'.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -workspace $WORKSPACE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+CURRENT_DIR="`pwd`"
+CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+CURRENT_CLUSTER=$CLUSTER
+
+if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+   switch_workspace $WORKSPACE
+fi
+echo ""
+echo -e "${CLightRed}Killing workspace${CNone} $WORKSPACE..."
+for j in $PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/*; do
+   CLUSTER="`basename $j`"
+   echo ""
+   echo -e "${CLightRed}Killing cluster${CNone} $CLUSTER..."
+   kill_cluster -cluster $CLUSTER "$@"
+done
+if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+   switch_workspace $CURRENT_WORKSPACE
+   switch_cluster $CLUSTER
+   cd $CURRENT_DIR
+fi

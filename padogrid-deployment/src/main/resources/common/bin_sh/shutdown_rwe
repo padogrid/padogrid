@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-workspace -all -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$RWE_ARG" != "" ]; then
+   RWE=$RWE_ARG
+else
+   RWE=$(basename $PADOGRID_WORKSPACES_HOME)
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Gracefully shutdown all active clusters in the specified RWE
+
+SYNOPSIS
+   $EXECUTABLE [-rwe rwe_name | -all] [-quiet] [-?]
+
+DESCRIPTION
+   Gracefully shuts down all active clusters by executing 'shutdown_workspace' on each workspace
+   in the specified RWE.
+
+OPTIONS
+   -rwe rwe_name
+             RWE name. If not specified, then stops the current RWE.
+
+   -all
+             Shuts down all active processes in each cluster. This options is passed on to each
+             cluster, i.e., 'shutdown_cluster -all'.
+             
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -workspace $WORKSPACE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*workspace*" $EXECUTABLE
+   exit
+fi
+
+if [ "$QUIET" == "false" ]; then
+   echo ""
+   echo "RWE: $RWE"
+   echo ""
+   echo -e "${CBrownOrange}WARNING:${CNone} This command gracefully shuts down all workspaces in the RWE. Do you want to continue?"
+   echo "(Enter 'continue' + Enter to continue to shutdown all workspaces, or other keys to abort.)"
+   read INPUT
+   if [ "$INPUT" != "continue" ]; then
+      echo "Command aborted."
+      exit
+   fi
+fi
+
+CURRENT_DIR="`pwd`"
+CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+CURRENT_CLUSTER=$CLUSTER
+
+__WORKSPACES=`ls $PADOGRID_WORKSPACES_HOME`
+__WORKSPACES=$(removeTokens "$__WORKSPACES" "initenv.sh setenv.sh")
+__WORKSPACES=( $__WORKSPACES )
+
+let NUM_WORKSPACES=${#__WORKSPACES[@]};
+for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
+   __WORKSPACE="${__WORKSPACES[$__i]}"
+   if [ $NUM_WORKSPACES -eq 1 ]; then
+      if [ "$__WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+         switch_workspace $__WORKSPACE
+      fi
+   else
+      switch_workspace $__WORKSPACE
+   fi
+   echo ""
+   echo -e "${CLightRed}Shutting down workspace${CNone} $__WORKSPACE..."
+   for j in $PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/*; do
+      CLUSTER="`basename $j`"
+      echo ""
+      echo -e "${CLightRed}Shutting down cluster${CNone} $CLUSTER..."
+      shutdown_cluster -cluster $CLUSTER "$@"
+   done
+done
+if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
+   switch_workspace $CURRENT_WORKSPACE
+   switch_cluster $CLUSTER
+   cd $CURRENT_DIR
+fi

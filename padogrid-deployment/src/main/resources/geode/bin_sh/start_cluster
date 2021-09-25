@@ -38,21 +38,21 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Start all inactive members in the specified padogrid cluster
+   $EXECUTABLE - Start all inactive members in the specified cluster
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name]
 
 DESCRIPTION
-   Starts all inactive (or stopped) members in the specified cluster.
+   Starts all inactive (or stopped) locators and members in the specified cluster.
 
 OPTIONS
    -cluster cluster_name
              Cluster name.
 
    -fg
-             Run each member in the foreground serially until each member is fully initialized
-             started. If this options is not specified, then by default, it starts the members
+             Run each member in the foreground serially until each member is fully started and
+             initialized. If this options is not specified, then by default, it starts the members
              in the background. Note that it always starts the locators in the foreground.
 
 EOF
@@ -68,6 +68,23 @@ SEE ALSO
 EOF
    printSeeAlsoList "*cluster*" $EXECUTABLE
    exit
+fi
+
+if [ "$FG_SPECIFIED" == "true" ]; then
+   echo "Starting the members in the foreground..."
+fi
+
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
 fi
 
 # 
@@ -113,22 +130,30 @@ if [ "$VM_ENABLED" == "true" ]; then
    done
 
    COUNT=0
+   MEMBER_NUM=1
    for VM_HOST in $__LOCATOR_HOSTS; do
       let COUNT=COUNT+1
       if [ $COUNT -lt $LOCATOR_COUNT ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE" &
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      fi
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
       fi
    done
 
    # Replace , with space
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
       if [ "$FG_SPECIFIED" == "true" ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE" &
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+      fi
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
       fi
    done
    exit

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-docker -host -port -cluster -count -?"
+   echo "-product -docker -host -port -cluster -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -36,6 +36,10 @@ for i in $(getHostIPv4List); do
    HOST_IP=$i
 done
 
+PRODUCT_OPTIONS=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /|/g')
+PRODUCTS_SUPPORTED=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /, /g')
+THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+
 if [ "$HELP" == "true" ]; then
 cat <<EOF
 
@@ -43,11 +47,12 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Create a Docker environment in the current padogrid workspace
+   $EXECUTABLE - Create a Docker environment in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-docker compose] [-host host_ip] [-port first_port_number]
-               [-count member_count] -cluster cluster_name [-?]
+   $EXECUTABLE [-product $PRODUCT_OPTIONS]
+                 [-host host_ip] [-port first_port_number]
+                 [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
    Creates a Docker environment that includes Hazelcast cluster configuration files for
@@ -55,9 +60,16 @@ DESCRIPTION
  
    compose  docker-compose Dockfile based cluster orchestration
 
-   To use the created environment, you must have the specified Docker tool installed.
+   Make sure your Docker version includes support for 'docker compose'.
+
+   This command generates the 'docker-compose.yaml' file configured with the current workspace's
+   product versions. If the product versions cannot be determined then it defaults to the
+   'latest' tag.
 
 OPTIONS
+   -product $PRODUCT_OPTIONS
+             Docker cluster product name. Supported products are $PRODUCTS_SUPPORTED.
+
    -docker compose
              Docker compose driven Hazelcast cluster.
 
@@ -84,7 +96,7 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -docker $DEFAULT_DOCKER -host $HOST_IP -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
+   $EXECUTABLE -product $THIS_PRODUCT -docker $DEFAULT_DOCKER -host $HOST_IP -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
 
 EXAMPLES
    To create 'mydocker' cluster with the host IP 'host.docker.internal':
@@ -103,6 +115,28 @@ FILES
 EOF
 fi
    exit
+fi
+
+#
+# Run the target docker command if the product is different.
+#
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$DOCKER_PRODUCT_LIST" "$PRODUCT_ARG")" == "false" ]; then
+      >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+      exit 1
+   fi
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ] && [ "$PRODUCT_ARG" != "jet" ]; then
+      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+      exit
+   fi
+   if [ "$PRODUCT_ARG" == "jet" ]; then
+      CLUSTER_TYPE="jet"
+    else
+      CLUSTER_TYPE="imdg"
+    fi
+else
+   # Default product is hazelcast and hence CLUSTER_TYPE is "imdg"
+   CLUSTER_TYPE="imdg"
 fi
 
 if [ "$CLUSTER_SPECIFIED" == "false" ]; then
@@ -156,6 +190,7 @@ if [ "$DOCKER" == "compose" ]; then
 
    # Copy Docker doc
    cp -rf $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
+   cp -rf $BASE_DIR/docker/compose/images $CLUSTER_DIR
    # Copy the template hazelcast.xml file
    if [ "$CLUSTER_TYPE" == "jet" ]; then
       cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
@@ -214,7 +249,16 @@ if [ "$DOCKER" == "compose" ]; then
        $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-env > $CLUSTER_DIR/.env
 
    # Update docker-compose.yaml
-   sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
+   MC_VERSION=""
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      MC_VERSION="$JET_MC_VERSION"
+   else
+      MC_VERSION="$HAZELCAST_MC_VERSION"
+   fi
+   if [ "$MC_VERSION" == "" ]; then
+      MC_VERSION="latest"
+   fi
+   sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" -e "s/\${MC_VERSION}/$MC_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
 
    # Append server services to docker-compose.yaml
    if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -237,9 +281,9 @@ if [ "$DOCKER" == "compose" ]; then
    WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
    for i in $(seq 1 $COUNT); do   
       if [ $i -lt $COUNT ]; then
-         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}\t\t\t<address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>\n"
+         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}            <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address> "
       else
-         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}\t\t\t<address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
+         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}            <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
       fi
 
       SERVER_NAME="server$i"
@@ -266,6 +310,7 @@ fi
 #
 echo ""
 echo "         WORKSPACE: $PADOGRID_WORKSPACE"
+echo -e "           Product: ${CLightGreen}$CLUSTER_TYPE${CNone}"
 echo "            Docker: $DOCKER"
 echo "      Member Count: $COUNT"
 echo "Docker Environment:"
@@ -276,6 +321,7 @@ cat <<EOF
 $CLUSTER
 ├── .env
 ├── README.md
+├── images
 ├── docker-compose.yaml
 └── padogrid
     ├── etc

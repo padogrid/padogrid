@@ -26,23 +26,41 @@ import com.netcrest.pado.internal.util.ClassFinder;
 public class WrapperGenerator {
 
 	public final static String PROPERTY_executableName = "executable.name";
-	public final static int DEFAULT_TYPE_ID = 1100;
 	public final static String DEFAULT_SRC_DIR = "src/main/java";
 	public final static boolean DEFAULT_IS_OVERWRITE = false;
+
+	public final static String PDX_WRAPPER_CLASS_TEMPLATE = "PdxWrapperClassTemplate.txt";
+	public final static String SIMPLE_WRAPPER_CLASS_TEMPLATE = "WrapperClassTemplate.txt";
+
+	public enum WrapperType {
+		simple, pdx
+	}
 
 	String sourcePackageName;
 	String targetPackageName;
 	String jarPath;
+	WrapperType wrapperType = WrapperType.simple;
+	String wrapperTemplateFile = SIMPLE_WRAPPER_CLASS_TEMPLATE;
 	boolean isOverwrite = false;
 	File srcDirFile = new File(DEFAULT_SRC_DIR);
 
 	public WrapperGenerator(String sourcePackageName, String targetPackageName, String jarPath, String srcDir,
-			boolean isOverwrite) {
+			WrapperType wrapperType, boolean isOverwrite) {
 		this.sourcePackageName = sourcePackageName;
 		this.targetPackageName = targetPackageName;
 		this.jarPath = jarPath;
 		this.srcDirFile = new File(srcDir);
+		this.wrapperType = wrapperType;
 		this.isOverwrite = isOverwrite;
+		switch (wrapperType) {
+		case pdx:
+			wrapperTemplateFile = PDX_WRAPPER_CLASS_TEMPLATE;
+			break;
+		case simple:
+		default:
+			wrapperTemplateFile = SIMPLE_WRAPPER_CLASS_TEMPLATE;
+			break;
+		}
 	}
 
 	private List<Class<?>> findClasses(String packageName) throws ClassNotFoundException, IOException {
@@ -61,7 +79,7 @@ public class WrapperGenerator {
 
 	public void generateWrappers() throws IOException, URISyntaxException, NoSuchMethodException, SecurityException,
 			IllegalAccessException, IllegalArgumentException, InvocationTargetException, ClassNotFoundException {
-		InputStream is = this.getClass().getClassLoader().getResourceAsStream("WrapperClassTemplate.txt");
+		InputStream is = this.getClass().getClassLoader().getResourceAsStream(wrapperTemplateFile);
 		String baseWrapperClassStr = readFile(is);
 		is.close();
 
@@ -183,7 +201,7 @@ public class WrapperGenerator {
 		writeLine();
 		writeLine("SYNOPSIS");
 		writeLine("    " + executableName
-				+ " -sp source_package -tp target_package -jar jar_path [-dir target_directory] [-overwrite]");
+				+ " -sp source_package -tp target_package -jar jar_path [-type default|pdx] [-dir target_directory] [-overwrite]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine();
@@ -199,6 +217,11 @@ public class WrapperGenerator {
 		writeLine();
 		writeLine("   -jar jar_path");
 		writeLine("             The path of the jar file that contains the source package.");
+		writeLine();
+		writeLine("   -type simple|pdx");
+		writeLine("             Wrapper class type. 'simple' creates generic wrapper classes, 'pdx' creates");
+		writeLine("             Geode/GemFire PDX wrapper classes that include the fromData(), toData(),");
+		writeLine("             and toString() methods. If not specified, then it defaults to 'simple'.");
 		writeLine();
 		writeLine("   -dir source_directory");
 		writeLine("              Directory path in which to generate the wrapper classes. If this option is not");
@@ -223,6 +246,7 @@ public class WrapperGenerator {
 		String targetPackageName = null;
 		String jarPath = null;
 		String srcDir = DEFAULT_SRC_DIR;
+		WrapperType type = WrapperType.simple;
 		boolean isOverwrite = DEFAULT_IS_OVERWRITE;
 		for (int i = 0; i < args.length; i++) {
 			arg = args[i];
@@ -243,6 +267,18 @@ public class WrapperGenerator {
 			} else if (arg.equals("-dir")) {
 				if (i < args.length - 1) {
 					srcDir = args[++i].trim();
+				}
+			} else if (arg.equals("-type")) {
+				if (i < args.length - 1) {
+					arg = args[++i].trim();
+					if (arg.equalsIgnoreCase("simple")) {
+						type = WrapperType.simple;
+					} else if (arg.equalsIgnoreCase("pdx")) {
+						type = WrapperType.pdx;
+					} else {
+						writeLine("ERROR: Invalid wrapper type: [" + arg + "]. Command aborted.");
+						System.exit(1);
+					}
 				}
 			} else if (arg.equals("-overwrite")) {
 				isOverwrite = true;
@@ -270,7 +306,7 @@ public class WrapperGenerator {
 			System.exit(1);
 		}
 
-		WrapperGenerator generator = new WrapperGenerator(sourcePackageName, targetPackageName, jarPath, srcDir,
+		WrapperGenerator generator = new WrapperGenerator(sourcePackageName, targetPackageName, jarPath, srcDir, type,
 				isOverwrite);
 		generator.generateWrappers();
 	}

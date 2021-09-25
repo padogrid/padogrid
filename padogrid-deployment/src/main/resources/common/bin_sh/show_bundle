@@ -41,7 +41,13 @@ NAME
    $EXECUTABLE - List online bundles or display bundle descriptions
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-githost github|gitea] [-all | [-product bundle_product_name] | [-list|-header|-catalog] ] [-console] [bundle_file_name]
+   $EXECUTABLE [-user git_user_name]
+               [-githost github|gitea]
+               [-connect https | ssh]
+               [-all | [-product bundle_product_name] | [-list|-header|-catalog]]
+               [-console]
+               [bundle_file_name]
+               [-?]
 
 DESCRIPTION
    Lists online bundles or displays the specified bundle's README.md file in the browser. If
@@ -146,7 +152,6 @@ else
    GITHUB_USERS="padogrid $GITHUB_USERS"
 fi
 
-
 if [ "$ALL" == "true" ]; then
    BUNDLE_PRODUCTS="$BUNDLE_PRODUCT_LIST"
    BUNDLE_PRODUCT="$PRODUCT"
@@ -154,6 +159,7 @@ elif [ "$PRODUCT_ARG" != "" ]; then
    BUNDLE_PRODUCTS="$PRODUCT_ARG"
    BUNDLE_PRODUCT="$PRODUCT_ARG"
 else
+   BUNDLE_PRODUCT=$"$PRODUCT"
    if [ "$PRODUCT" == "hazelcast" ]; then
       if [ "$CLUSTER_TYPE" == "jet" ]; then
          BUNDLE_PRODUCTS="jet"
@@ -207,7 +213,6 @@ fi
 
 BUNDLE_FILE_PATH=${@: -1}
 ARG1=${@: -2}
-
 if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-product "* ]] || [[ "$ARG1" == "-user "* ]]; then
    # If bundle file not specified... 
    echo ""
@@ -222,26 +227,34 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
       RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
 
       echo -e "(Repo: ${CLightGreen}$GITHUB_USER_HOME${CNone})"
+
+      NEXT_URL=$BUNDLE_REPOS
       let BUNDLE_INDEX=0
-      for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
-         HREF=$(curl -sS $BUNDLE_REPOS | grep "\/$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-")
-         BUNDLE_LIST=""
-         for i in $HREF; do
-            if [[ $i == *href=* ]]; then
-               BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
-	       if [[ $BUNDLE_NAME != *\/* ]]; then 
-                  BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
-	       fi
-            fi
-         done
-         for BUNDLE_NAME in $BUNDLE_LIST; do
-            let BUNDLE_INDEX=BUNDLE_INDEX+1
-            echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
-            if [ "$HEADER" == "true" ]; then
-               RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README_HEADER.md"
-               echo "    $(curl -sS $RAW_FILE_URL)"
-               echo ""
-            fi
+      while [ "$NEXT_URL" != "" ]; do
+         BUFFER=$(curl -sSL $NEXT_URL)
+         NEXT_URL=$(echo "$BUFFER" | grep "Next" | grep "$GITHUB_USER_HOME?after=" | sed -e 's/.*href="//' -e 's/">Next.*$//')
+
+         for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
+            HREF=$(echo "$BUFFER" | grep "\/$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-")
+            BUNDLE_LIST=""
+            for i in $HREF; do
+               if [[ $i == *href=* ]]; then
+                   BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
+                   if [[ $BUNDLE_NAME != *\/* ]]; then 
+                      BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
+                   fi
+               fi
+            done
+            for BUNDLE_NAME in $BUNDLE_LIST; do
+               let BUNDLE_INDEX=BUNDLE_INDEX+1
+               echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+               echo -e "       (${CUrl}$GITHUB_USER_HOME/$BUNDLE_NAME${CNone})"
+               if [ "$HEADER" == "true" ]; then
+                  RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README_HEADER.md"
+                  echo "    $(curl -sS $RAW_FILE_URL)"
+                  echo ""
+               fi
+            done
          done
       done
       echo "---------------------------------------------------------------------------"
@@ -256,22 +269,23 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
       GITHUB_USER_HOME="$GITEA_HTTPS_URL/$GITHUB_USER"
       RAW_BASE_URL="$GITEA_RAW_BASE_URL/$GITHUB_USER"
       echo -e "(Repo: ${CLightGreen}$GITHUB_USER_HOME)${CNone}"
+      BUFFER=$(curl -sS -X GET "$USER_REPOS_URL" -H "$AUTH_HEADER")
       let BUNDLE_INDEX=0
       for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
-	 HREF=$(curl -sS -X GET "$USER_REPOS_URL" -H "$AUTH_HEADER" | grep -o "\"$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-[^\"]*" | grep -o "bundle-${BUNDLE_PRODUCT}\-.*")
+         HREF=$(echo "$BUFFER" | grep -o "\"$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-[^\"]*" | grep -o "bundle-${BUNDLE_PRODUCT}\-.*")
          BUNDLE_LIST=""
          for i in $HREF; do
             BUNDLE_LIST="$BUNDLE_LIST $i"
          done
-	 #https://wecode.sorint.it/dspark/bundle-hazelcast-4-k8s-minishift/raw/branch/master/README.md
          for BUNDLE_NAME in $BUNDLE_LIST; do
             let BUNDLE_INDEX=BUNDLE_INDEX+1
             echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+            echo -e "       (${CUrl}$GITHUB_USER_HOME/$BUNDLE_NAME${CNone})"
             if [ "$HEADER" == "true" ]; then
                HEADER_CONTENT_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_NAME}/contents/README_HEADER.md"
-	       CONTENT=$(curl -sS -X GET "$HEADER_CONTENT_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d)
+               CONTENT=$(curl -sS -X GET "$HEADER_CONTENT_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d)
                echo "    $CONTENT"
-	       echo ""
+               echo ""
             fi
          done
       done
@@ -288,10 +302,12 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
       echo "---------------"
    fi
 
-   echo "View catalog (use cases): show_bundle -catalog"
-   echo "View bundle instructions: show_bundle bundle_file_name"
-   echo " Preview bundle contents: install_bundle -download -preview bundle_file_name"
-   echo "          Install bundle: install_bundle -download bundle_file_name"
+   echo "    View catalog (use cases): show_bundle -catalog"
+   echo "    View bundle instructions: show_bundle bundle_name"
+   echo "     Preview bundle contents: install_bundle -download -preview bundle_name"
+   echo "              Install bundle: install_bundle -download bundle_name"
+   echo " Install bundle as workspace: install_bundle -download -workspace bundle_name"
+   echo "Checkout bundle as workspace: install_bundle -checkout bundle_name"
    echo ""
 else
    # If bundle file specified... 
@@ -315,11 +331,13 @@ else
    elif [[ "$BUNDLE_FILE_PATH" == "bundle-snappydata-"* ]]; then
       __PRODUCT="snappydata"
       BUNDLE_PRODUCT="snappydata"
+   elif [[ "$BUNDLE_FILE_PATH" == "bundle-spark-"* ]]; then
+      __PRODUCT="spark"
+      BUNDLE_PRODUCT="spark"
    else
       echo >&2 "ERROR: Invalid bundle name. Command aborted."
       exit 1
    fi
-   
 
    BUNDLE_FOUND="false"
    if [ "$GITHOST" == "gitea" ]; then

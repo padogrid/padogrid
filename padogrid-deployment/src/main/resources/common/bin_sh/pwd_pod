@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the name of the present (current) working pod in the current workspace
+
+SYNOPSIS
+   $EXECUTABLE [-all] [-?]
+
+DESCRIPTION
+   Displays the name of the present (current) working pod. If the '-all' option
+   is present then it displays current environment details.
+
+OPTIONS
+   -all
+             If specified then it displays the current environment details.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+
+if [ "$ALL" = "true" ]; then
+   POD_TYPE=`getPodProperty "pod.type" $POD_TYPE`
+   POD_BOX_IMAGE=`getPodProperty "pod.box.image"`
+   AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" "false"`
+   PRIMARY_NODE=`getPodProperty "node.name.primary"`
+   NODE_PREFIX=`getPodProperty "node.name.prefix"`
+   NODE_COUNT=`getPodProperty "node.count"`
+   HOST_PRODCUT_DIR=`getPodProperty "host.productsDir"`
+
+   echo "                     POD: $POD"
+   echo "                POD_TYPE: $POD_TYPE"
+   echo "               Box Image: $POD_BOX_IMAGE"
+   echo "           Avahi Enabled: $AVAHI_ENABLED"
+   echo "            Primary Node: $PRIMARY_NODE"
+   echo "             Node Prefix: $NODE_PREFIX"
+   echo "              Node Count: $NODE_COUNT"
+   echo "        Host Product Dir: $HOST_PRODCUT_DIR"
+   echo "       Current Workspace: $WORKSPACE"
+   echo "      PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "PADOGRID_WORKSPACES_HOME: $PADOGRID_WORKSPACES_HOME"
+   echo "           PADOGRID_HOME: $PADOGRID_HOME"
+else
+   echo $POD
+fi
+

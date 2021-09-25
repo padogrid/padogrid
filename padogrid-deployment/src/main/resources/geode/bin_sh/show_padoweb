@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -short -long -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the status of Management Center in the specified cluster in the current workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster <cluster-name>] [=short | -long] [-all] [-?]
+
+DESCRIPTION
+   Displays PadoWeb status
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+   -short
+             Displays running status only.
+
+   -long
+             Displays detailed information.
+
+   -all
+             Displays all PadoWeb instances in the workspace clusters
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+   $LOG_DIR
+             The current cluster log directory.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*padoweb pado" $EXECUTABLE
+   exit
+fi
+
+# Displays short status of a management center.
+function displayPadowebShort()
+{
+   # Determine the node host name for URL
+   POD=`getClusterProperty "pod.name" "local"`
+   NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE=`getOsNodeName`
+
+   PADOWEB_HOST=`getClusterProperty "padoweb.host" $DEFAULT_PADOWEB_HOST`
+   PADOWEB_HTTP_PORT=`getClusterProperty "padoweb.http.port" $DEFAULT_PADOWEB_HTTP_PORT`
+   PADOWEB_HTTPS_PORT=`getClusterProperty "padoweb.https.port" $DEFAULT_PADOWEB_HTTPS_PORT`
+   PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" $DEFAULT_PADOWEB_HTTPS_ENABLED`
+   PADOWEB_CONTEXT_PATH=`getClusterProperty "padoweb.contextPath" $DEFAULT_PADOWEB_CONTEXT_PATH`
+   if [ "$PADOWEB_HTTPS_ENABLED" == "false" ]; then
+      PADOWEB_URL="http://${PADOWEB_HOST}:${PADOWEB_HTTP_PORT}${PADOWEB_CONTEXT_PATH}"
+   else
+      PADOWEB_URL="https://${PADOWEB_HOST}:${PADOWEB_HTTPS_PORT}${PADOWEB_CONTEXT_PATH}"
+   fi
+   if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
+      PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTPS_PORT}
+   else
+      PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}
+   fi
+   WORKING_DIR=$RUN_DIR/$PADOWEB_NAME
+   LOG_FILE=$LOG_DIR/${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}.log
+   PID=`getPadowebPid $PADOWEB_NAME $WORKSPACE`
+
+   echo "    CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "       Name: $PADOWEB_NAME"
+   fi
+   if [ "$PID" == "" ]; then
+   echo -e "      STATE: ${CLightRed}Down${CNone}"
+   if [ "$SHORT" == "false" ]; then
+   echo "        PID: N/A"
+   fi
+   else
+   echo -e "      STATE: ${CLightGreen}Running${CNone}"
+   if [ "$SHORT" == "false" ]; then
+   echo "        PID: $PID"
+   fi
+   fi
+   if [ "$SHORT" == "false" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo " Deployment: VM"
+   fi
+   echo -e "        URL: $CUrl$PADOWEB_URL$CNone"
+   fi
+}
+
+# Displays long status of a management center.
+function displayPadowebLong()
+{
+   # Determine the node host name for URL
+   POD=`getClusterProperty "pod.name" "local"`
+   NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE=`getOsNodeName`
+
+   PADOWEB_HOST=`getClusterProperty "padoweb.host" $DEFAULT_PADOWEB_HOST`
+   PADOWEB_HTTP_PORT=`getClusterProperty "padoweb.http.port" $DEFAULT_PADOWEB_HTTP_PORT`
+   PADOWEB_HTTPS_PORT=`getClusterProperty "padoweb.https.port" $DEFAULT_PADOWEB_HTTPS_PORT`
+   PADOWEB_HTTPS_ENABLED=`getClusterProperty "padoweb.https.enabled" $DEFAULT_PADOWEB_HTTPS_ENABLED`
+   PADOWEB_CONTEXT_PATH=`getClusterProperty "padoweb.contextPath" $DEFAULT_PADOWEB_CONTEXT_PATH`
+   if [ "$PADOWEB_HTTPS_ENABLED" == "false" ]; then
+      PADOWEB_URL="http://${PADOWEB_HOST}:${PADOWEB_HTTP_PORT}${PADOWEB_CONTEXT_PATH}"
+   else
+      PADOWEB_URL="https://${PADOWEB_HOST}:${PADOWEB_HTTPS_PORT}${PADOWEB_CONTEXT_PATH}"
+   fi
+   if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
+      PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTPS_PORT}
+   else
+      PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}
+   fi
+   WORKING_DIR=$RUN_DIR/$PADOWEB_NAME
+   LOG_FILE=$LOG_DIR/${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}.log
+   PID=`getPadowebPid $PADOWEB_NAME $WORKSPACE`
+
+   echo "----------------------------------------------------------------"
+   echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "       Name: $PADOWEB_NAME"
+   if [ "$PID" == "" ]; then
+   echo -e "      STATE: ${CLightRed}Down${CNone}"
+   echo "        PID: N/A"
+   else
+   echo -e "      STATE: ${CLightGreen}Running${CNone}"
+   echo "        PID: $PID"
+   fi
+   echo "    Cluster: $CLUSTER"
+   echo -e "        URL: $CUrl$PADOWEB_URL$CNone"
+   echo "WORKING_DIR: $WORKING_DIR"
+   if [ "$PADOWEB_HTTPS_ENABLED" == "true" ]; then
+   echo " HTTPS_PORT: $PADOWEB_HTTPS_PORT"
+   else
+   echo "  HTTP_PORT: $PADOWEB_HTTP_PORT"
+   fi
+   echo "    LOG_DIR: $LOG_DIR"
+   echo "   LOG_FILE: $LOG_FILE"
+   echo "----------------------------------------------------------------"
+}
+
+#
+# VM cluster
+#
+THIS_HOST_NAME=`hostname`
+PADOWEB_HOST=`getClusterProperty "padoweb.host" $DEFAULT_PADOWEB_HOST`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_PADOWEB_HOST" ]; then
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then
+         VM_KEY="-i $VM_KEY"
+      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
+      fi
+      # For Vagrant VMs, run local if '.local' is suffix
+      if [ "$PADOWEB_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
+         ssh -q -n $VM_KEY $VM_USER@$PADOWEB_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_padoweb -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
+         exit
+      fi
+   fi
+fi
+
+if [ "$RUN_TYPE" != "pado" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid run type. PadoWeb requires a Pado cluster. Command aborted."
+   exit 1
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+if [ "$ALL" == "true" ]; then
+
+   # Display all clusters
+
+   pushd $CLUSTERS_DIR > /dev/null 2>&1
+   CLUSTERS=""
+   COUNT=0
+   for i in *; do
+      if [ -d "$i" ]; then
+         if [ "$(isPadoCluster $i)" == "true" ]; then
+            let COUNT=COUNT+1
+            if [ $COUNT -eq 1 ]; then
+               CLUSTERS="$i"
+            else
+               CLUSTERS="$CLUSTERS $i"
+            fi
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+
+   echo "----------------------------------------------------------------"
+   echo "Pado Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
+   echo ""
+
+   if [ "$LONG" == "false" ]; then 
+      # Short display -all
+      for CLUSTER in ${CLUSTERS}; do
+         displayPadowebShort
+      done
+   else
+      # Long display -all
+      for CLUSTER in ${CLUSTERS}; do
+         displayPadowebLong
+      done
+   fi
+   echo ""
+   echo "----------------------------------------------------------------"
+   echo "Pado Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
+
+else
+
+   if  [ ! -d $CLUSTER_DIR ]; then
+      echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+      exit 1
+   fi
+
+   if [ "$LONG" == "false" ]; then
+      # Short display (single)
+      displayPadowebShort
+   else
+      # Long display (single)
+      displayPadowebLong
+   fi
+
+fi

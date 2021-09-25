@@ -43,6 +43,8 @@
 #                    This will be prepended to the padogrid class paths.
 # HAZELCAST_MC_HOME  Hazelcast Management Center directory path. This needs
 #                    to be set only if you have the MC module separately installed.
+# JET_MC_HOME        Hazelcast Jet Management Center directory path. Unlike IMDG, this needs
+#                    to be set. 
 # CLUSTER            The default cluster name. The default cluster can be managed without
 #                    specifying the '-cluster' command option. Default: myhz
 # MIN_HEAP_SIZE      Minimum heap size. Used initially when the cluster is created. Default: 1g
@@ -87,7 +89,8 @@ CLASSPATH=""
 # Hazelcast IMDG Management Center home directory. This is required only if you want to run
 # the IMDG management center, i.e., start-mc.sh 
 #HAZELCAST_MC_HOME=$HAZELCAST_HOME/management-center
-#HAZELCAST_MC_HOME=$JET_HOME/hazelcast-jet-management-center
+# The following is no longer valid. Jet MC must be installed separately.
+#JET_MC_HOME=$JET_HOME/hazelcast-jet-management-center
 
 # 
 # Default Cluster - If the -cluster option is not specified in any of the commands, then

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-package -jar -id -dir -classpath -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$JAR_ARG" != "" ]; then
+   CLASSPATH="$CLASSPATH:$JAR_ARG"
+fi
+if [ "$CLASSPATH_ARG" != "" ]; then
+   CLASSPATH="$CLASSPATH_ARG/*:$CLASSPATH"
+fi
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+
+if [ "$PRODUCT" == "geode" ]; then
+   "$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.AvroPdxClassGenerator $@
+else
+   echo >&2 "ERROR: Avro-to-PDX class grenerator is not available for this product: [$PRODUCT]. Command aborted."
+fi
+exit
+
+# For padogrid -? only
+cat <<EOF
+NAME
+   $EXECUTABLE - Generate PdxSerializable classes based on Avro schema files
+EOF

@@ -48,6 +48,8 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        This will be prepended to the padogrid class paths.
 # HAZELCAST_MC_HOME      Hazelcast Management Center directory path. This needs
 #                        to be set only if you have the MC module separately installed.
+# JET_MC_HOME            Hazelcast Jet Management Center directory path. This needs
+#                        to be set only if you have the MC module separately installed.
 # DEFAULT_CLUSTER        The default IMDG cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: myhz
 # DEFAULT_JET_CLUSTER    The default Jet cluster name. The default cluster can be managed without
@@ -94,12 +96,16 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
+DEFAULT_PADO_CLUSTER="mypado"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
+DEFAULT_SPARK_CLUSTER="myspark"
+DEFAULT_KAFKA_CLUSTER="mykafka"
+DEFAULT_HADOOP_CLUSTER="myhadoop"
 DEFAULT_CLUSTER="$DEFAULT_HAZELCAST_CLUSTER"
 
 #
@@ -208,11 +214,7 @@ CLASSPATH=""
 # Default member TCP start port. The value of ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's TCP port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_MEMBER_START_PORT=6701
-else
-   DEFAULT_MEMBER_START_PORT=5701
-fi
+DEFAULT_MEMBER_START_PORT=5701
 
 #
 # Enable/disable Java remote debugging
@@ -236,36 +238,22 @@ DEFAULT_MC_HTTPS_ENABLED=false
 # command. You can change them later in the cluster.properties file.
 #
 DEFAULT_MC_HOST=localhost
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_MC_HTTP_PORT=8180
-   DEFAULT_MC_JMX_PORT=9301
-   DEFAULT_MC_JMX_RMI_PORT=9351
-else
-   DEFAULT_MC_HTTP_PORT=8080
-   DEFAULT_MC_HTTPS_PORT=8443
-   DEFAULT_MC_JMX_PORT=9001
-   DEFAULT_MC_JMX_RMI_PORT=9051
-fi
+DEFAULT_MC_HTTP_PORT=8080
+DEFAULT_MC_HTTPS_PORT=8443
+DEFAULT_MC_JMX_PORT=9301
+DEFAULT_MC_JMX_RMI_PORT=9351
 
 # 
 # Debug start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-  DEFAULT_DEBUG_START_PORT=9401
-else
-  DEFAULT_DEBUG_START_PORT=9101
-fi
+DEFAULT_DEBUG_START_PORT=9401
 
 # 
 # Default JMX start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_JMX_START_PORT=12101
-else
-   DEFAULT_JMX_START_PORT=12001
-fi
+DEFAULT_JMX_START_PORT=12201
 
 #
 # Default PROMETHEUS enable/disable flag.
@@ -276,11 +264,8 @@ DEFAULT_PROMETHEUS_ENABLED=true
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the start port number to
 # determine the member's debug port number.
 #
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   DEFAULT_PROMETHEUS_START_PORT=8191
-else
-   DEFAULT_PROMETHEUS_START_PORT=8091
-fi
+DEFAULT_PROMETHEUS_START_PORT=8291
+
 #
 # The max number of members per cluster. The port number ranges are determined by this value.
 # All port numbers begin from DEFAULT_*_START_PORT and end at DEFAULT_*_START_PORT+MAX_MEMBER_COUNT-1.
@@ -304,7 +289,7 @@ HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
 # Disagnostics logging
 DEFAULT_DIAGNOSTICS_ENABLED="true"
 DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
--Dhazelcast.diagnostics.metric.level=info \
+-Dhazelcast.diagnostics.metric.level=Debug \
 -Dhazelcast.diagnostics.invocation.sample.period.seconds=30 \
 -Dhazelcast.diagnostics.pending.invocations.period.seconds=30 \
 -Dhazelcast.diagnostics.slowoperations.period.seconds=30 \
@@ -340,12 +325,35 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
 fi
 
 #
-# Source in the workspaces setenv.sh file (mainly for license keys)
+# Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)
 #
-if [ -f "$PADOGRID_WORKSPACE/../setenv.sh" ]; then
+# First, reset product paths for local pods. This is required in case the user
+# switches contexts.
+if [ "$IN_POD" != "true" ]; then
+   export PADOGRID_HOME=""
+   export PADO_HOME=""
+   export JAVA_HOME=""
+   export COHERENCE_HOME=""
+   export GEMFIRE_HOME=""
+   export GEODE_HOME=""
+   export HAZELCAST_HOME=""
+   export HAZELCAST_MC_HOME=""
+   export JET_HOME=""
+   export JET_MC_HOME=""
+   export SNAPPYDATA_HOME=""
+   export SPARK_HOME=""
+   export KAFKA_HOME=""
+   export HADOOP_HOME=""
+   export PRODUCT_HOME=""
+fi
+# Source in setenv.sh
+if [ -f "$PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
-   . $PADOGRID_WORKSPACE/../setenv.sh
+   . $PADOGRID_WORKSPACES_HOME/setenv.sh
+   if [ -f "$PADOGRID_WORKSPACE/setenv.sh" ]; then
+      . $PADOGRID_WORKSPACE/setenv.sh
+   fi
    SCRIPT_DIR=$__SCRIPT_DIR
    export PADOGRID_WORKSPACE=$__PADOGRID_WORKSPACE
 fi
@@ -386,8 +394,16 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark kafka hadoop"
 
+# Supported Docker Products
+DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
+
+# Supported Kubernetes Products
+K8S_PRODUCT_LIST="geode hazelcast jet"
+
+# Supported App Products
+APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
@@ -444,14 +460,25 @@ fi
 # Set CLUSTER to the default cluster set in setenv.sh if it 
 # is not specified.
 if [ -z $CLUSTER ]; then
-   CLUSTER=$DEFAULT_CLUSTER
+   retrieveWorkspaceEnvFile
 fi
 
 if [ -z $CLUSTERS_DIR ]; then
-   CLUSTERS_DIR=$BASE_DIR/clusters
+   if [ "$PADOGRID_WORKSPACE" == "" ]; then
+      CLUSTERS_DIR=$BASE_DIR/clusters
+   else
+      CLUSTERS_DIR=$PADOGRID_WORKSPACE/clusters
+   fi
 fi
 
 CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+
+# Source in cluster file to get the product and cluster type
+THIS_PRODUCT=$PRODUCT
+THIS_CLUSTER_TYPE=$CLUSTER_TYPE
+
+# Retrieve PRODUCT and CLUSTER_TYPE
+retrieveClusterEnvFile
 
 # Parent directory of member working directories
 RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
@@ -491,8 +518,8 @@ SHUTDOWN_HOOK_PROPERTIES="-Dhazelcast.shutdownhook.enabled=true \
 # Set Hazelcast IMDG Management Center home directory if undefined in setenv.sh
 #
 if [ "$CLUSTER_TYPE" == "jet" ]; then
-   if [ "$HAZELCAST_MC_HOME" == "" ]; then
-      HAZELCAST_MC_HOME=$JET_HOME/hazelcast-jet-management-center
+   if [ "$JET_MC_HOME" == "" ]; then
+      JET_MC_HOME=$JET_HOME/hazelcast-jet-management-center
    fi
 else
    if [ "$HAZELCAST_MC_HOME" == "" ]; then
@@ -501,12 +528,60 @@ else
 fi
 
 #
+# Remove the previous paths from PATH to prevent duplicates
+#
+CLEANED_PATH=""
+__IFS=$IFS
+IFS=":"
+PATH_ARRAY=($PATH)
+for i in "${PATH_ARRAY[@]}"; do
+   if [ "$i" == "$JAVA_HOME/bin" ]; then
+      continue;
+   elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
+      continue;
+   elif [ "$PRODUCT_HOME" != "" ] && [[ "$i" == "$PRODUCT_HOME"** ]]; then
+      continue;
+   elif [ "$COHERENCE_HOME" != "" ] && [[ "$i" == "$COHERENCE_HOME"** ]]; then
+      continue;
+   elif [ "$GEODE_HOME" != "" ] && [[ "$i" == "$GEODE_HOME"** ]]; then
+      continue;
+   elif [ "$GEMFIRE_HOME" != "" ] && [[ "$i" == "$GEMFIRE_HOME"** ]]; then
+      continue;
+   elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
+      continue;
+   elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
+      continue;
+   elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
+      continue;
+   elif [ "$SPARK_HOME" != "" ] && [[ "$i" == "$SPARK_HOME"** ]]; then
+      continue;
+   elif [ "$KAFKA_HOME" != "" ] && [[ "$i" == "$KAFKA_HOME"** ]]; then
+      continue;
+   elif [ "$HADOOP_HOME" != "" ] && [[ "$i" == "$HADOOP_HOME"** ]]; then
+      continue;
+   fi
+   if [ "$CLEANED_PATH" == "" ]; then
+      CLEANED_PATH="$i"
+   else
+      CLEANED_PATH="$CLEANED_PATH:$i"
+   fi
+done
+IFS=$__IFS
+
+# Export cleaned PATH
+PATH="$CLEANED_PATH"
+
+#
 # PATH
 #
 if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$JET_HOME/bin:$PATH"
+else
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
+fi
 
 #
 # Java executable
@@ -520,59 +595,122 @@ fi
 #
 # Java version
 #
-JAVA_VERSION=$($JAVA -version 2>&1)
-JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
+__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+JAVA_VERSION=$(eval $__COMMAND)
+JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
 JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 
 #
 # HAZELCAST_VERSION/PROUDCT_VERSION: Determine the Hazelcast version
 #
 HAZELCAST_VERSION=""
+HAZELCAST_MC_VERSION=""
 IS_HAZELCAST_ENTERPRISE=false
+
 if [ "$CLUSTER_TYPE" == "jet" ]; then
-   if [ "$JET_HOME" != "" ]; then
-      if [ -f $JET_HOME/lib/hazelcast-jet-enterprise-* ]; then
-         for file in $JET_HOME/lib/hazelcast-jet-enterprise-*; do
+   if [ "$HAZELCAST_HOME" != "" ]; then
+     if [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"*; do
+            file=${file##*hazelcast\-enterprise\-all\-}
+            HAZELCAST_VERSION=${file%.jar}
+         done
+     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-"*; do
+            file=${file##*hazelcast\-enterprise\-}
+            HAZELCAST_VERSION=${file%.jar}
+         done
+     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-all-"*; do
+            file=${file##*hazelcast\-all\-}
+            HAZELCAST_VERSION=${file%.jar}
+         done
+      fi
+   elif [ "$JET_HOME" != "" ]; then
+      if [ `ls -1 "$JET_HOME/lib/hazelcast-jet-enterprise-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$JET_HOME/lib/hazelcast-jet-enterprise-all-"*; do
+            file=${file##*hazelcast\-jet\-enterprise\-all\-}
+            HAZELCAST_VERSION=${file%.jar}
+            IS_HAZELCAST_ENTERPRISE=true
+            break;
+         done
+      elif [ `ls -1 "$JET_HOME/lib/hazelcast-jet-enterprise-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$JET_HOME/lib/hazelcast-jet-enterprise-"*; do
             file=${file##*hazelcast\-jet\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
             IS_HAZELCAST_ENTERPRISE=true
-	    break;
+            break;
          done
-      else
-         for file in $JET_HOME/lib/hazelcast-jet-*; do
+      elif [ `ls -1 "$JET_HOME/lib/hazelcast-jet-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$JET_HOME/lib/hazelcast-jet-"*; do
             file=${file##*hazelcast\-jet\-}
-	    file=${file##*-}
+            file=${file##*-}
             HAZELCAST_VERSION=${file%%.jar}
-	    break;
+            break;
          done
       fi
    fi
 
    # Set Jet MC jar
-   if [ "$HAZELCAST_MC_HOME" != "" ]; then
-      for file in $HAZELCAST_MC_HOME/hazelcast-jet-management-center-*; do
-         file=${file##*hazelcast\-jet\-management\-center\-}
-         JET_MC_VERSION=${file%.jar}
-      done
-      JET_MC_JAR=hazelcast-jet-management-center-${JET_MC_VERSION}.jar 
+   if [ "$JET_MC_HOME" != "" ]; then
+      if [[ "$JET_MC_HOME" == **"202"** ]]; then
+         for file in "$JET_MC_HOME/hazelcast-management-center-"*; do
+            file=${file##*hazelcast\-management\-center\-}
+            JET_MC_VERSION=${file%.jar}
+            break;
+         done
+         JET_MC_JAR=hazelcast-management-center-${JET_MC_VERSION}.jar
+      else
+         # TODO: Drop the following support before 2021 ends
+         for file in "$JET_MC_HOME/hazelcast-jet-management-center-"*; do
+            file=${file##*hazelcast\-jet\-management\-center\-}
+            JET_MC_VERSION=${file%.jar}
+            break;
+         done
+         JET_MC_JAR=hazelcast-jet-management-center-${JET_MC_VERSION}.jar 
+      fi
    fi
 else
    if [ "$HAZELCAST_HOME" != "" ]; then
-      if [ -f $HAZELCAST_HOME/lib/hazelcast-enterprise-all-* ]; then
+      if [ -f "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"* ]; then
          for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-all-*; do
             file=${file##*hazelcast\-enterprise\-all\-}
             HAZELCAST_VERSION=${file%.jar}
             IS_HAZELCAST_ENTERPRISE=true
          done
-      else
+      elif [ -f "$HAZELCAST_HOME/lib/hazelcast-enterprise-"* ]; then
+         for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-*; do
+            file=${file##*hazelcast\-enterprise\-}
+            HAZELCAST_VERSION=${file%.jar}
+         done
+      elif [ -f "$HAZELCAST_HOME/lib/hazelcast-all-"* ]; then
          for file in $HAZELCAST_HOME/lib/hazelcast-all-*; do
             file=${file##*hazelcast\-all\-}
             HAZELCAST_VERSION=${file%.jar}
          done
+      else
+         # hazelcast- is not unique. scan 5-10 versions
+         for i in $(seq 5 10); do
+            if [ -f "$HAZELCAST_HOME/lib/hazelcast-$i."* ]; then
+               for file in "$HAZELCAST_HOME/lib/hazelcast-$i."*; do
+                  file=${file##*hazelcast\-}
+                  HAZELCAST_VERSION=${file%.jar}
+                  break;
+               done
+               break;
+            fi
+         done
       fi
    fi
+   if [ "$HAZELCAST_MC_HOME" != "" ]; then
+      for file in "$HAZELCAST_MC_HOME/hazelcast-management-center-"*; do
+         file=${file##*hazelcast\-management\-center\-}
+         HAZELCAST_MC_VERSION=${file%.jar}
+         break;
+      done
+   fi
 fi
-HAZELCAST_MAJOR_VERSION_NUMBER=`expr "$HAZELCAST_VERSION" : '\([0-9]*\)'`
+HAZELCAST_MAJOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[1]'})
+HAZELCAST_MINOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[2]'})
 PRODUCT_VERSION=$HAZELCAST_VERSION
 PRODUCT_MAJOR_VERSION=$HAZELCAST_MAJOR_VERSION_NUMBER
 
@@ -583,6 +721,13 @@ for file in $BASE_DIR/lib/v4/hazelcast-addon-core-4-*; do
    file=${file#*hazelcast\-addon\-core\-4\-}
    PADOGRID_VERSION=${file%.jar}
 done
+
+#
+# JAVA_OPTS
+#
+if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+   JAVA_OPTS="$JAVA_OPTS -Djet.custom.lib.dir=$HAZELCAST_HOME/custom-lib"
+fi
 
 #
 # CLASSPATH
@@ -610,7 +755,9 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
       __CLASSPATH="$__CLASSPATH:$JET_HOME/lib/hazelcast-jet-${HAZELCAST_VERSION}.jar"
    fi
 else
-   if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+      __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib:$__CLASSPATH:$HAZELCAST_HOME/lib/*:$HAZELCAST_HOME/user-lib:$HAZELCAST_HOME/user-lib/*"
+   elif [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
       __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-enterprise-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/user-lib/*"
    else
       __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/user-lib/*"
@@ -622,25 +769,6 @@ export CLASSPATH="$__CLASSPATH"
 # Source in cluster specific setenv.sh
 #
 RUN_SCRIPT=
-if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
-   . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
+if [ -f "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh" ] && [ "$1" != "-options" ]; then
+   . "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh"
 fi
-
-# Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'

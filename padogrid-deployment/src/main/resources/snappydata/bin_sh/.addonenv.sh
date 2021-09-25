@@ -93,12 +93,16 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
+DEFAULT_PADO_CLUSTER="mypado"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
+DEFAULT_SPARK_CLUSTER="myspark"
+DEFAULT_KAFKA_CLUSTER="mykafka"
+DEFAULT_HADOOP_CLUSTER="myhadoop"
 DEFAULT_CLUSTER="$DEFAULT_SNAPPYDATA_CLUSTER"
 
 #
@@ -354,12 +358,35 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
 fi
 
 #
-# Source in the workspaces setenv.sh file (mainly for license keys)
+# Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)
 #
-if [ -f "$PADOGRID_WORKSPACE/../setenv.sh" ]; then
+# First, reset product paths for local pods. This is required in case the user
+# switches contexts.
+if [ "$IN_POD" != "true" ]; then
+   export PADOGRID_HOME=""
+   export PADO_HOME=""
+   export JAVA_HOME=""
+   export COHERENCE_HOME=""
+   export GEMFIRE_HOME=""
+   export GEODE_HOME=""
+   export HAZELCAST_HOME=""
+   export HAZELCAST_MC_HOME=""
+   export JET_HOME=""
+   export JET_MC_HOME=""
+   export SNAPPYDATA_HOME=""
+   export SPARK_HOME=""
+   export KAFKA_HOME=""
+   export HADOOP_HOME=""
+   export PRODUCT_HOME=""
+fi
+# Source in setenv.sh
+if [ -f "$PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
-   . $PADOGRID_WORKSPACE/../setenv.sh
+   . $PADOGRID_WORKSPACES_HOME/setenv.sh
+   if [ -f "$PADOGRID_WORKSPACE/setenv.sh" ]; then
+      . $PADOGRID_WORKSPACE/setenv.sh
+   fi
    SCRIPT_DIR=$__SCRIPT_DIR
    export PADOGRID_WORKSPACE=$__PADOGRID_WORKSPACE
 fi
@@ -400,7 +427,16 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark kafka hadoop"
+
+# Supported Docker Products
+DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
+
+# Supported Kubernetes Products
+K8S_PRODUCT_LIST="geode hazelcast jet"
+
+# Supported App Products
+APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
@@ -457,14 +493,25 @@ fi
 # Set CLUSTER to the default cluster set in setenv.sh if it 
 # is not specified.
 if [ -z $CLUSTER ]; then
-   CLUSTER=$DEFAULT_CLUSTER
+   retrieveWorkspaceEnvFile
 fi
 
 if [ -z $CLUSTERS_DIR ]; then
-   CLUSTERS_DIR=$BASE_DIR/clusters
+   if [ "$PADOGRID_WORKSPACE" == "" ]; then
+      CLUSTERS_DIR=$BASE_DIR/clusters
+   else
+      CLUSTERS_DIR=$PADOGRID_WORKSPACE/clusters
+   fi
 fi
 
 CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+
+# Source in cluster file to get the product and cluster type
+THIS_PRODUCT=$PRODUCT
+THIS_CLUSTER_TYPE=$CLUSTER_TYPE
+
+# Retrieve PRODUCT and CLUSTER_TYPE
+retrieveClusterEnvFile
 
 # Parent directory of member working directories
 RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
@@ -492,12 +539,60 @@ fi
 LOG_PROPERTIES="-J-Dlog4j.configurationFile=$LOG4J_FILE"
 
 #
+# Remove the previous paths from PATH to prevent duplicates
+#
+CLEANED_PATH=""
+__IFS=$IFS
+IFS=":"
+PATH_ARRAY=($PATH)
+for i in "${PATH_ARRAY[@]}"; do
+   if [ "$i" == "$JAVA_HOME/bin" ]; then
+      continue;
+   elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
+      continue;
+   elif [ "$PRODUCT_HOME" != "" ] && [[ "$i" == "$PRODUCT_HOME"** ]]; then
+      continue;
+   elif [ "$COHERENCE_HOME" != "" ] && [[ "$i" == "$COHERENCE_HOME"** ]]; then
+      continue;
+   elif [ "$GEODE_HOME" != "" ] && [[ "$i" == "$GEODE_HOME"** ]]; then
+      continue;
+   elif [ "$GEMFIRE_HOME" != "" ] && [[ "$i" == "$GEMFIRE_HOME"** ]]; then
+      continue;
+   elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
+      continue;
+   elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
+      continue;
+   elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
+      continue;
+   elif [ "$SPARK_HOME" != "" ] && [[ "$i" == "$SPARK_HOME"** ]]; then
+      continue;
+   elif [ "$KAFKA_HOME" != "" ] && [[ "$i" == "$KAFKA_HOME"** ]]; then
+      continue;
+   elif [ "$HADOOP_HOME" != "" ] && [[ "$i" == "$HADOOP_HOME"** ]]; then
+      continue;
+   fi
+   if [ "$CLEANED_PATH" == "" ]; then
+      CLEANED_PATH="$i"
+   else
+      CLEANED_PATH="$CLEANED_PATH:$i"
+   fi
+done
+IFS=$__IFS
+
+# Export cleaned PATH
+PATH="$CLEANED_PATH"
+
+#
 # PATH
 #
 if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
 export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$SNAPPYDATA_HOME/bin:$SNAPPYDATA_HOME/sbin:$PATH"
+
+# SPARK_HOME
+# This must be set to prevent it from conflicting with a separate instance of Spark.
+SPARK_HOME=$SNAPPYDATA_HOME
 
 #
 # Java executable
@@ -511,24 +606,20 @@ fi
 #
 # Java version
 #
-JAVA_VERSION=$($JAVA -version 2>&1)
-JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
+__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+JAVA_VERSION=$(eval $__COMMAND)
+JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
 JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 
 #
-# SNAPPYDATA_VERSION/PROUDCT_VERSION: Determine the Hazelcast version
+# SNAPPYDATA_VERSION/PROUDCT_VERSION: Determine the SnappyData version
 #
 SNAPPYDATA_VERSION=""
 IS_ENTERPRISE=false
-CLUSTER_TYPE="snappydata"
-if [ "$SNAPPYDATA_HOME" == "" ]; then
-   CLUSTER_TYPE="snappydata"
-else
-   for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
-      file=${file##*snappydata\-core*\-}
-      SNAPPYDATA_VERSION=${file%.jar}
-   done
-fi
+for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
+   file=${file##*snappydata\-core*\-}
+   SNAPPYDATA_VERSION=${file%.jar}
+done
 SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
 PRODUCT_VERSION=$SNAPPYDATA_VERSION
 PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
@@ -536,8 +627,8 @@ PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
 #
 # PADOGRID_VERSION: Determine the padogrid version
 #
-for file in $BASE_DIR/lib/snappydata-addon-core-*; do
-   file=${file#*snappydata\-addon\-core\-}
+for file in $BASE_DIR/../lib/padogrid-common-*; do
+   file=${file#*padogrid\-common\-}
    PADOGRID_VERSION=${file%.jar}
 done
 
@@ -568,22 +659,3 @@ RUN_SCRIPT=
 if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
    . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
 fi
-
-# Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'

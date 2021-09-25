@@ -15,7 +15,7 @@
 # ========================================================================
 
 # -----------------------------------------------------
-# Coherence/GemFire Utility Functions. Do NOT modify!
+# Coherence Utility Functions. Do NOT modify!
 # -----------------------------------------------------
 
 #
@@ -47,34 +47,13 @@ function getLocatorPid
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
-      locators=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__LOCATOR" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      # Use eval to handle commands with spaces
+      local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__LOCATOR"
+      locators=$(eval $__COMMAND)
+      locators=$(echo $locators | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
    fi
    spids=""
    for j in $locators; do
-      spids="$j $spids"
-   done
-   spids=`trimString $spids`
-   echo $spids
-}
-
-#
-# Returns the member PID if it is running. Empty value otherwise.
-# @required NODE_LOCAL     Node name with the local extenstion. For remote call only.
-# @param    memberName     Unique member name
-# @param    workspaceName  Workspace name
-#
-function getMemberPid
-{
-   __MEMBER=$1
-   __WORKSPACE=$2
-   __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
-   if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   else
-      members=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MEMBER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   fi
-   spids=""
-   for j in $members; do
       spids="$j $spids"
    done
    spids=`trimString $spids`
@@ -86,6 +65,7 @@ function getMemberPid
 # This function is for clusters running on VMs whereas the getLocatorPid
 # is for pods running on the same machine.
 # @required VM_USER        VM ssh user name
+# @required VM_JAVA_HOME   VM Java home path
 # @optional VM_KEY         VM private key file path with -i prefix, e.g., "-i file.pem"
 # @param    host           VM host name or address
 # @param    locatorName    Unique locator name
@@ -99,30 +79,6 @@ function getVmLocatorPid
    local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $locators; do
-      spids="$j $spids"
-   done
-   spids=`trimString $spids`
-   echo $spids
-}
-
-#
-# Returns the member PID of VM if it is running. Empty value otherwise.
-# This function is for clusters running on VMs whereas the getMemberPid
-# is for pods running on the same machine.
-# @required VM_USER        VM ssh user name
-# @optional VM_KEY         VM private key file path with -i prefix, e.g., "-i file.pem"
-# @param    host           VM host name or address
-# @param    memberName     Unique member name
-# @param    workspaceName  Workspace name
-#
-function getVmMemberPid
-{
-   __HOST=$1
-   __MEMBER=$2
-   __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   spids=""
-   for j in $members; do
       spids="$j $spids"
    done
    spids=`trimString $spids`
@@ -239,37 +195,38 @@ function getVmActiveMemberCount
 #
 # Returns the locator name prefix that is used in constructing the unique locator
 # name for a given locator number. See getLocatorName.
-# @required POD               Pod name.
-# @required NODE_NAME_PREFIX  Node name prefix.
-# @required CLUSTER           Cluster name.
+# @param clusterName    Optional cluster name. If not specified then it defaults to CLUSTER.
+# @param podName        Optional pod name. If not specified then it defaults to POD.
+# @param nodeNamePrefix Optional node name prefix. If not specified then it defaults to NODE_NAME_PREFIX.
 #
 function getLocatorPrefix
 {
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-locator-${NODE_NAME_PREFIX}-"
-   else
-      echo "${CLUSTER}-locator-`hostname`-"
-   fi
-}
+   local __CLUSTER="$1"
+   local __POD="$2"
+   local __NODE_NAME_PREFIX="$3"
 
-#
-# Returns the member name prefix that is used in constructing the unique member
-# name for a given member number. See getMemberName.
-# @required POD               Pod name.
-# @required NODE_NAME_PREFIX  Node name prefix.
-# @required CLUSTER           Cluster name.
-#
-function getMemberPrefix
-{
-   if [ "$POD" != "local" ]; then
-      echo "${CLUSTER}-member-${NODE_NAME_PREFIX}-"
+   if [ "$__CLUSTER" == "" ]; then
+     __CLUSTER=$CLUSTER
+   fi
+   if [ "$__POD" == "" ]; then
+     __POD=$POD
+   fi
+   if [ "$__NODE_NAME_PREFIX" == "" ]; then
+     __NODE_NAME_PREFIX=$NODE_NAME_PREFIX
+   fi
+
+   if [ "$__POD" != "local" ]; then
+      echo "${__CLUSTER}-locator-${__NODE_NAME_PREFIX}-"
    else
-      echo "${CLUSTER}-member-`hostname`-"
+      echo "${__CLUSTER}-locator-`hostname`-"
    fi
 }
 
 #
 # Returns the unique locator name (ID) for the specified locator number.
+# @required POD               Pod name.
+# @required NODE_NAME_PREFIX  Node name prefix.
+# @required CLUSTER           Cluster name.
 # @param locatorNumber
 #
 function getLocatorName
@@ -296,20 +253,6 @@ function getVmLocatorName
    local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
    echo "${CLUSTER}-locator-${__HOSTNAME}-01"
 }
-
-#
-# Returns the member name of the specified VM host (address).
-# @required VM_USER VM ssh user name
-# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
-# @param    host    VM host name or address
-#
-function getVmMemberName
-{
-   __HOST=$1
-   __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-member-${__HOSTNAME}-01"
-}
-
 
 #
 # Returns merged comma-separated list of VM locator and member hosts

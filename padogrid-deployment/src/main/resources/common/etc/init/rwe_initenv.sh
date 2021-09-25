@@ -10,10 +10,17 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 #  Set the default environment variable for this RWE.
 #
 RWE_DIR="$PADOGRID_WORKSPACES_HOME/.rwe"
-DEFAULTENV_FILE="$RWE_DIR/defaultenv.sh"
-if [ -f "$DEFAULTENV_FILE" ]; then
-   . "$DEFAULTENV_FILE"
+RWEENV_FILE="$RWE_DIR/rweenv.sh"
+if [ -f "$RWEENV_FILE" ]; then
+   . "$RWEENV_FILE"
 fi
+# Find the first workspace directory
+for i in $PADOGRID_WORKSPACES_HOME/*; do
+   if [ -f "$i/initenv.sh" ]; then
+      . "$i/initenv.sh" -quiet
+      break
+   fi
+done
 
 #
 # Remove the previous paths from PATH to prevent duplicates
@@ -23,7 +30,7 @@ __IFS=$IFS
 IFS=":"
 PATH_ARRAY=($PATH)
 for i in "${PATH_ARRAY[@]}"; do
-   if [ "$i" == "$JAVA_HOME" ]; then
+   if [ "$i" == "$JAVA_HOME/bin" ]; then
       continue;
    elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
       continue;
@@ -45,6 +52,20 @@ export PATH="$CLEANED_PATH"
 # Initialize auto completion
 #
 . $PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash
+
+#
+# Need to reset here for the direct call, i.e., from .bashrc
+#
+if [ -f "$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh" ]; then
+   . "$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh"
+fi
+if [ -f "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster/clusterenv.sh" ]; then
+   . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster/clusterenv.sh"
+fi
+export CLUSTER
+export CLUSTER_TYPE
+export POD
+export PRODUCT
 
 #
 # Display initialization info

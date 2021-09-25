@@ -18,6 +18,7 @@ fi
 # Assume the pod type is vagrant for now unitl other types are supported.
 POD_TYPE=`getPodProperty "pod.type"`
 POD_BOX_IMAGE=`getPodProperty "pod.box.image"`
+POD_AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" $HOST_PRODUCTS_DIR`
 
 HOST_NAME=`hostname`
 
@@ -28,6 +29,8 @@ NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
 NODE_COUNT=`getPodProperty "node.count" $NODE_COUNT`
+NODE_PRIMARY_MEMORY_SIZE=`getPodProperty "node.memory.data" $NODE_PRIMARY_MEMORY_SIZE`
+NODE_MEMORY_SIZE=`getPodProperty "node.memory.primary" $NODE_MEMORY_SIZE`
 HOST_PRODUCTS_DIR=`getPodProperty "host.productsDir" $HOST_PRODUCTS_DIR`
 
 # Host private IP address. This address must be accessible from VitualBox
@@ -67,6 +70,7 @@ PODS_DIR=$GUEST_PADOGRID_WORKSPACE/pods
 HAZELCAST_HOME=""
 JET_HOME=""
 JAVA_HOME=""
+VM_JAVA_HOME=""
 PROMETHEUS_HOME=""
 GRAFANA_HOME=""
 JQ_HOME=""
@@ -76,8 +80,9 @@ for i in *; do
       HAZELCAST_HOME="$GUEST_HOME_DIR/products/$i"  
    elif [[ $i == hazelcast-jet-enterprise* ]]; then
       JET_HOME="$GUEST_HOME_DIR/products/$i"  
-   elif [[ $i == jdk* ]]; then
+   elif [[ $i == *java* ]] || [[ $i == *jdk* ]] || [[ $i == *openjdk* ]]; then
       JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
+      VM_JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
    elif [[ $i == prometheus* ]]; then
       PROMETHEUS_HOME="$GUEST_HOME_DIR/products/$i"  
    elif [[ $i == grafana* ]]; then
@@ -100,9 +105,11 @@ echo "export PADOGRID_HOME=$VAGRANT_PADOGRID_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_WORKSPACES_HOME=$GUEST_PADOGRID_WORKSPACES_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_WORKSPACE=$GUEST_PADOGRID_WORKSPACE" >> $NODEENV_FILE
 echo "export PODS_DIR=$PODS_DIR" >> $NODEENV_FILE
+echo "export IN_POD=\"true\"" >> $NODEENV_FILE
 echo "export POD=$POD" >> $NODEENV_FILE
 echo "export OS_POD=$POD" >> $NODEENV_FILE
 echo "export JAVA_HOME=$JAVA_HOME" >> $NODEENV_FILE
+echo "export VM_JAVA_HOME=$JAVA_HOME" >> $NODEENV_FILE
 echo "export PROMETHEUS_HOME=$PROMETHEUS_HOME" >> $NODEENV_FILE
 echo "export GRAFANA_HOME=$GRAFANA_HOME" >> $NODEENV_FILE
 echo "export JQ_HOME=$JQ_HOME" >> $NODEENV_FILE
@@ -135,14 +142,14 @@ if [[ $OS_NAME == CYGWIN* ]]; then
    PADOGRID_HOME="${PADOGRID_HOME//\\/\\\\\\\\}"
 
    # Replace '/' to avoid expansion for the subsequent use.
-   POD_BOX_IMAGE="${POD_BOX_IMAGE//\//\\/}"
+   POD_BOX_IMAGE=$(echo $POD_BOX_IMAGE | sed 's/\//\\\//g')
 else
    # Replace '/' to avoid expansion for the subsequent use.
-   HOST_PRODUCTS_DIR="${HOST_PRODUCTS_DIR//\//\/}"
-   PADOGRID_WORKSPACES_HOME="${PADOGRID_WORKSPACES_HOME//\//\/}"
-   VAGRANT_PADOGRID_HOME="${VAGRANT_PADOGRID_HOME//\//\/}"
-   PADOGRID_HOME="${PADOGRID_HOME//\//\/}"
-   POD_BOX_IMAGE="${POD_BOX_IMAGE//\//\/}"
+   HOST_PRODUCTS_DIR=$(echo $HOST_PRODUCTS_DIR | sed 's/\//\\\//g')
+   PADOGRID_WORKSPACES_HOME=$(echo $PADOGRID_WORKSPACES_HOME | sed 's/\//\\\//g')
+   VAGRANT_PADOGRID_HOME=$(echo $VAGRANT_PADOGRID_HOME | sed 's/\//\\\//g')
+   PADOGRID_HOME=$(echo $PADOGRID_HOME | sed 's/\//\\\//g')
+   POD_BOX_IMAGE=$(echo $POD_BOX_IMAGE | sed 's/\//\\\//g')
 fi
 
 # Extract the first three octets from the primary IP.
@@ -153,6 +160,7 @@ BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCT
 # Substitute the variables in the template file with the actual values.
 sed -e 's/\${POD}/'${POD}'/g' \
     -e 's/\${POD_BOX_IMAGE}/'${POD_BOX_IMAGE}'/g' \
+    -e 's/\${POD_AVAHI_ENABLED}/'${POD_AVAHI_ENABLED}'/g' \
     -e 's/\${NODE_NAME_PRIMARY}/'${NODE_NAME_PRIMARY}'/g' \
     -e 's/\${NODE_COUNT}/'${NODE_COUNT}'/g' \
     -e 's/\${BASE_PRIVATE_IP}/'${BASE_PRIVATE_IP}'/g' \

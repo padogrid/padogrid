@@ -31,8 +31,18 @@ if [ ! -d "$APP_LOG_DIR" ]; then
 fi
 
 # k8s pod
-if [ "NAMESPACE" != "" ] && [ "$HAZELCAST_SERVICE" != "" ]; then
-   K8S_PROPERTIES="-Dk8s.hazelcast.service=$HAZELCAST_SERVICE -Dk8s.namespace=$NAMESPACE"
+if [ "$NAMESPACE" != "" ] && [ "$HAZELCAST_SERVICE" != "" ]; then
+   if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" == "3" ]; then
+      if [ "$HAZELCAST_GROUP_NAME" == "" ]; then
+          HAZELCAST_GROUP_NAME="dev"
+      fi
+      K8S_PROPERTIES="-Dk8s.hazelcast.service=$HAZELCAST_SERVICE -Dk8s.namespace=$NAMESPACE -Dk8s.hazelcast.group.name=$HAZELCAST_GROUP_NAME"
+   else
+      if [ "$HAZELCAST_CLUSTER_NAME" == "" ]; then
+          HAZELCAST_CLUSTER_NAME="dev"
+      fi
+      K8S_PROPERTIES="-Dk8s.hazelcast.service=$HAZELCAST_SERVICE -Dk8s.namespace=$NAMESPACE -Dk8s.hazelcast.cluster.name=$HAZELCAST_CLUSTER_NAME"
+   fi
    HAZELCAST_CLIENT_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client-k8s.xml
 else
    HAZELCAST_CLIENT_CONFIG_FILE=$APP_ETC_DIR/hazelcast-client.xml

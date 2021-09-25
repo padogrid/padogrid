@@ -18,6 +18,7 @@
 				<include>org.apache.logging.log4j:**</include>
 				<include>com.esotericsoftware:kryo</include>
 				<include>org.json:json</include>
+				<include>javax.cache:cache-api</include>
 			</includes>
 		</dependencySet>
 	</dependencySets>
@@ -93,6 +94,28 @@
 			<useAllReactorProjects>true</useAllReactorProjects>
 			<includes>
 				<include>*:hazelcast-addon-core-4</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>hazelcast/lib/v4</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:hazelcast-addon-core-5</include>
+			</includes>
+			<binaries>
+				<includeDependencies>false</includeDependencies>
+				<outputDirectory>hazelcast/lib/v5</outputDirectory>
+				<unpack>false</unpack>
+			</binaries>
+		</moduleSet>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>*:hazelcast-addon-jet-core-4</include>
 			</includes>
 			<binaries>
 				<includeDependencies>false</includeDependencies>
@@ -343,6 +366,14 @@
 			<directory>../hazelcast-addon-jet-demo-4/src</directory>
 			<outputDirectory>hazelcast/apps/jet_demo/src-4</outputDirectory>
 		</fileSet>
+		<fileSet>
+			<directory>../hazelcast-addon-core-5/src/main/java/org/hazelcast/addon/apps/jet/demo</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/src-5/main/java/org/hazelcast/addon/apps/jet/demo</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>../hazelcast-addon-core-5/src/main/java/org/hazelcast/addon/apps/jet/util</directory>
+			<outputDirectory>hazelcast/apps/jet_demo/src-5/main/java/org/hazelcast/addon/apps/jet/util</outputDirectory>
+		</fileSet>
 
 		<!-- plugins (include test jar in the plugins/ dir) -->
 		<!-- Tried moduleSet, dependencySet. None worked. Kludge but this works. -->
@@ -360,9 +391,25 @@
 				<include>**/*tests.jar</include>
 			</includes>
 		</fileSet>
+		<fileSet>
+			<directory>../hazelcast-addon-core-5/target</directory>
+			<outputDirectory>hazelcast/plugins/v5</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet>
 
 		<!-- ==== Geode ==== -->
 		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/tools/bin_sh</directory>
+			<outputDirectory>geode/bin_sh/tools</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
 		<fileSet>
 			<directory>src/main/resources/common/bin_sh</directory>
 			<outputDirectory>geode/bin_sh</outputDirectory>
@@ -484,7 +531,7 @@
 			</includes>
 			<fileMode>0644</fileMode>
 		</fileSet>
-		
+
 		<!-- pado: pado files -->
 		<fileSet>
 			<directory>src/main/resources/geode/pado</directory>
@@ -724,6 +771,264 @@
 				<include>**/*tests.jar</include>
 			</includes>
 		</fileSet>
+		
+		<!-- ==== Spark ==== -->
+		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/common/bin_sh</directory>
+			<outputDirectory>spark/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/spark/bin_sh</directory>
+			<outputDirectory>spark/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/spark/bin_sh</directory>
+			<outputDirectory>spark/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
+		<!-- etc -->
+		<fileSet>
+			<directory>src/main/resources/spark/etc</directory>
+			<outputDirectory>spark/etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+
+		<!-- k8s: k8s files -->
+		<!-- <fileSet> <directory>src/main/resources/spark/k8s</directory> 
+			<outputDirectory>spark/k8s/</outputDirectory> </fileSet> <fileSet> <directory>src/main/resources/spark/k8s/kustom/bin_sh</directory> 
+			<outputDirectory>spark/k8s/kustom/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
+
+		<!-- docker: docker files -->
+		<!-- <fileSet> <directory>src/main/resources/spark/docker</directory> 
+			<outputDirectory>spark/docker/</outputDirectory> </fileSet> -->
+
+		<!-- apps -->
+		<!-- Include the entire apps dir -->
+		<fileSet>
+			<directory>src/main/resources/spark/apps</directory>
+			<outputDirectory>spark/apps/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		<!-- Make app bin_sh files executable. -->
+		<!-- <fileSet> <directory>src/main/resources/spark/apps/grafana/bin_sh</directory> 
+			<outputDirectory>spark/apps/grafana/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
+<!-- 		<fileSet>
+			<directory>src/main/resources/spark/apps/perf_test/bin_sh</directory>
+			<outputDirectory>spark/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet> -->
+
+		<!-- plugins (include test jar in the plugins/ dir) -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+<!-- 		<fileSet>
+			<directory>../spark-addon-core/target</directory>
+			<outputDirectory>spark/plugins</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet> -->
+		
+		<!-- ==== Kafka ==== -->
+		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/common/bin_sh</directory>
+			<outputDirectory>kafka/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/kafka/bin_sh</directory>
+			<outputDirectory>kafka/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/kafka/bin_sh</directory>
+			<outputDirectory>kafka/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+		
+		<!-- etc -->
+		<fileSet>
+			<directory>src/main/resources/kafka/etc</directory>
+			<outputDirectory>kafka/etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		
+		<!-- k8s: k8s files -->
+		<!-- <fileSet> <directory>src/main/resources/spark/k8s</directory> 
+			<outputDirectory>spark/k8s/</outputDirectory> </fileSet> <fileSet> <directory>src/main/resources/spark/k8s/kustom/bin_sh</directory> 
+			<outputDirectory>spark/k8s/kustom/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
+
+		<!-- docker: docker files -->
+		<!-- <fileSet> <directory>src/main/resources/spark/docker</directory> 
+			<outputDirectory>spark/docker/</outputDirectory> </fileSet> -->
+
+		<!-- apps -->
+		<!-- Include the entire apps dir -->
+		<fileSet>
+			<directory>src/main/resources/kafka/apps</directory>
+			<outputDirectory>kafka/apps/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		<!-- Make app bin_sh files executable. -->
+		<!-- <fileSet> <directory>src/main/resources/spark/apps/grafana/bin_sh</directory> 
+			<outputDirectory>spark/apps/grafana/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
+<!-- 		<fileSet>
+			<directory>src/main/resources/spark/apps/perf_test/bin_sh</directory>
+			<outputDirectory>spark/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet> -->
+
+		<!-- plugins (include test jar in the plugins/ dir) -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+<!-- 		<fileSet>
+			<directory>../spark-addon-core/target</directory>
+			<outputDirectory>spark/plugins</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet> -->
+		
+		<!-- ==== Hadoop ==== -->
+		<!-- Executable permissions -->
+		<fileSet>
+			<directory>src/main/resources/common/bin_sh</directory>
+			<outputDirectory>hadoop/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hadoop/bin_sh</directory>
+			<outputDirectory>hadoop/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<excludes>
+				<exclude>setenv.sh</exclude>
+			</excludes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>src/main/resources/hadoop/bin_sh</directory>
+			<outputDirectory>hadoop/bin_sh</outputDirectory>
+			<includes>
+				<include>setenv.sh</include>
+			</includes>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
+		<!-- etc -->
+		<fileSet>
+			<directory>src/main/resources/hadoop/etc</directory>
+			<outputDirectory>hadoop/etc</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+
+		<!-- k8s: k8s files -->
+		<!-- <fileSet> <directory>src/main/resources/hadoop/k8s</directory> 
+			<outputDirectory>hadoop/k8s/</outputDirectory> </fileSet> <fileSet> <directory>src/main/resources/hadoop/k8s/kustom/bin_sh</directory> 
+			<outputDirectory>hadoop/k8s/kustom/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
+
+		<!-- docker: docker files -->
+		<!-- <fileSet> <directory>src/main/resources/hadoop/docker</directory> 
+			<outputDirectory>hadoop/docker/</outputDirectory> </fileSet> -->
+
+		<!-- apps -->
+		<!-- Include the entire apps dir -->
+		<fileSet>
+			<directory>src/main/resources/hadoop/apps</directory>
+			<outputDirectory>hadoop/apps/</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+		</fileSet>
+		<!-- Make app bin_sh files executable. -->
+		<!-- <fileSet> <directory>src/main/resources/hadoop/apps/grafana/bin_sh</directory> 
+			<outputDirectory>hadoop/apps/grafana/bin_sh</outputDirectory> <includes> 
+			<include>**</include> </includes> <fileMode>0755</fileMode> <directoryMode>0755</directoryMode> 
+			</fileSet> -->
+<!-- 		<fileSet>
+			<directory>src/main/resources/hadoop/apps/perf_test/bin_sh</directory>
+			<outputDirectory>hadoop/apps/perf_test/bin_sh</outputDirectory>
+			<includes>
+				<include>**</include>
+			</includes>
+			<fileMode>0755</fileMode>
+			<directoryMode>0755</directoryMode>
+		</fileSet> -->
+
+		<!-- plugins (include test jar in the plugins/ dir) -->
+		<!-- Tried moduleSet, dependencySet. None worked. Kludge but works. -->
+<!-- 		<fileSet>
+			<directory>../hadoop-addon-core/target</directory>
+			<outputDirectory>hadoop/plugins</outputDirectory>
+			<includes>
+				<include>**/*tests.jar</include>
+			</includes>
+		</fileSet> -->
 
 		<!-- ==== All === -->
 		<!-- common/etc -->
@@ -773,6 +1078,12 @@
 		<!-- Copy create_rwe to bin_sh/ -->
 		<file>
 			<source>src/main/resources/common/bin_sh/create_rwe</source>
+			<outputDirectory>bin_sh</outputDirectory>
+			<fileMode>0755</fileMode>
+		</file>
+		<!-- Copy install_padogrid to bin_sh/ -->
+		<file>
+			<source>src/main/resources/common/bin_sh/install_padogrid</source>
 			<outputDirectory>bin_sh</outputDirectory>
 			<fileMode>0755</fileMode>
 		</file>

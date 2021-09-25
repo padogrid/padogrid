@@ -1,0 +1,330 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
+
+__options()
+{
+   echo "-rwe -workspace -init -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Open the specified workspace in VSCode
+
+SYNOPSIS
+   $EXECUTABLE [-rwe [rwe_name]] [-workspace [workspace_name]] [-?]
+
+DESCRIPTION
+   Opens the specified workspace in VSCode.
+
+   If no options are specified then the current workspace is opened with its component folders.
+
+   If the '-rwe' option is specified then the current or the specified RWE is opened with
+   workspace folders.
+
+   If the '-workspace' option is specified then the specified workspace is opened its component
+   folders.
+
+   This command requires the 'jq' executable downloadable from the following link.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+   echo -e "   ${CUrl}https://stedolan.github.io/jq/download/${CNone}"
+else
+   echo "   https://stedolan.github.io/jq/download/"
+fi
+cat <<EOF
+
+OPTIONS
+   -init
+             If specified, then it initializes but does not open VS Code.
+
+   -rwe [rwe_name]
+             RWE name. If the rwe_name is not specified, then it defaults to the current RWE.
+
+   -workspace [workspace_name]
+             Workspace name. If workspace_name is not specified then it defaults to the current
+             workspace.
+EOF
+cat <<EOF
+
+DEFAULT
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+echo "   $EXECUTABLE -rwe $RWE_NAME -workspace $WORKSPACE_NAME"
+else
+echo "   $EXECUTABLE"
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*jupyter* *vscode*" $EXECUTABLE
+   exit
+fi
+
+if [ "$OS_NAME" != "DARWIN" ] &&  [[ "$OS_NAME" != "CYGWIN"* ]] && [ "$OS_NAME" != "LINUX" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} This command only supports macOS, Cygwin and Linux. Command aborted."
+   exit 1
+fi
+
+VSCODE_EXECUTABLE="code"
+if [ "$(which $VSCODE_EXECUTABLE 2> /dev/null)" == "" ]; then
+   if [ "$OS_NAME" == "DARWIN" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} The '$VSCODE_EXECUTABLE' execuable not found. To add it to PATH, from VS Code, run the"
+      echo  "       \"Shell Command: Install 'code' command in PATH\" command (available through"
+      echo "       the Command Palette, Shift-Command-P). Command aborted."
+   else
+      echo -e >&2 "${CLightRed}ERROR:${CNone} $VSCODE_EXECUTABLE not found. Command aborted."
+   fi
+   exit 1
+fi
+
+if [ "$(which jq)" == "" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} This command requires the 'jq' executable in your path. You can downlaod it from the following link."
+   echo -e >&2 "       ${CUrl}https://stedolan.github.io/jq/download/${CNone}"
+   exit 1
+fi
+
+if [ "$RWE_ARG" == "" ]; then
+   __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+else
+   RWE_PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+   __RWE_PATH="$RWE_PARENT_DIR/$RWE_ARG"
+   RWE_NAME=$RWE_ARG
+   if [ ! -d "$__RWE_PATH" ]; then
+      echo >&2 "ERROR: Specified RWE does not exist [$RWE_ARG]. Command aborted."
+      exit 1
+   elif [ "$(isValidRwe $RWE_ARG)" == "false" ]; then
+      echo >&2 "ERROR: Specified RWE is not valid [$RWE_ARG]. Command aborted."
+      exit 1
+   fi
+fi
+
+if [ "$WORKSPACE_ARG" != "" ]; then
+   WORKSPACE_NAME="$WORKSPACE_ARG"
+fi
+
+if [ ! -d "$__RWE_PATH/$WORKSPACE_NAME" ]; then
+   echo >&2 "ERROR: Specified workspace does not exist [$WORKSPACE_NAME]. Command aborted."
+   exit 1
+elif [ "$(isValidWorkspace $WORKSPACE_NAME $RWE_NAME)" == "false" ]; then
+   echo >&2 "ERROR: Specified workspace is not valid [$WORKSPACE_NAME]. Command aborted."
+   exit 1
+fi
+
+RWE_CODE_WORKSPACE_FILE_NAME="rwe.code-workspace"
+RWEINIT_FILE_NAME="rwe_vscode.sh"
+WORKSPACE_CODE_WORKSPACE_FILE_NAME="workspace.code-workspace"
+WORKSPACEINIT_FILE_NAME="workspace_vscode.sh"
+
+PADOGRID_ENV_BASE_PATH="$(dirname $PADOGRID_WORKSPACES_HOME)"
+RWE_PATH="$PADOGRID_ENV_BASE_PATH/$RWE_NAME"
+RWE_VSCODE_WORKSPACE_FILE="$RWE_PATH/$RWE_CODE_WORKSPACE_FILE_NAME"
+RWEINIT_VSCODE_FILE="$RWE_PATH/.rwe/$RWEINIT_FILE_NAME"
+WORKSPACE_NAMES=$(list_workspaces -rwe $RWE_NAME)
+WORKSPACE_PATH="$RWE_PATH/$WORKSPACE_NAME"
+WORKSPACE_VSCODE_WORKSPACE_FILE="$WORKSPACE_PATH/$WORKSPACE_CODE_WORKSPACE_FILE_NAME"
+WORKSPACEINIT_VSCODE_FILE="$WORKSPACE_PATH/.workspace/$WORKSPACEINIT_FILE_NAME"
+
+#
+# Creates teh RWE VS Code file if it does not exist.
+#
+function createVscodeRwe
+{
+   if [ -f "$RWE_VSCODE_WORKSPACE_FILE" ]; then
+      # If vscode workspace file exists then update the folders only.
+
+      if [ ! -d "$RWE_PATH/.rwe" ]; then
+         mkdir "$RWE_PATH/.rwe"
+      fi
+   
+      # Write to rwe.code-workspace
+      let i=0
+      JQ_INPUT="del(.folders)"
+      for WORKSPACE_NAME in $WORKSPACE_NAMES; do
+         JQ_INPUT="$JQ_INPUT|.folders[$i].path=\"$WORKSPACE_NAME\""
+         let i=i+1
+      done
+      cat "$RWE_VSCODE_WORKSPACE_FILE" | eval jq '$JQ_INPUT' > "/tmp/$RWE_CODE_WORKSPACE_FILE_NAME"
+      mv "/tmp/$RWE_CODE_WORKSPACE_FILE_NAME" "$RWE_VSCODE_WORKSPACE_FILE"
+   else
+      # Create a new vscode workspace file
+   
+      # Write to rwe.code-workspace
+      echo "{" > "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "  \"settings\": {" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "    \"terminal.integrated.shellArgs.osx\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "      \"--init-file\"," >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "      \"$RWE_PATH/.rwe/rwe_vscode.sh\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "   ]," >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "    \"terminal.integrated.shellArgs.linux\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "      \"--init-file\"," >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "      \"$RWE_PATH/.rwe/rwe_vscode.sh\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "   ]" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "  }," >> "$RWE_VSCODE_WORKSPACE_FILE"
+   
+      COUNT=0
+      echo "  \"folders\": [" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      for WORKSPACE_NAME in $WORKSPACE_NAMES; do
+      if [ $COUNT -gt 0 ]; then
+      echo "    }," >> "$RWE_VSCODE_WORKSPACE_FILE"
+      fi
+      echo "    {" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "      \"path\": \"$WORKSPACE_NAME\"" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      let COUNT=COUNT+1
+      done
+      echo "    }" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "  ]" >> "$RWE_VSCODE_WORKSPACE_FILE"
+      echo "}" >> "$RWE_VSCODE_WORKSPACE_FILE"
+   fi
+   
+   # Write to rwe_vscode.sh
+   echo "#!/usr/bin/env bash" > $RWEINIT_VSCODE_FILE
+   if [ -f "$HOME/.bashrc" ]; then
+      echo ". ~/.bashrc" >> $RWEINIT_VSCODE_FILE
+   elif [ -f "$HOME/.bash_profile" ]; then
+      echo ". ~/.bash_profile" >> $RWEINIT_VSCODE_FILE
+   fi
+   echo ". \"$RWE_PATH/initenv.sh\" -quiet" >> $RWEINIT_VSCODE_FILE
+   echo "switch_rwe $RWE_NAME" >> $RWEINIT_VSCODE_FILE
+}
+
+#
+# Creates VS Code file if it does not exist.
+# @param folders Space-separated component folder paths relative to the workspace folder
+#
+function createVscodeWorkspace
+{
+   local FOLDERS="$1"
+
+   if [ ! -f "$WORKSPACE_VSCODE_WORKSPACE_FILE" ]; then
+      # Create a new vscode workspace file only if the vscode workspace file does not exist.
+
+      if [ ! -d "$WORKSPACE_PATH/.workspace" ]; then
+         mkdir "$WORKSPACE_PATH/.workspace"
+      fi
+   
+      # Write to workspace.code-workspace
+      echo "{" > "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "  \"settings\": {" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "    \"terminal.integrated.shellArgs.osx\": [" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "      \"--init-file\"," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "      \".workspace/$WORKSPACEINIT_FILE_NAME\"" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "   ]," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "    \"terminal.integrated.shellArgs.linux\": [" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "      \"--init-file\"," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "      \".workspace/$WORKSPACEINIT_FILE_NAME\"" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "   ]" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "  }," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+   
+      COUNT=0
+      echo "  \"folders\": [" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "    {" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "      \"path\": \".\"" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      for i in $FOLDERS; do
+         echo "    }," >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+         echo "    {" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+         echo "      \"path\": \"$i\"" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      done
+      echo "    }" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "  ]" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      echo "}" >> "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+   fi
+   # Write to workspace_vscode.sh
+   echo "#!/usr/bin/env bash" > $WORKSPACEINIT_VSCODE_FILE
+   if [ -f "$HOME/.bashrc" ]; then
+      echo ". ~/.bashrc" >> $WORKSPACEINIT_VSCODE_FILE
+   elif [ -f "$HOME/.bash_profile" ]; then
+      echo ". ~/.bash_profile" >> $WORKSPACEINIT_VSCODE_FILE
+   fi
+   echo ". \"$RWE_PATH/initenv.sh\" -quiet" >> $WORKSPACEINIT_VSCODE_FILE
+   echo "switch_rwe $RWE_NAME/$WORKSPACE_NAME" >> $WORKSPACEINIT_VSCODE_FILE
+}
+
+if [ "$RWE_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+   # Create RWE vscode 
+   createVscodeRwe
+
+   if [ "$INIT_SPECIFIED" != "true" ]; then
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         "$VSCODE_EXECUTABLE" "$(sygpath -d $RWE_VSCODE_WORKSPACE_FILE)"
+      else
+         "$VSCODE_EXECUTABLE" "$RWE_VSCODE_WORKSPACE_FILE"
+      fi
+   else
+      echo "RWE VS Code initialized [$RWE_NAME]"
+   fi
+else
+   # Create workspace vscode 
+
+   #First, gather all component folders
+   FOLDERS=""
+   apps=$(list_apps -rwe $RWE_NAME -workspace $WORKSPACE_NAME)
+   clusters=$(list_clusters -rwe $RWE_NAME -workspace $WORKSPACE_NAME)
+   docker=$(list_docker -rwe $RWE_NAME -workspace $WORKSPACE_NAME)
+   k8s=$(list_k8s -rwe $RWE_NAME -workspace $WORKSPACE_NAME)
+   pods=$(list_pods -rwe $RWE_NAME -workspace $WORKSPACE_NAME)
+
+   for i in $apps; do
+      FOLDERS="$FOLDERS apps/$i"
+   done
+   for i in $clusters; do
+      FOLDERS="$FOLDERS clusters/$i"
+   done
+   for i in $docker; do
+      FOLDERS="$FOLDERS docker/$i"
+   done
+   for i in $k8s; do
+      FOLDERS="$FOLDERS k8s/$i"
+   done
+   for i in $pods; do
+      FOLDERS="$FOLDERS pods/$i"
+   done
+
+   createVscodeWorkspace "$FOLDERS"
+   
+   if [ "$INIT_SPECIFIED" != "true" ]; then
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         "$VSCODE_EXECUTABLE" "$(cygpath -d $WORKSPACE_VSCODE_WORKSPACE_FILE)"
+      else
+         "$VSCODE_EXECUTABLE" "$WORKSPACE_VSCODE_WORKSPACE_FILE"
+      fi
+   else
+      echo "Workspace VS Code initialized [$RWE_NAME/$WORKSPACE_NAME]"
+   fi
+fi

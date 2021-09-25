@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -?"
+   echo "-cluster -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,14 +38,14 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Stop all running members in the current padogrid workspace
+   $EXECUTABLE - Stop all running members in the specified cluster
 
 WARNING
    This command does not wait for migration operations to complete before
    terminating members. For graceful shutdown, use 'shutdown_cluster' instead.
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
 
 DESCRIPTION
    Stops all running Hazelcast members by executing 'stop_member' on each
@@ -54,6 +54,9 @@ DESCRIPTION
 OPTIONS
    -cluster cluster_name
              Cluster name.
+
+   -all
+             If specified, then it stops both members and management center.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -68,6 +71,19 @@ SEE ALSO
 EOF
    printSeeAlsoList "*cluster*" $EXECUTABLE
    exit
+fi
+
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
 fi
 
 # 
@@ -92,9 +108,15 @@ if [ "$VM_ENABLED" == "true" ]; then
    VM_KEY=`getClusterProperty "vm.privateKeyFile"`
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
+   elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
    fi
+   MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
    done
    exit
 fi
@@ -117,4 +139,10 @@ for i in ${MEMBER_PREFIX}*; do
       popd > /dev/null 2>&1
    fi
 done
+
+# Stop management center if -all specified.
+if [ "$ALL" == "true" ]; then
+   stop_mc "$@"
+fi
+
 popd > /dev/null 2>&1

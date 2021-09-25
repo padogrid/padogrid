@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -connect -preview -download -workspace -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -checkout -workspace -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,61 +38,89 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Install the specified bundle file in the current padogrid workspace
+   $EXECUTABLE - Install the specified bundle file in the current workspace
 
 WARNING
-   This command OVERWRITES the files in the current padogrid workspace that have
-   the same paths. As a safety measure, it will back up the workspace by executing
-   the 'create_bundle -all' command before  installing the specified bundle.
-
+   Depending on the options specified, this command may overwrite the files in the
+   current padogrid workspace that have the same paths. As a safety measure, it will
+   back up the workspace by executing the 'create_bundle -all' command before  installing
+   the specified bundle.
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-githost github|gitea]  [-branch git_branch] 
-               [-connect https|ssh] [-preview] [-download [-workspace]] [-quiet] [-?] bundle_file_path
+   $EXECUTABLE [-user git_user_name]
+                  [-githost github | gitea]
+                  [-branch git_branch] 
+                  [-connect https | ssh]
+                  [-checkout default | workspace_name]
+                  [-workspace default | workspace_name]
+                  [-preview] [-download]
+                  [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
-   Installs the specified bundle file in the current padogrid workspace. Make
-   sure to terminate all of the conflicting clusters and apps before executing
-   this command. Otherwise, the running processes may produce unpredictable behavior.
+   Installs the specified bundle file in the specified padogrid workspace. If the target
+   workspace exists and has running processes, then make sure to terminate all of the
+   conflicting processes before executing this command; otherwise, the running processes
+   may result in unpredictable state.
+
+   For online bundles, if the 'init_bundle.sh' script exists in the top directory, then it
+   is executed upon completion of bundle installation. The 'init_bundle.sh' script is the
+   entry point for initializing the bundle in a workspace environment; hence, it is executed
+   only if the following options are specified.
+
+      install_bundle -checkout
+      install_bundle -workspace -download
 
 OPTIONS
-   -user
+   -user git_user_name
              Git user name. If specified, then it downloads the specified bundle from user's
              Git repos.
 
-   -githost github|gitea
+   -githost github | gitea
              Git host. Supported git hosts are 'github' and 'gitea'. Default: github.
 
    -branch git_branch
-            Git branch to download. If not specified then the default branch is downloaded.
+             Git branch to download. If not specified then the default branch is downloaded.
 
+   -connect https | ssh
+             Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh'
+             is supported and this option is ignored. To connect to private repos, for 'ssh', you
+             must first deploy your public key, e.g., '~/.ssh/id_rsa.pub', to your repo account, and
+             for 'https', generate a personal access token from the repo account. Please see
+             GitHub documentation for details.
 
-   -connect https|ssh
-             Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh' is supported
-             and this option is ignored. Specify 'ssh' if the bundle repos are private. To connect to
-             private repos, you must first deploy your public key, i.e., ~/.ssh/id_rsa.pub to your repo account.
+             To make 'ssh' default, set GITHUB_PRIVATE_REPO_ENABLED to "true" in the
+             '~/.padogrid/setenv.sh' file as shown below.
+
+             GITHUB_PRIVATE_REPO_ENABLED="true"
 
    -preview
              Do not install but display the bundle contents.
 
    -download
-             Downloads and installs the specified bundle from the remote padogrid
-             bundle repo. To prevent it from installing, specify the '-preview' option.
-             If the '-preview' option is specified, then it downloads and displays the
-             contents but does not install the bundle. You can install the downloaded
-             bundle later by specifying the bundle file path.
+             Downloads and installs the specified bundle from the remote padogrid bundle repo. To
+             prevent it from installing, specify the '-preview' option.  If the '-preview' option is
+             specified, then it downloads and displays the contents but does not install the bundle.
+             You can install the downloaded bundle later by specifying the bundle file path.
 
-   -workspace
-             Workspace Developement Mode. If this option is specified then the bundle is checked out in
-             the form of workspace. By installing the bundle as a workspace, you are able to make changes
-             to the bundle and check in the changes directly from the workspace. This option must
-             be specified with the '-download' option.
+   -checkout default | workspace_name
+             If this option is specified then it checks out the bundle in the specified workspace.
+             If workspace_name is 'default' or unspecified then the bundle name is used as the workspace
+             name.  The new workspace it creates clones the same configuration as the current workspace. 
+             The '-download' option is not necessary for this option as it always downloads the bundle
+             from the repo.
+
+   -workspace default | workspace_name
+             If this option is specified then it installs the bundle in the specified workspace.
+             If workspace_name is 'default' or unspecified then the bundle name is used as the workspace
+             name. The new workspace it creates clones the same configuration as the current workspace. 
+             If the '-download' option is also specified, then it checks out the bundle from the repo.
 
    -quiet
              Quiet mode. Supresses the interactive prompt.
 
    bundle_file_path
               Bundle file path if local or bundle name if download.
+
 
 DEFAULT
    $EXECUTABLE -user padogrid -githost github
@@ -107,8 +135,11 @@ EXAMPLES
    To install a remote bundle:
       $EXECUTABLE -download bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
 
-   To check out a remote bundle as a workspace:
+   To install a remote bundle as a workspace:
       $EXECUTABLE -download -workspace bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
+
+   To check out a remote bundle as a workspace:
+      $EXECUTABLE -checkout bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -136,6 +167,113 @@ fi
 
 BUNDLE_FILE_PATH=${@: -1}
 
+#
+# Returns "true" if one of the specfied product versions match the configured product version.
+#
+# @param product        Product name in lowercase. Valid values are hazelcast, hazecast-enterprise,
+#                       jet, jet-enterprise, geode, gemfire, snappydata, spark, coherence, pado.
+# @param productHome    Product home path, e.g. $HAZELCAST_HOME.
+# @param productVersion Product versions, e.g., "3,4"
+#
+function isProductExist
+{
+   local product=$1          # hazelcast
+   local productHome=$2     # HAZELCAST_HOME
+   local productVersions=$3 # 3,4
+   local found="false"
+   local IFS=','
+   for token in $productVersions; do
+      if [ "$product" == "hazelcast-enterprise" ] && [[ "$productHome" == *"hazelcast-enterprise-$token"* ]]; then
+         found="true"
+         break;
+      elif [ "$product" == "jet-enterprise" ] && [[ "$productHome" == *"jet-enterprise-$token"* ]]; then
+         found="true"
+         break;
+      elif [[ "$productHome" == *"$token"* ]]; then
+         found="true"
+         break;
+      fi
+   done
+   unset IFS
+   echo "$found"
+}
+
+#
+# Returns key/value product pair for the specified bundle name.
+#
+# Example:
+#    getProductKeyValue "bundle-hazelcast-3n4-app-pado"
+#    hazelcast=3,4 
+# 
+# @param bundleName Bundle name
+#
+function getProductKeyValue
+{
+   local bundleName=$1
+   local product=${bundleName#bundle-}
+   product=${product%%-*}
+   version=${bundleName#bundle-$product-}
+   version=${version#training-}
+   version=${version%%-*}
+   version=${version/n/,} 
+   echo "$product=$version"
+}
+
+#
+# Creates .cluster/clusterenv.sh in all bundle clusters. This function is to support the deprecated
+# bundle installation method which relied on a single product/cluster type per workspace. This only
+# addresses a bundle with a single type.
+# 
+# @required PRODUCT
+# @required CLUSTERS
+# @required WORKSPACE_PATH
+# @required CLUSTER_TYPE
+#
+function createClusterEnv
+{
+   __PRODUCT=${PRODUCT%%-enterprise}
+   for cluster in $CLUSTERS; do
+      CLUSTER_DIR="$WORKSPACE_PATH/clusters/$cluster"
+      if [ ! -d "$CLUSTER_DIR/.cluster" ]; then
+         mkdir "$CLUSTER_DIR/.cluster"
+         echo "PRODUCT=$__PRODUCT" > "$CLUSTER_DIR/.cluster/clusterenv.sh"
+         echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$CLUSTER_DIR/.cluster/clusterenv.sh"
+      fi
+    done
+}
+
+if [ "$CHECKOUT_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. Specify either '-checkout' or '-workspace'. Command aborted."
+   exit 1
+fi
+
+# Set arguments. (due to the arg parser limitations, we need to do this here)
+if [ "$CHECKOUT_ARG" == "" ] || [[ "$CHECKOUT_ARG" == "-"* ]]; then
+   if [ "$CHECKOUT_ARG" == "-download" ]; then
+      DOWNLOAD="true"
+   elif [ "$CHECKOUT_ARG" == "-preview" ]; then
+      PREVIEW="true"
+   fi
+   WORKSPACE_NAME="default"
+else
+   WORKSPACE_NAME=$CHECKOUT_ARG
+fi
+if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
+   DOWNLOAD="true"
+fi
+if [ "$WORKSPACE_NAME" == "" ] || [ "$WORKSPACE_NAME" == "default" ]; then
+   if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]]; then
+      if [ "$WORKSPACE_ARG" == "-download" ]; then
+         DOWNLOAD="true"
+      elif [ "$WORKSPACE_ARG" == "-preview" ]; then
+         PREVIEW="true"
+      fi
+      WORKSPACE_NAME="default"
+   else
+      WORKSPACE_NAME=$WORKSPACE_ARG
+   fi
+fi
+
 if [ "$USER" == "" ]; then
    GITHUB_USER="padogrid"
 else
@@ -143,10 +281,15 @@ else
 fi
 if [ "$DOWNLOAD" == "true" ]; then
    IS_DOWNLOAD="true"
-   if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-      GIT_DIR="$PADOGRID_WORKSPACES_HOME/$BUNDLE_FILE_PATH"
+   if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+      if [ "$WORKSPACE_NAME" != "default" ]; then
+         REPO_NAME="$WORKSPACE_NAME"
+      else
+         REPO_NAME="$BUNDLE_FILE_PATH"
+      fi
+      GIT_DIR="$PADOGRID_WORKSPACES_HOME/$REPO_NAME"
       if [ "$QUIET" == "false" ] && [ -d "$GIT_DIR" ]; then
-         echo >&2 "ERROR: The specified bundle workspace already exists. Command aborted."
+         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace already exists. Command aborted."
          exit 1
       fi
    else
@@ -169,9 +312,8 @@ if [ "$DOWNLOAD" == "true" ]; then
          done
       fi
    fi
-
    if [ "$IS_DOWNLOAD" == "true" ]; then
-      if [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+      if [ "$CHECKOUT_SPECIFIED" == "false" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
          if [ -d $GIT_DIR ]; then
             rm -rf $GIT_DIR
          fi
@@ -183,20 +325,123 @@ if [ "$DOWNLOAD" == "true" ]; then
          . $SETENV_FILE
       fi
 
+      GIT_PATH=$PADOGRID_WORKSPACE/bundles/required_products.txt
       if [ "$GITHOST" == "gitea" ]; then
          GITHUB_USER_HOME="$GITEA_SSH_URL:$GITHUB_USER"
+         USER_REPOS_URL="$GITEA_HTTPS_URL/api/v1/user/repos"
+         REPOS_URL="$GITEA_HTTPS_URL/api/v1/repos"
+         AUTH_HEADER="Authorization: token $GITEA_ACCESS_TOKEN"
+         REQUIRED_PRODUCTS_CONTENT_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_FILE_PATH}/contents/required_products.txt"
+         curl -sS -X GET "$REQUIRED_PRODUCTS_CONTENT_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d > $GIT_PATH 2>/dev/null
       else
          if [ "$CONNECT" == "ssh" ] || [ "$GITHUB_PRIVATE_REPO_ENABLED" == "true" ]; then
              GITHUB_USER_HOME="git@github.com:$GITHUB_USER"
          else
              GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
          fi
+         RAW_REQUIRED_PRODUCTS_URL=https://raw.githubusercontent.com/$GITHUB_USER/$BUNDLE_FILE_PATH/master/required_products.txt
+         curl -sS $RAW_REQUIRED_PRODUCTS_URL > $GIT_PATH 2>/dev/null
       fi
       
-      if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+      declare -a requiredProducts
+      declare -a clusterTypes
+      declare -a propArray
+      getPropertiesArray "$GIT_PATH" propArray
+      let len=${#propArray[@]}
+      if [ $len -eq 0 ]; then
+         echo "Using bundle name to determine installed products..."
+      
+         #
+         # Make sure the bundle can be installed in the current environment.
+         #
+         file_name="`basename $BUNDLE_FILE_PATH $0`"
+         keyvalue=$(getProductKeyValue "$file_name")
+      
+         if [[ "$keyvalue" != "hazelcast"* ]] \
+            && [[ "$keyvalue" != "jet"* ]] \
+            && [[ "$keyvalue" != "geode"* ]] \
+            && [[ "$keyvalue" != "gemfire"* ]] \
+            && [[ "$keyvalue" != "snappydata"* ]] \
+            && [[ "$keyvalue" != "spark"* ]] \
+            && [[ "$keyvalue" != "kafka"* ]] \
+            && [[ "$keyvalue" != "hadoop"* ]] \
+            && [[ "$keyvalue" != "coherence"* ]]; then
+            echo -e >&2 "${CLightRed}ERROR:${CNone} Unsupported bundle product name [$keyvalue]. Command aborted."
+            exit 1
+         fi
+         propArray[0]=$keyvalue
+      fi
+      
+      # Determine if the required product versions are available.
+      let len=${#propArray[@]}
+      declare -a unfoundProducts
+      if [ $len -gt 0 ]; then
+         let last_index=len-1
+         for i in $(seq 0 $last_index); do
+            keyvalue=${propArray[$i]}
+            PRODUCT=${keyvalue%%=*}
+            PRODUCT_VERSIONS=${keyvalue#*=}
+            found="false"
+            CLUSTER_TYPE=""
+            if [ "$PRODUCT" == "hazelcast-enterprise" ]; then
+               found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="imdg"
+            elif [ "$PRODUCT" == "hazelcast" ]; then
+               found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="imdg"
+            elif [ "$PRODUCT" == "jet-enterprise" ]; then
+               found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="jet"
+            elif [ "$PRODUCT" == "jet" ]; then
+               found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="jet"
+            elif [ "$PRODUCT" == "geode" ]; then
+               found=$(isProductExist "$PRODUCT" "$GEODE_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="geode"
+            elif [ "$PRODUCT" == "gemfire" ]; then
+               found=$(isProductExist "$PRODUCT" "$GEMFIRE_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="gemfire"
+            elif [ "$PRODUCT" == "snappydata" ]; then
+               found=$(isProductExist "$PRODUCT" "$SNAPPYDATA_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="snappydata"
+            elif [ "$PRODUCT" == "spark" ]; then
+               found=$(isProductExist "$PRODUCT" "$SPARK_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="standalone"
+            elif [ "$PRODUCT" == "coherence" ]; then
+               found=$(isProductExist "$PRODUCT" "$COHERENCE_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="coherence"
+            elif [ "$PRODUCT" == "pado" ]; then
+               found=$(isProductExist "$PRODUCT" "$PADO_HOME" "$PRODUCT_VERSIONS")
+            fi
+            if [ "$found" == "true" ]; then
+                requiredProducts[$i]=$PRODUCT
+                clusterTypes[$i]=$CLUSTER_TYPE
+            else
+                unfoundProducts[$i]=$keyvalue
+            fi
+         done
+      fi
+
+      # Exit if there are unfound versions.
+      let len=${#unfoundProducts[@]}
+      if [ $len -gt 0 ]; then
+         let last_index=len-1
+         echo -e >&2 "${CLightRed}ERROR:${CNone} This bundle requires the following product version(s) configured for the workspace."
+         for i in $(seq 0 $last_index); do
+            echo >&2 "          ${unfoundProducts[$i]}"
+         done
+         echo >&2 ""
+         echo >&2 "       Use the following commands to verify and install products."
+         echo >&2 "          show_products, update_products, install_products, change_version"
+         echo >&2 ""
+         echo >&2 "       Command aborted."
+         exit 1
+      fi
+      
+      if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
          pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1 
-         echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
-         git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
+         echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME
+         git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME> /dev/null 2>&1
          popd > /dev/null 2>&1 
       else
          pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
@@ -206,33 +451,56 @@ if [ "$DOWNLOAD" == "true" ]; then
       fi
 
       if [ ! -d "$GIT_DIR" ]; then
-         echo >&2 "ERROR: The specified bundle does not exist for the user [$GITHUB_USER]."
+         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle does not exist for the user [$GITHUB_USER]."
          exit 1
       fi
       pushd $GIT_DIR > /dev/null 2>&1 
       if [ "$BRANCH" != "" ]; then
          BRANCH_IN_REMOTE=$(git ls-remote --heads origin ${BRANCH})
-	 if [[ -z ${BRANCH_IN_REMOTE} ]]; then
-            echo >&2 "ERROR: The specified branch does not exist: [$BRANCH]. Command aborted."
-	    exit 1
-	 fi
+         if [[ -z ${BRANCH_IN_REMOTE} ]]; then
+            echo -e >&2 "${CLightRed}ERROR:${CNone} The specified branch does not exist: [$BRANCH]. Command aborted."
+            exit 1
+         fi
          git checkout $BRANCH
       fi
       git pull
-      if [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+      if [ "$CHECKOUT_SPECIFIED" == "false" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
          mvn package
       fi
       popd > /dev/null 2>&1 
-      if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+      if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
          # Copy the workspace files
-         create_workspace -name ws-${BUNDLE_FILE_PATH} -product $PRODUCT_HOME -quiet > /dev/null
-         rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/clusters/*
-         cp -r $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/* $GIT_DIR/
-         cp $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
-         rm -rf $PADOGRID_WORKSPACES_HOME/ws-${BUNDLE_FILE_PATH}
+         create_workspace -name __ws-${BUNDLE_FILE_PATH} -product $PRODUCT_HOME -quiet > /dev/null
+         rm -rf $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}/clusters/*
+         cp -r $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}/* $GIT_DIR/
+         cp $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}/.addonenv.sh $GIT_DIR/
+         rm -rf $PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_FILE_PATH}
+
+         if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+            # Remove build files including git
+            if [ -d $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME ]; then
+               pushd $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME > /dev/null 2>&1 
+               rm -rf $(find . -name ".git*")
+               rm -f pom.xml
+               rm -f assembly-descriptor.xml
+               rm -f README_HEADER.md
+            popd > /dev/null 2>&1 
+            fi
+         fi
+
+         CLUSTERS=$(list_clusters -workspace $WORKSPACE_NAME)
+         WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
+         createClusterEnv
+         if [ -f "$WORKSPACE_PATH/init_bundle.sh" ]; then
+            chmod 755 "$WORKSPACE_PATH/init_bundle.sh"
+            pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
+            ./init_bundle.sh "$WORKSPACE_NAME"
+            popd > /dev/null 2>&1 
+         fi
+
          echo ""
-         echo "Bundle workspace created. Switch workspace by executinig the following command:"
-         echo -e "   ${CLightGreen}switch_workspace $BUNDLE_FILE_PATH ${CNone}"
+         echo "Bundle workspace created. Switch workspace by executing the following command:"
+         echo -e "   ${CLightGreen}switch_workspace $REPO_NAME ${CNone}"
          echo ""
          exit
       else
@@ -241,7 +509,7 @@ if [ "$DOWNLOAD" == "true" ]; then
          if [ -f $TARBALL_PATH ]; then
             BUNDLE_FILE_PATH=$TARBALL_PATH
          else
-            echo >&2 "ERROR: File not found. Command aborted."
+            echo -e >&2 "${CLightRed}ERROR:${CNone} File not found. Command aborted."
             exit 1
          fi
       fi
@@ -253,71 +521,54 @@ fi
 if [ ! -f $BUNDLE_FILE_PATH ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "    ERROR: The specified file not found. Command aborted."
+   echo -e >&2 "    ${CLightRed}ERROR:${CNone} The specified file not found. Command aborted."
    echo >&2 "----------------------------------------------------------------"
    exit 1 
 fi
 
-file_name="`basename $BUNDLE_FILE_PATH $0`"
-if [ "$PRODUCT" == "hazelcast" ]; then
-   if [[ "$file_name" == "bundle-hazelcast-"* ]]; then
-      cluster_type="imdg"
-   elif [[ "$file_name" == "bundle-jet-"* ]]; then
-      cluster_type="jet"
-   else
-      echo >&2 "ERROR: Unsupported bundle name. Command aborted."
-      exit 1
-   fi
-elif [[ "$file_name" == "bundle-geode-"* ]]; then
-   cluster_type="geode"
-elif [[ "$file_name" == "bundle-coherence-"* ]]; then
-   cluster_type="coherence"
-elif [[ "$file_name" == "bundle-gemfire-"* ]]; then
-   cluster_type="gemfire"
-elif [[ "$file_name" == "bundle-snappydata-"* ]]; then
-   cluster_type="snappydata"
+
+# Set workspace and its path
+if [ "$WORKSPACE_NAME" != "default" ]; then
+   WORKSPACE=$WORKSPACE_NAME
+   WORKSPACE_PATH="$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME"
 else
-   echo >&2 "ERROR: Unsupported bundle name. Command aborted."
-   exit 1
+   WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+   WORKSPACE_PATH="$PADOGRID_WORKSPACE"
 fi
 
-if [ "$PREVIEW" == "false" ] && [ "$PRODUCT" == "hazelcast" ] && [ "$CLUSTER_TYPE" != "$cluster_type" ]; then
-   echo >&2 "ERROR: Invalid cluster type. This workspace is configured to run \"$CLUSTER_TYPE\""
-   echo >&2 "       but the bundle is for \"$cluster_type\". Command aborted."
-   exit 1
-fi
-
-if [ "$PREVIEW" == "false" ] && [ "$QUIET" == "false" ]; then
-   echo "        WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "Bundle to Install: $BUNDLE_FILE_PATH"
-   echo "   This command installs the specified bundle in the padogrid workspace."
-   echo "   Any conflicting files will be overwritten with the files in the bundle. Note that"
-   echo "   as a safety measure, it will automatically back up the padogrid workspace"
-   echo "   in the 'bundles' directory before installing the specified bundle."
-   echo "Do you want to continue?"
-   echo "(Enter 'continue' + Enter to continue the cluster removal, other keys to abort.)"
-   read INPUT
-   if [ "$INPUT" != "continue" ]; then
-      echo "Bundle installation aborted."
-      exit
+# Display warning message and backup if the workspace exists
+if [ -d "$WORKSPACE_PATH" ] && [ "$PREVIEW" == "false" ]; then
+   if [ "$QUIET" == "false" ]; then
+      echo ""
+      echo "        WORKSPACE: $WORKSPACE_PATH"
+      echo "Bundle to Install: $BUNDLE_FILE_PATH"
+      echo ""
+      echo -e "${CBrownOrange}WARNING:${CNone}"
+      echo "   This command installs the specified bundle in the existing workspace. Any"
+      echo "   conflicting files will be overwritten with the files in the bundle. Note that"
+      echo "   as a safety measure, it will automatically back up the padogrid workspace"
+      echo "   in the 'bundles' directory before installing the specified bundle."
+      echo "Do you want to continue?"
+      echo "(Enter 'continue' + Enter to continue the cluster removal, other keys to abort.)"
+      read INPUT
+      if [ "$INPUT" != "continue" ]; then
+         echo "Bundle installation aborted."
+         exit
+      fi
    fi
-fi
 
-#
-# Backup the entire workspace
-#
-if [ "$PREVIEW" == "false" ]; then
+   # Backup the entire workspace
    BUNDLE_DISPLAY_MESSAGE="Backup Bundle Created:"
    echo ""
    echo "BACKUP"
    echo "------"
-   $SCRIPT_DIR/create_bundle -all -quiet
+   $SCRIPT_DIR/create_bundle -workspace $WORKSPACE -all -quiet
 fi
 
 # 
 # Find all pods, clusters and apps in the bundle
 #
-# Find all clusters
+# Find all pods
 PODS=""
 for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* clusters\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* pods\//pods\//'`; do
    if [[ $i == pods/* ]]; then
@@ -329,6 +580,7 @@ for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* clusters\/.*//' -e 's/^.* 
    fi
 done
 
+# Find all clusters
 CLUSTERS=""
 for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* apps\/.*//' -e 's/^.* k8s\/.*//' -e 's/^.* docker\/.*//' -e 's/^.* clusters\//clusters\//'`; do
    if [[ $i == clusters/* ]]; then
@@ -376,13 +628,22 @@ for i in `tar tzvf $BUNDLE_FILE_PATH | sed  -e 's/^.* pods\/.*//' -e 's/^.* clus
    fi
 done
 
+# Create workspace if it does not exist
+if [ ! -d "$WORKSPACE_PATH" ]; then
+   create_workspace -name $WORKSPACE_NAME -product $PRODUCT_HOME -quiet > /dev/null
+   WORKSPACE_CREATED="true"
+else
+   WORKSPACE_CREATED="false"
+fi
+
 #
 # Install the specified bundle
 # 
 if [ "$PREVIEW" == "true" ]; then
    tar -tzvf $BUNDLE_FILE_PATH
 else
-   tar -C $PADOGRID_WORKSPACE -xzvf $BUNDLE_FILE_PATH
+   tar -C $WORKSPACE_PATH -xzvf $BUNDLE_FILE_PATH
+   createClusterEnv
 fi
 
 echo ""
@@ -394,7 +655,7 @@ else
    echo "---------"
 fi
 if [ "$PREVIEW" == "true" ]; then
-   echo "      Cluster Type: $cluster_type"
+   echo "      Cluster Type: $CLUSTER_TYPE"
    if [ "$DOWNLOAD" == "true" ]; then
    echo " Downloaded Bundle: $BUNDLE_FILE_PATH"
    else
@@ -406,8 +667,8 @@ if [ "$PREVIEW" == "true" ]; then
    echo "    Preview Docker:$DOCKERS"
    echo "      Preiview K8S:$K8S"
 else
-   echo "           WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "        Cluster Type: $cluster_type"
+   echo "           WORKSPACE: $WORKSPACE_PATH"
+   echo "        Cluster Type: $CLUSTER_TYPE"
    echo "              Bundle: $BUNDLE_FILE_PATH"
    echo "    Installed Pod(s):$PODS"
    echo "Installed Cluster(s):$CLUSTERS"
@@ -416,5 +677,11 @@ else
    echo "       Installed K8S:$K8S"
    echo ""
    echo "The specified bundle extracted and installed."
+fi
+
+if [ "$WORKSPACE_CREATED" == "true" ]; then
+   echo ""
+   echo "Bundle workspace created. Switch workspace by executing the following command:"
+   echo -e "   ${CLightGreen}switch_workspace $WORKSPACE_NAME ${CNone}"
 fi
 echo ""

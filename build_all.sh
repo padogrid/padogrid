@@ -24,7 +24,16 @@ SYNOPSIS
 
    coherence-addon-core/README.md
 
+NOTES
+   The man pages are generated using the command usage outputs obtained by executing each
+   command with the '-?' option. The '-?' option may output error messages for those commands
+   that run Java executables if they are not in the class path. You can ignore the error
+   messages and build an incomplete list of man pages or you can set CLASSPATH.
+
 OPTIONS
+   -all
+             If specified, then builds all modules and generates man pages.
+
    -man
              If specified, then generate man pages for all modules.
 

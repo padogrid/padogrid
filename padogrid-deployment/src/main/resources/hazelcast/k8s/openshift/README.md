@@ -16,26 +16,26 @@ This article provides instructions for installing Hazelcast on OCP or CRC.
 │   ├── start_padogrid
 │   ├── stop_hazelcast
 │   └── stop_padogrid
-├── hazelcast
-│   ├── hazelcast-enterprise-rhel.yaml
-│   ├── hazelcast-enterprise.yaml
-│   ├── hazelcast-enterprise.yaml0
-│   ├── hazelcast.yaml
-│   ├── rbac.yaml
-│   ├── service-lb.yaml
-│   ├── service-nodeport.yaml
-│   ├── service-pods-nodeports.yaml
-│   ├── service-pods.yaml
-│   └── wan
-│       ├── hazelcast-enterprise-rhel.yaml
-│       └── hazelcast-enterprise.yaml
-└── padogrid
-    ├── padogrid-no-pvc.yaml
-    ├── padogrid.yaml
-    └── pv-hostPath.yaml
+└── templates
+    ├── hazelcast
+    │   ├── hazelcast-enterprise-rhel.yaml
+    │   ├── hazelcast-enterprise.yaml
+    │   ├── hazelcast.yaml
+    │   ├── rbac.yaml
+    │   ├── service-lb-pods.yaml
+    │   ├── service-lb.yaml
+    │   ├── service-nodeport-pods.yaml
+    │   ├── service-nodeport.yaml
+    │   └── wan
+    │       ├── hazelcast-enterprise-rhel.yaml
+    │       └── hazelcast-enterprise.yaml
+    └── padogrid
+        ├── padogrid-no-pvc.yaml
+        ├── padogrid.yaml
+        └── pv-hostPath.yaml
 ```
 
-There are three (3) templates obtained from the [Hazelcast GitHub repo](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift/hazelcast-cluster) in the `hazelcast` directory. The first two (2) are Hazelcast Enterprise which requires an enterprise license key. The last one is an open source Hazelcast template.
+There are three (3) templates obtained from the [Hazelcast GitHub repo](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift/hazelcast-cluster) in the `template/hazelcast` directory. The first two (2) are Hazelcast Enterprise which requires an enterprise license key. The last one is an open source Hazelcast template.
 
 * **Hazelcast Enterprise RHEL:** template to deploy Hazelcast IMDG Enterprise RHEL onto OpenShift Container Platform, i.e., `registry.connect.redhat.com/hazelcast/hazelcast-4-rhel8:4.0`.
 * **Hazelcast Enterprise:** template to deploy Hazelcast IMDG Enterprise onto OpenShift Container Platform, i.e., `hazelcast/hazelcast-enterprise:4.0`.
@@ -43,12 +43,23 @@ There are three (3) templates obtained from the [Hazelcast GitHub repo](https://
 
 ## 1. Build Local Environment
 
-Run `build_app` which initializes your local environment. This script creates a new OpenShift project using the k8s cluster name. The example shown in this article uses **crc** as the cluster name (and project name).
+Run `build_app` which initializes your local environment. This script creates a new OpenShift project using the k8s cluster name. The example shown in this article uses the environment variable **PROJECT** for both the k8s cluster mame and project name.
 
 ```bash
-cd_k8s crc; cd bin_sh
+# "myocp" is used as the project name throughout this article
+export PROJECT="myocp"
+
+# Build app
+cd_k8s $PROJECT; cd bin_sh
 ./build_app
+
+# If you want to setup wan replication, then specify the '-wan` option as follows.
+# Note that -wan may not work for some OpenShift clusters.
+./build_app -wan
 ```
+
+The `build_app` script creates the `hazelcast` and `padogrid` directories containing Kubernetes `.yaml` files. By default, `build_app` configures three (3) Hazelcast members. You can change the number of members, the node port numbers, etc. by editing the `setenv.sh` file.
+
 ## 2. CRC Users (Optional): Create Mountable Persistent Volumes in Master Node
 
 :exclamation: **This section is optional and only applies to CRC users.**
@@ -79,32 +90,46 @@ We will use the volumes created as follows:
 We can now create the required persistent volumes using **hostPath** by executing the following.
 
 ```bash
-cd_k8s crc; cd padogrid
+cd_k8s $PROJECT; cd padogrid
 oc create -f pv-hostPath.yaml
 ```
 
-## 3. Add User to anyuid SCC (Security Context Constraints)
+## 3. Add User to `nonroot` SCC (Security Context Constraints)
 
-PadoGrid runs as a non-root user that requires read/write permissions to the persistent volume. Let's add your project's default user to the anyuid SCC.
+PadoGrid runs as a non-root user (padogrid/1001) that requires read/write permissions to the persistent volume. Let's add your project's default user to the `nonroot` SCC.
+
+You can use one of the following methods to add the user to `nonroot` SSC.
+
+### 3.1. Using Editor
 
 ```bash
-oc edit scc anyuid
+oc edit scc nonroot
 ```
 
-**anyuid SCC:**
+**nonroot SCC:**
 
-Add your project under the`users:` section. For our example, since our project name is **crc**, we would enter the following.
+Add your project under the`users:` section. For our example, since our project name is **myocp**, we would enter the following.
 
 ```yaml
 users:
-- system:serviceaccount:crc:default
+- system:serviceaccount:myocp:default
 ```
 
-## 4. Create OpenShift secrets
+### 3.2. Using CLI
+
+```bash
+# See if user can use nonroot
+oc adm policy who-can use scc nonroot
+
+# Add user
+oc adm policy add-scc-to-user nonroot system:serviceaccount:myocp:default
+```
+
+:exclamation: Note that depending on the `oc` version, e.g., **v4.5.9**, `oc get scc nonroot -o yaml` may not show the user you added using CLI. This also true for the user added using the editor, which may not be shown in the output of `oc adm policy who-can use scc nonroot`.
+
+## 4. Create Hazelcast Enterprise RHEL regitry secret
 
 _You can skip this step and go to [Step #5](#5-start-hazelcast) if you are running Hazelcast OSS._
-
-### 4.1. Hazelcast Enterprise RHEL
 
 To download the Hazelcast images from the RedHat Registry, i.e., `registry.connect.redhat.com`, you must create a secret using your RedHat account; otherwise, you will get an "unauthorized" error during the image download time.
 
@@ -121,20 +146,19 @@ oc create secret docker-registry rhcc \
 oc secrets link default rhcc --for=pull
 ```
 
-### 4.2. Hazelcast Enterprise RHEL and Hazelcast Enterprise
-
-Let's also create a secret that holds the Hazelcast enterprise license key.
-
-```bash
-# Create hz-enterprise-license secret expected by hazelcast.yaml  
-oc create secret generic hz-enterprise-license --from-literal=key=<hazelcast-enterprise-license-key>
-```
-
 ## 5. Start Hazelcast
 
 ```bash
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
+
+# To start default (Enterprise or OSS depending on your workspace environment)
 ./start_hazelcast
+
+# To start OSS:
+./start_hazelcast -oss
+
+# To start RHEL container
+./start_hazelcast -rhel
 ```
 
 The `start_hazelcast` starts a Hazelcast cluster with one (10) headless cluster IP service and three (3) pod services exposed as follows.
@@ -164,12 +188,12 @@ oc get route
 Output:
 
 ```console
-NAME                        HOST/PORT                                        PATH   SERVICES                    PORT        TERMINATION   WILDCARD
-hazelcast-service-0         hazelcast-service-0-crc.apps-crc.testing                hazelcast-service-0         hazelcast                 None
-hazelcast-service-1         hazelcast-service-1-crc.apps-crc.testing                hazelcast-service-1         hazelcast                 None
-hazelcast-service-2         hazelcast-service-2-crc.apps-crc.testing                hazelcast-service-2         hazelcast                 None
-hazelcast-service-lb        hazelcast-service-lb-crc.apps-crc.testing               hazelcast-service-lb        5701                      None
-management-center-service   management-center-service-crc.apps-crc.testing          management-center-service   8080                      None
+NAME                        HOST/PORT                                          PATH   SERVICES                    PORT        TERMINATION   WILDCARD
+hazelcast-service-0         hazelcast-service-0-myocp.apps-crc.testing                hazelcast-service-0         hazelcast                 None
+hazelcast-service-1         hazelcast-service-1-myocp.apps-crc.testing                hazelcast-service-1         hazelcast                 None
+hazelcast-service-2         hazelcast-service-2-myocp.apps-crc.testing                hazelcast-service-2         hazelcast                 None
+hazelcast-service-lb        hazelcast-service-lb-myocp.apps-crc.testing               hazelcast-service-lb        5701                      None
+management-center-service   management-center-service-myocp.apps-crc.testing          management-center-service   8080                      None
 ```
 
 :exclamation: The `oc` executable version (4.5.9) used for writing this article has a bug that does not properly parse numeric parameters. The following error message is seen if ${HALZELCAST_REPLICAS} is kept in the `hazelcast/hazelcast.yaml` file. 
@@ -196,7 +220,7 @@ To prevent the error, `${HAZELCAST_REPLICAS}` has been replaced with  the numeri
 ## 6. Start PadoGrid
 
 ```bash
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
 
 # If you have not created local-storage
 ./start_padogrid
@@ -206,7 +230,7 @@ cd_k8s crc; cd bin_sh
 
 **Note that Management Center is not available for Hazelcast OSS.**
 
-**URL:** <http://management-center-service-crc.apps-crc.testing>
+**URL:** <http://management-center-service-myocp.apps-crc.testing>
 
 ## 8. Client Applications
 
@@ -215,7 +239,7 @@ cd_k8s crc; cd bin_sh
 You can use the included PadoGrid container as a client to the Hazelcast cluster. 
 
 ```bash
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
 ./login_padogrid_pod
 ```
 
@@ -239,7 +263,7 @@ To connect to the Hazelcast cluster from an external client, you have two choice
    <network>  
       <smart-routing>false</smart-routing>  
       <cluster-members>  
-         <address>hazelcast-service-lb-crc.apps-crc.testing:30000</address>  
+         <address>hazelcast-service-lb-myocp.apps-crc.testing:30000</address>  
       </cluster-members>  
    </network>
 ...
@@ -297,7 +321,7 @@ Enter the master URI, encoded token, and certificate in the `hazelcast-client.xm
    <network>
       <smart-routing>true</smart-routing>
       <kubernetes enabled="true">
-         <namespace>crc</namespace>
+         <namespace>myocp</namespace>
          <service-name>hazelcast-service-lb</service-name>
          <use-public-ip>true</use-public-ip>
          <kubernetes-master>https://api.crc.testing:6443</kubernetes-master>
@@ -442,6 +466,20 @@ cd_app perf_test
 vi etc/hazelcast-client.xml
 ```
 
+#### 8.2.3. Port Forwarding
+
+If the OpenShift node has **socat** installed then you can forward one or more local ports to a pod. Run the provided `listen_hazelcast_port_forward` to forward localhost 5701 to pods.
+
+```bash
+cd_k8s $PROJECT; cd bin_sh
+# The following command blocks.
+./listen_hazelcast_port_forward
+```
+
+If port-forwarding is successful then you can run smart clients (or dummy clients) by connecting to localhost:5701. This means you can simply create and run the `perf_test` app without any modifications.
+
+### 8.3. Running `perf_test`
+
 Run `test_ingestion`:
 
 ```bash
@@ -456,12 +494,21 @@ cd_app perf_test; cd bin_sh
 oc get all --selector app=hazelcast -o name
 
 # To delete all resource objects:  
-cd_k8s crc; cd bin_sh
+cd_k8s $PROJECT; cd bin_sh
 ./cleanup
+
+# Remove user from nonroot SCC
+# Editor - edit scc nonroot and remove the 'system:serviceaccount:myocp:default'
+# from under 'users:'
+oc edit scc nonroot
+
+# CLI
+oc adm policy remove-scc-from-user nonroot system:serviceaccount:myocp:default
 ```
 
 ## References
 
 1. Hazelcast for OpenShift Example, [https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift](https://github.com/hazelcast/hazelcast-code-samples/tree/master/hazelcast-integration/openshift).
 2. Hazelcast Discovery Plugin for Kubernetes, [https://github.com/hazelcast/hazelcast-kubernetes](https://github.com/hazelcast/hazelcast-kubernetes).
+3. Blog: Managing SCCs in OpenShift, [https://www.openshift.com/blog/managing-sccs-in-openshift](https://www.openshift.com/blog/managing-sccs-in-openshift)
 

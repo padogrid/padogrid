@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -long -all -?"
+   echo "-cluster -short -long -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -42,7 +42,7 @@ NAME
                  padogrid workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-long] [-all] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-short | -long] [-all] [-?]
 
 DESCRIPTION
    Displays cluster status.
@@ -51,11 +51,14 @@ OPTIONS
    -cluster cluster_name
              Cluster name.
 
+   -short
+             Displays running status only.
+
    -long
-             Display detailed information.
+             Displays detailed information.
 
    -all
-              Display all clusters
+             Displays all clusters
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -76,10 +79,27 @@ EOF
    exit
 fi
 
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
+
 # Displays short status of a VM cluster.
 # @required VM_HOSTS         A space separated list of VM member hosts (addresses)
 function displayVmClusterShort()
 {
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
    # Members
    MEMBER_COUNT=0
    RUNNING_MEMBER_COUNT=0
@@ -92,23 +112,29 @@ function displayVmClusterShort()
       fi
    done
    
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    echo "         CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "      Deployment: VM"
+   fi
    if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
    echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
+   if [ "$SHORT" == "false" ]; then
    echo "         Version: $COHERENCE_VERSION"
-   echo ""
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
 } # displayVmClusterShort
 
 # Displays long status of a VM cluster.
 function displayVmClusterLong()
 {
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
    COHERENCE_CONFIG_FILE=$ETC_DIR/cache.xml
    MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
@@ -138,13 +164,13 @@ function displayVmClusterLong()
    pushd $RUN_DIR > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
       echo "         CLUSTER: $CLUSTER (default)"
    else
       echo "         CLUSTER: $CLUSTER"
    fi
-   echo "            PRODUCT: $PRODUCT"
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
    echo "      Deployment: VM"
    echo ""
 
@@ -210,6 +236,7 @@ function displayVmClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $COHERENCE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
 } # displayVmClusterLong
 
 # Displays short status of a local/pod cluster.
@@ -258,12 +285,14 @@ function displayClusterShort()
       done
       popd > /dev/null 2>&1
    fi
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    echo "         CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "             POD: $POD"
    echo "        POD_TYPE: $POD_TYPE"
+   fi
    if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
    echo -e " Members Running: ${CYellow}Unknown${CNone}"
    elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
@@ -271,8 +300,10 @@ function displayClusterShort()
    else
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
+   if [ "$SHORT" == "false" ]; then
    echo "         Version: $COHERENCE_VERSION"
-   echo ""
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
 } # dispalyClusterShort
 
 # Displays long status of a local/pod cluster.
@@ -316,12 +347,12 @@ function displayClusterLong()
    pushd $RUN_DIR > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
       echo "         CLUSTER: $CLUSTER (default)"
    else
       echo "         CLUSTER: $CLUSTER"
    fi
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "             POD: $POD"
@@ -430,6 +461,7 @@ function displayClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $COHERENCE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
 
@@ -452,10 +484,10 @@ if [ "$VM_ENABLED" == "true" ]; then
    VM_HOSTS=$(getClusterProperty "vm.hosts")
    if [ "$VM_HOSTS" == "" ]; then
       echo "----------------------------------------------------------------"
-      echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
-      echo "           $ETC_DIR/cluster.properties"
-      echo "           Command aborted."
+      echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      echo "       ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "              $ETC_DIR/cluster.properties"
+      echo "              Command aborted."
       echo "----------------------------------------------------------------"
       exit 1
    fi
@@ -507,25 +539,43 @@ if [ "$ALL" == "true" ]; then
    fi
 
    echo "----------------------------------------------------------------"
-   echo "      Clusters: $CLUSTERS"
+   echo "Clusters: $CLUSTERS"
    echo "----------------------------------------------------------------"
    echo ""
 
+   THIS_PRODUCT=$PRODUCT
    if [ "$LONG" == "false" ]; then 
       # Short display -all
       for CLUSTER in ${CLUSTERS}; do
-         displayClusterShort
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterShort
+         else
+           if [ "$SHORT" == "true" ]; then
+              SHORT_OPT="-short"
+           else
+              SHORT_OPT=""
+           fi
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -cluster $CLUSTER $SHORT_OPT
+         fi
+         echo ""
       done
    else
       # Long display -all
       for CLUSTER in ${CLUSTERS}; do
-         displayClusterLong
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterLong
+         else
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -long -cluster $CLUSTER
+         fi
+         echo ""
       done
    fi
 
    echo "----------------------------------------------------------------"
    popd > /dev/null 2>&1
-   echo "      Clusters: $CLUSTERS"
+   echo "Clusters: $CLUSTERS"
    echo "----------------------------------------------------------------"
 
 else

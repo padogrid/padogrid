@@ -1,0 +1,224 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: hazelcast
+  annotations:
+    description: "Openshift deployment template for Hazelcast"
+    tags: "hazelcast, imdg, datagrid, inmemory, kvstore, nosql, java"
+    iconClass: "icon-java"
+labels:
+  template: hazelcast-openshift-template
+
+parameters:
+- name: HAZELCAST_IMAGE
+  description: "Defines the location of Hazelcast image"
+  value: registry.connect.redhat.com/hazelcast/hazelcast-enterprise-4-rhel8:4.0.2
+  required: true
+- name: SERVICE_NAME
+  description: "Defines the service name of the POD to lookup of Kubernetes"
+  value: hazelcast-service
+  required: true
+- name: NAMESPACE
+  description: "Defines the namespace (project name) of the application POD of Kubernetes"
+  required: false
+- name: HAZELCAST_REPLICAS
+  description: "Number of Hazelcast members"
+  value: "3"
+  required: true
+- name: ENTERPRISE_LICENSE_KEY
+  description: "Defines Hazelcast Enterprise License Key, please enter your License"
+  required": true
+- name: MANAGEMENT_CENTER_IMAGE
+  description: "Defines the location of Hazelcast Management Center image"
+  value: registry.connect.redhat.com/hazelcast/management-center-4-rhel8:4.0.3-1
+  required: true
+- name: MANAGEMENT_CENTER_SERVICE_NAME
+  description: "Defines the service name of Management Center"
+  value: management-center-service
+  required: true
+
+objects:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: hazelcast-configuration
+  data:
+    hazelcast.yaml: |-
+      hazelcast:
+        cluster-name: dev
+        network:
+          join:
+            multicast:
+              enabled: false
+            kubernetes:
+              enabled: true
+          rest-api:
+            enabled: true
+            endpoint-groups:
+              CLUSTER_READ:
+                enabled: true
+              CLUSTER_WRITE:
+                enabled: true
+              HEALTH_CHECK:
+                enabled: true
+              HOT_RESTART:
+                enabled: true
+              WAN:
+                enabled: false
+              DATA:
+                enabled: true
+
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: hazelcast
+    labels:
+      app: hazelcast
+      role: hazelcast
+  spec:
+    replicas: ${HAZELCAST_REPLICAS}
+    selector:
+      matchLabels:
+        app: hazelcast
+        role: hazelcast
+    template:
+      metadata:
+        labels:
+          app: hazelcast
+          role: hazelcast
+      spec:
+        containers:
+        - name: hazelcast-openshift
+          image: ${HAZELCAST_IMAGE}
+          ports:
+          - name: hazelcast
+            containerPort: 5701
+          livenessProbe:
+            httpGet:
+              path: /hazelcast/health/node-state
+              port: 5701
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /hazelcast/health/node-state
+              port: 5701
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 1
+          volumeMounts:
+          - name: hazelcast-storage
+            mountPath: /data/hazelcast
+          env:
+          - name: HAZELCAST_KUBERNETES_SERVICE_DNS
+            value: ${SERVICE_NAME}.${NAMESPACE}.svc.cluster.local
+          - name: HZ_LICENSE_KEY
+            value: ${ENTERPRISE_LICENSE_KEY}
+          - name: HZ_DATA
+            value: /data/hazelcast
+          - name: JAVA_OPTS
+            value: "-Dhazelcast.config=/data/hazelcast/hazelcast.yaml -Dnamespace=${NAMESPACE}"
+        volumes:
+        - name: hazelcast-storage
+          configMap:
+            name: hazelcast-configuration
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${SERVICE_NAME}
+  spec:
+    type: ClusterIP
+    clusterIP: None
+    selector:
+      app: hazelcast
+      role: hazelcast
+    ports:
+    - protocol: TCP
+      port: 5701
+
+- kind: PersistentVolumeClaim
+  apiVersion: v1
+  metadata:
+    name: management-center-volume
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: management-center
+    labels:
+      app: hazelcast
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: hazelcast
+        role: mancenter
+    template:
+      metadata:
+        labels:
+          app: hazelcast
+          role: mancenter
+      spec:
+        containers:
+        - name: management-center
+          image: ${MANAGEMENT_CENTER_IMAGE}
+          resources:
+            limits:
+              memory: 1Gi
+          ports:
+          - name: mancenter
+            containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 15
+            successThreshold: 1
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 15
+            successThreshold: 1
+            failureThreshold: 10
+          volumeMounts:
+          - name: mancenter-storage
+            mountPath: /data
+          env:
+          - name: MC_INIT_CMD
+            value: "./mc-conf.sh cluster add -H /data -cn dev -ma ${SERVICE_NAME}.${NAMESPACE}.svc.cluster.local"
+        volumes:
+        - name: mancenter-storage
+          persistentVolumeClaim:
+            claimName: management-center-volume
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${MANAGEMENT_CENTER_SERVICE_NAME}
+  spec:
+    type: ClusterIP
+    clusterIP: None
+    selector:
+      app: hazelcast
+      role: mancenter
+    ports:
+    - protocol: TCP
+      port: 8080

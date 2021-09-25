@@ -11,7 +11,7 @@ NAME
    $EXECUTABLE - Build padogrid along with all required files such as Unix man pages
 
 SYNOPSIS
-   ./$EXECUTABLE [-man] [-coherence] [-?]
+   ./$EXECUTABLE [-all] [-man] [-coherence] [-?]
 
    Builds padogrid without man pages and Coherence by default.
     
@@ -29,7 +29,16 @@ SYNOPSIS
 
    coherence-addon-core/README.md
 
+NOTES
+   The man pages are generated using the command usage outputs obtained by executing each
+   command with the '-?' option. The '-?' option may output error messages for those commands
+   that run Java executables if they are not in the class path. You can ignore the error
+   messages and build an incomplete list of man pages or you can set CLASSPATH.
+
 OPTIONS
+   -all
+             If specified, then builds all modules and generates man pages.
+
    -man
              If specified, then generate man pages for all modules.
 

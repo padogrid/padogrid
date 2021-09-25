@@ -56,7 +56,6 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # DEFAULT_MAX_HEAP_SIZE  Maximum heap size. Used initially when the cluster is created.  
 # ----------------------------------------------------------------------------------------------------
 
-
 # 
 # Unset variables
 # 
@@ -93,12 +92,16 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
+DEFAULT_PADO_CLUSTER="mypado"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
+DEFAULT_SPARK_CLUSTER="myspark"
+DEFAULT_KAFKA_CLUSTER="mykafka"
+DEFAULT_HADOOP_CLUSTER="myhadoop"
 DEFAULT_CLUSTER="$DEFAULT_GEODE_CLUSTER"
 
 #
@@ -231,6 +234,21 @@ DEFAULT_LOCATOR_JMX_ENABLED=false
 DEFAULT_JMX_ENABLED=true
 
 #
+# Enable/disable PadoWeb HTTPS
+#
+DEFAULT_PADOWEB_HTTPS_ENABLED=false
+
+#
+# Default PadoWeb host and ports. These values are initially set
+# in $ETC_DIR/cluster.properties when a new cluster is created using the 'create_cluster'
+# command. You can change them later in the cluster.properties file.
+#
+DEFAULT_PADOWEB_HOST=localhost
+DEFAULT_PADOWEB_HTTP_PORT=8080
+DEFAULT_PADOWEB_HTTPS_PORT=8443
+DEFAULT_PADOWEB_CONTEXT_PATH="/"
+
+#
 # Default Pulse port numbers. These values are initially set in $ETC_DIR/cluster.properties
 # when a new cluster is created using the 'create_cluster' command. You can change them later
 # in the cluster.properties file.
@@ -299,7 +317,7 @@ MAX_MEMBER_COUNT=20
 #
 # Source in setenv.sh that contains user configured variables
 #
-if [ -f $SCRIPT_DIR/setenv.sh ]; then
+if [ -f "$SCRIPT_DIR/setenv.sh" ]; then
    # CLUSTER and POD options override setenv.sh
    __CLUSTER=$CLUSTER
    __POD=$POD
@@ -322,12 +340,35 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
 fi
 
 #
-# Source in the workspaces setenv.sh file (mainly for license keys)
+# Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)
 #
-if [ -f "$PADOGRID_WORKSPACE/../setenv.sh" ]; then
+# First, reset product paths for local pods. This is required in case the user
+# switches contexts.
+if [ "$IN_POD" != "true" ]; then
+   export PADOGRID_HOME=""
+   export PADO_HOME=""
+   export JAVA_HOME=""
+   export COHERENCE_HOME=""
+   export GEMFIRE_HOME=""
+   export GEODE_HOME=""
+   export HAZELCAST_HOME=""
+   export HAZELCAST_MC_HOME=""
+   export JET_HOME=""
+   export JET_MC_HOME=""
+   export SNAPPYDATA_HOME=""
+   export SPARK_HOME=""
+   export KAFKA_HOME=""
+   export HADOOP_HOME=""
+   export PRODUCT_HOME=""
+fi
+# Source in setenv.sh
+if [ -f "$PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then
    __SCRIPT_DIR=$SCRIPT_DIR
    __PADOGRID_WORKSPACE=$PADOGRID_WORKSPACE
-   . $PADOGRID_WORKSPACE/../setenv.sh
+   . $PADOGRID_WORKSPACES_HOME/setenv.sh
+   if [ -f "$PADOGRID_WORKSPACE/setenv.sh" ]; then
+      . $PADOGRID_WORKSPACE/setenv.sh
+   fi
    SCRIPT_DIR=$__SCRIPT_DIR
    export PADOGRID_WORKSPACE=$__PADOGRID_WORKSPACE
 fi
@@ -368,7 +409,16 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark kafka hadoop"
+
+# Supported Docker Products
+DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
+
+# Supported Kubernetes Products
+K8S_PRODUCT_LIST="geode hazelcast jet"
+
+# Supported App Products
+APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
@@ -425,14 +475,25 @@ fi
 # Set CLUSTER to the default cluster set in setenv.sh if it 
 # is not specified.
 if [ -z $CLUSTER ]; then
-   CLUSTER=$DEFAULT_CLUSTER
+   retrieveWorkspaceEnvFile
 fi
 
 if [ -z $CLUSTERS_DIR ]; then
-   CLUSTERS_DIR=$BASE_DIR/clusters
+   if [ "$PADOGRID_WORKSPACE" == "" ]; then
+      CLUSTERS_DIR=$BASE_DIR/clusters
+   else
+      CLUSTERS_DIR=$PADOGRID_WORKSPACE/clusters
+   fi
 fi
 
 CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+
+# Source in cluster file to get the product and cluster type
+THIS_PRODUCT=$PRODUCT
+THIS_CLUSTER_TYPE=$CLUSTER_TYPE
+
+# Retrieve PRODUCT and CLUSTER_TYPE
+retrieveClusterEnvFile
 
 # Parent directory of member working directories
 RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
@@ -465,12 +526,78 @@ fi
 LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
 
 #
+# Remove the previous paths from PATH to prevent duplicates
+#
+CLEANED_PATH=""
+__IFS=$IFS
+IFS=":"
+PATH_ARRAY=($PATH)
+for i in "${PATH_ARRAY[@]}"; do
+   if [ "$i" == "$JAVA_HOME/bin" ]; then
+      continue;
+   elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
+      continue;
+   elif [ "$PRODUCT_HOME" != "" ] && [[ "$i" == "$PRODUCT_HOME"** ]]; then
+      continue;
+   elif [ "$COHERENCE_HOME" != "" ] && [[ "$i" == "$COHERENCE_HOME"** ]]; then
+      continue;
+   elif [ "$GEODE_HOME" != "" ] && [[ "$i" == "$GEODE_HOME"** ]]; then
+      continue;
+   elif [ "$GEMFIRE_HOME" != "" ] && [[ "$i" == "$GEMFIRE_HOME"** ]]; then
+      continue;
+   elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
+      continue;
+   elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
+      continue;
+   elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
+      continue;
+   elif [ "$SPARK_HOME" != "" ] && [[ "$i" == "$SPARK_HOME"** ]]; then
+      continue;
+   elif [ "$KAFKA_HOME" != "" ] && [[ "$i" == "$KAFKA_HOME"** ]]; then
+      continue;
+   elif [ "$HADOOP_HOME" != "" ] && [[ "$i" == "$HADOOP_HOME"** ]]; then
+      continue;
+   fi
+   if [ "$CLEANED_PATH" == "" ]; then
+      CLEANED_PATH="$i"
+   else
+      CLEANED_PATH="$CLEANED_PATH:$i"
+   fi
+done
+IFS=$__IFS
+
+# Export cleaned PATH
+PATH="$CLEANED_PATH"
+
+#
 # PATH
 #
 if [ "$JAVA_HOME" != "" ] && [[ "$PATH" != "$JAVA_HOME"** ]]; then
    export PATH="$JAVA_HOME/bin:$PATH"
 fi
-export PATH="$SCRIPT_DIR:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
+
+# PATH Depends on PRODUCT_HOME due to switch_workspace which does not have cluster info.
+# We need to change that accordingly here.
+# Also, set PRODUCT to "geode" to override "gemfire". This is required due to both products
+# sharing the same resources under the name "geode".
+export PRODUCT="geode"
+if [ "$CLUSTER_TYPE_SPECIFIED" == "false" ]; then
+   if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
+      export CLUSTER_TYPE="gemfire"
+   elif [[ "$PRODUCT_HOME" == *"geode"* ]]; then
+      export CLUSTER_TYPE="geode"
+   fi
+fi
+if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+   IS_GEODE_ENTERPRISE=true
+   export PRODUCT_HOME="$GEMFIRE_HOME"
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
+else
+   IS_GEODE_ENTERPRISE=false
+   export CLUSTER_TYPE="geode"
+   export PRODUCT_HOME="$GEODE_HOME"
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
+fi
 
 #
 # Java executable
@@ -484,32 +611,19 @@ fi
 #
 # Java version
 #
-JAVA_VERSION=$($JAVA -version 2>&1)
-JAVA_VERSION=$(echo $JAVA_VERSION | sed -e 's/.* "//' -e 's/" .*//')
+__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+JAVA_VERSION=$(eval $__COMMAND)
+JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
 JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 
 #
-# GEODE_VERSION/PRODUCT_VERSION: Determine the Geode version
-#
+# GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
+# Geode and GemFire share the same 'geode' prefix for jar names.
 GEODE_VERSION=""
-IS_GEODE_ENTERPRISE=false
-CLUSTER_TYPE="geode"
-if [ "$GEODE_HOME" == "" ]; then
-   CLUSTER_TYPE="geode"
-else
-   GEMFIRE_CHECK=$(ls $GEODE_HOME/Pivotal* 2> /dev/null | wc -l)
-   if [ "$GEMFIRE_CHECK" -eq 0 ]; then
-      GEMFIRE_CHECK=$(ls $GEODE_HOME/VMware* 2> /dev/null | wc -l)
-   fi
-   if [ "$GEMFIRE_CHECK" -gt 0 ]; then
-      IS_GEODE_ENTERPRISE=true
-      CLUSTER_TYPE="gemfire"
-   fi
-   for file in $GEODE_HOME/lib/geode-core-*; do
-      file=${file##*geode\-core\-}
-      GEODE_VERSION=${file%.jar}
-   done
-fi
+for file in "$PRODUCT_HOME/lib/geode-core-"*; do
+   file=${file##*geode\-core\-}
+   GEODE_VERSION=${file%.jar}
+done
 if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then
    RUN_TYPE="pado"
 else
@@ -536,6 +650,7 @@ if [ "$CLASSPATH" != "" ]; then
 fi
 if [ "$__CLASSPATH" == "" ]; then
 __CLASSPATH="$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
+
 else
 __CLASSPATH="$__CLASSPATH:$CLUSTER_DIR/plugins/*:$CLUSTER_DIR/lib/*"
 fi
@@ -544,32 +659,21 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-__CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/*"
+if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+   __CLASSPATH="$__CLASSPATH:$GEMFIRE_HOME/lib/geode-dependencies.jar"
+else
+   __CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/geode-dependencies.jar"
+fi
+if [ "$RUN_TYPE" == "pado" ]; then
+   __CLASSPATH="$__CLASSPATH:$PADO_HOME/plugins/*"
+fi
+
 export CLASSPATH="$__CLASSPATH"
 
 #
 # Source in cluster specific setenv.sh
 #
 RUN_SCRIPT=
-if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
-   . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
+if [ -f "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh" ] && [ "$1" != "-options" ]; then
+   . "$CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh"
 fi
-
-# Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'

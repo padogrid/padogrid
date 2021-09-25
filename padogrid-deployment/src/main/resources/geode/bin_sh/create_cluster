@@ -19,11 +19,15 @@
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 . $SCRIPT_DIR/.addonenv.sh
 
+# Set PRODUCT here. This is necessary due to the default product read from
+# the RWE setenv.sh by the above .addonenv.sh
+PRODUCT="geode"
+
 EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -type -pod -vm -locator -port -?"
+   echo "-cluster -type -pod -vm -locator -padoweb -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,7 +42,7 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Create a new cluster in the current padogrid workspace
+   $EXECUTABLE - Create a new cluster in the current workspace
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name]
@@ -46,6 +50,7 @@ SYNOPSIS
                [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-locator comma_separated_locator_hosts]
+               [-padoweb padoweb_host]
                [-port first_locator_port_number] [-?]
 
 DESCRIPTION
@@ -60,12 +65,13 @@ OPTIONS
              to all member names.
 
    -type default|pado
-             If the 'pado' option is specified, then it creates a Pado cluster that provide
+             If the 'pado' option is specified, then it creates a Pado cluster that includes
              full support for grid federation. The 'default' option creates a normal cluster
              without any Pado dependencies.
   
    -pod pod_name
-             Pod name. The 'local' pod is the local machine.
+             Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
+             option. 
              Default: local
 
    -vm [comma_separated_hosts]
@@ -74,12 +80,24 @@ OPTIONS
              specified, then the host list defined by VM_HOSTS in the workspace
              'setenv.sh' file is applied.
 
+             If the '-pod' option is specified then this option is suppressed.
+
    -locator comma_separated_locator_hosts
              A list of locator hosts or addresses separated by comma. If the list
              contains spaces then enclosed it in quotes. This option is meaningful
-             only if the '-vm' option is specified. If this option is not specified
-             but the '-vm' option is specified, then the first host from the '-vm'
-             host list is selected for the locator.
+             only if the '-vm' option is specified. 
+
+             If this option is not specified and the '-pod' option is specified then
+             the primary node is used for the locator.
+
+             If this option is not specified but the '-vm' option is specified, then
+             the first host from the '-vm' host list is selected for the locator.
+
+   -padoweb padoweb_host
+             PadoWeb host name. This option is meaningful only if the '-vm' option
+             is specified. If this option is not specified but the '-vm' option is
+             specified, then the first host from the '-vm' host list is selected
+             for PadoWeb.
 
    -port first_locator_port_number
              First locator's port number. Port number is incremented
@@ -91,6 +109,10 @@ OPTIONS
              is added to the member's default port number of $DEFAULT_MEMBER_START_PORT
              to obtain the port number 40406 for the member's first port number.
              Similarly, the JMX Manager's first HTTP port number would be 7072 ($DEFAULT_JMX_MANAGER_HTTP_START_PORT+2).
+
+             This option applies only for a cluster running locally. It is ignored
+             for creating non-local pod and VM clusters.
+
              Default: $DEFAULT_LOCATOR_START_PORT 
 
 EOF
@@ -130,10 +152,14 @@ if [ -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ "$VM_SPECIFIED" == "true" ]; then
+# Suppress pod if VM specified
+#if [ "$VM_SPECIFIED" == "true" ]; then
+#   POD="local"
+#fi
+
+if [ "$POD_SPECIFIED" == "false" ]; then
    POD="local"
 fi
-
 if [ "`isPodExist $POD`" == "false" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -155,8 +181,17 @@ if [ "$TYPE_ARG" == "pado" ]; then
   fi
 fi
 
+# If -product (hidden option) is specified then make it default. This effectively
+# provides a way to create any product clusters in the same workspace.
+if [ "$PRODUCT_ARG" != "" ]; then
+   PRODUCT=$PRODUCT_ARG
+fi
+
 function writeCluster() 
 {
+   # Update cluster env file with PRODUCT and CLUSTER_TYPE
+   updateClusterEnvFile
+
    # Copy the template gemfire.properties file
    cp $BASE_DIR/etc/template-gemfire.properties $ETC_DIR/gemfire.properties
    # Copy the template cache.xml file
@@ -187,7 +222,7 @@ function writeCluster()
    echo "# if [[ \${OS_NAME} == CYGWIN* ]]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    HIBERNATE_CONFIG_FILE=\"\$(cygpath -wp \"\$HIBERNATE_CONFIG_FILE\")\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# JAVA_OPTS=\"$JAVA_OPTS --J=-Dpadogrid.hibernate.config=$HIBERNATE_CONFIG_FILE\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# JAVA_OPTS=\"$JAVA_OPTS --J=-Dgeode-addon.hibernate.config=$HIBERNATE_CONFIG_FILE\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# To use Hibernate backed CacheWriterLoaderPkDbImpl, set the following property and" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# configure CacheWriterLoaderPkDbImpl in the \$CLUSTER_DIR/etc/cache.xml file." >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -198,8 +233,8 @@ function writeCluster()
    echo "# directory. CLASSPATH includes all the jar files in that directory for" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# the apps and clusters running in this workspace." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dpadogrid.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dpadogrid.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dgeode-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dgeode-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Set RUN_SCRIPT. Absolute path required." >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -320,6 +355,15 @@ function writeCluster()
    echo "# Default GC log file flag. If true then GC information is logged in a separate log file." >> $ETC_DIR/cluster.properties
    echo "gc.log.file.enabled=$DEFAULT_GC_LOG_FILE_ENABLED" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
+   if [ "$TYPE_ARG" == "pado" ]; then
+      echo "# PadoWeb properties" >> $ETC_DIR/cluster.properties
+      echo "padoweb.host=$PADOWEB_HOST" >> $ETC_DIR/cluster.properties
+      echo "padoweb.http.port=$NEW_PADOWEB_HTTP_PORT" >> $ETC_DIR/cluster.properties
+      echo "padoweb.https.port=$NEW_PADOWEB_HTTPS_PORT" >> $ETC_DIR/cluster.properties
+      echo "padoweb.https.enabled=false" >> $ETC_DIR/cluster.properties
+      echo "padoweb.contextPath=$DEFAULT_PADOWEB_CONTEXT_PATH" >> $ETC_DIR/cluster.properties
+      echo "" >> $ETC_DIR/cluster.properties
+   fi
    
    # VM
    echo "# Enable/disable VM cluster" >> $ETC_DIR/cluster.properties
@@ -357,31 +401,32 @@ function writeCluster()
       cp -r $PADO_HOME/data $CLUSTER_DIR/
       cp -r $PADO_HOME/db $CLUSTER_DIR/
       cp -r $PADO_HOME/etc/pado1_0.dtd $ETC_DIR/
-      #cp -r $PADO_HOME/etc/mygrid $ETC_DIR/$CLUSTER
-      #cp -r $PADO_HOME/etc/mygrid/server.xml $ETC_DIR/cache.xml
+      cp -r $PADO_HOME/etc/client $ETC_DIR/
       cp -r $PADO_HOME/lang $CLUSTER_DIR/
       cp -r $PADO_HOME/ldap $CLUSTER_DIR/
-      cp -r $PADO_HOME/plugins $CLUSTER_DIR/
       cp -r $PADO_HOME/script $CLUSTER_DIR/
       cp -r $PADO_HOME/security $CLUSTER_DIR/
       sed "s/mygrid/$CLUSTER/g" $PADO_HOME/data/template/scheduler/etc/db-example.json > $CLUSTER_DIR/data/template/scheduler/etc/db-example.json
       sed "s/mygrid/$CLUSTER/g" $PADO_HOME/data/template/scheduler/README_SCHEDULER.txt > $CLUSTER_DIR/data/template/scheduler/README_SCHEDULER.txt
-      #sed "s/mygrid/$CLUSTER/g" $PADO_HOME/etc/mygrid/pado.xml > $ETC_DIR/$CLUSTER/pado.xml
-      #sed "s/mygrid/$CLUSTER/g" $PADO_HOME/etc/mygrid/pado.properties > $ETC_DIR/$CLUSTER/pado.properties
-      #sed "s/mygrid/$CLUSTER/g" $PADO_HOME/etc/mygrid/app/test.xml > $ETC_DIR/$CLUSTER/app/test.xml
       sed "s/mygrid/$CLUSTER/g" $PADO_HOME/ldap/example/newco-all.ldif > $CLUSTER_DIR/ldap/example/newco-all.ldif
       mv $CLUSTER_DIR/security/client/mygrid-user.keystore $CLUSTER_DIR/security/client/$CLUSTER-user.keystore
       mv $CLUSTER_DIR/data/template/scheduler/schema/mygrid-grid_path.schema $CLUSTER_DIR/data/template/scheduler/schema/$CLUSTER-grid_path.schema
       # Pado specifics maintained by PadoGrid
       cp -r $PADOGRID_HOME/geode/pado/* $CLUSTER_DIR/
       cp -r $PADOGRID_HOME/geode/pado/etc/grid/server.xml $CLUSTER_DIR/etc/cache.xml
+
+      # Generate pado.xml
+      sed -e "s/\${GRID_ID}/$CLUSTER/g" \
+          $PADOGRID_HOME/geode/pado/etc/grid/template-pado.xml \
+          | tr '|' '\n' \
+          > $CLUSTER_DIR/etc/grid/pado.xml
    fi
 }
 
 # 
 # VM cluster
 #
-if [ $"VM_SPECIFIED" == "true" ]; then
+if [ "$VM_SPECIFIED" == "true" ] && [ "$POD" == "local" ]; then
    VM_ENABLED="true"
 fi
 if [ "$VM_USER" == "" ]; then
@@ -393,6 +438,7 @@ if [ "$VM_ENABLED" == "true" ]; then
       VM_HOSTS="$VM_HOSTS_ARG"
    fi
 
+   # Default locator host
    if [ "$LOCATOR" == "" ]; then
       # Extract the first host from the VM host list
       VM_LOCATOR_HOSTS=${VM_HOSTS%%,*}
@@ -403,12 +449,26 @@ if [ "$VM_ENABLED" == "true" ]; then
       echo "WARNING: VM locator host\(s\) undefined. Configuring with this host."
       VM_LOCATOR_HOSTS=`hostname`
    fi
+   
+   # PadoWeb
+   if [ "$PADOWEB" == "" ]; then
+      # Extract the first host from the VM host list
+      VM_PADOWEB_HOSTS=${VM_HOSTS%%,*}
+   else
+      VM_PADOWEB_HOSTS=$PADOWEB
+   fi
+   if [ "$VM_PADOWEB_HOSTS" == "" ]; then
+      echo "WARNING: VM padoweb host\(s\) undefined. Configuring with this host."
+      VM_PADOWEB_HOSTS=`hostname`
+   fi
+
    if [ "$VM_HOSTS" == "" ]; then
       echo "WARNING: VM hosts undefined. Configuring with this host."
       VM_HOSTS=`hostname`
    fi
 else
    VM_LOCATOR_HOSTS=`hostname`
+   VM_PADOWEB_HOSTS=`hostname`
    VM_HOSTS=`hostname`
 fi
 
@@ -443,6 +503,8 @@ if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "
    NEW_PROMETHEUS_START_PORT=$DEFAULT_PROMETHEUS_START_PORT
    NEW_JMX_MANAGER_HTTP_START_PORT=$DEFAULT_JMX_MANAGER_HTTP_START_PORT
    NEW_JMX_MANAGER_START_PORT=$DEFAULT_JMX_MANAGER_START_PORT
+   NEW_PADOWEB_HTTP_PORT=$DEFAULT_PADOWEB_HTTP_PORT
+   NEW_PADOWEB_HTTPS_PORT=$DEFAULT_PADOWEB_HTTPS_PORT
 else
    NEW_LOCATOR_START_PORT=$PORT_ARG
    let PORT_DIFF=$NEW_LOCATOR_START_PORT-DEFAULT_LOCATOR_START_PORT
@@ -456,6 +518,8 @@ else
    let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_HTTP_START_PORT=DEFAULT_JMX_MANAGER_HTTP_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_START_PORT=DEFAULT_JMX_MANAGER_START_PORT+PORT_DIFF
+   let NEW_PADOWEB_HTTP_PORT=DEFAULT_PADOWEB_HTTP_PORT+PORT_DIFF
+   let NEW_PADOWEB_HTTPS_PORT=DEFAULT_PADOWEB_HTTPS_PORT+PORT_DIFF
 fi
 
 # Create the cluster sub-directories and files.
@@ -469,6 +533,14 @@ mkdir -p $LOG_DIR
 mkdir -p $LIB_DIR
 mkdir -p $PLUGINS_DIR
 
+# Copy the plugin jars in the cluster plugins directory.
+# All plugins will be hot-deployed to the cluster plugins directory.
+if [ "$TYPE_ARG" == "pado" ]; then
+   if [ -d "$PADO_HOME/plugins" ]; then
+      cp -r "$PADO_HOME/plugins"/* "$PLUGINS_DIR"/
+   fi
+fi
+
 # Add one (1) member if VM is enabled.
 # Add one (1) locator if the pod name is "local".
 # Add two (2) members if the pod name is "local".
@@ -480,7 +552,10 @@ if [ "$VM_ENABLED" == "true" ]; then
    MEMBER_1=`getMemberName 1`
    MEMBER_1_DIR=$CLUSTER_DIR/run/$MEMBER_1
    mkdir -p $MEMBER_1_DIR
-   POD_TYPE="local"
+   if [ "POD" == "local" ]; then
+      POD_TYPE="local"
+   fi
+   PADOWEB_HOST=$VM_PADOWEB_HOSTS
 elif [ "$POD" == "local" ]; then
    LOCATOR_1=`getLocatorName 1`
    LOCATOR_1_DIR=$CLUSTER_DIR/run/$LOCATOR_1
@@ -491,12 +566,26 @@ elif [ "$POD" == "local" ]; then
    MEMBER_2_DIR=$CLUSTER_DIR/run/$MEMBER_2
    mkdir -p $MEMBER_1_DIR
    mkdir -p $MEMBER_2_DIR
-   POD_TYPE="local"
-else 
+   POD_TYPE="local" 
+   PADOWEB_HOST="localhost"
+fi
+
+if [ "$POD" != "local" ]; then
+
+   # TODO: Pod VM_ENABLED is currently for workspace-wide only. To support individual clusters,
+   #       VM_* parameters must be set for each cluster. Significant overhauling may required.
+   # VM_ENABLED="true"
+
+   AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" false`
+   NODE_COUNT=`getPodProperty "node.count" "0"`
+   VM_USER="vagrant"
+   POD_TYPE="vagrant"
+   VM_HOSTS=""
+   
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
    BIND_ADDRESS=$PRIMARY_NODE_LOCAL
-   HOSTNAME_FOR_CLIENTS=$NPRIMARY_ODE_LOCAL
+   HOSTNAME_FOR_CLIENTS=$PRIMARY_NODE_LOCAL
 
    # Create locator run directory
    NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
@@ -506,19 +595,81 @@ else
 
    # Create member run directories
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
-   NODE_COUNT=`getPodProperty "node.count" "0"`
    for i in $(seq 1 $NODE_COUNT); do
        MEMBER=`getMemberName $i`
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
        mkdir -p $MEMBER_DIR
    done
-   POD_TYPE="vagrant"
-   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
-   if [ "$NODE_NAME_PRIMARY" != "" ]; then
-      NODE_NAME_PRIMARY=${NODE_NAME_PRIMARY}.local
+   
+   # Vagrant pod VMs   
+   if [ "$AVAHI_ENABLED" == "true" ]; then
+      NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
+      if [ "$NODE_NAME_PRIMARY" != "" ]; then
+         NODE_NAME_PRIMARY=${NODE_NAME_PRIMARY}.local
+      else
+         NODE_NAME_PRIMARY="localhost"
+      fi
+      PADOWEB_HOST=$NODE_NAME_PRIMARY
+
+      for i in $(seq 1 $NODE_COUNT); do
+        __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+        NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+        if [ $i -eq 1 ]; then
+           VM_HOSTS="$NODE_LOCAL"
+        else
+           VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
+        fi
+      done
+      if [ "$LOCATOR_SPECIFIED" == "true" ]; then
+         VM_LOCATOR_HOSTS=$LOCATOR
+      else
+         # pnode
+         VM_LOCATOR_HOSTS=$PRIMARY_NODE_LOCAL
+      fi
    else
-      NODE_NAME_PRIMARY="localhost"
+      POD_DIR="$PADOGRID_WORKSPACE/pods/$POD"
+      POD_SETENV="$POD_DIR/bin_sh/setenv.sh"
+      HOST_PRIVATE_IP=""
+      if [ -f "$POD_SETENV" ]; then
+         . $POD_SETENV
+      fi
+      if [ "$HOST_PRIVATE_IP" == "" ]; then
+         AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
+         if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
+            echo >&2 "ERROR: Private IP address not specified and unable to determine. Please add"
+            echo >&2 "       a host-only ethernet adapter to VirtualBox. Command aborted."
+            exit 1
+         fi
+         # Pick the first one in the list
+         for i in $AVAILABLE_IP_ADDRESSES; do
+            HOST_PRIVATE_IP=$i
+            break;
+         done
+      fi
+      IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
+      # Extract the first three octets from the primary IP.
+      BASE_PRIVATE_IP_FIRST_THREE_OCTETS=${HOST_PRIVATE_IP%.*}
+      BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
+      BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
+      NODE_NAME_PRIMARY=${BASE_PRIVATE_IP}
+      PADOWEB_HOSTS=$NODE_NAME_PRIMARY
+      for i in $(seq 1 $NODE_COUNT); do
+         let NODE_OCTET=i+BASE_PRIVATE_IP_LAST_OCTET
+         NODE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${NODE_OCTET}
+         if [ $i -eq 1 ]; then
+            VM_HOSTS="$NODE_IP"
+         else
+            VM_HOSTS="$VM_HOSTS,$NODE_IP"
+         fi
+      done   
+      if [ "$LOCATOR_SPECIFIED" == "true" ]; then
+         VM_LOCATOR_HOSTS=$LOCATOR
+      else
+         # pnode
+         VM_LOCATOR_HOSTS=$NODE_NAME_PRIMARY
+      fi
    fi
+
 fi
 
 # Write cluster files
@@ -546,11 +697,15 @@ echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
 echo "JMX_MANAGER_HTTP_START_PORT: $NEW_JMX_MANAGER_HTTP_START_PORT"
 echo "     JMX_MANAGER_START_PORT: $NEW_JMX_MANAGER_START_PORT"
 echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
+if [ "$TYPE_ARG" == "pado" ]; then
+echo "          PADOWEB_HTTP_PORT: $NEW_PADOWEB_HTTP_PORT"
+echo "         PADOWEB_HTTPS_PORT: $NEW_PADOWEB_HTTPS_PORT"
+fi
 echo ""
 echo "The default config.xml file has been placed in the CONFIG_DIR directory."
-echo "Modify it or replace it with the appropriate file."
+echo "Modify or replace it with the appropriate file."
 echo ""
-if [ "$VM_ENABLED" == "true" ]; then
+if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ]; then
    echo "One (1) member has been configured (added) to run in this cluster as follows:"
    echo ""
    echo "      Member: $MEMBER_1"
@@ -569,15 +724,27 @@ elif [ "$POD" == "local" ]; then
 else
    echo "$NODE_COUNT members have been configured (added) to run in this cluster as follows:"
    echo ""
+   NUM=0
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+   for i in $VM_LOCATOR_HOSTS; do
+       let NUM=NUM+1
+       NODE_NAME_PREFIX=$i
+       LOCATOR=`getLocatorName $NUM`
+       LOCATOR_DIR=$CLUSTER_DIR/run/$LOCATOR
+       echo "     Locator: $LOCATOR"
+       echo " Working Dir: $LOCATOR_DIR"
+   done
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    for i in $(seq 1 $NODE_COUNT); do
        MEMBER=`getMemberName $i`
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
       echo "      Member: $MEMBER"
-      echo " Working Dir: $MEMBER"
+      echo " Working Dir: $MEMBER_DIR"
    done
    echo ""
 fi
-echo "1. Make sure to replace or update cache.xml:"
+echo "1. Update Geode/GemFire configuration in cache.xml as needed:"
 echo "      ${ETC_DIR}/cache.xml"
 echo "2. Place your application jar files in one of the 'plugins' directories:"
 echo "      $PADOGRID_WORKSPACE/plugins/"
@@ -620,11 +787,10 @@ else
    echo "      build_pod -pod $POD"
    echo "6. To get the pod details, run the following:"
    echo "      show_pod -pod $POD"
-   echo "7. Login to one of the nodes and start the cluster. For example, to login to the primary node:"
-   echo "      cd $POD_DIR"
-   echo "      vagrant ssh $NODE_NAME_PRIMARY"
-   echo "      password: vagrant"
-   echo "      start_cluster -pod $POD" 
-   echo "8. Execute 'show_cluster' to verify the cluster state."
+   echo "7. To use this pod, attach it to a cluster. For example,"
+   echo "      create_cluster -cluster mycluster -pod $POD"
+   echo "      start_cluster -cluster mycluster"
+   echo "8. You can login to the primary node as follows."
+   echo "      ssh vagrant@$NODE_NAME_PRIMARY"
 fi
 echo "----------------------------------------------------------------"

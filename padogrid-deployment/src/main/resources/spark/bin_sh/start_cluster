@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start all inactive members in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name]
+
+DESCRIPTION
+   Starts all inactive (or stopped) members in the specified cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_MASTER_HOSTS=$(getClusterProperty "vm.master.hosts")
+   if [ "$VM_MASTER_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM local hosts undefined. Set 'vm.local.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_HOSTS=$(getClusterProperty "vm.hosts")
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   # Start masters
+   __MASTER_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   #VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   VM_KEY=$VM_PRIVATE_KEY_FILE
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+
+   # Master count
+   MASTER_COUNT=0
+   for VM_HOST in $__MASTER_HOSTS; do
+      let MASTER_COUNT=MASTER_COUNT+1
+   done
+
+   COUNT=0
+   MEMBER_NUM=1
+   for VM_HOST in $__MASTER_HOSTS; do
+      let COUNT=COUNT+1
+      if [ $COUNT -lt $MASTER_COUNT ]; then
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_master -cluster $CLUSTER -vm VM_MASTER_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_master -cluster $CLUSTER -vm VM_MASTER_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      fi
+      if [ "$POD" != "local" ]; then
+          let MEMBER_NUM=MEMBER_NUM+1
+      fi
+   done
+
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   MEMBER_NUM=1
+   for VM_HOST in $__VM_HOSTS; do
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+      fi
+      if [ "$POD" != "local" ]; then
+          let MEMBER_NUM=MEMBER_NUM+1
+      fi
+   done
+   exit
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+__NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
+MASTER_PREFIX=`getMasterPrefix`
+MASTER_PREFIX_LEN=${#MASTER_PREFIX}
+NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+
+NODE_COUNT=`getPodProperty "node.count" 0` 
+MEMBER_COUNT=`getMemberCount`
+
+# Show warning message if the member count is greater than the pod size.
+if [ "$POD" != "local" ]; then
+   if [ "$MEMBER_COUNT" -gt "$NODE_COUNT" ]; then
+       echo "WARNING: The cluster member count ($MEMBER_COUNT) exceeds the data node count ($NODE_COUNT) in the pod."
+       echo "         Only $NODE_COUNT member will be started."
+   fi
+fi
+
+if [ "$(isClusterExist $CLUSTER)" == "false" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "    ERROR: This cluster has not been created. Please run the create_cluster command"
+   echo "           to create the cluster before running this command. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+# TODO: The following assumes that the member numbers exist consecutively.
+#       Need a way to pass the node number to start_member.
+
+
+# Start masters
+pushd $RUN_DIR > /dev/null 2>&1
+# Master count
+let MASTER_COUNT=0
+for VM_HOST in $__MASTER_HOSTS; do
+   let MASTER_COUNT=MASTER_COUNT+1
+done
+
+COUNT=0
+for i in ${MASTER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      let COUNT=COUNT+1
+      pushd $i > /dev/null 2>&1
+      MASTER_NUMBER=${i:$MASTER_PREFIX_LEN}
+      if [ $COUNT -lt $MASTER_COUNT ]; then
+         start_master -cluster $CLUSTER -num $MASTER_NUMBER &
+      else
+         start_master -cluster $CLUSTER -num $MASTER_NUMBER
+      fi
+      popd > /dev/null 2>&1
+   fi
+   if [ "$POD" != "local" ]; then
+      if [ "$COUNT" -ge "$NODE_COUNT" ]; then
+         break;
+       fi
+   fi
+done
+
+# Start members in background
+COUNT=0
+for i in ${MEMBER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      let COUNT=COUNT+1
+      pushd $i > /dev/null 2>&1
+      MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+      start_member -cluster $CLUSTER -num $MEMBER_NUMBER $*
+      popd > /dev/null 2>&1
+   fi
+   if [ "$POD" != "local" ]; then
+      if [ "$COUNT" -ge "$NODE_COUNT" ]; then
+         break;
+       fi
+   fi
+done
+popd > /dev/null 2>&1
+
+if [ "$MEMBER_NUMBER" == "" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "     INFO: Cluster has no members defined: [$CLUSTER]. Please add members by executing the 'add_member' command."
+   echo "----------------------------------------------------------------"
+fi

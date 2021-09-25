@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -long -all -?"
+   echo "-cluster -short -long -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,11 +38,10 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Display the status of the specified cluster in the current
-                 padogrid workspace
+   $EXECUTABLE - Display the status of the specified cluster in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-long] [-all] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-short | -long] [-all] [-?]
 
 DESCRIPTION
    Displays cluster status.
@@ -51,11 +50,14 @@ OPTIONS
    -cluster cluster_name
              Cluster name.
 
+   -short
+             Displays running status only.
+
    -long
-             Display detailed information.
+             Displays detailed information.
 
    -all
-              Display all clusters
+             Displays all clusters
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -76,11 +78,30 @@ EOF
    exit
 fi
 
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
+
 # Displays short status of a VM cluster.
 # @required VM_LOCATOR_HOSTS A space separated list of VM locator hosts (addresses)
 # @required VM_HOSTS         A space separated list of VM member hosts (addresses)
 function displayVmClusterShort()
 {
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
    # Locators
    LOCATOR_COUNT=0
    RUNNING_LOCATOR_COUNT=0
@@ -105,12 +126,14 @@ function displayVmClusterShort()
       fi
    done
    
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    echo "         CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "        Run Type: $RUN_TYPE"
    echo "      Deployment: VM"
+   fi
    if [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
    echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
    else
@@ -121,13 +144,17 @@ function displayVmClusterShort()
    else
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
+   if [ "$SHORT" == "false" ]; then
    echo "         Version: $GEODE_VERSION"
-   echo ""
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
 } # displayVmClusterShort
 
 # Displays long status of a VM cluster.
 function displayVmClusterLong()
 {
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
    GEODE_CONFIG_FILE=$ETC_DIR/cache.xml
    LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
    MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
@@ -164,13 +191,13 @@ function displayVmClusterLong()
    pushd $RUN_DIR > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
       echo "         CLUSTER: $CLUSTER (default)"
    else
       echo "         CLUSTER: $CLUSTER"
    fi
-   echo "            PRODUCT: $PRODUCT"
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
    echo "      Deployment: VM"
    echo ""
 
@@ -209,23 +236,23 @@ function displayVmClusterLong()
       else
          NUM=$LOCATOR_COUNT
       fi
-      echo "$NUM        Locator: $LOCATOR"
+      echo "$NUM       Locator: $LOCATOR"
 
       pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE`
       if [ -z $pid ]; then
          let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
-         echo -e "          STATE: ${CLightRed}Down${CNone}"
+         echo -e "           STATE: ${CLightRed}Down${CNone}"
          echo "             PID: N/A"
       else
          let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
-         echo -e "          STATE: ${CLightGreen}Running${CNone}"
+         echo -e "           STATE: ${CLightGreen}Running${CNone}"
          echo "             PID: $pid"
       fi
 
       echo "    LOCATOR_PORT: $LOCATOR_PORT"
 #      echo "      DEBUG_PORT: $DEBUG_PORT"
 #      echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-      echo "       PULSE_URL: $PULSE_URL"
+      echo -e "       PULSE_URL: $CUrl$PULSE_URL$CNone"
       echo "         JMX_URL: $JMX_URL"
       echo "     Working Dir: $LOCATOR_DIR"
       echo "        LOG_FILE: $LOG_FILE"
@@ -247,7 +274,7 @@ function displayVmClusterLong()
       if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
          MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
          HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
-         MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+         MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/geode/swagger-ui.html"
       fi
       if [ "$DEBUG_ENABLED" == "true" ]; then
          DEBUG_PORT=$DEBUG_START_PORT
@@ -302,6 +329,7 @@ function displayVmClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $GEODE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
 } # displayVmClusterLong
 
 # Displays short status of a local/pod cluster.
@@ -324,6 +352,7 @@ function displayClusterShort()
 
    RUNNING_LOCATOR_COUNT=-1
    RUNNING_MEMBER_COUNT=-1
+
    if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
       ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
       ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
@@ -371,13 +400,16 @@ function displayClusterShort()
       done
       popd > /dev/null 2>&1
    fi
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+
    echo "         CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "        Run Type: $RUN_TYPE"
    echo "             POD: $POD"
    echo "        POD_TYPE: $POD_TYPE"
+   fi
    if [ $RUNNING_LOCATOR_COUNT -lt 0 ]; then
    echo -e "Locators Running: ${CYellow}Unknown${CNone}"
    elif [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
@@ -392,8 +424,10 @@ function displayClusterShort()
    else
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
+   if [ "$SHORT" == "false" ]; then
    echo "         Version: $GEODE_VERSION"
-   echo ""
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
 } # dispalyClusterShort
 
 # Displays long status of a local/pod cluster.
@@ -411,7 +445,7 @@ function displayClusterLong()
    LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
    MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
-   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startRPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
    JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
    DEBUG_ENABLED=`getClusterProperty "debug.enabled" $DEFAULT_DEBUG_ENABLED`
@@ -446,12 +480,12 @@ function displayClusterLong()
 #   pushd $RUN_DIR > /dev/null 2>&1
 
    echo "----------------------------------------------------------------"
-   echo "       WORKSPACE: $PADOGRID_WORKSPACE"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
       echo "         CLUSTER: $CLUSTER (default)"
    else
       echo "         CLUSTER: $CLUSTER"
    fi
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
    echo "        Run Type: $RUN_TYPE"
@@ -546,11 +580,11 @@ function displayClusterLong()
             pid=`getLocatorPid $LOCATOR $WORKSPACE`
             if [ -z $pid ]; then
                let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
-               echo -e "          STATE: ${CLightRed}Down${CNone}"
+               echo -e "           STATE: ${CLightRed}Down${CNone}"
                echo "             PID: N/A"
             else
                let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
-               echo -e "          STATE: ${CLightGreen}Running${CNone}"
+               echo -e "           STATE: ${CLightGreen}Running${CNone}"
                echo "             PID: $pid"
             fi
          else
@@ -562,7 +596,7 @@ function displayClusterLong()
          echo "    LOCATOR_PORT: $LOCATOR_PORT"
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-         echo "       PULSE_URL: $PULSE_URL"
+         echo -e "       PULSE_URL: $CUrl$PULSE_URL$CNone"
          echo "         JMX_URL: $JMX_URL"
          echo "     Working Dir: $LOCATOR_DIR"
          echo "        LOG_FILE: $LOG_FILE"
@@ -599,7 +633,7 @@ function displayClusterLong()
             MEMBER_PORT=$MEMBER_START_PORT
             if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
                MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
-               MEMBER_HTTP_URL="http://${NODE}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+               MEMBER_HTTP_URL="http://${NODE}:${MEMBER_HTTP_PORT}/geode/swagger-ui.html"
 	    fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                DEBUG_PORT=$DEBUG_START_PORT
@@ -619,7 +653,7 @@ function displayClusterLong()
             if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
                let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
                HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$NODE"`
-               MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/padogrid/swagger-ui.html"
+               MEMBER_HTTP_URL="http://${HOSTNAME_FOR_CLIENTS}:${MEMBER_HTTP_PORT}/geode/swagger-ui.html"
             fi
             if [ "$DEBUG_ENABLED" == "true" ]; then
                let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
@@ -661,7 +695,7 @@ function displayClusterLong()
             DOWN_MEMBER_COUNT=-1
          fi
          echo "     MEMBER_PORT: $MEMBER_PORT"
-         echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
+         echo -e " MEMBER_HTTP_URL: $CUrl$MEMBER_HTTP_URL$CNone"
          echo "      DEBUG_PORT: $DEBUG_PORT"
          echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
          echo "         JMX_URL: $JMX_URL"
@@ -692,6 +726,7 @@ function displayClusterLong()
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
    echo "         Version: $GEODE_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
 
@@ -714,20 +749,20 @@ if [ "$VM_ENABLED" == "true" ]; then
    VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
    if [ "$VM_LOCATOR_HOSTS" == "" ]; then
       echo "----------------------------------------------------------------"
-      echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo "    ERROR: VM local hosts undefined. Set 'vm.local.hosts' in the following cluster.properties file."  
-      echo "           $ETC_DIR/cluster.properties"
-      echo "           Command aborted."
+      echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      echo "      ERROR: VM local hosts undefined. Set 'vm.local.hosts' in the following cluster.properties file."  
+      echo "             $ETC_DIR/cluster.properties"
+      echo "             Command aborted."
       echo "----------------------------------------------------------------"
       exit 1
    fi
    VM_HOSTS=$(getClusterProperty "vm.hosts")
    if [ "$VM_HOSTS" == "" ]; then
       echo "----------------------------------------------------------------"
-      echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
-      echo "           $ETC_DIR/cluster.properties"
-      echo "           Command aborted."
+      echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      echo "      ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "             $ETC_DIR/cluster.properties"
+      echo "             Command aborted."
       echo "----------------------------------------------------------------"
       exit 1
    fi
@@ -780,25 +815,43 @@ if [ "$ALL" == "true" ]; then
    fi
 
    echo "----------------------------------------------------------------"
-   echo "      Clusters: $CLUSTERS"
+   echo "Clusters: $CLUSTERS"
    echo "----------------------------------------------------------------"
    echo ""
 
+   THIS_PRODUCT=$PRODUCT
    if [ "$LONG" == "false" ]; then 
       # Short display -all
       for CLUSTER in ${CLUSTERS}; do
-         displayClusterShort
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterShort
+         else
+           if [ "$SHORT" == "true" ]; then
+              SHORT_OPT="-short"
+           else
+              SHORT_OPT=""
+           fi
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -cluster $CLUSTER $SHORT_OPT
+         fi
+         echo ""
       done
    else
       # Long display -all
       for CLUSTER in ${CLUSTERS}; do
-         displayClusterLong
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterLong
+         else
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -long -cluster $CLUSTER
+         fi
+         echo ""
       done
    fi
 
    echo "----------------------------------------------------------------"
    popd > /dev/null 2>&1
-   echo "      Clusters: $CLUSTERS"
+   echo "Clusters: $CLUSTERS"
    echo "----------------------------------------------------------------"
 
 else

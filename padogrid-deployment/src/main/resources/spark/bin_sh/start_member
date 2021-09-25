@@ -1,0 +1,1255 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -fg -simulate -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start a Spark member (worker) in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-simulate] [-?]
+
+DESCRIPTION
+   Starts a Spark member (worker) in the specified cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -fg
+             This option is only applicable for RUN_SCRIPT. If RUN_SCRIPT is defined, then the
+             script is run in the foreground.
+
+   -num member_number
+             Member number 1-99.
+
+   -simulate
+             If specified then it only displays the member information and does
+             not run the member.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MEMBER_NUM
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*member* *worker*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+POD=`getClusterProperty "pod.name" "local"`
+
+# Set FG_OPT
+if [ "$SIMULATE" == "true" ]; then
+   FG_OPT="-fg"
+else
+   FG_OPT=""
+fi
+# Set -simulate if specified
+if [ "$SIMULATE" == "true" ]; then
+   SIMULATE_OPT="-simulate"
+else
+   SIMULATE_OPT=""
+fi
+# Set -create_script if specified
+if [ "$CREATE_SCRIPT" == "true" ]; then
+   CREATE_SCRIPT_OPT="-create-script"
+else
+   CREATE_SCRIPT_OPT=""
+fi
+
+#
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_MASTER_HOSTS=$(getClusterProperty "vm.master.hosts")
+      if [ "$VM_MASTER_HOSTS" == "" ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "    ERROR: VM master hosts undefined. Set 'vm.master.hosts' in the following cluster.properties file."  
+         echo >&2 "           $ETC_DIR/cluster.properties"
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+      VM_HOSTS=$(getClusterProperty "vm.hosts")
+      if [ "$VM_HOSTS" == "" ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+         echo >&2 "           $ETC_DIR/cluster.properties"
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+
+      # Determine the host
+      __MEMBER_NUMBER=0
+      __FOUND="false"
+      
+      for VM_HOST in $__VM_HOSTS; do
+         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+            __FOUND="true"
+            if [ "$POD" == "local" ]; then
+               NUM=1
+            else
+               let NUM=__MEMBER_NUMBER
+            fi
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            break;
+         fi
+      done
+      FIRST_NUMBER=1
+      LAST_NUMBER=$__MEMBER_NUMBER
+      if [ "$__FOUND" == "false" ]; then
+         echo >&2 "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+if [ "$VM_ENABLED" == "true" ]; then
+   # POD needed to get the correct node name
+   POD=`getClusterProperty "pod.name" "local"`
+   MEMBER=`getVmMemberName`
+else
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+fi
+MEMBER_DIR=$RUN_DIR/$MEMBER
+
+if  [ ! -d "$CLUSTER_DIR" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ ! -d "$MEMBER_DIR" ]; then
+   if [ "$REMOTE_SPECIFIED" == "true" ]; then
+      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE -num $MEMBER_NUMBER
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Member: $MEMBER"
+      echo "   Status: This member has not been configured. Please run the add_member command to configure"
+      echo "           new members."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# If the member is already running, then exit.
+if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
+   PID=`getMemberPid $MEMBER $WORKSPACE`
+   if [ -n "${PID}" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Member: $MEMBER"
+      echo "   Status: This member is already running [Member: $MEMBER, PID=$PID]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# Member port number
+MASTER_START_PORT=`getClusterProperty "master.tcp.startPort" $DEFAULT_MASTER_START_PORT`
+MEMBER_PROPERTIES=""
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
+let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
+let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
+MEMBER_WEBUI_START_PORT=`getClusterProperty "webui.startPort" $DEFAULT_MEMBER_WEBUI_START_PORT`
+let MEMBER_WEBUI_PORT=MEMBER_WEBUI_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+MASTER_TCP_LIST=""
+MEMBER_TCP_LIST=""
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+BIND_ADDRESS=""
+HOSTNAME_FOR_CLIENTS=""
+REDUNDANCY_ZONE=""
+if [ "$VM_ENABLED" == "true" ]; then
+
+   VM_MASTER_HOSTS=$(getClusterProperty "vm.master.hosts")
+   if [ "$VM_MASTER_HOSTS" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: VM master hosts undefined. Set 'vm.master.hosts' in the following cluster.properties file."  
+      echo >&2 "           $ETC_DIR/cluster.properties"
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo >&2 "           $ETC_DIR/cluster.properties"
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   # Replace , with space
+   __MASTER_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
+   for VM_HOST in $__MASTER_HOSTS; do
+      BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress" "$VM_HOST"`
+      if [ "$MASTER_TCP_LIST" == "" ]; then
+         MASTER_TCP_LIST="$BIND_ADDRESS:$MASTER_START_PORT"
+      else
+         MASTER_TCP_LIST="$MASTER_TCP_LIST,$BIND_ADDRESS:$MASTER_START_PORT"
+      fi
+   done
+   VM_HOST=$REMOTE
+   BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients"`
+   REDUNDANCY_ZONE=`getClusterProperty "vm.${VM_HOST}.redundancyZone"`
+
+elif [ "$POD" == "local" ]; then
+
+   HOST_NAME=`hostname`
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+   MASTER_PREFIX=`getMasterPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${MASTER_PREFIX}*; do
+      if [ -d "$i" ]; then
+         __MASTER=$i
+         __MASTER_NUM=${__MASTER##$MASTER_PREFIX}
+         __MASTER_NUM=$(trimLeadingZero $__MASTER_NUM)
+	     let __MASTER_PORT=MASTER_START_PORT+__MASTER_NUM-1
+         if [ "$MASTER_TCP_LIST" == "" ]; then
+            MASTER_TCP_LIST="$BIND_ADDRESS:$__MASTER_PORT"
+         else
+            MASTER_TCP_LIST="$MASTER_TCP_LIST,$BIND_ADDRESS:$__MASTER_PORT"
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+   for i in $(seq $MEMBER_START_PORT $MEMBER_END_PORT); do
+      if [ "$MEMBER_TCP_LIST" == "" ]; then
+         MEMBER_TCP_LIST="$BIND_ADDRESS:$i"
+      else
+         MEMBER_TCP_LIST="$MEMBER_TCP_LIST,$BIND_ADDRESS:$i"
+      fi
+   done
+
+else
+
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   MASTER_COUNT=`getMasterCount`
+   PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   MASTER_TCP_LIST="$PRIMARY_NODE_LOCAL:$MASTER_START_PORT"
+
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   BIND_ADDRESS=$NODE_LOCAL
+   HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+   
+fi
+
+# Debug parameters.
+DEBUG_ENABLED=`getClusterProperty "debug.enabled" $DEFAULT_DEBUG_ENABLED`
+DEBUG=""
+if [ "$DEBUG_ENABLED" == "true" ]; then
+   DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUMBER-1
+   else
+      DEBUG_PORT=$DEBUG_START_PORT
+   fi
+   DEBUG="-Xdebug '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT'"
+else
+   DEBUG_PORT="Disabled"
+   DEBUG=""
+fi
+
+# JMX parameters
+JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
+JMX_PARAMETERS=""
+if [ "$JMX_ENABLED" == "true" ]; then
+   JMX_START_PORT=`getClusterProperty "jmx.startPort" $DEFAULT_JMX_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let JMX_PORT=JMX_START_PORT+MEMBER_NUMBER-1
+   else
+      JMX_PORT=$JMX_START_PORT
+   fi
+   JMX_PARAMETERS="-Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dspark.jmx=true"
+else
+   JMX_PORT="Disabled"
+   JMX_PARAMETERS=""
+fi
+
+# Set LOG_FILE in the log directory.
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   __LOG_DIR="$(cygpath -wp "$LOG_DIR")"
+else
+   __LOG_DIR=$LOG_DIR
+fi
+STATS_FILE_NAME=${MEMBER}.gfs
+STATS_FILE=$STATS_DIR/${STATS_FILE_NAME}
+export LOG_FILE_NAME=${MEMBER}.log
+export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   MEMBER_DIR="$(cygpath -wp "$MEMBER_DIR")"
+fi
+
+# Set heap to the "heap.min/heap.max" values found in the $ETC_DIR/cluster.properties file.
+MIN_HEAP_SIZE=`getClusterProperty "heap.min" $DEFAULT_MIN_HEAP_SIZE`
+MAX_HEAP_SIZE=`getClusterProperty "heap.max" $DEFAULT_MAX_HEAP_SIZE`
+
+# Set JAVA_OPTS.
+JAVA_OPTS="$JAVA_OPTS $LOG_PROPERTIES $JMX_PARAMETERS"
+JAVA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE $JAVA_OPTS"
+JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
+
+# Set PROMETHEUS paths
+PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
+if [ "$PROMETHEUS_ENABLED" == "true" ]; then
+   PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let PROMETHEUS_PORT=PROMETHEUS_START_PORT+MEMBER_NUMBER-1
+   else
+      PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+   fi
+   PROMETHEUS_CONFIG_FILE_PATH="$ETC_DIR/prometheus.yml"
+   PROMETHEUS_JAR_PATH=`find $PADOGRID_HOME/lib -name jmx_prometheus_javaagent*.jar`
+
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      PROMETHEUS_JAR_PATH="$(cygpath -wp "$PROMETHEUS_JAR_PATH")"
+      PROMETHEUS_CONFIG_FILE_PATH="$(cygpath -wp "$PROMETHEUS_CONFIG_FILE_PATH")"
+      # Remove the disk drive letter from the path. A workaround to a bug in the prometheus exporter.
+      PROMETHEUS_CONFIG_FILE_PATH=${PROMETHEUS_CONFIG_FILE_PATH:2}
+   fi
+   JAVA_OPTS="$JAVA_OPTS -javaagent:$PROMETHEUS_JAR_PATH=$PROMETHEUS_PORT:$PROMETHEUS_CONFIG_FILE_PATH"
+else
+   PROMETHEUS_PORT="Disabled"
+fi
+
+# Set GC log
+GC_LOG_ENABLED=`getClusterProperty "gc.log.enabled" $DEFAULT_GC_LOG_ENABLED`
+GC_LOG_FILE_ENABLED=`getClusterProperty "gc.log.file.enabled" $DEFAULT_GC_LOG_FILE_ENABLED`
+if [ $GC_LOG_ENABLED == "true" ]; then
+   if [ $GC_LOG_FILE_ENABLED == "true" ]; then
+      GC_LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
+      if [[ ${OS_NAME} == CYGWIN* ]]; then
+         GC_LOG_FILE="$(cygpath -wp "$GC_LOG_FILE")"
+      fi
+      if [[ $JAVA_VERSION == 1.8* ]]; then
+         JAVA_OPTS="$JAVA_OPTS -Xloggc:$GC_LOG_FILE -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+      else
+         JAVA_OPTS="$JAVA_OPTS -Xlog:gc=info:file=$GC_LOG_FILE:time,uptime,pid:filecount=5,filesize=4096"
+      fi
+   fi
+fi
+
+if [[ $JAVA_VERSION == 1.8* ]]; then
+   JAVA_OPTS="$JAVA_OPTS \
+      -XX:+UseParNewGC \
+      -XX:+UseConcMarkSweepGC \
+      -XX:CMSInitiatingOccupancyFraction=75"
+fi
+
+JAVA_OPTS="$JAVA_OPTS -Dlog4j.configuration=file:$ETC_DIR/log4j.properties -DLOG_FILE=$LOG_FILE"
+
+# Set worker system properties
+if [ -f "$ETC_DIR/worker.properties" ]; then
+   declare -a propArray
+   getPropertiesArray "$ETC_DIR/worker.properties" propArray
+   len=${#propArray[@]}
+   if [ $len -gt 0 ]; then
+      let last_index=len-1
+      WORKER_PROPS=""
+      for i in $(seq 0 $last_index); do
+         WORKER_PROPS="$WORKER_PROPS -D${propArray[$i]}"
+      done
+      JAVA_OPTS="$JAVA_OPTS $WORKER_PROPS"
+   fi
+fi
+
+# For Arrow related features. This prevents java.lang.UnsupportedOperationException: 
+# sun.misc.Unsafe or java.nio.DirectByteBuffer.(long, int) not available when Apache Arrow
+# uses Netty internally.
+if [ "$JAVA_MAJOR_VERSION_NUMBER" == "11" ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dio.netty.tryReflectionSetAccessible=true"
+fi
+
+# Master URL
+#MASTER_START_PORT=`getClusterProperty "master.tcp.startPort" $DEFAULT_MASTER_START_PORT`
+#MASTER_NUMBER=1
+#let MASTER_PORT=MASTER_START_PORT+MASTER_NUMBER-1
+#let MASTER_END_PORT=MASTER_START_PORT+MAX_MASTER_COUNT-1
+#MASTER_URL="spark://$BIND_ADDRESS:$MASTER_PORT"
+
+IFS=','; for ENDPOINT in $MASTER_TCP_LIST; do MASTER_URL="spark://$ENDPOINT"; break; done
+IFS=' '
+
+# Start the member
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+export LOG_DIR=$__LOG_DIR
+
+# Export JAVA_OPTS and CLASSPATH so that RUN_SCRIPT can hijack the executable.
+export JAVA_OPTS
+export CLASSPATH
+export JAVA
+
+POD=`getClusterProperty "pod.name" $POD`
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   exit
+elif [ "$SIMULATE" == "true" ]; then
+   PID="Simulated"
+elif [ "$CREATE_SCRIPT" == "true" ]; then
+   PID="Script"
+else
+   # LOG_FILE might not exist if a VM bundle has been deployed.
+   if  [ ! -d "$LOG_DIR" ]; then
+      mkdir -p $LOG_DIR
+   fi
+   if [ "$RUN_SCRIPT" != "" ]; then
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         $RUN_SCRIPT >> $LOG_FILE
+      else
+         nohup $RUN_SCRIPT >> $LOG_FILE &
+      fi
+   else
+       MEMBER_PREFIX=`getMemberPrefix` 
+       MEMBER_COUNT=`getMemberCount`
+
+       RUNNING_MEMBER_COUNT=$(getActiveMemberCount $WORKSPACE $CLUSTER)
+       if [ $RUNNING_MEMBER_COUNT -lt $MEMBER_COUNT ]; then
+
+          CLASS="org.apache.spark.deploy.worker.Worker"
+
+          echo SPARK_CONF_DIR=$ETC_DIR
+          echo SPARK_LOCAL_IP=$BIND_ADDRESS
+          echo SPARK_WORKER_PORT=$MEMBER_PORT
+          echo SPARK_WORKER_DIR=$RUN_DIR/$MEMBER
+          echo SPARK_LOG_DIR=$LOG_DIR
+          echo SPARK_PID_DIR=$RUN_DIR/pids
+          echo SPARK_WORKER_OPTS=$JAVA_OPTS
+          echo ""
+          echo ${SPARK_HOME}/sbin/spark-daemon.sh start \
+          $CLASS $MEMBER_NUM_NO_LEADING_ZERO \
+          --webui-port "$MEMBER_WEBUI_PORT" \
+          --port $MEMBER_PORT \
+          $MASTER_URL
+
+          SPARK_CONF_DIR=$ETC_DIR \
+          SPARK_LOCAL_IP=$BIND_ADDRESS \
+          SPARK_WORKER_PORT=$MEMBER_PORT \
+          SPARK_WORKER_DIR=$RUN_DIR/$MEMBER \
+          SPARK_LOG_DIR=$LOG_DIR \
+          SPARK_PID_DIR=$RUN_DIR/pids \
+          SPARK_WORKER_OPTS=$JAVA_OPTS \
+          ${SPARK_HOME}/sbin/spark-daemon.sh start \
+          $CLASS $MEMBER_NUM_NO_LEADING_ZERO \
+          --webui-port "$MEMBER_WEBUI_PORT" \
+          --port $MEMBER_PORT \
+          $MASTER_URL
+       fi
+   fi
+   PID=`getMemberPid $MEMBER $WORKSPACE`
+fi
+
+# JMX_URL
+JMX_URL="service:jmx:rmi:///jndi/rmi://$HOSTNAME_FOR_CLIENTS:$JMX_PORT/jmxrmi"
+
+echo "----------------------------------------------------------------"
+echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+echo "         Cluster: $CLUSTER"
+if [ "$VM_SPECIFIED" == "true" ] || [ "$VM_ENABLED" == "true" ]; then
+echo "      Deployment: VM"
+else
+echo "             Pod: $POD"
+fi
+echo "          Member: $MEMBER"
+if [ "$FG_SPECIFIED" == "true" ]; then
+echo "             PID: $PID"
+fi
+echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "     WORKING_DIR: $MEMBER_DIR"
+echo "      CONFIG_DIR: $ETC_DIR"
+echo "         LOG_DIR: $LOG_DIR"
+echo "        LOG_FILE: $LOG_FILE"
+echo "     MEMBER_PORT: $MEMBER_PORT"
+echo "      WEBUI_PORT: $MEMBER_WEBUI_PORT"
+echo "      DEBUG_PORT: $DEBUG_PORT"
+echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
+echo "        JMX_PORT: $JMX_PORT"
+if [ "$JMX_ENABLED" == "true" ]; then
+echo "         JMX_URL: $JMX_URL"
+fi
+echo "            JAVA: $JAVA"
+if [ "$RUN_SCRIPT" != "" ]; then
+echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
+fi
+echo "       JAVA_OPTS: "$JAVA_OPTS
+echo "       CLASSPATH: $CLASSPATH"
+echo "----------------------------------------------------------------"
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "JAVA_OPTS"
+   echo "---------"
+   printJavaOpts "$JAVA_OPTS"
+   echo ""
+   echo "CLASSPATH"
+   echo "---------"
+   printClassPath "$CLASSPATH"
+   echo ""
+   echo "Environment Variable(s)"
+   echo "-----------------------"
+   echo "LOG_FILE=$LOG_FILE"
+   echo ""
+fi #
+# Create script
+#
+if [ "$CREATE_SCRIPT" == "true" ]; then
+
+#
+# Creates the header part in the specified file
+#
+# @required CLUSTER      Cluster name
+# @param filePath        File path
+# @param scriptName      Script file name
+# @param deploymentType  'VM' or 'local'
+#
+function writeHeader()
+{
+   __SCRIPT_FILE=$1
+   __SCRIPT_NAME=$2
+   __DEPLOYMENT_TYPE=$3
+   echo "#!/usr/bin/env bash" > $__SCRIPT_FILE
+   echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\$0\")\" && pwd -P)\"" >> $__SCRIPT_FILE
+   echo "BASE_DIR=\"\$(dirname \"\$SCRIPT_DIR\")\"" >> $__SCRIPT_FILE
+   echo ". \$BASE_DIR/setenv.sh" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__SCRIPT_FILE
+   echo "# Deployment: $__DEPLOYMENT_TYPE" >> $__SCRIPT_FILE
+   echo "#       File: $__SCRIPT_NAME" >> $__SCRIPT_FILE
+   echo "#    Cluster: $CLUSTER" >> $__SCRIPT_FILE
+   echo "#  Generated: `date "+%m/%d/%y %H:%M:%S %Z"`" >> $__SCRIPT_FILE
+   echo "#         By: `whoami`" >> $__SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Source in this file to set the environment variables and run 'gfsh start master'" >> $__SCRIPT_FILE
+   echo "# or 'gfsh start member' on local machine." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Determine the Spark version." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "for file in \$SPARK_HOME/lib/spark-addon-core-*; do" >> $__SCRIPT_FILE
+   echo "   file=\${file##*spark-addon\-core\-}" >> $__SCRIPT_FILE
+   echo "   SPARK_VERSION=\${file%.jar}" >> $__SCRIPT_FILE
+   echo "done" >> $__SCRIPT_FILE
+}
+
+#
+# Appends the VM top body part in the specified file
+#
+# @required JMX_START_PORT   Base JMX port
+# @required DEBUG_START_PORT Base debug port
+# @param filePath            File path
+# @param memberTcpList       TCP interfaces separated by commas
+#
+function writeVmTopBody()
+{
+   __SCRIPT_FILE=$1
+   __MEMBER_TCP_LIST=$2
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# The first argument is -master or -member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "TYPE=\"\$1\"" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Cluster name used in padogrid. This name is used as the prefix" >> $__SCRIPT_FILE
+   echo "# to the Spark instance name." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "CLUSTER=$CLUSTER" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Host name of this machine. The host name is used to build the member" >> $__SCRIPT_FILE
+   echo "# TCP interface list for the cluster." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "HOST_NAME=\`hostname\`" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member TCP port number" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "TCP_PORT=$DEFAULT_MEMBER_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# JMX port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "JMX_PORT=$JMX_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Debug port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "DEBUG_PORT=$DEBUG_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Prometheus port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "PROMETHEUS_PORT=$PROMETHEUS_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member number. If you need to run more than one member on the same" >> $__SCRIPT_FILE
+   echo "# machine then increment the number for the additional members." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_NUMBER=01" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Comma separated member TCP interface list. This list is read by the etc/cache.xml file." >> $__SCRIPT_FILE
+   echo "# Example: MEMBER_TCP_LIST=\"host1:40404,host2:40405,host3:40406\"" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_TCP_LIST=$__MEMBER_TCP_LIST" >> $__SCRIPT_FILE
+}
+
+#
+# Appends the local top body part in the specified file
+#
+# @required JMX_START_PORT        Base JMX port
+# @required DEBUG_START_PORT      Base debug port
+# @required PROMETHEUS_START_PORT Base Prometheus port
+# @param filePath                 File path
+#
+function writeLocalTopBody()
+{
+   __SCRIPT_FILE=$1
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# The first argument is -master or -member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "TYPE=\"\$1\"" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "# The second argument is -local or -vm. Ignore it." >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# The third argument is the member number. Default: 1" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_NUMBER=\"\$3\"" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Cluster name used in padogrid. This name is used as the prefix" >> $__SCRIPT_FILE
+   echo "# to the Spark instance name." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "CLUSTER=$CLUSTER" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Master start port number. Master port number is determined by adding"  >> $__SCRIPT_FILE
+   echo "# the specified master/member number to the start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MASTER_START_PORT=$DEFAULT_MASTER_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member start port number. Member port number is determined by adding"  >> $__SCRIPT_FILE
+   echo "# the specified member number to the start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_START_PORT=$DEFAULT_MEMBER_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member HTTP start port number. Member HTTP port number is determined by adding"  >> $__SCRIPT_FILE
+   echo "# the specified member number to the start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_HTTP_START_PORT=$DEFAULT_MEMBER_HTTP_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Master JMX Manager start port numbers." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "master.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
+   JMX_MANAGER_START_PORT=`getClusterProperty "master.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+   echo "JMX_MANAGER_HTTP_START_PORT=$JMX_MANAGER_HTTP_START_PORT" >> $__SCRIPT_FILE
+   echo "JMX_MANAGER_START_PORT=$JMX_MANAGER_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member JMX start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "JMX_START_PORT=$JMX_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Debug start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "DEBUG_START_PORT=$DEBUG_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Host name of this machine. The host name is used to build the member" >> $__SCRIPT_FILE
+   echo "# TCP interface list for the cluster." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "HOST_NAME=\`hostname\`" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Determine member number" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "if [ \"\$MEMBER_NUMBER\" == \"\" ]; then" >> $__SCRIPT_FILE
+   echo "   MEMBER_NUMBER=\"1\"" >> $__SCRIPT_FILE
+   echo "elif [ \"\$MEMBER_NUMBER\" -le 0 ]; then" >> $__SCRIPT_FILE
+   echo "   echo >&2 \"ERROR: Invalid member number. Must be greater than 0. Command aborted.\"" >> $__SCRIPT_FILE
+   echo "fi" >> $__SCRIPT_FILE
+   echo "MEMBER_NUMBER=\$((10#\$MEMBER_NUMBER))" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Set TCP port for this master" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let MASTER_TCP_PORT=MASTER_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Set TCP port for this member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let TCP_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Set HTTP port for this member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# JMX Manager port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let JMX_MANAGER_HTTP_PORT=JMX_MANAGER_HTTP_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "let JMX_MANAGER_PORT=JMX_MANAGER_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# JMX port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let JMX_PORT=JMX_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Prometheus port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let PROMETHEUS_PORT=PROMETHEUS_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Debug port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Add leading 0 to single digit member number" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "if [ \"\$MEMBER_NUMBER\" -lt 10 ]; then" >> $__SCRIPT_FILE
+   echo "   MEMBER_NUMBER=\"0\${MEMBER_NUMBER}\"" >> $__SCRIPT_FILE
+   echo "fi" >> $__SCRIPT_FILE
+   
+}
+
+#
+# Appends the bottom body part in the specified file
+#
+# @required JAVA_OPTS  Java options
+# @required CLASSPATH  Class path
+# @required OS_NAME    OS name
+# @param    filePath   File path
+#
+function writeBottomBody()
+{
+   __SCRIPT_FILE=$1
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Instance (master/member) name" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "INSTANCE_NAME=\$CLUSTER\${TYPE}-\$HOST_NAME-\$MEMBER_NUMBER" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Distribution Directories" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "RUN_DIR=\$BASE_DIR/run" >> $__SCRIPT_FILE
+   echo "ETC_DIR=\$BASE_DIR/etc" >> $__SCRIPT_FILE
+   echo "LIB_DIR=\$SPARK_DIR/lib" >> $__SCRIPT_FILE
+   echo "LOG_DIR=\$BASE_DIR/log" >> $__SCRIPT_FILE
+   echo "STATS_DIR=\$BASE_DIR/stats" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Log file path. This environment variable is picked up by log4j in" >> $__SCRIPT_FILE
+   echo "# the config file etc/log4j.properties" >> $__SCRIPT_FILE
+   echo "export LOG_FILE=\$LOG_DIR/\${INSTANCE_NAME}.log" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Run script. If specified, then start_member.sh runs this script instead of gfsh." >> $__SCRIPT_FILE
+   echo "# It must be in the same directory as start_member.sh." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   if [ "$RUN_SCRIPT" == "" ]; then
+   echo "RUN_SCRIPT=\"\"" >> $__SCRIPT_FILE
+   else
+   __RUN_SCRIPT_FILE_NAME="`basename $RUN_SCRIPT`"
+   echo "RUN_SCRIPT=$__RUN_SCRIPT_FILE_NAME" >> $__SCRIPT_FILE
+   fi
+   echo "" >> $__SCRIPT_FILE
+
+   # Masters
+   echo "#" >> $__SCRIPT_FILE
+   echo "# MASTER_SPARK_OPTS" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MASTER_SPARK_OPTS=\"" >> $__SCRIPT_FILE
+   echo "--name=\$INSTANCE_NAME \\" >> $__SCRIPT_FILE
+   echo "--masters=$\MASTERS \\" >> $__SCRIPT_FILE
+   echo "--dir=\$RUN_DIR/\$INSTANCE_NAME \\" >> $__SCRIPT_FILE
+   echo "--port=\$MASTER_TCP_PORT \\" >> $__SCRIPT_FILE
+   echo "\""  >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# MASTER_JAVA_OPTS" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MASTER_JAVA_OPTS=\"" >> $__SCRIPT_FILE
+   echo "-Dpadogrid.workspace=myws \\" >> $__SCRIPT_FILE
+   echo "-Dlog4j.configurationFile=\$ETC_DIR/log4j.properties \\" >> $__SCRIPT_FILE
+   MASTER_MIN_HEAP_SIZE=`getClusterProperty "master.heap.min" $DEFAULT_MASTER_MIN_HEAP_SIZE`
+   MASTER_MAX_HEAP_SIZE=`getClusterProperty "master.heap.max" $DEFAULT_MASTER_MAX_HEAP_SIZE`
+   echo "-Xms$MASTER_MIN_HEAP_SIZE \\" >> $__SCRIPT_FILE
+   echo "-Xmx$MASTER_MIN_HEAP_SIZE \\" >> $__SCRIPT_FILE
+   echo "-Xloggc:\$INSTANCE_NAME-gc.log \\" >> $__SCRIPT_FILE
+   echo "-XX:+PrintGCDetails \\" >> $__SCRIPT_FILE
+   echo "-XX:+PrintGCDateStamps \\" >> $__SCRIPT_FILE
+   echo "\""  >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+
+   # Members
+   echo "#" >> $__SCRIPT_FILE
+   echo "# MEMBER_SPARK_OPTS" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_SPARK_OPTS=\"" >> $__SCRIPT_FILE
+   for token in $SPARK_OPTS; do
+      if [[ $token == --cache-xml-file=* ]]; then
+         echo "--cache-xml-file=\$ETC_DIR/cache.xml \\" >> $__SCRIPT_FILE
+      elif [[ $token == --dir=* ]]; then
+         echo "--dir=\$RUN_DIR/\$INSTANCE_NAME \\" >> $__SCRIPT_FILE
+      elif [[ $token == --name=* ]]; then
+         echo "--name=\$INSTANCE_NAME \\" >> $__SCRIPT_FILE
+      elif [[ $token == --statistic-archive-file=* ]]; then
+         echo "--statistic-archive-file=\$STATS_DIR/\$INSTANCE_NAME.gfs \\" >> $__SCRIPT_FILE
+      elif [[ $token == --http-service-port=* ]]; then
+         echo "--http-service-port=\$MEMBER_HTTP_PORT \\" >> $__SCRIPT_FILE
+      else
+         echo "$token \\"  >> $__SCRIPT_FILE
+      fi
+   done
+   echo "\""  >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# MEMBER_JAVA_OPTS" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_JAVA_OPTS=\"" >> $__SCRIPT_FILE
+   for token in $JAVA_OPTS; do
+      if [[ $token == -Dlog4j.configurationFile=* ]]; then
+         echo "-Dlog4j.configurationFile=\$ETC_DIR/log4j.properties \\" >> $__SCRIPT_FILE
+      elif [[ $token == *prometheus* ]]; then
+         PROMETHEUS_JAR="jmx_prometheus_javaagent${PROMETHEUS_JAR_PATH##*jmx_prometheus_javaagent}"
+         echo "-javaagent:\$LIB_DIR/$PROMETHEUS_JAR=\$PROMETHEUS_PORT:\$ETC_DIR/prometheus.yml \\" >> $__SCRIPT_FILE
+      elif [[ $token == -Xloggc:* ]]; then
+         echo "-Xloggc:\${LOG_DIR}/\${INSTANCE_NAME}-gc.log \\" >> $__SCRIPT_FILE
+      elif [[ $token == *-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=* ]]; then
+         echo "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=\$DEBUG_PORT \\" >> $__SCRIPT_FILE
+      elif [[ $token == -Dcom.sun.management.jmxremote.port=* ]]; then
+         echo "-Dcom.sun.management.jmxremote.port=\$JMX_PORT \\" >> $__SCRIPT_FILE
+      elif [[ $token == -Dspark-addon.server.port=* ]]; then
+         echo "-Dspark-addon.server.port=\$TCP_PORT \\" >> $__SCRIPT_FILE
+      else
+         echo "$token \\" >> $__SCRIPT_FILE
+      fi
+   done
+
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      DELIMITER=";"
+   else
+      DELIMITER=":"
+   fi
+   echo "\""  >> $__SCRIPT_FILE
+}
+
+#
+# Writes start_master.sh or start_member.sh
+#
+# @param scriptType master or member
+#
+function writeStartScript
+{
+   local SCRIPT_TYPE=$1
+   if [ "$SCRIPT_TYPE" == "member" ]; then
+      PEER="member"
+   else
+      PEER="master"
+   fi
+   SPARK_COMMAND="gfsh start $PEER"
+
+   __START_SCRIPT_FILE=$__BIN_DIR/start_$SCRIPT_TYPE.sh
+   echo "#!/usr/bin/env bash" > $__START_SCRIPT_FILE
+   echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\$0\")\" && pwd -P)\"" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__START_SCRIPT_FILE
+   echo "#       File: start_$SCRIPT_TYPE.sh" >> $__START_SCRIPT_FILE
+   echo "#    Cluster: $CLUSTER" >> $__START_SCRIPT_FILE
+   echo "#  Generated: `date "+%m/%d/%y %H:%M:%S %Z"`" >> $__START_SCRIPT_FILE
+   echo "#         By: `whoami`" >> $__START_SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "EXECUTABLE=\"\`basename \$0\`\"" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "if [ \"\$1\" == \"-?\" ]; then" >> $__START_SCRIPT_FILE
+   echo "cat <<EOF" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "NAME" >> $__START_SCRIPT_FILE
+   echo "   \$EXECUTABLE - Execute '$SPARK_COMMAND' with the settings source in from the specified env file" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "SYNOPSIS" >> $__START_SCRIPT_FILE
+   echo "   \$EXECUTABLE -local|-vm [local_${SCRIPT_TYPE}_number]" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "DESCRIPTION" >> $__START_SCRIPT_FILE
+   echo "   Executes the '$SPARK_COMMAND' command with the settings sourced in from the" >> $__START_SCRIPT_FILE
+   echo "   specified env file." >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "OPTIONS" >> $__START_SCRIPT_FILE
+   echo "   -local" >> $__START_SCRIPT_FILE
+   echo "             Source in setenv_local.sh" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "   -vm" >> $__START_SCRIPT_FILE
+   echo "             Source in setenv_vm.sh" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "   local_${SCRIPT_TYPE}_number" >> $__START_SCRIPT_FILE
+   echo "             Member number starting from 1. This value applies to '-local' only." >> $__START_SCRIPT_FILE
+   echo "             For '-vm', it is ignored. Default: 1" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "EOF" >> $__START_SCRIPT_FILE
+   echo "   exit" >> $__START_SCRIPT_FILE
+   echo "fi" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "if [ \"\$1\" == \"\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   >&2 echo \"Error: '-local' or '-vm' argument required. Command aborted.\"" >> $__START_SCRIPT_FILE
+   echo "   exit 1" >> $__START_SCRIPT_FILE
+   echo "elif [ \"\$1\" == \"-local\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   SETENV_FILE=\"setenv_local.sh\"" >> $__START_SCRIPT_FILE
+   echo "elif [ \"\$1\" == \"-vm\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   SETENV_FILE=\"setenv_vm.sh\"" >> $__START_SCRIPT_FILE
+   echo "else" >> $__START_SCRIPT_FILE
+   echo "   >&2 echo \"Error: Invalid argument. Valid arguments are '-local' or '-vm'.\"" >> $__START_SCRIPT_FILE
+   echo "   >&2 echo \"       Command aborted.\"" >> $__START_SCRIPT_FILE
+   echo "   exit 1" >> $__START_SCRIPT_FILE
+   echo "fi" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo ". \$SCRIPT_DIR/\$SETENV_FILE -$SCRIPT_TYPE \$*" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "#" >> $SCRIPT_FILE >> $__START_SCRIPT_FILE
+   echo "# Launch Spark Worker" >> $__START_SCRIPT_FILE
+   echo "#" >> $__START_SCRIPT_FILE
+   echo "if [ \"\$RUN_SCRIPT\" == \"\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   \$SPARK_DIR/bin/$SPARK_COMMAND \$SPARK_OPTS \$JAVA_OPTS" >> $__START_SCRIPT_FILE
+   echo "else" >> $__START_SCRIPT_FILE
+   echo "   \"\$SCRIPT_DIR/\$RUN_SCRIPT\"" >> $__START_SCRIPT_FILE
+   echo "fi" >> $__START_SCRIPT_FILE
+   chmod 755 "$__START_SCRIPT_FILE"
+}
+
+
+   if [ -d "${CLUSTER_DIR}/generated/tmp" ]; then
+      rm -rf ${CLUSTER_DIR}/generated/tmp
+   fi
+   __BIN_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/bin
+   if [ ! -d "${__BIN_DIR}" ]; then
+      mkdir -p ${__BIN_DIR}
+   fi
+   if [ "$VM_ENABLED" == "true" ]; then
+      DEFAULT_SCRIPT_NAME="setenv_vm.sh"
+      DEPLOYTMENT_TYPE="VM"
+   else
+      DEFAULT_SCRIPT_NAME="setenv_local.sh"
+      DEPLOYTMENT_TYPE="local"
+   fi
+   # DEFAULT_SCRIPT_NAME is also used later when generating start_member.sh
+   SCRIPT_FILE="${__BIN_DIR}/${DEFAULT_SCRIPT_NAME}"
+   writeHeader $SCRIPT_FILE $DEFAULT_SCRIPT_NAME $DEPLOYTMENT_TYPE
+
+   if [ "$VM_ENABLED" == "true" ]; then
+      # For VM, requires host names
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      MEMBER_TCP_LIST=""
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         if [ "$MEMBER_TCP_LIST" == "" ]; then
+            MEMBER_TCP_LIST="$VM_HOST:$MEMBER_START_PORT"
+         else
+            MEMBER_TCP_LIST="$MEMBER_TCP_LIST,$VM_HOST:$MEMBER_START_PORT"
+         fi
+      done
+      writeVmTopBody $SCRIPT_FILE $MEMBER_TCP_LIST
+   else
+      # For local, use the local machine's host name
+      writeLocalTopBody $SCRIPT_FILE
+   fi
+   writeBottomBody $SCRIPT_FILE
+
+   #
+   # For local cluster, let's also generate an optional VM script
+   #
+   if [ "$VM_ENABLED" == "true" ]; then
+      SCRIPT_NAME="setenv_local.sh"
+      SCRIPT_FILE="${__BIN_DIR}/${SCRIPT_NAME}"
+      writeHeader $SCRIPT_FILE $SCRIPT_NAME "local"
+      writeLocalTopBody $SCRIPT_FILE
+      writeBottomBody $SCRIPT_FILE
+   else
+      SCRIPT_NAME="setenv_vm.sh"
+      SCRIPT_FILE="${__BIN_DIR}/${SCRIPT_NAME}"
+      writeHeader $SCRIPT_FILE $SCRIPT_NAME "VM"
+      writeVmTopBody $SCRIPT_FILE ""
+      writeBottomBody $SCRIPT_FILE
+   fi
+
+   #
+   # Copy lib and config files
+   #
+   __RUN_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/run
+   __ETC_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/etc
+   __LIB_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/lib
+   __LOG_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/log
+   __STATS_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/etc
+   mkdir -p $__RUN_DIR
+   mkdir -p $__LIB_DIR
+   mkdir -p $__LOG_DIR
+   mkdir -p $__ETC_DIR
+   __VERSION_DIR=v${SPARK_VERSION:0:1}
+   cp $BASE_DIR/lib/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $BASE_DIR/lib/$__VERSION_DIR/* $__LIB_DIR/ > /dev/null 2>&1
+   cp $BASE_DIR/plugins/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $BASE_DIR/plugins/$__VERSION_DIR/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/lib/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/plugins/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $PADOGRID_WORKSPACE/lib/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $PADOGRID_WORKSPACE/plugins/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/etc/log4j.properties $__ETC_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/etc/prometheus.yml $__ETC_DIR/ > /dev/null 2>&1
+
+   #
+   # README.txt
+   #
+   README_FILE="${CLUSTER_DIR}/generated/tmp/$CLUSTER/README.txt"
+   echo "padogrid Script Distribution" > $README_FILE
+   echo "***********************************" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "This distribtuion has been generated by padogrid. It contains all the" >> $README_FILE
+   echo "necessary scripts, binaries, and configuration files to reinstate the same Spark" >> $README_FILE
+   echo "cluster that was previously running in the padogrid workspace environment." >> $README_FILE
+   echo "The scripts provided in this distribution are readily executable in the Spark" >> $README_FILE
+   echo "product distribution environment." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "# ------------------------------------------------------" >> $README_FILE
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "# Deployment: VM" >> $README_FILE
+   else
+   echo "# Deployment: local" >> $README_FILE
+   fi
+   echo "#       File: README.txt" >> $README_FILE
+   echo "#    Cluster: $CLUSTER" >> $README_FILE
+   echo "#  Generated: `date "+%m/%d/%y %H:%M:%S %Z"`" >> $README_FILE
+   echo "#         By: `whoami`" >> $README_FILE
+   echo "# ------------------------------------------------------" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "Directories" >> $README_FILE
+   echo "-----------" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "." >> $README_FILE
+   echo "└── $CLUSTEA" >> $README_FILE
+   echo "    ├── README.txt" >> $README_FILE
+   echo "    ├── bin" >> $README_FILE
+   echo "    │   ├── setenv.sh" >> $README_FILE
+   echo "    │   ├── setenv_local.sh" >> $README_FILE
+   echo "    │   ├── setenv_vm.sh" >> $README_FILE
+   echo "    │   └── start_member.sh" >> $README_FILE
+   echo "    ├── etc" >> $README_FILE
+   echo "    │   ├── spark-env.sh" >> $README_FILE
+   echo "    │   ├── log4j.properties" >> $README_FILE
+   echo "    │   └── prometheus.yml" >> $README_FILE
+   echo "    ├── lib" >> $README_FILE
+   USER_LIB_FILES=$(ls $__LIB_DIR)
+   USER_LIB_FILES=( $USER_LIB_FILES )
+   let FILE_COUNT=${#USER_LIB_FILES[@]}
+   let LAST_INDEX=FILE_COUNT-1
+   for ((i = 0; i <= $LAST_INDEX; i++)); do
+      if [ $i -lt $LAST_INDEX ]; then
+         echo "    │   ├── ${USER_LIB_FILES[$i]}" >> $README_FILE
+      else
+         echo "    │   └── ${USER_LIB_FILES[$i]}" >> $README_FILE
+      fi
+   done
+   echo "    └── log" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "bin/" >> $README_FILE
+   echo "   setenv.sh" >> $README_FILE
+   echo "             Sets SPARK_HOME and other required environment variables." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "   setenv_local.sh" >> $README_FILE
+   echo "             Sets SPARK_OPTS and JAVA_OPTS required by 'gfsh start' for running masters and" >> $README_FILE
+   echo "             members on the same local machine." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "   setenv_vm.sh" >> $README_FILE
+   echo "             Sets SPARK_OPTS and JAVA_OPTS required by 'gfsh start' for running masters and" >> $README_FILE
+   echo "             menbers on separate machines." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "   start_member.sh" >> $README_FILE
+   echo "             Runs 'start.sh' with the specified option ('-local' or '-vm')." >> $README_FILE
+   echo "             See the usage by running 'start_member.sh -?'." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "etc/" >> $README_FILE
+   echo "   Contains configuration files." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "log/" >> $README_FILE
+   echo "   All log files are written to this directory." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "lib/" >> $README_FILE
+   echo "   Contains all the binaries used by the workspace cluster." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "Deployment Steps" >> $README_FILE
+   echo "----------------" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "1. Inflate '${CLUSTER}.tar.gz' inside the Spark installation directory." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "2. Edit '$CLUSTER/bin/setenv.sh' set the following variables." >> $README_FILE
+   echo "      SPARK_HOME - Spark/GemFire root directory path" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "3. Edit '$CLUSTER/bin/setenv_local.sh' and/or '$CLUSTER/bin/setenv_vm.sh' and set the" >> $README_FILE
+   echo "   following variables (and others as necessary):" >> $README_FILE
+   echo "      MEMBER_TCP_LIST (for setenv_vm.sh only)" >> $README_FILE
+   echo "      RUN_SCRIPT" >> $README_FILE
+   echo "      JAVA_OPTS" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "4. The changes you made in the above steps apply to all masters and members. If you are" >> $README_FILE
+   echo "   running Spark/GemFire on multiple machines then you can deploy the same changes to" >> $README_FILE
+   echo "   other machines." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "5. Start a member by running '${CLUSTER}/bin/start_member.sh'" >> $README_FILE
+   echo "          Display usage: start_member.sh -?" >> $README_FILE
+   echo "      Run local members: start_member.sh -local <member-number>" >> $README_FILE
+   echo "         Run VM members: start_member.sh -vm" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "6. Stop a member by running 'stop_member -num member_number'" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "7. Stop a master by running 'stop_master -num member_number'" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "8. The master and member log files are written in the $CLUSTER/log directory." >> $README_FILE
+
+   cp $README_FILE ${CLUSTER_DIR}/generated/
+
+   #
+   # Copy RUN_SCRIPT the bin directory if defined
+   #
+   if [ "$RUN_SCRIPT" != "" ]; then
+      cp $RUN_SCRIPT $__BIN_DIR
+   fi
+
+   #
+   # Write start_master.sh and start_member.sh
+   #
+   writeStartScript "master"
+   writeStartScript "member"
+
+   #
+   # Write setenv.sh
+   #
+   __SETENV_SH_FILE=$__BIN_DIR/setenv.sh
+   echo "#" >> $__SETENV_SH_FILE
+   echo "# Set environment variables required by your application in this file." >> $__SETENV_SH_FILE
+   echo "# This file is sourced in by setenv_local.sh and setenv_vm.sh." >> $__SETENV_SH_FILE
+   echo "#" >> $__SETENV_SH_FILE
+   echo "" >> $__SETENV_SH_FILE
+   echo "#" >> $__SETENV_SH_FILE
+   echo "# Set SPARK_HOME to the Spark or GemFire installation directory path." >> $__SETENV_SH_FILE
+   echo "# This is a required environment variable." >> $__SETENV_SH_FILE
+   echo "#" >> $__SETENV_SH_FILE
+   echo "export SPARK_HOME=$SPARK_HOME" >> $__SETENV_SH_FILE
+
+   pushd ${CLUSTER_DIR}/generated/tmp > /dev/null 2>&1
+   tar -czvf ${CLUSTER_DIR}/generated/$CLUSTER.tar.gz $CLUSTER
+   popd > /dev/null 2>&1
+
+   rm -r ${CLUSTER_DIR}/generated/tmp
+
+   echo ""
+   echo "Script tarball generated:"
+   echo ""
+   echo -e "   ${CLightGreen}${CLUSTER_DIR}/generated/README.txt${CNone}"
+   echo -e "   ${CLightGreen}${CLUSTER_DIR}/generated/$CLUSTER.tar.gz${CNone}"
+   echo ""
+   echo "See 'README.txt' (also included in the tarball) for instructions."
+   echo ""
+fi

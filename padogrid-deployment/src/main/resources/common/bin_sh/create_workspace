@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-name -cluster -product -java -vm -vm-java -vm-product -vm-addon -vm-workspaces -vm-user -vm-key -quiet -?"
+   echo "-name -cluster -product -java -vm -vm-java -vm-product -vm-workspaces -vm-user -vm-key -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -88,7 +88,7 @@ fi
 cat <<EOF
 
    -product local_product_home_path
-              Local Geode, GemFire, Hazelcast, Jet, or Coherence home path.
+              Local home path of Geode, GemFire, Hazelcast, Jet, Coherence, or Spark.
 
    -vm [comma_separated_host_names]
               A comma separated list of VM host names (or IP addresses). If the list contains
@@ -105,9 +105,9 @@ cat <<EOF
               been created.
 
    -vm-product vm_product_home_path
-              VM Geode, GemFire, Hazelcast, Jet, or Coherence home path. If the VMs do not have the product
-              installed, then you can install it by executing 'vm_install' after the workspace
-              has locally been created.
+              VM home path of Geode, GemFire, Hazelcast, Jet, Coherence, or Spark. If the VMs do not
+              have the product installed, then you can install it by executing 'vm_install' after
+              the workspace has locally been created.
 
    -vm-padogrid vm_padogrid_path
               VM PadoGrid home path. If the VMs do not have PadoGrid installed in this path,
@@ -148,6 +148,12 @@ if [ "$PADOGRID_WORKSPACES_HOME" == "" ] || [ ! -d $PADOGRID_WORKSPACES_HOME ]; 
       echo >&2 "----------------------------------------------------------------"
       exit 1
    fi
+fi
+
+# TODO: It seems .argenv.sh source-in of ENV_ARG has no effect due to recurrent source-ins.
+#       For now, source in again.
+if [ "$ENV_ARG" != "" ]; then
+   . $ENV_ARG
 fi
 
 if [ "$JAVA_HOME_ARG" == "" ]; then
@@ -321,11 +327,23 @@ else
          if [ "$GEODE_HOME" != "" ]; then
             echo "   $GEODE_HOME"
          fi 
+         if [ "$GEMFIRE_HOME" != "" ]; then
+            echo "   $GEMFIRE_HOME"
+         fi 
          if [ "$COHERENCE_HOME" != "" ]; then
             echo "   $COHERENCE_HOME"
          fi
          if [ "$SNAPPYDATA_HOME" != "" ]; then
             echo "   $SNAPPYDATA_HOME"
+         fi
+         if [ "$SPARK_HOME" != "" ]; then
+            echo "   $SPARK_HOME"
+         fi
+         if [ "$KAFKA_HOME" != "" ]; then
+            echo "   $KAFKA_HOME"
+         fi
+         if [ "$HADOOP_HOME" != "" ]; then
+            echo "   $HADOOP_HOME"
          fi
          echo "[$__PRODUCT_HOME]:"
 
@@ -565,52 +583,97 @@ echo ". \$SCRIPT_DIR/.addonenv.sh \$@" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
 echo "# The following environment variables are required. Without them, padogrid may not" >> $WORKSPACE_DIR/setenv.sh
-echo "# function properly. Note that for non-local pods, they are set separately in the" >> $WORKSPACE_DIR/setenv.sh
-echo "# node initialization file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACE_DIR/setenv.sh
+echo "# function properly." >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
+
+# Product home paths
 echo "#" >> $WORKSPACE_DIR/setenv.sh
-echo "if [ \"\$POD\" == \"\" ] || [ \"\$POD\" == \"local\" ]; then" >> $WORKSPACE_DIR/setenv.sh
+echo "# Set product home paths. Unspecified product homes default to the values set" >> $WORKSPACE_DIR/setenv.sh
+echo "# in the RWE's setenv.sh file. Note that for non-local pods, they are set" >> $WORKSPACE_DIR/setenv.sh
+echo "# separately in the node initialization file, i.e., /vagrant/.nodeenv.sh." >> $WORKSPACE_DIR/setenv.sh
+echo "# IN_POD is reserved and used interally by PadoGrid to identify pod clusters." >> $WORKSPACE_DIR/setenv.sh
+echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "if [ \"\$IN_POD\" != \"true\" ]; then" >> $WORKSPACE_DIR/setenv.sh
+echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACE_DIR/setenv.sh
+echo "   #export PADO_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
 if [ "$JAVA_HOME" != "" ]; then
    echo "   export JAVA_HOME=\"$JAVA_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
    echo "   #export JAVA_HOME=" >> $WORKSPACE_DIR/setenv.sh
 fi
-echo "   export PRODUCT_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 
 if [ "$PRODUCT" == "geode" ]; then
-   echo "   export GEODE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-   echo "   export PADO_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
+      echo "   export GEMFIRE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   #export GEODE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "   export GEODE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   #export GEMFIRE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   fi
 elif [ "$PRODUCT" == "coherence" ]; then
-   echo "   export COHERENCE_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   export COHERENCE_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "snappydata" ]; then
-   echo "   export SNAPPYDATA_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   export SNAPPYDATA_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "spark" ]; then
+   echo "   export SPARK_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "kafka" ]; then
+   echo "   export KAFKA_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "hadoop" ]; then
+   echo "   export HADOOP_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$CLUSTER_TYPE" == "jet" ]; then
-      echo "   export JET_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export JET_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       if [ "$JET_HOME" != "" ]; then
          if [ -d "$JET_HOME/hazelcast-jet-management-center" ]; then
             echo "   export HAZELCAST_MC_HOME=\"\$JET_HOME/hazelcast-jet-management-center\"" >> $WORKSPACE_DIR/setenv.sh
          else
-            echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+            echo "   export JET_MC_HOME=\"$JET_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
          fi
       else
          echo "   export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-         echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "   export JET_MC_HOME=\"$JET_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       fi
+      echo "   #export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   #export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    else
-      echo "   export HAZELCAST_HOME=\"\$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export HAZELCAST_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       if [ "$HAZELCAST_HOME" != "" ]; then
          if [ -d "$HAZELCAST_HOME/management-center" ]; then
             echo "   export HAZELCAST_MC_HOME=\"\$HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
          else
-            echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+            echo "   export HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
          fi
       else
          echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-         echo "   export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+         echo "   export HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       fi
+      echo "   #export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   #export JET_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    fi
 fi
-echo "   export PADOGRID_HOME=\"$PARENT_DIR\"" >> $WORKSPACE_DIR/setenv.sh
+if [ "$PRODUCT" != "coherence" ]; then
+   echo "   #export COHERENCE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "geode" ]; then
+   echo "   #export GEMFIRE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   #export GEODE_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "hazelcast" ]; then
+   echo "   #export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   echo "   #export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "snappydata" ]; then
+   echo "   #export SNAPPYDATA_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "spark" ]; then
+   echo "   #export SPARK_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "kafka" ]; then
+   echo "   #export KAFKA_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
+if [ "$PRODUCT" != "hadoop" ]; then
+   echo "   #export HADOOP_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+fi
 echo "fi" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
@@ -625,17 +688,17 @@ echo "# VM user name." >> $WORKSPACE_DIR/setenv.sh
 echo "VM_USER=\"$VM_USER\"" >> $WORKSPACE_DIR/setenv.sh
 echo "# VM private key file path. If not set, then it defaults to the first .pem file" >> $WORKSPACE_DIR/setenv.sh
 echo "# found in the workspace directory." >> $WORKSPACE_DIR/setenv.sh
-if [ "$__VM_PRIVATE_KEY_FILE" != "" ]; then
-echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
-else
-echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
-fi
 if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
    cp $VM_PRIVATE_KEY_FILE $WORKSPACE_DIR/
    __VM_PRIVATE_KEY_FILE="$(basename $VM_PRIVATE_KEY_FILE)"
    chmod 400 $WORKSPACE_DIR/$__VM_PRIVATE_KEY_FILE
 else
    __VM_PRIVATE_KEY_FILE=""
+fi
+if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
+else
+echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/setenv.sh
 fi
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# VM hosts may have installation paths dfferent from the local paths." >> $WORKSPACE_DIR/setenv.sh
@@ -654,6 +717,15 @@ if [ "$VM_ENABLED" == "true" ]; then
    elif [ "$PRODUCT" == "snappydata" ]; then
       echo "# VM SnappData home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_SNAPPYDATA_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "spark" ]; then
+      echo "# VM Spark home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_SPARK_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "kafka" ]; then
+      echo "# VM Kafka home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_KAFKA_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "hadoop" ]; then
+      echo "# VM Hadoop home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_HADOOP_HOME=\"\$VM_PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
       if [ "$CLUSTER_TYPE" == "jet" ]; then
@@ -690,6 +762,15 @@ else
    elif [ "$PRODUCT" == "snappydata" ]; then
       echo "# VM SnappyData home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_SNAPPYDATA_HOME=\$SNAPPYDATA_HOME" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "spark" ]; then
+      echo "# VM Spark home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_SPARK_HOME=\$SPARK_HOME" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "kafka" ]; then
+      echo "# VM Kafka home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_KAFKA_HOME=\$KAFKA_HOME" >> $WORKSPACE_DIR/setenv.sh
+   elif [ "$PRODUCT" == "hadoop" ]; then
+      echo "# VM Hadoop home directory path." >> $WORKSPACE_DIR/setenv.sh
+      echo "VM_HADOOP_HOME=\$HADOOP_HOME" >> $WORKSPACE_DIR/setenv.sh
    else
       echo "# VM Hazelcast home directory path." >> $WORKSPACE_DIR/setenv.sh
       echo "VM_HAZELCAST_HOME=\$HAZELCAST_HOME" >> $WORKSPACE_DIR/setenv.sh
@@ -709,12 +790,6 @@ echo "# Add your workspace-wide environment variables in this file." >> $WORKSPA
 echo "# The environment variables set in this file are used for all clusters running" >> $WORKSPACE_DIR/setenv.sh
 echo "# in this workspace. Cluster specifics should be added in clusters/<cluster>/setenv.sh." >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
-echo "" >> $WORKSPACE_DIR/setenv.sh
-echo "# Set default cluster name. This cluster name is used if the '-cluster' option is not specified" >> $WORKSPACE_DIR/setenv.sh
-echo "# when running padogrid commands." >> $WORKSPACE_DIR/setenv.sh
-echo "if [ \"\$CLUSTER\" == \"\" ]; then" >> $WORKSPACE_DIR/setenv.sh
-echo "   export CLUSTER=\"$CLUSTER\"" >> $WORKSPACE_DIR/setenv.sh
-echo "fi" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# Set default pod name. This pod name is used if the '-pod' option is not specified" >> $WORKSPACE_DIR/setenv.sh
 echo "# when running padogrid commands" >> $WORKSPACE_DIR/setenv.sh
@@ -745,6 +820,12 @@ elif [ "$PRODUCT" == "coherence" ]; then
    echo "#    \$COHERENCE_HOME/lib/*" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "snappydata" ]; then
    echo "#    \$SNAPPYDATA_HOME/jars/*" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "spark" ]; then
+   echo "#    \$SPARK_HOME/jars/*" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "kafka" ]; then
+   echo "#    \$KAFKA_HOME/jars/*" >> $WORKSPACE_DIR/setenv.sh
+elif [ "$PRODUCT" == "hadoop" ]; then
+   echo "#    \$HADOOP_HOME/jars/*" >> $WORKSPACE_DIR/setenv.sh
 else
    if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
    echo "#    \$HAZELCAST_HOME/lib/hazelcast-enterprise-all-<version>.jar" >> $WORKSPACE_DIR/setenv.sh
@@ -770,24 +851,17 @@ echo "export PADOGRID_WORKSPACE=\$SCRIPT_DIR" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export CLUSTERS_DIR=\$PADOGRID_WORKSPACE/clusters" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export PODS_DIR=\$PADOGRID_WORKSPACE/pods" >> $WORKSPACE_DIR/.addonenv.sh
 echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
-if [ "$PRODUCT" == "geode" ]; then
-   echo "export PRODUCT=geode" >> $WORKSPACE_DIR/.addonenv.sh
-elif [ "$PRODUCT" == "coherence" ]; then
-   echo "export PRODUCT=coherence" >> $WORKSPACE_DIR/.addonenv.sh
-elif [ "$PRODUCT" == "snappydata" ]; then
-   echo "export PRODUCT=snappydata" >> $WORKSPACE_DIR/.addonenv.sh
-else
-   echo "export CLUSTER_TYPE=$CLUSTER_TYPE" >> $WORKSPACE_DIR/.addonenv.sh
-   echo "export PRODUCT=hazelcast" >> $WORKSPACE_DIR/.addonenv.sh
-fi
 
 #
-# Switch workspace and create cluster. This is done is sub-shell and hence
+# Switch workspace and create cluster. This is done in sub-shell and hence
 # the exported variables do not carry on to the parent shell.
 #
+export POD=""
 export PADOGRID_WORKSPACE=$WORKSPACE_DIR
 export CLUSTER
-$SCRIPT_DIR/switch_workspace
+export PRODUCT
+export CLUSTER_TYPE
+#switch_workspace
 if [ "$VM_ENABLED" == "true" ]; then
    $PARENT_DIR/$PRODUCT/bin_sh/create_cluster -vm $VM_HOSTS -cluster $CLUSTER
 else
@@ -796,11 +870,6 @@ fi
 
 # Create product env file
 createProductEnvFile "$PRODUCT" "$PADOGRID_WORKSPACES_HOME"
-
-# Update the defaultenv.sh file if this is the sole workspace
-if [ "$(list_workspaces)" == "$WORKSPACE" ]; then
-   updateDefaultEnv
-fi
 
 #
 # Display workspace information
@@ -811,8 +880,8 @@ echo "   $WORKSPACE_DIR"
 echo ""
 echo "The workspace directory also contains the following files."
 echo ""
-echo "   initenv.sh -  Workspace initialization file. Source this file in to"
-echo "                 enter the workspace."
+echo "   initenv.sh -  Workspace initialization file. This file is automatically sourced"
+echo "                 in when you switch into the workspace."
 echo ""
 echo "   setenv.sh -  You can set your workspace-wide environment variables in"
 echo "                this file."

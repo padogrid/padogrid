@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the name of the present (current) working group in the current workspace
+
+SYNOPSIS
+   $EXECUTABLE [-all] [-?]
+
+DESCRIPTION
+   Displays the name of the present (current) working group. If the '-all' option is present then
+   it displays current environment details.
+
+OPTIONS
+   -all
+             If specified then it displays the current environment details.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*group*" $EXECUTABLE
+   exit
+fi
+
+WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+
+CLUSTER_FOUND="false"
+GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
+GROUP_FILE="$PADOGRID_WORKSPACE/groups/$GROUP/etc/group.properties"
+if [ -f "$GROUP_FILE" ]; then
+   CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
+   CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
+   for i in $CLUSTER_NAMES; do
+      if [ "$i" == "$CLUSTER" ]; then
+         CLUSTER_FOUND="true"
+         break;
+      fi
+   done
+fi
+
+# Search all groups for the current cluster. Set GROUP to the first one found.
+if [ "$CLUSTER_FOUND" == "false" ]; then
+   GROUP=$(getCurrentClusterGroup)
+fi
+
+if [ "$ALL" = "true" ]; then
+   if [ "$GROUP" != "" ]; then
+      GROUP_FILE="$PADOGRID_WORKSPACE/groups/$GROUP/etc/group.properties"
+      CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
+      echo "                   GROUP: $GROUP"
+      echo "                Clusters: $CLUSTER_NAMES_COMMAS"
+      echo "                 CLUSTER: $CLUSTER"
+      echo "            CLUSTER_TYPE: $CLUSTER_TYPE"
+      echo "       Current Workspace: $WORKSPACE"
+      echo "      PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "PADOGRID_WORKSPACES_HOME: $PADOGRID_WORKSPACES_HOME"
+      echo "                 PRODUCT: $PRODUCT"
+      echo "            PRODUCT_HOME: $PRODUCT_HOME"
+      echo "           PADOGRID_HOME: $PADOGRID_HOME"
+   fi
+else
+   if [ "$GROUP" != "" ]; then
+      echo $GROUP
+   fi
+fi

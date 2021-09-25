@@ -1,0 +1,485 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -simulate -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start a Spark master in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num master_number] [-simulate] [-?]
+
+DESCRIPTION
+   Starts a Spark master in the specified cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -num master_number
+             Master number 1-9.
+
+   -simulate
+             If specified then it only displays the master information
+             and does not run the master.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MASTER_NUM
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*master*" $EXECUTABLE
+   exit
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+# Set -simulate if specified
+if [ "$SIMULATE" == "true" ]; then
+   SIMULATE_OPT="-simulate"
+else
+   SIMULATE_OPT=""
+fi
+# Set -create_script if specified
+if [ "$CREATE_SCRIPT" == "true" ]; then
+   CREATE_SCRIPT_OPT="-create-script"
+else
+   CREATE_SCRIPT_OPT=""
+fi
+
+#
+# VM cluster
+#
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_MASTER_HOSTS=`getClusterProperty "vm.master.hosts"`
+      if [ "$VM_MASTER_HOSTS" == "" ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "    ERROR: VM master hosts undefined. Set 'vm.master.hosts' in the following cluster.properties file."  
+         echo >&2 "           $ETC_DIR/cluster.properties"
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      #VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      VM_KEY=$VM_PRIVATE_KEY_FILE
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+
+      # Determine the host
+      __MASTER_NUMBER=0
+      __FOUND="false"
+      
+      for VM_HOST in $__VM_HOSTS; do
+         let __MASTER_NUMBER=__MASTER_NUMBER+1
+         if [ $__MASTER_NUMBER -eq $MASTER_NUM_NO_LEADING_ZERO ]; then
+            __FOUND="true"
+            if [ "$POD" == "local" ]; then
+               NUM=1
+            else
+               let NUM=__MASTER_NUMBER
+            fi
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_master $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            break;
+         fi
+      done
+      FIRST_NUMBER=1
+      LAST_NUMBER=$__MASTER_NUMBER
+      if [ "$__FOUND" == "false" ]; then
+         echo >&2 "ERROR: Invalid master number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+
+# For pod clusters. If non-pod, the following variables are ignored.
+PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+
+MASTER_NUMBER=$MASTER_NUM_NO_LEADING_ZERO
+MASTER=`getMasterName $MASTER_NUMBER`
+MASTER_DIR=$RUN_DIR/$MASTER
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ ! -d $MASTER_DIR ]; then
+   if [ "$REMOTE_SPECIFIED" == "true" ]; then
+      $SCRIPT_DIR/add_master -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Master: $MASTER"
+      echo "   Status: This master has not been configured. Please run the add_master command to configure"
+      echo "           new masters."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# If the master is already running, then exit.
+if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
+   PID=`getMasterPid $MASTER $WORKSPACE`
+   if [ -n "${PID}" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Master: $MASTER"
+      echo "   Status: This master is already running [Master: $MASTER, PID=$PID]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# Master port number
+MASTER_PROPERTIES=""
+MASTER_START_PORT=`getClusterProperty "master.tcp.startPort" $DEFAULT_MASTER_START_PORT`
+let MASTER_PORT=MASTER_START_PORT+MASTER_NUMBER-1
+let MASTER_END_PORT=MASTER_START_PORT+MAX_MASTER_COUNT-1
+MASTER_TCP_LIST=""
+MASTER_WEBUI_START_PORT=`getClusterProperty "master.webui.startPort" $DEFAULT_MASTER_WEBUI_START_PORT`
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+
+if [ "$VM_ENABLED" == "true" ]; then
+   HOST_NAME=$REMOTE
+   BIND_ADDRESS=`getClusterProperty "vm.${HOST_NAME}.bindAddress"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${HOST_NAME}.hostnameForClients"`
+   VM_MASTER_HOSTS=`getClusterProperty "vm.master.hosts"`
+   if [ "$VM_MASTER_HOSTS" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: VM hosts undefined. Set 'vm.master.hosts' in the following cluster.properties file."  
+      echo >&2 "           $ETC_DIR/cluster.properties"
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+   # Replace , with space
+   __VM_MASTER_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
+   for VM_HOST in $__VM_MASTER_HOSTS; do
+      if [ "$MASTER_TCP_LIST" == "" ]; then
+         MASTER_TCP_LIST="$VM_HOST[$MASTER_START_PORT]"
+      else
+         MASTER_TCP_LIST="$MASTER_TCP_LIST,$VM_HOST[$MASTER_START_PORT]"
+      fi
+   done
+elif [ "$POD" == "local" ]; then
+   HOST_NAME=`hostname`
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   MASTER_PREFIX=`getMasterPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${MASTER_PREFIX}*; do
+      if [ -d "$i" ]; then
+         __MASTER=$i
+         __MASTER_NUM=${__MASTER##$MASTER_PREFIX}
+         __MASTER_NUM=$(trimLeadingZero $__MASTER_NUM)
+         let __MASTER_PORT=MASTER_START_PORT+__MASTER_NUM-1
+         if [ "$MASTER_TCP_LIST" == "" ]; then
+            MASTER_TCP_LIST="$BIND_ADDRESS[$__MASTER_PORT]"
+         else
+            MASTER_TCP_LIST="$MASTER_TCP_LIST,$BIND_ADDRESS[$__MASTER_PORT]"
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+else
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   MASTER_COUNT=`getMasterCount`
+   NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   MASTER_TCP_LIST="$NODE_LOCAL[$MASTER_START_PORT]"
+   BIND_ADDRESS=$NODE_LOCAL
+   HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+fi
+
+# Debug parameters.
+DEBUG_ENABLED=`getClusterProperty "master.debug.enabled" $DEFAULT_MASTER_DEBUG_ENABLED`
+DEBUG=""
+if [ "$DEBUG_ENABLED" == "true" ]; then
+   DEBUG_START_PORT=`getClusterProperty "master.debug.startPort" $DEFAULT_MASTER_DEBUG_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let DEBUG_PORT=DEBUG_MASTER_START_PORT+MASTER_NUMBER-1
+   else
+      DEBUG_PORT=$DEBUG_START_PORT
+   fi
+   DEBUG="-Xdebug -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT"
+else
+   DEBUG_PORT="Disabled"
+   DEBUG=""
+fi
+
+# JMX parameters
+MASTER_JMX_ENABLED=`getClusterProperty "master.jmx.enabled" $DEFAULT_MASTER_JMX_ENABLED`
+JMX_PARAMETERS=""
+if [ "$MASTER_JMX_ENABLED" == "true" ]; then
+   MASTER_JMX_START_PORT=`getClusterProperty "master.jmx.startPort" $DEFAULT_MASTER_JMX_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let JMX_PORT=MASTER_JMX_START_PORT+MASTER_NUMBER-1
+   else
+      JMX_PORT=$MASTER_JMX_START_PORT
+   fi
+   JMX_PARAMETERS="-Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
+else
+   JMX_PORT="Disabled"
+   JMX_PARAMETERS=""
+fi
+
+# Set LOG_FILE in the log directory.
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   __LOG_DIR="$(cygpath -wp "$LOG_DIR")"
+else
+   __LOG_DIR=$LOG_DIR
+fi
+export LOG_FILE_NAME=${MASTER}.log
+export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   CONFIG_FILE="$(cygpath -wp "$CONFIG_FILE")"
+fi
+
+# Set heap to the "heap.min/heap.max" values found in the $ETC_DIR/cluster.properties file.
+MIN_HEAP_SIZE=`getClusterProperty "master.heap.min" $DEFAULT_MASTER_MIN_HEAP_SIZE`
+MAX_HEAP_SIZE=`getClusterProperty "master.heap.max" $DEFAULT_MASTER_MAX_HEAP_SIZE`
+
+# Set JAVA_OPTS.
+JAVA_OPTS="$JAVA_OPTS $MASTER_PROPERTIES $LOG_PROPERTIES $SHUTDOWN_HOOK_PROPERTIES $JMX_PARAMETERS"
+#JAVA_OPTS="$JAVA_OPTS -Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}"
+JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
+
+# Set Pulse
+JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "master.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
+JMX_MANAGER_START_PORT=`getClusterProperty "master.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+if [ "$POD" == "local" ]; then
+   let JMX_MANAGER_HTTP_PORT=JMX_MANAGER_HTTP_START_PORT+MASTER_NUMBER-1
+   let JMX_MANAGER_PORT=JMX_MANAGER_START_PORT+MASTER_NUMBER-1
+else
+   JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
+   JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
+fi
+
+# Set PROMETHEUS paths
+MASTER_PROMETHEUS_ENABLED=`getClusterProperty "master.prometheus.enabled" $DEFAULT_MASTER_PROMETHEUS_ENABLED`
+if [ "$MASTER_PROMETHEUS_ENABLED" == "true" ]; then
+   MASTER_PROMETHEUS_START_PORT=`getClusterProperty "master.prometheus.startPort" $DEFAULT_MASTER_PROMETHEUS_START_PORT`
+   if [ "$POD" == "local" ]; then
+      let PROMETHEUS_PORT=MASTER_PROMETHEUS_START_PORT+MASTER_NUMBER-1
+   else
+      PROMETHEUS_PORT=$MASTER_PROMETHEUS_START_PORT
+   fi
+   PROMETHEUS_CONFIG_FILE_PATH="$ETC_DIR/prometheus.yml"
+   PROMETHEUS_JAR_PATH=`find $BASE_DIR/lib -name jmx_prometheus_javaagent*.jar`
+
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      PROMETHEUS_JAR_PATH="$(cygpath -wp "$PROMETHEUS_JAR_PATH")"
+      PROMETHEUS_CONFIG_FILE_PATH="$(cygpath -wp "$PROMETHEUS_CONFIG_FILE_PATH")"
+      # Remove the disk drive letter from the path. A workaround to a bug in the prometheus exporter.
+      PROMETHEUS_CONFIG_FILE_PATH=${PROMETHEUS_CONFIG_FILE_PATH:2}
+   fi
+   JAVA_OPTS="$JAVA_OPTS -javaagent:$PROMETHEUS_JAR_PATH=$PROMETHEUS_PORT:$PROMETHEUS_CONFIG_FILE_PATH"
+else
+   PROMETHEUS_PORT="Disabled"
+fi
+
+# Set GC log
+GC_LOG_ENABLED=`getClusterProperty "gc.log.enabled" $DEFAULT_GC_LOG_ENABLED`
+GC_LOG_FILE_ENABLED=`getClusterProperty "gc.log.file.enabled" $DEFAULT_GC_LOG_FILE_ENABLED`
+if [ $GC_LOG_ENABLED == "true" ]; then
+   if [ $GC_LOG_FILE_ENABLED == "true" ]; then
+      GC_LOG_FILE=$LOG_DIR/${MASTER}-gc.log
+      if [[ ${OS_NAME} == CYGWIN* ]]; then
+         GC_LOG_FILE="$(cygpath -wp "$GC_LOG_FILE")"
+      fi
+      if [[ $JAVA_VERSION == 1.8* ]]; then
+         JAVA_OPTS="$JAVA_OPTS -Xloggc:$GC_LOG_FILE -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+      else
+         JAVA_OPTS="$JAVA_OPTS -Xlog:gc=info:file=$GC_LOG_FILE:time,uptime,pid:filecount=5,filesize=4096"
+      fi
+   fi
+fi
+
+# Start the master
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+   MASTER_DIR="$(cygpath -wp "$MASTER_DIR")"
+fi
+export LOG_DIR=$__LOG_DIR
+
+JAVA_OPTS="-Dpado.vm.id=${MASTER} \
+   -Dpadogrid.workspace=$WORKSPACE \
+   $JAVA_OPTS"
+
+# Set master system properties
+if [ -f "$ETC_DIR/master.properties" ]; then
+   declare -a propArray
+   getPropertiesArray "$ETC_DIR/master.properties" propArray
+   len=${#propArray[@]}
+   if [ $len -gt 0 ]; then
+      let last_index=len-1
+      MASTER_PROPS=""
+      for i in $(seq 0 $last_index); do
+         MASTER_PROPS="$MASTER_PROPS -D${propArray[$i]}"
+      done
+      JAVA_OPTS="$JAVA_OPTS $MASTER_PROPS"
+   fi
+fi
+
+POD=`getClusterProperty "pod.name" $POD`
+if [ "$SIMULATE" == "true" ]; then
+   PID="Simulated"
+elif [ "$CREATE_SCRIPT" == "true" ]; then
+   PID="Script"
+else
+   # LOG_FILE might not exist if a VM bundle has been deployed.
+   if  [ ! -d "$LOG_DIR" ]; then
+      mkdir -p $LOG_DIR
+   fi
+   if [ "$RUN_SCRIPT" != "" ]; then
+      $RUN_SCRIPT >> $LOG_FILE &
+   else
+      echo SPARK_CONF_DIR=$ETC_DIR
+      echo SPARK_MASTER_HOST=$BIND_ADDRESS
+      echo SPARK_MASTER_PORT=$MASTER_START_PORT
+      echo SPARK_MASTER_WEBUI_PORT=$MASTER_WEBUI_START_PORT
+      echo SPARK_LOCAL_DIRS=$CLUSTER_DIR/scratch
+      echo SPARK_LOG_DIR=$LOG_DIR
+      echo SPARK_PID_DIR=$RUN_DIR/pids
+      echo SPARK_MASTER_OPTS=$JAVA_OPTS
+      echo ""
+      echo start-master.sh
+
+      SPARK_CONF_DIR=$ETC_DIR \
+      SPARK_MASTER_HOST=$BIND_ADDRESS \
+      SPARK_MASTER_PORT=$MASTER_START_PORT \
+      SPARK_MASTER_WEBUI_PORT=$MASTER_WEBUI_START_PORT \
+      SPARK_LOCAL_DIRS=$CLUSTER_DIR/scratch \
+      SPARK_LOG_DIR=$LOG_DIR \
+      SPARK_PID_DIR=$RUN_DIR/pids \
+      SPARK_MASTER_OPTS=$JAVA_OPTS  start-master.sh
+
+      PID=`getMasterPid $MASTER $WORKSPACE`
+   fi
+fi
+
+# MASTER_URL
+MASTER_URL="spark://$BIND_ADDRESS:$MASTER_PORT"
+WEBUI_URL="http://$BIND_ADDRESS:$MASTER_WEBUI_START_PORT"
+
+# JMX_URL
+JMX_URL="service:jmx:rmi:///jndi/rmi://padomac.local:$JMX_PORT/jmxrmi"
+
+echo "----------------------------------------------------------------"
+echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+echo "         Cluster: $CLUSTER"
+if [ "$VM_SPECIFIED" == "true" ] || [ "$VM_ENABLED" == "true" ]; then
+echo "      Deployment: VM"
+else
+echo "             Pod: $POD"
+fi
+echo "          Master: $MASTER"
+echo "             PID: $PID"
+echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "     WORKING_DIR: $MASTER_DIR"
+echo "      CONFIG_DIR: $ETC_DIR"
+echo "     CONFIG_FILE: $CONFIG_FILE"
+echo "         LOG_DIR: $LOG_DIR"
+echo "        LOG_FILE: $LOG_FILE"
+echo "     MASTER_PORT: $MASTER_PORT"
+echo "       WBUI_PORT: $MASTER_WEBUI_START_PORT"
+echo "      DEBUG_PORT: $DEBUG_PORT"
+echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
+echo "        JMX_PORT: $JMX_PORT"
+echo "      MASTER_URL: $MASTER_URL"
+echo "       WEBUI_URL: $WEBUI_URL"
+if [ "$MASTER_JMX_ENABLED" == "true" ]; then
+echo "         JMX_URL: $JMX_URL"
+fi
+echo "            JAVA: $JAVA"
+if [ "$RUN_SCRIPT" != "" ]; then
+echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
+fi
+echo "       JAVA_OPTS: $JAVA_OPTS"
+echo "       CLASSPATH: $CLASSPATH"
+echo "----------------------------------------------------------------"
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "SPARK_OPTS"
+   echo "---------"
+   printJavaOpts "$SPARK_OPTS"
+   echo ""
+   echo "JAVA_OPTS"
+   echo "---------"
+   printJavaOpts "$JAVA_OPTS"
+   echo ""
+   echo "CLASSPATH"
+   echo "---------"
+   printClassPath "$CLASSPATH"
+   echo ""
+   echo "Environment Variables"
+   echo "---------------------"
+   echo "LOG_FILE=$LOG_FILE"
+   echo ""
+fi
+

@@ -38,7 +38,7 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Stop Hazelcast Management Center in the specified padogrid cluster
+   $EXECUTABLE - Stop Hazelcast Management Center in the specified cluster
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name] [-?]
@@ -78,10 +78,12 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
       if [ "$VM_KEY" != "" ]; then
          VM_KEY="-i $VM_KEY"
+      elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+         VM_KEY="-i $VM_PRIVATE_KEY_FILE"
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
-         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote -workspace $VM_PADOGRID_WORKSPACE $*"
+         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
          exit
       fi
    fi
@@ -100,10 +102,16 @@ else
 fi
 
 MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
+MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" "false"`
 MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
-WORKING_DIR=$RUN_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}
-LOG_FILE=$LOG_DIR/${CLUSTER}-mc-${MC_HTTP_PORT}.log
-MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+else
+   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+fi
+WORKING_DIR=$RUN_DIR/$MC_NAME
+LOG_FILE=$LOG_DIR/${MC_NAME}.log
 PID=`getMcPid $MC_NAME $WORKSPACE`
 
 if [ -z $PID ]; then
@@ -121,10 +129,18 @@ else
    echo "       MC Stopped: $MC_NAME"
    echo "          Cluster: $CLUSTER"
    echo "Management Center: hazelcast-mancenter"
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   echo "              URL: https://${NODE}:${MC_HTTPS_PORT}/hazelcast-mancenter"
+   else
    echo "              URL: http://${NODE}:${MC_HTTP_PORT}/hazelcast-mancenter"
+   fi
    echo "              PID: $PID"
-   echo "      WORKING_DIR: $RUN_DIR/hazelcast-mc-${MC_HTTP_PORT}"
+   echo "      WORKING_DIR: ${WORKING_DIR}"
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   echo "       HTTPS_PORT: $MC_HTTPS_PORT"
+   else
    echo "        HTTP_PORT: $MC_HTTP_PORT"
+   fi
    echo "         JMX_PORT: $MC_JMX_PORT"
    echo "          LOG_DIR: $LOG_DIR"
    echo "         LOG_FILE: $LOG_FILE"

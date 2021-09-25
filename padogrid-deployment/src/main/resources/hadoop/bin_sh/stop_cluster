@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Stop all running members in the current padogrid workspace
+
+WARNING
+   This command does not wait for migration operations to complete before
+   terminating members. For graceful shutdown, use 'shutdown_cluster' instead.
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
+
+DESCRIPTION
+   Stops all running members by executing 'stop_member' on each member in the
+   cluster. To stop both members and namenodes, specify the '-all' option.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -all
+             If specified, then it stops both members and namenodes.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_NAMENODE_HOSTS=`getClusterProperty "vm.namenode.hosts"`
+   if [ "$VM_NAMENODE_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM local hosts undefined. Set 'vm.namenode.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+   MEMBER_NUM=1
+   for VM_HOST in $__VM_HOSTS; do
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
+   done
+
+   if [ "$ALL" == "true" ]; then
+      # NameNodes
+      __NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
+      MEMBER_NUM=1
+      for VM_HOST in $__NAMENODE_HOSTS; do
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_namenode -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         if [ "$POD" != "local" ]; then
+            let MEMBER_NUM=MEMBER_NUM+1
+         fi
+      done
+   fi
+   exit
+fi
+
+#
+# Local cluster
+#
+POD=`getClusterProperty "pod.name" "local"`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+
+pushd $RUN_DIR > /dev/null 2>&1
+# Stop members
+for i in ${MEMBER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      pushd $i > /dev/null 2>&1
+      MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+      stop_member -cluster $CLUSTER -num $MEMBER_NUMBER
+      popd > /dev/null 2>&1
+   fi
+done
+
+# Stop namenodes
+if [ "$ALL" == "true" ]; then
+
+   NAMENODE=`getNameNodeName 1`
+   HADOOP_PID_DIR=$RUN_DIR/pid/$NAMENODE
+
+   # First stop othere components
+   SECONDARYNAMENODE="$(getHadoopPrefix secondarynamenode)01"
+   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE`
+   if [ "$PID" != "" ]; then
+     echo "Stopping secondarynamenode..."
+     HADOOP_PID_DIR=$HADOOP_PID_DIR \
+     hdfs --daemon stop secondarynamenode
+   fi
+   NODEMANAGER="$(getHadoopPrefix nodemanager)01"
+   PID=`getNameNodePid $NODEMANAGER $WORKSPACE`
+   if [ "$PID" != "" ]; then
+     echo "Stopping nodemanager..."
+     HADOOP_PID_DIR=$HADOOP_PID_DIR \
+     yarn --daemon stop nodemanager
+   fi
+   RESOURCEMANAGER="$(getHadoopPrefix resourcemanager)01"
+   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE`
+   if [ "$PID" != "" ]; then
+     echo "Stopping resourcemanager..."
+     HADOOP_PID_DIR=$HADOOP_PID_DIR \
+     yarn --daemon stop resourcemanager
+   fi
+   HISTORYSERVER="$(getHadoopPrefix historyserver)01"
+   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE`
+   if [ "$PID" != "" ]; then
+     echo "Stopping historyserver..."
+     HADOOP_PID_DIR=$HADOOP_PID_DIR \
+     mapred --daemon stop historyserver
+   fi
+
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
+   NAMENODE_PREFIX=`getNameNodePrefix`
+   NAMENODE_PREFIX_LEN=${#NAMENODE_PREFIX}
+   for i in ${NAMENODE_PREFIX}*; do
+      if [ -d "$i" ]; then
+         pushd $i > /dev/null 2>&1
+         NAMENODE_NUMBER=${i:$NAMENODE_PREFIX_LEN}
+         stop_namenode -cluster $CLUSTER -num $NAMENODE_NUMBER
+         popd > /dev/null 2>&1
+      fi
+   done
+fi
+popd > /dev/null 2>&1

@@ -15,11 +15,27 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
+if [ "$JAR_ARG" != "" ]; then
+   CLASSPATH="$CLASSPATH:$JAR_ARG"
+fi
 if [ "$CLASSPATH_ARG" != "" ]; then
    CLASSPATH="$CLASSPATH_ARG/*:$CLASSPATH"
 fi
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"
 fi
-#"$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.KryoGenerator $@ 2> /dev/null
-"$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.KryoGenerator $@
+
+if [ "$PRODUCT" == "geode" ]; then
+   "$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.GeodeKryoGenerator $@
+elif [ "$PRODUCT" == "hazelcast" ]; then
+   "$JAVA" -Dexecutable.name=$EXECUTABLE com.netcrest.padogrid.tools.HazelcastKryoGenerator $@
+else
+   echo >&2 "ERROR: Kryo grenerator is not available for this product: [$PRODUCT]. Command aborted."
+fi
+exit
+
+# For padogrid -? only
+cat <<EOF
+NAME
+   $EXECUTABLE - Generate KryoSerializer
+EOF

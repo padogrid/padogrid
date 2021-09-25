@@ -44,7 +44,7 @@ public class CustomerFactoryImpl extends AbstractDataObjectFactory {
 	 * Returns an entry with the specified idNum as part of the primary key
 	 */
 	@Override
-	public DataObjectFactory.Entry createEntry(int idNum) {
+	public DataObjectFactory.Entry createEntry(int idNum, Object erKey) {
 		Customer customer = createCustomer();
 		if (isKeyRandom == false) {
 			customer.setCustomerId(createKey(idNum));

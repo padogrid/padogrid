@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -?"
+   echo "-cluster -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,10 +38,10 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Start all inactive members in the specified padogrid cluster
+   $EXECUTABLE - Start all inactive members in the specified cluster
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name]
+   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
 
 DESCRIPTION
    Starts all inactive (or stopped) members in the specified cluster.
@@ -49,6 +49,9 @@ DESCRIPTION
 OPTIONS
    -cluster cluster_name
              Cluster name.
+
+   -all
+             If specified, then it starts both members and management center.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -63,6 +66,19 @@ SEE ALSO
 EOF
    printSeeAlsoList "*cluster*" $EXECUTABLE
    exit
+fi
+
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
 fi
 
 # 
@@ -87,9 +103,15 @@ if [ "$VM_ENABLED" == "true" ]; then
    VM_KEY=`getClusterProperty "vm.privateKeyFile"`
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
+   elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
    fi
+   MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE"
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $@ -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
    done
    exit
 fi
@@ -133,7 +155,7 @@ for i in ${MEMBER_PREFIX}*; do
       let COUNT=COUNT+1
       pushd $i > /dev/null 2>&1
       MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
-      start_member -cluster $CLUSTER -num $MEMBER_NUMBER $*
+      start_member -cluster $CLUSTER -num $MEMBER_NUMBER $@
       popd > /dev/null 2>&1
    fi
    if [ "$POD" != "local" ]; then
@@ -143,6 +165,11 @@ for i in ${MEMBER_PREFIX}*; do
    fi
 done
 popd > /dev/null 2>&1
+
+# Start management center if -all specified.
+if [ "$ALL" == "true" ]; then
+   start_mc "$@"
+fi
 
 if [ "$MEMBER_NUMBER" == "" ]; then
    echo "----------------------------------------------------------------"

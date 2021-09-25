@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -quiet -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified cluster from the current padogrid workspace
+
+WARNING
+   This command removes the entire cluster directory including the config and log files.
+   If a VM cluster, it removes the cluster directory in each loccator and member VM.
+
+SYNOPSIS
+   $EXECUTABLE -cluster cluster_name [-quiet] [-?]
+
+DESCRIPTION
+   Removes the specified cluster. It prompts for confirmation. Specify the 'quiet' option
+   to suppress the confirmation prompt.
+
+   -cluster cluster_name
+             Unique cluster name. The cluster name is required.
+
+   -quiet
+             Quiet mode. Supresses the interactive prompt.
+
+DEFAULT
+   $EXECUTABLE -cluster cluster_name
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+
+if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: Cluster name is not specified. Command aborted." 
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Prompt if the cluster exists
+if [ -d $CLUSTER_DIR ]; then
+   if [ "$QUIET" == "false" ]; then
+      echo "        WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "Cluster to Remove: $CLUSTER"
+      echo "   This command removes the entire cluster including config, log, and data store files."
+      echo "Do you want to continue?"
+      echo "(Enter 'continue' + Enter to continue the cluster removal, other keys to abort.)"
+      read INPUT
+      if [ "$INPUT" != "continue" ]; then
+         echo "Cluster removal aborted."
+         exit
+      fi
+   fi
+else
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# Returns the number of active (running) member VMs.
+# @required __VM_HOSTS Space separated list of VM hosts (addresses)
+# @optional VM_KEY  VM private key file path with -i prefix, e.g., "-i file.pem"
+#                   Required by getVmMemberPid.
+# @return Returns the number of active (running) VM members 
+function getActiveVmMemberCount()
+{
+   local MEMBER_COUNT=0
+   local MEMBER_RUNNING_COUNT=0
+   for VM_HOST in ${__VM_HOSTS}; do
+      let MEMBER_COUNT=MEMBER_COUNT+1
+      MEMBER=`getVmMemberName $VM_HOST`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      if [ "$pid" != "" ]; then
+          let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
+      fi
+  done
+  echo $MEMBER_RUNNING_COUNT
+}
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+# POD needed to get the correct node name
+POD=`getClusterProperty "pod.name" "local"`
+
+# See if any members in the cluster are still running. If so, abort.
+MEMBER_RUNNING_COUNT=0
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_HOSTS=$(getClusterProperty "vm.hosts")
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+   MEMBER_RUNNING_COUNT=$(getActiveVmMemberCount)
+else
+   # Members
+   MEMBER_COUNT=0
+   MEMBER_PREFIX=`getMemberPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${MEMBER_PREFIX}*; do
+      if [ -d "$i" ]; then
+         pushd $i > /dev/null 2>&1
+         let MEMBER_COUNT=MEMBER_COUNT+1
+         MEMBER=$i
+         MEMBER_DIR=$RUN_DIR/$MEMBER
+         LOG_FILE=$LOG_DIR/${MEMBER}.log
+         echo "----------------------------------------------------------------"
+         echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "     Member: $MEMBER"
+         pid=`getMemberPid $MEMBER $WORKSPACE`
+         if [ -z $pid ]; then
+            echo "       *PID: N/A (Down)"
+         else
+            echo "        PID: $pid"
+            let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
+         fi
+         echo "Working Dir: $MEMBER_DIR"
+         popd > /dev/null 2>&1
+      fi
+   done
+fi
+
+if [ $MEMBER_RUNNING_COUNT -gt 0 ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo >&2 "    ERROR: ${MEMBER_RUNNING_COUNT} member(s) are still running in the cluster. Please stop them first."
+   echo >&2 "           Command aborted."
+   echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+# Remove the cluster from VMs if enabled.
+if [ "$VM_ENABLED" == "true" ]; then
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
+   fi
+
+   # Remove all from the workspace VMs
+
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   for VM_HOST in $__VM_HOSTS; do
+      HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+      if [ "$HOSTNAME" == "" ]; then
+         echo "Invalid host [$VM_HOST]"
+         continue
+      elif [ "$HOSTNAME" == "$THIS_VM_HOSTNAME" ]; then
+         continue
+      fi
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "rm -rf $VM_PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   done
+fi
+
+# Get group names before removing the cluster to prevent the error due to removed dir
+GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
+GROUP_NAMES=""
+if [ -d "$GROUPS_DIR" ]; then
+   GROUP_NAMES=$(list_groups)
+fi
+
+# Remove the cluster in local VM
+CURRENT_DIR=`pwd`
+rm -rf $CLUSTER_DIR
+
+# Update group.properties if the cluster belongs to groups
+GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
+for GROUP in $GROUP_NAMES; do
+   GROUP_FILE="$GROUPS_DIR/$GROUP/etc/group.properties"
+   if [ -f "$GROUP_FILE" ]; then
+      CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
+      if [ "$CLUSTER_NAMES_COMMAS" != "" ]; then
+         CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
+         if [ "$(containsWord "$CLUSTER_NAMES" "$CLUSTER")" == "true" ]; then
+            NEW_CLUSTER_NAMES_COMMAS=""
+            for i in $CLUSTER_NAMES; do
+               if [ "$i" != "$CLUSTER" ]; then
+                  if [ "$NEW_CLUSTER_NAMES_COMMAS" == "" ]; then
+                     NEW_CLUSTER_NAMES_COMMAS="$i"
+                  else
+                     NEW_CLUSTER_NAMES_COMMAS="$NEW_CLUSTER_NAMES_COMMAS, $i"
+                  fi
+               fi
+            done
+            setProperty "$GROUPS_DIR/$GROUP/etc/group.properties" "group.cluster.names" "$NEW_CLUSTER_NAMES_COMMAS"
+         fi
+      fi
+   fi
+done
+
+echo "----------------------------------------------------------------"
+echo "      WORKSPACE: $PADOGRID_WORKSPACE"
+echo "Cluster Removed: $CLUSTER"
+if [ "$VM_ENABLED" == "true" ]; then
+echo "            VMs: $VM_HOSTS"
+fi
+echo "    CLUSTER_DIR: $CLUSTER_DIR"
+echo "     CONFIG_DIR: $ETC_DIR"
+echo "    CONFIG_FILE: $CONFIG_FILE"
+echo "        LOG_DIR: $LOG_DIR"
+echo "----------------------------------------------------------------"
+
+if [ "$CURRENT_DIR" != "" ] && [ ! -d "$CURRENT_DIR" ]; then
+   echo "You are currently in the removed directory."
+   echo "Please change directory to a valid directory before executing any commands."
+fi

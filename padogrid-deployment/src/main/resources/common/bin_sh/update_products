@@ -1,0 +1,819 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+# 
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi      
+
+RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
+
+__options()
+{
+   echo "-product -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Interatively add or update product versions in the current RWE
+
+SYNOPSIS
+   $EXECUTABLE [-product product_name] [-?]
+
+DESCRIPTION
+   Interactively add or update the current PadoGrid environment (RWE) with the installed
+   product versions. This command extracts product versions from the PadoGrid products
+   directory where the products are installed. You can also manually update them in the
+   RWE and/or workspace 'setenv.sh' file.
+
+OPTIONS
+   -product product_name
+             Product to update. The product name must be one of the following.
+
+EOF
+for i in $DOWNLOADABLE_PRODUCTS; do
+   echo "             $i"
+done
+   echo "             pado"
+   echo "             padodesktop"
+   echo "             padoweb"
+   echo "             jet-mc"
+cat <<EOF
+
+NOTES
+   PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0 or
+   a later version.
+
+EOF
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "change_version install_padogrid show_products" $EXECUTABLE
+   exit
+fi
+
+# Exit if invalid product specified
+if [ "$PRODUCT_ARG" != "" ]; then
+   if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS pado padodesktop padoweb jet-mc" "$PRODUCT_ARG")" == "false" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid product name: [$PRODUCT_ARG]. Please enter one of the following products."
+      for i in $DOWNLOADABLE_PRODUCTS; do
+         echo >&2 "          $i"
+      done
+      echo >&2 "          pado"
+      echo >&2 "          padodesktop"
+      echo >&2 "          padoweb"
+      echo >&2 "          jet-mc"
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+fi
+
+function getProductVersions
+{
+   __PADOGRID_VERSION=${PADOGRID_HOME#*padogrid_}
+   __PADO_VERSION=${PADO_HOME#*pado_}
+   __PADODESKTOP_VERSION=${PADODESKTOP_HOME#*pado-desktop_}
+   __PADOWEB_VERSION=${PADOWEB_HOME#*padoweb_}
+   __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
+   __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
+   __HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_HOME#*hazelcast-enterprise-}
+   if [[ "$HAZELCAST_MC_HOME" == *"management-center" ]] && [ -d "$HAZELCAST_MC_HOME" ]; then
+      for i in $HAZELCAST_MC_HOME/*.jar; do
+         if [[ "$i" == *"hazelcast-management-center"* ]]; then
+            __HAZELCAST_MC_VERSION=${i#*hazelcast-management-center-}
+            __HAZELCAST_MC_VERSION=${__HAZELCAST_MC_VERSION%.jar}
+            break;
+         fi
+      done
+   else
+      __HAZELCAST_MC_VERSION=${HAZELCAST_MC_HOME#*hazelcast-management-center-}
+   fi
+   __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
+   __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
+   __HAZELCAST_OSS_VERSION=${JET_HOME#*hazelcast-}
+   if [[ "$JET_MC_HOME" == *"4.2021"* ]]; then
+      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-management-center-}
+   else
+      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-jet-management-center-}
+   fi
+   __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
+   __SPARK_VERSION=${SPARK_HOME#*spark-}
+   __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
+   __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
+}
+
+#
+# 
+# @output SELECTED_INDEX
+#
+function doUserInput
+{
+   local index=0
+   local PRODUCT_NAME=$1
+   local VERSIONS=($2)
+   local CURRENT_PRODUCT_VERSION=$3
+   SELECTED_INDEX=$4
+   if [ "$SELECTED_INDEX" == "" ]; then
+      SELECTED_INDEX=0
+   fi
+
+   local len=${#VERSIONS[@]}
+   local last last_index
+   let last_index=len-1
+   echo ${PRODUCT_NAME}
+   if [ $len -eq 0 ]; then
+      echo "   (not installed)"
+   else
+      local CURRRENT_PRODUCT_INDEX=""
+      for i in ${VERSIONS[@]}; do
+        if [ "$i" == "$CURRENT_PRODUCT_VERSION" ]; then
+           echo -e "   [$index] ${CLightGreen}$i${CNone}"
+        else
+           echo "   [$index] $i"
+        fi
+        let index=index+1
+      done
+      
+      local __REDO="true"
+      while [ "$__REDO" == "true" ]; do
+         read -p "Enter a version to add [$SELECTED_INDEX]: " INPUT
+         if [ "$INPUT" == "" ]; then
+            __REDO="false"
+            break;
+         elif [ "$(isNumber $INPUT)" == "false" ]; then
+            echo "Invalid input. Please enter [0, $last_index]."
+         elif [ $INPUT -lt 0 ] || [ $INPUT -gt $last_index ]; then
+            echo "Invalid input. Please enter [0, $last_index]."
+         else
+            SELECTED_INDEX=$INPUT
+            __REDO="false"
+         fi
+      done
+   fi
+}
+
+determineInstalledProductVersions
+getProductVersions
+
+# Add "(none)"
+PADOGRID_VERSIONS="(none) $PADOGRID_VERSIONS"
+PADO_VERSIONS="(none) $PADO_VERSIONS"
+PADODEKSTOP_VERSIONS="(none) $PADODEKSTOP_VERSIONS"
+PADOWEB_VERSIONS="(none) $PADOWEB_VERSIONS"
+GEMFIRE_VERSIONS="(none) $GEMFIRE_VERSIONS"
+GEODE_VERSIONS="(none) $GEODE_VERSIONS"
+HAZELCAST_ENTERPRISE_VERSIONS="(none) $HAZELCAST_ENTERPRISE_VERSIONS"
+HAZELCAST_OSS_VERSIONS="(none) $HAZELCAST_OSS_VERSIONS"
+HAZELCAST_MANAGEMENT_CENTER_VERSIONS="(none) $HAZELCAST_MANAGEMENT_CENTER_VERSIONS"
+JET_ENTERPRISE_VERSIONS="(none) $JET_ENTERPRISE_VERSIONS"
+JET_OSS_VERSIONS="(none) $JET_OSS_VERSIONS"
+JET_MANAGEMENT_CENTER_VERSIONS="(none) $JET_MANAGEMENT_CENTER_VERSIONS"
+SNAPPYDATA_VERSIONS="(none) $SNAPPYDATA_VERSIONS"
+SPARK_VERSIONS="(none) $SPARK_VERSIONS"
+KAFKA_VERSIONS="(none) $KAFKA_VERSIONS"
+HADOOP_VERSIONS="(none) $HADOOP_VERSIONS"
+
+# Convert to array
+__PADOGRID_VERSIONS=($PADOGRID_VERSIONS)
+__PADO_VERSIONS=($PADO_VERSIONS)
+__PADODEKSTOP_VERSIONS=($PADODEKSTOP_VERSIONS)
+__PADOWEB_VERSIONS=($PADOWEB_VERSIONS)
+__GEMFIRE_VERSIONS=($GEMFIRE_VERSIONS)
+__GEODE_VERSIONS=($GEODE_VERSIONS)
+__HAZELCAST_ENTERPRISE_VERSIONS=($HAZELCAST_ENTERPRISE_VERSIONS)
+__HAZELCAST_OSS_VERSIONS=($HAZELCAST_OSS_VERSIONS)
+__HAZELCAST_MANAGEMENT_CENTER_VERSIONS=($HAZELCAST_MANAGEMENT_CENTER_VERSIONS)
+__JET_ENTERPRISE_VERSIONS=($JET_ENTERPRISE_VERSIONS)
+__JET_OSS_VERSIONS=($JET_OSS_VERSIONS)
+__JET_MANAGEMENT_CENTER_VERSIONS=($JET_MANAGEMENT_CENTER_VERSIONS)
+__SNAPPYDATA_VERSIONS=($SNAPPYDATA_VERSIONS)
+__SPARK_VERSIONS=($SPARK_VERSIONS)
+__KAFKA_VERSIONS=($KAFKA_VERSIONS)
+__HADOOP_VERSIONS=($HADOOP_VERSIONS)
+
+echo ""
+echo "Products Directoy:"
+echo "   $PADOGRID_ENV_BASE_PATH/products"
+echo ""
+echo "The following product versions are found in the products directory."
+echo -e "The current workspace versions are ${CLightGreen}highlighted${CNone}."
+echo ""
+
+SELECTED_INDEX_PADOGRID=""
+SELECTED_INDEX_PADO=""
+SELECTED_INDEX_PADODESKTOP=""
+SELECTED_INDEX_PADOWEB=""
+SELECTED_INDEX_GEMFIRE=""
+SELECTED_INDEX_GEODE=""
+SELECTED_INDEX_HAZELCAST_ENTERPRISE=""
+SELECTED_INDEX_HAZELCAST_OSS=""
+SELECTED_INDEX_HAZELCAST_MC=""
+SELECTED_INDEX_JET_ENTERPRISE=""
+SELECTED_INDEX_JET_OSS=""
+SELECTED_INDEX_JET_MC=""
+SELECTED_INDEX_SNAPPYDATA=""
+SELECTED_INDEX_SPARK=""
+SELECTED_INDEX_KAFKA=""
+SELECTED_INDEX_HADOOP=""
+
+# Product PRODUCT_EVAL_ARRAY.
+INDEX_PADOGRID=0
+INDEX_PADO=1
+INDEX_PADODESKTOP=2
+INDEX_PADOWEB=3
+INDEX_GEMFIRE=4
+INDEX_GEODE=5
+INDEX_HAZELCAST=6
+INDEX_HAZELCAST_MC=7
+INDEX_JET=8
+INDEX_JET_MC=9
+INDEX_SNAPPYDATA=10
+INDEX_SPARK=11
+INDEX_KAFKA=12
+INDEX_HADOOP=13
+
+# PRODUCT_HOME_ARRAY contains an ordered list of product home environment variable names
+PRODUCT_HOME_ARRAY=(PADOGRID_HOME PADO_HOME PADODESKTOP_HOME PADOWEB_HOME GEMFIRE_HOME GEODE_HOME HAZELCAST_HOME HAZELCAST_MC_HOME JET_HOME JET_MC_HOME SNAPPYDATA_HOME SPARK_HOME KAFKA_HOME HADOOP_HOME)
+
+# PRODUCT_EVAL_ARRAY is an ordered list of selected product versions. See INDEX_ variables above.
+# [0] PADOGRID
+# [1] PADO
+# [2] PADODESKTOP
+# [3] PADOWEB
+# [4] GEMFIRE
+# [5] GEODE
+# [6] HAZELCAST - (use IS_HAZELCAST_ENTERPRISE to determine enterprise or oss)
+# [7] HAZELCAST_MC 
+# [8] JET (use IS_JET_ENTERPRISE to determine enterprise or oss)
+# [9] JET_MC
+# [10] SNAPPYDATA
+# [11] SPARK
+# [12] KAFKA
+# [13] HADOOP
+# "none" indicates no product selection
+unset PRODUCT_EVAL_ARRAY
+let LAST_INDEX=${#PRODUCT_HOME_ARRAY[@]}-1
+for i in $(seq 0 $LAST_INDEX); do
+  PRODUCT_EVAL_ARRAY[$i]="none"
+done
+
+__JAVA_HOME=$JAVA_HOME
+NEW_JAVA_HOME=$JAVA_HOME
+
+REDO="true"
+while [ "$REDO" == "true" ]; do
+   # PadoGrid
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padogrid" ]; then
+      doUserInput "PadoGrid" "$PADOGRID_VERSIONS" "$__PADOGRID_VERSION" "$SELECTED_INDEX_PADOGRID"
+      echo "Selected: [$SELECTED_INDEX] ${__PADOGRID_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_PADOGRID=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_PADOGRID]=${__PADOGRID_VERSIONS[$SELECTED_INDEX]}
+   fi
+
+   # Java
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "java" ]; then
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         echo "Enter Java home path."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$__JAVA_HOME]:"
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __JAVA_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
+         fi
+         __JAVA_HOME="$(trimString "$__JAVA_HOME")"
+         if [[ ! -d "$__JAVA_HOME" ]]; then
+            echo "Directory does not exist or not a directory."
+            __JAVA_HOME="$JAVA_HOME_ARG"
+            __REDO=true
+         elif [ "$__JAVA_HOME" == "" ]; then
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      NEW_JAVA_HOME="$__JAVA_HOME"
+   fi
+   
+   # Pado
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+      doUserInput "Pado" "$PADO_VERSIONS" "$__PADO_VERSION" "$SELECTED_INDEX_PADO"
+      echo "Selected: [$SELECTED_INDEX] ${__PADO_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_PADO=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_PADO]=${__PADO_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
+   # PadoDesktop
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+      doUserInput "PadoDesktop" "$PADODEKSTOP_VERSIONS" "$__PADODESKTOP_VERSION" "$SELECTED_INDEX_PADODESKTOP"
+      echo "Selected: [$SELECTED_INDEX] ${__PADODEKSTOP_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_PADODESKTOP=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_PADODESKTOP]=${__PADODEKSTOP_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
+   # PadoWeb
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+      doUserInput "PadoWeb" "$PADOWEB_VERSIONS" "$__PADOWEB_VERSION" "$SELECTED_INDEX_PADOWEB"
+      echo "Selected: [$SELECTED_INDEX] ${__PADOWEB_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_PADOWEB=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_PADOWEB]=${__PADOWEB_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+   
+   # GemFire
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "gemfire" ]; then
+      doUserInput "GemFire" "$GEMFIRE_VERSIONS" "$__GEMFIRE_VERSION" "$SELECTED_INDEX_GEMFIRE"
+      echo "Selected: [$SELECTED_INDEX] ${__GEMFIRE_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_GEMFIRE=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_GEMFIRE]=${__GEMFIRE_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+   
+   # Geode
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+      doUserInput "Geode" "$GEODE_VERSIONS" "$__GEODE_VERSION" "$SELECTED_INDEX_GEODE"
+      echo "Selected: [$SELECTED_INDEX] ${__GEODE_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_GEODE=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_GEODE]=${__GEODE_VERSIONS[$SELECTED_INDEX]}
+   echo ""
+   fi
+
+   if [ "$PRODUCT_ARG" == "" ]; then
+      __NONE="false"
+      __INNER_LOOP="true"
+      while [ "$__INNER_LOOP" == "true" ]; do
+         read -p "Do you want to add Hazelcast Enterprise or OSS? Enter 'e' for Enterprise, 'o' for OSS, 'n' for none: " INPUT
+         case $INPUT in
+            [Ee]* ) IS_HAZELCAST_ENTERPRISE="true"; __INNER_LOOP="false";;
+            [Oo]* ) IS_HAZELCAST_ENTERPRISE="false"; __INNER_LOOP="false";;
+            [Nn]* ) IS_HAZELCAST_ENTERPRISE="false"; __NONE="true"; __INNER_LOOP="false";;
+         esac
+      done
+   else
+      if [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+         IS_HAZELCAST_ENTERPRISE="true"
+         __NONE="false"
+      elif [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+         IS_HAZELCAST_ENTERPRISE="false"
+         __NONE="false"
+      else
+         __NONE="true"
+      fi
+   fi
+
+   if [ "$__NONE" == "false" ]; then
+      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+         # Hazelcast Enterprise
+         doUserInput "Hazelcast Enterprise" "$HAZELCAST_ENTERPRISE_VERSIONS" "$__HAZELCAST_ENTERPRISE_VERSION" "$SELECTED_INDEX_HAZELCAST_ENTERPRISE"
+         echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_HAZELCAST_ENTERPRISE=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      else
+         # Hazelcast OSS
+         doUserInput "Hazelcast OSS" "$HAZELCAST_OSS_VERSIONS" "$__HAZELCAST_OSS_VERSION" "$SELECTED_INDEX_HAZELCAST_OSS"
+         echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_HAZELCAST_OSS=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+   fi
+
+   # Hazelcast Management Center
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
+      doUserInput "Hazelcast Management Center" "$HAZELCAST_MANAGEMENT_CENTER_VERSIONS" "$__HAZELCAST_MC_VERSION" "$SELECTED_INDEX_HAZELCAST_MC"
+      echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_HAZELCAST_MC=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST_MC]=${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
+   if [ "$PRODUCT_ARG" == "" ]; then
+      __INNER_LOOP="true"
+      __NONE="false"
+      while [ "$__INNER_LOOP" == "true" ]; do
+         read -p "Do you want to add Jet Enterprise or OSS? Enter 'e' for Enterprise, 'o' for OSS, 'n' for none: " INPUT
+         case $INPUT in
+            [Ee]* ) IS_JET_ENTERPRISE="true"; __INNER_LOOP="false";;
+            [Oo]* ) IS_JET_ENTERPRISE="false"; __INNER_LOOP="false";;
+            [Nn]* ) IS_HAZELCAST_ENTERPRISE="false"; __NONE="true"; __INNER_LOOP="false";;
+         esac
+      done
+    else
+      if [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+         IS_JET_ENTERPRISE="true"
+         __NONE="false"
+      elif [ "$PRODUCT_ARG" == "jet-oss" ]; then
+         IS_JET_ENTERPRISE="false"
+         __NONE="false"
+      else
+         __NONE="true"
+      fi
+   fi
+
+   if [ "$__NONE" == "false" ]; then
+      if [ "$IS_JET_ENTERPRISE" == "true" ]; then
+         # Jet Enterprise
+         doUserInput "Jet Enterprise" "$JET_ENTERPRISE_VERSIONS" "$__JET_ENTERPRISE_VERSION" "$SELECTED_INDEX_JET_ENTERPRISE"
+         echo "Selected: [$SELECTED_INDEX] ${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_JET_ENTERPRISE=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_JET]=${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      else
+         # Jet OSS
+         doUserInput "Jet OSS" "$JET_OSS_VERSIONS" "$__JET_OSS_VERSION" "$SELECTED_INDEX_JET_OSS"
+         echo "Selected: [$SELECTED_INDEX] ${__JET_OSS_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_JET_OSS=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_JET]=${__JET_OSS_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+   fi
+
+   # Jet Management Center
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-mc" ]; then
+      doUserInput "Jet Management Center" "$JET_MANAGEMENT_CENTER_VERSIONS" "$__JET_MC_VERSION" "$SELECTED_INDEX_JET_MC"
+      echo "Selected: [$SELECTED_INDEX] ${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_JET_MC=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_JET_MC]=${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
+   # SnappyData
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+      doUserInput "SnappyData" "$SNAPPYDATA_VERSIONS" "$__SNAPPYDATA_VERSION" "$SELECTED_INDEX_SNAPPYDATA"
+      echo "Selected: [$SELECTED_INDEX] ${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX]}"
+      PRODUCT_EVAL_ARRAY[$INDEX_SNAPPYDATA]=${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX]}
+      SELECTED_INDEX_SNAPPYDATA=$SELECTED_INDEX
+      echo ""
+   fi
+
+   # Spark
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+      doUserInput "Spark" "$SPARK_VERSIONS" "$__SPARK_VERSION" "$SELECTED_INDEX_SPARK"
+      echo "Selected: [$SELECTED_INDEX] ${__SPARK_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_SPARK=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_SPARK]=${__SPARK_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
+   # Kafka
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+      doUserInput "Kafka" "$KAFKA_VERSIONS" "$__KAFKA_VERSION" "$SELECTED_INDEX_KAFKA"
+      echo "Selected: [$SELECTED_INDEX] ${__KAFKA_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_KAFKA=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_KAFKA]=${__KAFKA_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
+   # Hadoop
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
+      doUserInput "Hadoop" "$HADOOP_VERSIONS" "$__HADOOP_VERSION" "$SELECTED_INDEX_HADOOP"
+      echo "Selected: [$SELECTED_INDEX] ${__HADOOP_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_HADOOP=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_HADOOP]=${__HADOOP_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
+   __INNER_REDO="true"
+   while [ "$__INNER_REDO" == "true" ]; do
+      # RWE
+      __INNER_LOOP="true"
+      while [ "$__INNER_LOOP" == "true" ]; do
+         echo "Apply selected version(s) to RWE?"
+         read -p "Enter 'r' for RWE, 'n' for no RWE, 'q' to quit this command: " INPUT
+         case $INPUT in
+            [Rr]* ) UPDATE_RWE=true; __INNER_LOOP=false;;
+            [Nn]* ) UPDATE_RWE=false; __INNER_LOOP=false;;
+            [Qq]* ) exit;;
+         esac
+      done
+      echo ""
+      
+      # Workspaces
+      __INNER_LOOP="true"
+      while [ "$__INNER_LOOP" == "true" ]; do
+         echo "Apply selected version(s) to the current workspace or all workspaces?"
+         echo "Enter 'w' for current workspace, 'a' for all workspaces,"
+         read -p "      'n' for no workspaces,     'q' to quit this command: " INPUT
+         case $INPUT in
+            [Ww]* ) UPDATE_WORKSPACES="current"; __INNER_LOOP=false;;
+            [Aa]* ) UPDATE_WORKSPACES="all"; __INNER_LOOP=false;;
+            [Nn]* ) UPDATE_WORKSPACES="none"; __INNER_LOOP=false;;
+            [Qq]* ) exit;;
+         esac
+      done
+      if [ "$UPDATE_RWE" == "false" ] && [ "$UPDATE_WORKSPACES" == "none" ]; then
+         echo "You have selected no RWE and workspaces to apply. You must select at least one."
+      else
+         __INNER_REDO="false"
+      fi
+   done
+
+   ### Summary
+   echo ""
+   echo "You have selected the following products to add or update:"
+   echo "   PadoGrid: ${__PADOGRID_VERSIONS[$SELECTED_INDEX_PADOGRID]}"
+   echo "       Java: ${NEW_JAVA_HOME}"
+   echo "       Pado: ${__PADO_VERSIONS[$SELECTED_INDEX_PADO]}"
+   echo "PadoDesktop: ${__PADODESKTOP_VERSIONS[$SELECTED_INDEX_PADODESKTOP]}"
+   echo "    PadoWeb: ${__PADOWEB_VERSIONS[$SELECTED_INDEX_PADOWEB]}"
+   echo "    GemFire: ${__GEMFIRE_VERSIONS[$SELECTED_INDEX_GEMFIRE]}"
+   echo "      Geode: ${__GEODE_VERSIONS[$SELECTED_INDEX_GEODE]}"
+   if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+   echo "  Hazelcast: ${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX_HAZELCAST_ENTERPRISE]} - enterprise"
+   else
+   echo "  Hazelcast: ${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX_HAZELCAST_OSS]} - oss"
+   fi
+   echo "Hazecast MC: ${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX_HAZELCAST_MC]}"
+   if [ "$IS_JET_ENTERPRISE" == "true" ]; then
+   echo "        Jet: ${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX_JET_ENTERPRISE]} - enterprise"
+   else
+   echo "        Jet: ${__JET_OSS_VERSIONS[$SELECTED_INDEX_JET_OSS]} - oss"
+   fi
+   echo "     Jet MC: ${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX_JET_MC]}"
+   echo " SnappyData: ${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX_SNAPPYDATA]}"
+   echo "      Spark: ${__SPARK_VERSIONS[$SELECTED_INDEX_SPARK]}"
+   echo "      Kafka: ${__KAFKA_VERSIONS[$SELECTED_INDEX_KAFKA]}"
+   echo "     Hadoop: ${__HADOOP_VERSIONS[$SELECTED_INDEX_HADOOP]}"
+   echo ""
+   echo "The selected product(s) will be applied to"
+   if [ "$UPDATE_RWE" == "true" ]; then
+      echo "   - Current RWE [$RWE_NAME]"
+   fi
+   if [ "$UPDATE_WORKSPACES" == "all" ]; then
+      echo "   - All workspaces in the cureent RWE"
+   elif [ "$UPDATE_WORKSPACES" == "current" ]; then
+      echo "   - Current workspace [$WORKSPACE_NAME]"
+   fi
+   echo ""
+
+   __INNER_LOOP="true"
+   while [ "$__INNER_LOOP" == "true" ]; do
+      read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
+      case $INPUT in
+         [Cc]* ) REDO=false; __INNER_LOOP=false;;
+         [Rr]* ) REDO=true; __INNER_LOOP=false;;
+         [Qq]* ) echo "Command Aborted."; __INNER_LOOP=false; exit;;
+      esac
+   done
+      
+done
+
+echo ""
+
+# Add selected products
+WORKSPACE_DIR="$PADOGRID_WORKSPACE"
+PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
+RWE_SETENV="$PADOGRID_WORKSPACES_HOME/setenv.sh"
+WORKSPACE_SETENV="$WORKSPACE_DIR/setenv.sh"
+
+#
+# Returns the product directory name for the specified product index
+#
+# @param productIndex   Product index
+# @param productVersion Product version
+# @param isEnterprise   "true" if product is Enterprise, "false" if product is OSS
+#
+# @return Returns the product directory name
+#
+function getProductDirName
+{
+  local INDEX="$1"
+  local VERSION="$2"
+  local IS_ENTERPRISE="$3"
+  local DIR_NAME=""
+  case $INDEX in
+    $INDEX_PADOGRID ) DIR_NAME="padogrid_$VERSION";;
+    $INDEX_PADO ) DIR_NAME="pado_$VERSION";;
+    $INDEX_PADODESKTOP ) DIR_NAME="pado-desktop_$VERSION";;
+    $INDEX_PADOWEB ) DIR_NAME="padoweb_$VERSION";;
+    $INDEX_GEMFIRE ) DIR_NAME="pivotal-gemfire-$VERSION";;
+    $INDEX_GEODE ) DIR_NAME="apache-geode-$VERSION";;
+    $INDEX_HAZELCAST )
+       if [ "$IS_ENTERPRISE" == "true" ]; then 
+          DIR_NAME="hazelcast-enterprise-$VERSION"
+       else
+          DIR_NAME="hazelcast-$VERSION"
+       fi
+      ;;
+    $INDEX_HAZELCAST_MC ) DIR_NAME="hazelcast-management-center-$VERSION";;
+    $INDEX_JET )
+       if [ "$IS_ENTERPRISE" == "true" ]; then 
+          DIR_NAME="hazelcast-jet-enterprise-$VERSION"
+       else
+          DIR_NAME="hazelcast-jet-$VERSION"
+       fi
+      ;;
+    $INDEX_JET_MC )
+       if [[ "$VERSION" == *"4.2021"* ]]; then
+          DIR_NAME="hazelcast-management-center-$VERSION"
+       else
+          DIR_NAME="hazelcast-jet-management-center-$VERSION"
+       fi
+       ;;
+    $INDEX_SNAPPYDATA ) DIR_NAME="snappydata-$VERSION";;
+    $INDEX_SPARK ) DIR_NAME="spark-$VERSION";;
+    $INDEX_KAFKA ) DIR_NAME="kafka_$VERSION";;
+    $INDEX_HADOOP ) DIR_NAME="hadoop-$VERSION";;
+  esac
+  echo $DIR_NAME
+}
+
+#
+# Updates EVAL_RWE variable
+#
+# @param productIndex   Product index
+# @param productVersion Product version
+# @param isEnterprise   "true" if product is Enterprise, "false" if product is OSS
+# @param homeEnvVar     Home environment variable, e.g. PADOGRID_HOME
+# @param setenvPath     setenv.sh path
+# @required PRODUCTS_DIR Products directory path
+#
+function updateEVAL_RWE
+{
+   local INDEX="$1"
+   local VERSION="$2"
+   local IS_ENTERPRISE="$3"
+   local ENV_HOME="$4"
+   local SETENV_PATH="$5"
+
+   local PRODUCT_DIR_NAME=$(getProductDirName $INDEX $VERSION $IS_ENTERPRISE)
+   local ENV_HOME_PATH=$PRODUCTS_DIR/$PRODUCT_DIR_NAME
+
+   updateEVAL_RWE_HOME_PATH "$ENV_HOME" "$ENV_HOME_PATH" "$SETENV_PATH"
+}
+
+#
+# Upates EVAL_RWE variable with the specified product home path.
+#
+# @param homeEnvVar      Home environment variable, e.g. PADOGRID_HOME
+# @param productHomePath Product home path
+# @param setenvPath      setenv.sh path
+# @required PRODUCTS_DIR Products directory path
+#
+function updateEVAL_RWE_HOME_PATH
+{
+   local ENV_HOME="$1"
+   local ENV_HOME_PATH="$2"
+   local SETENV_PATH="$3"
+
+   if [ "$(grep "$ENV_HOME" $SETENV_PATH)" == "" ]; then
+      # If env var not found in setenv.sh, then insert this one before PRODUCT_HOME.
+      EVAL_RWE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'\'$'\n''\1|'"
+   elif [ "$(grep "^.*#.*export $ENV_HOME" $SETENV_PATH)" != "" ]; then
+      # Replace commented env var
+      EVAL_RWE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
+   else
+      # Replace the existing env var
+      EVAL_RWE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
+   fi
+}
+
+function updateEVAL_WORKSPACE
+{
+   local INDEX="$1"
+   local VERSION="$2"
+   local IS_ENTERPRISE="$3"
+   local ENV_HOME="$4"
+   local SETENV_PATH="$5"
+
+   local PRODUCT_DIR_NAME=$(getProductDirName $INDEX $VERSION $IS_ENTERPRISE)
+   local ENV_HOME_PATH=$PRODUCTS_DIR/$PRODUCT_DIR_NAME
+
+   updateEVAL_WORKSPACE_HOME_PATH "$ENV_HOME" "$ENV_HOME_PATH" "$SETENV_PATH"
+}
+
+#
+# Upates EVAL_WORKSPACE variable with the specified product home path.
+#
+# @param homeEnvVar      Home environment variable, e.g. PADOGRID_HOME
+# @param productHomePath Product home path
+# @param setenvPath      setenv.sh path
+# @required PRODUCTS_DIR Products directory path
+#
+function updateEVAL_WORKSPACE_HOME_PATH
+{
+   local ENV_HOME="$1"
+   local ENV_HOME_PATH="$2"
+   local SETENV_PATH="$3"
+
+   if [ "$(grep "$ENV_HOME" $SETENV_PATH)" == "" ]; then
+      # If env var not found in setenv.sh, then insert this one before PRODUCT_HOME.
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'\'$'\n''\1|'"
+   elif [ "$(grep "^.*#.*export $ENV_HOME" $SETENV_PATH)" != "" ]; then
+      # Replace commented env var
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
+   else
+      # Replace the existing env var
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
+      #EVAL_WORKSPACE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\"${ENV_HOME_PATH}\"'|'"
+   fi
+}
+
+# RWE
+if [ "$UPDATE_RWE" == "true" ]; then
+   EVAL_RWE=""
+   let PRODUCT_INDEX=0
+   for i in "${PRODUCT_EVAL_ARRAY[@]}"; do
+      if [ "$i" != "(none)" ] && [ "$i" != "none" ]; then
+         if [[ $PRODUCT_INDEX -eq $INDEX_HAZELCAST ]]; then
+            IS_ENTERPRISE="$IS_HAZELCAST_ENTERPRISE"
+         elif [[ $PRODUCT_INDEX -eq $INDEX_JET ]]; then
+            IS_ENTERPRISE="$IS_JET_ENTERPRISE"
+         else
+            IS_ENTERPRISE="false"
+         fi
+         updateEVAL_RWE $PRODUCT_INDEX $i $IS_ENTERPRISE ${PRODUCT_HOME_ARRAY[$PRODUCT_INDEX]} "$RWE_SETENV"
+      fi
+      let PRODUCT_INDEX=PRODUCT_INDEX+1
+   done
+   if [ "$NEW_JAVA_HOME" != "" ] && [ "$NEW_JAVA_HOME" != "$JAVA_HOME" ]; then
+      updateEVAL_RWE_HOME_PATH "JAVA_HOME" "$NEW_JAVA_HOME" "$RWE_SETENV"
+   fi
+   if [ "$EVAL_RWE" != "" ]; then
+      eval "sed -i${__SED_BACKUP} $EVAL_RWE \"$RWE_SETENV\""
+      echo -e "      Updated RWE: ${CLightGreen}$RWE_NAME${CNone}"
+   fi
+fi
+
+# Workspace(s)
+if [ "$UPDATE_WORKSPACES" == "all" ]; then
+   WORKSPACES="$(list_workspaces)"
+elif [ "$UPDATE_WORKSPACES" == "current" ]; then
+   WORKSPACES="$WORKSPACE_NAME"
+else
+   WORKSPACES=""
+fi
+for WORKSPACE in $WORKSPACES; do
+   EVAL_WORKSPACE=""
+   WORKSPACE_SETENV="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/setenv.sh"
+   let PRODUCT_INDEX=0
+   for i in "${PRODUCT_EVAL_ARRAY[@]}"; do
+      if [ "$i" != "(none)" ] && [ "$i" != "none" ]; then
+         if [[ $PRODUCT_INDEX -eq $INDEX_HAZELCAST ]]; then
+            IS_ENTERPRISE="$IS_HAZELCAST_ENTERPRISE"
+         elif [[ $PRODUCT_INDEX -eq $INDEX_JET ]]; then
+            IS_ENTERPRISE="$IS_JET_ENTERPRISE"
+         else
+            IS_ENTERPRISE="false"
+         fi
+         updateEVAL_WORKSPACE $PRODUCT_INDEX $i $IS_ENTERPRISE ${PRODUCT_HOME_ARRAY[$PRODUCT_INDEX]} "$WORKSPACE_SETENV"
+      fi
+      let PRODUCT_INDEX=PRODUCT_INDEX+1
+   done
+   if [ "$NEW_JAVA_HOME" != "" ] && [ "$NEW_JAVA_HOME" != "$JAVA_HOME" ]; then
+      updateEVAL_WORKSPACE_HOME_PATH "JAVA_HOME" "$NEW_JAVA_HOME" "$WORKSPACE_SETENV"
+   fi
+   if [ "$EVAL_WORKSPACE" != "" ]; then
+      eval "sed -i${__SED_BACKUP} $EVAL_WORKSPACE \"$WORKSPACE_SETENV\""
+      echo -e "Updated Workspace: ${CLightGreen}$WORKSPACE${CNone}"
+   fi
+done
+
+echo ""

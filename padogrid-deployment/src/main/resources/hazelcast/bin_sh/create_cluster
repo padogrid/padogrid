@@ -19,6 +19,10 @@
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 . $SCRIPT_DIR/.addonenv.sh
 
+# Set PRODUCT here. This is necessary due to the default product read from
+# the RWE setenv.sh by the above .addonenv.sh
+PRODUCT="hazelcast"
+
 EXECUTABLE="`basename $0`"
 
 __options()
@@ -38,10 +42,11 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Create a new cluster in the current padogrid workspace
+   $EXECUTABLE - Create a new cluster in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-pod pod_name]
+   $EXECUTABLE [-cluster cluster_name]
+               [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-mc management_center_host]
                [-port first_port_number] [-?]
@@ -58,7 +63,8 @@ OPTIONS
              to all member names.
 
    -pod pod_name
-             Pod name. The 'local' pod is the local machine.
+             Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
+             option. 
              Default: local
 
    -vm [comma_separated_hosts]
@@ -66,6 +72,8 @@ OPTIONS
              contains spaces then enclosed it in quotes. If this option is not
              specified, then the host list defined by VM_HOSTS in the workspace
              'setenv.sh' file is applied.
+             
+             If the '-pod' option is specified then this option is suppressed.
              
    -mc management_center_host
              Management center host name. This option is meaningful only
@@ -77,6 +85,10 @@ OPTIONS
    -port first_port_number
              First member's port number. Port number is incremented
              starting from this port number for the subsquent members.
+             
+             This option applies only for a cluster running locally. It is ignored
+             for creating non-local pod and VM clusters.
+             
              Default: 5701 for IMDG, 6701 for Jet
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -86,7 +98,7 @@ DEFAULT
 
 FILES
    $PADOGRID_WORKSPACE/setenv.sh
-             The current workspace coniguration file.
+             The current workspace configuration file.
 
 EOF
 fi
@@ -115,10 +127,14 @@ if [ -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ "$VM_SPECIFIED" == "true" ]; then
+# Suppress pod if VM specified
+#if [ "$VM_SPECIFIED" == "true" ]; then
+#   POD="local"
+#fi
+
+if [ "$POD_SPECIFIED" == "false" ]; then
    POD="local"
 fi
-
 if [ "`isPodExist $POD`" == "false" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -127,62 +143,94 @@ if [ "`isPodExist $POD`" == "false" ]; then
    exit 1
 fi
 
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+# If -product (hidden option) is specified then make it default. This effectively
+# provides a way to create any product clusters in the same workspace.
+if [ "$PRODUCT_ARG" != "" ]; then
+   PRODUCT=$PRODUCT_ARG
+   if [ "$PRODUCT_ARG" == "jet" ]; then
+      CLUSTER_TYPE="jet"
+   fi
+fi
 
 #
 # Check the license key
 #
 if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
    if [ "$CLUSTER_TYPE" == "jet" ] && [ "$JET_LICENSE_KEY" == "" ] ||
-      [ "$CLUSTER_TYPE" == "imdg" ] && [ "$IMDG_LICENSE_KEY" == "" ]; then
+      [ "$CLUSTER_TYPE" == "imdg" ] && [ "$IMDG_LICENSE_KEY" == "" ] ||
+      [ "$CLUSTER_TYPE" == "hazelcast" ] && [ "$IMDG_LICENSE_KEY" == "" ]; then
       echo "WORKSPACE"
       echo "   $PADOGRID_WORKSPACE"
       echo ""
-      echo "LICENSE KEY WARNING:"
       echo "-----------------------------------------------------------------------------------"
+      echo -e "${CBrownOrange}LICENSE KEY WARNING:${CNone}"
       echo "It seems you have not entered the enterprise license key. You can enter it in any"
       echo "of the following files. The higher in the list the wider it is applied. For example,"
-      echo "setting it in '$PADOGRID_WORKSPACES_HOME/setenv.sh', applies to all workspaces"
-      echo "in that directory."
+      echo "setting it in '.hazecastenv.sh', applies to all workspaces in that directory."
       echo ""
-      echo "   $PADOGRID_HOME/setenv.sh"
-      echo "   $PADOGRID_WORKSPACES_HOME/setenv.sh"
+      echo "   $PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh"
       echo "   $PADOGRID_WORKSPACE/setenv.sh"
       echo "   $CLUSTER_DIR/bin_sh/setenv.sh"
       echo ""
-      echo "The recommended file to place your license key(s) is the following file. This allows"
+      echo "The following is the recommended file to place your license key(s). This allows"
       echo "all workspaces to inherit the license key(s)."
       echo ""
       echo -e "${CLightRed}$PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh${CNone}"
-      echo ""
    fi
 fi
 
 function writeCluster() 
 {
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      # Copy the template hazelcast.xml file
-      cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
-      # Copy the template hazelcast-jet.xml file
-      cp $BASE_DIR/etc/template-hazelcast-jet-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-jet.xml
-      # Copy the template Jet MC application.properties file
-      cp $BASE_DIR/etc/template-jet-mc-application.properties $ETC_DIR/jet-mc-application.properties
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         sed 's/\${JET_ENABLED}/true/g' $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast.xml
+      else
+         sed 's/\${JET_ENABLED}/false/g' $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast.xml
+      fi
 
-      # Insert cluster member list in hazelcast-client.xml
-      JET_CLUSTER_MEMBERS=""
-      HOST_IP="localhost"
-      HOST_SERVER_PORT=$NEW_MEMBER_START_PORT
-      COUNT=2
-      for i in $(seq 1 $COUNT); do   
-         if [ $i -lt $COUNT ]; then
-            JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}\t\t\t<address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>\n"
-         else
-            JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}\t\t\t<address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
-         fi
-	 let HOST_SERVER_PORT=HOST_SERVER_PORT+1
-      done
-      sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
+      # Change cluster type to hazelcast. "jet" and "imdg" are for keep the cluster creating
+      # steps consistent and for setting the initial config file only.
+      CLUSTER_TYPE="hazelcast"
+      # Update cluster env file with PRODUCT and CLUSTER_TYPE
+      updateClusterEnvFile
    else
-      cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+      if [ "$CLUSTER_TYPE" == "jet" ]; then
+         # Update cluster env file with PRODUCT and CLUSTER_TYPE
+         updateClusterEnvFile
+   
+         # Copy the template hazelcast.xml file
+         cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+         # Copy the template hazelcast-jet.xml file
+         cp $BASE_DIR/etc/template-hazelcast-jet-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-jet.xml
+         # Copy the template Jet MC application.properties file
+         cp $BASE_DIR/etc/template-jet-mc-application.properties $ETC_DIR/jet-mc-application.properties
+   
+         # Insert cluster member list in hazelcast-client.xml
+         JET_CLUSTER_MEMBERS=""
+         HOST_IP="localhost"
+         HOST_SERVER_PORT=$NEW_MEMBER_START_PORT
+         COUNT=2
+         for i in $(seq 1 $COUNT); do   
+            if [ $i -lt $COUNT ]; then
+               JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
+            else
+               JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
+            fi
+            let HOST_SERVER_PORT=HOST_SERVER_PORT+1
+         done
+         sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
+      else
+         # Update cluster env file with PRODUCT and CLUSTER_TYPE
+         updateClusterEnvFile
+   
+         if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
+            cp $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
+         else
+            cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+          fi
+      fi
    fi
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
@@ -213,8 +261,8 @@ function writeCluster()
    echo "# directory. CLASSPATH includes all the jar files in that directory for" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# the apps and clusters running in this workspace." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dpadogrid.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dpadogrid.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dhazelcast-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dhazelcast-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Set Management Center Java options, i.e., -Dhazelcast.mc.forceLogoutOnMultipleLogin=true" >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -330,17 +378,13 @@ function writeCluster()
    echo "# SSH user name. If not specified then defaults to the shell login session user name." >> $ETC_DIR/cluster.properties
    echo "vm.user=$VM_USER" >> $ETC_DIR/cluster.properties
    echo "# Optional private key file path. You may use the private key file for AWS EC2, for example. " >> $ETC_DIR/cluster.properties
-   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
-      echo "#vm.privateKeyFile=$VM_KEY_FILE" >> $ETC_DIR/cluster.properties
-   else
-      echo "vm.privateKeyFile=$VM_PRIVATE_KEY_FILE" >> $ETC_DIR/cluster.properties
-   fi
+   echo "#vm.privateKeyFile=$VM_KEY_FILE" >> $ETC_DIR/cluster.properties
 }
 
 # 
 # VM cluster
 #
-if [ $"VM_SPECIFIED" == "true" ]; then
+if [ "$VM_SPECIFIED" == "true" ] && [ "$POD" == "local" ]; then
    VM_ENABLED="true"
 fi
 if [ "$VM_USER" == "" ]; then
@@ -575,7 +619,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    MEMBER_1=`getMemberName 1`
    MEMBER_1_DIR=$CLUSTER_DIR/run/$MEMBER_1
    mkdir -p $MEMBER_1_DIR
-   POD_TYPE="local"
+   if [ "POD" == "local" ]; then
+      POD_TYPE="local"
+   fi
    MC_HOST=$VM_MC_HOSTS
 elif [ "$POD" == "local" ]; then
    MEMBER_1=`getMemberName 1`
@@ -586,22 +632,84 @@ elif [ "$POD" == "local" ]; then
    mkdir -p $MEMBER_2_DIR
    POD_TYPE="local"
    MC_HOST="localhost"
-else 
-   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+fi
+
+if [ "$POD" != "local" ]; then
+
+   # TODO: Pod VM_ENABLED is currently for workspace-wide only. To support individual clusters,
+   #       VM_* parameters must be set for each cluster. Significant overhauling may required.
+   # VM_ENABLED="true"
+
+   AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" false`
    NODE_COUNT=`getPodProperty "node.count" "0"`
+   VM_USER="vagrant"
+   POD_TYPE="vagrant"
+   VM_HOSTS=""
+   
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    for i in $(seq 1 $NODE_COUNT); do
        MEMBER=`getMemberName $i`
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
        mkdir -p $MEMBER_DIR
    done
-   POD_TYPE="vagrant"
-   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
-   if [ "$NODE_NAME_PRIMARY" != "" ]; then
-      NODE_NAME_PRIMARY=${NODE_NAME_PRIMARY}.local
+   
+   # Vagrant pod VMs
+   if [ "$AVAHI_ENABLED" == "true" ]; then
+      NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
+      if [ "$NODE_NAME_PRIMARY" != "" ]; then
+         NODE_NAME_PRIMARY=${NODE_NAME_PRIMARY}.local
+      else
+         NODE_NAME_PRIMARY="localhost"
+      fi
+      MC_HOST=$NODE_NAME_PRIMARY
+
+      for i in $(seq 1 $NODE_COUNT); do
+        __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+        NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+        if [ $i -eq 1 ]; then
+           VM_HOSTS="$NODE_LOCAL"
+        else
+           VM_HOSTS="$VM_HOSTS,$NODE_LOCAL"
+        fi
+      done
    else
-      NODE_NAME_PRIMARY="localhost"
+      POD_DIR="$PADOGRID_WORKSPACE/pods/$POD"
+      POD_SETENV="$POD_DIR/bin_sh/setenv.sh"
+      HOST_PRIVATE_IP=""
+      if [ -f "$POD_SETENV" ]; then
+         . $POD_SETENV
+      fi
+      if [ "$HOST_PRIVATE_IP" == "" ]; then
+         AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
+         if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
+            echo >&2 "ERROR: Private IP address not specified and unable to determine. Please add"
+            echo >&2 "       a host-only ethernet adapter to VirtualBox. Command aborted."
+            exit 1
+         fi
+         # Pick the first one in the list
+         for i in $AVAILABLE_IP_ADDRESSES; do
+            HOST_PRIVATE_IP=$i
+            break;
+         done
+      fi
+      IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
+      # Extract the first three octets from the primary IP.
+      BASE_PRIVATE_IP_FIRST_THREE_OCTETS=${HOST_PRIVATE_IP%.*}
+      BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
+      BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
+      NODE_NAME_PRIMARY=${BASE_PRIVATE_IP}
+      MC_HOST=$NODE_NAME_PRIMARY
+      for i in $(seq 1 $NODE_COUNT); do
+         let NODE_OCTET=i+BASE_PRIVATE_IP_LAST_OCTET
+         NODE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${NODE_OCTET}
+         if [ $i -eq 1 ]; then
+            VM_HOSTS="$NODE_IP"
+         else
+            VM_HOSTS="$VM_HOSTS,$NODE_IP"
+         fi
+      done
    fi
-   MC_HOST=$NODE_NAME_PRIMARY
+
 fi
 
 writeCluster
@@ -616,7 +724,7 @@ writeCluster
 #fi
 
 # Display cluster information
-echo "----------------------------------------------------------------"
+echo "-----------------------------------------------------------------------------------"
 echo "            WORKSPACE: $PADOGRID_WORKSPACE"
 echo "      Cluster Created: $CLUSTER"
 echo "         CLUSTER_TYPE: $CLUSTER_TYPE"
@@ -639,9 +747,9 @@ echo "          MC_JMX_PORT: $NEW_MC_JMX_PORT"
 echo "      MC_JMX_RMI_PORT: $NEW_MC_JMX_RMI_PORT"
 echo ""
 echo "The default hazelcast.xml file has been placed in the CONFIG_DIR directory."
-echo "Modify it or replace it with the appropriate file."
+echo "Modify or replace it with the appropriate file."
 echo ""
-if [ "$VM_ENABLED" == "true" ]; then
+if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ]; then
    echo "One (1) member has been configured (added) to run in this cluster as follows:"
    echo ""
    echo "      Member: $MEMBER_1"
@@ -662,11 +770,11 @@ else
        MEMBER=`getMemberName $i`
        MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
       echo "      Member: $MEMBER"
-      echo " Working Dir: $MEMBER"
+      echo " Working Dir: $MEMBER_DIR"
    done
    echo ""
 fi
-echo "1. Make sure to replace or update hazelcast.xml:"
+echo "1. Update Hazelcast configuration in hazelcast.xml as needed:"
 echo "      ${ETC_DIR}/hazelcast.xml"
 echo "2. Place your application jar files in one of the 'plugins' directories:"
 echo "      $PADOGRID_WORKSPACE/plugins/"
@@ -709,11 +817,10 @@ else
    echo "      build_pod -pod $POD"
    echo "6. To get the pod details, run the following:"
    echo "      show_pod -pod $POD"
-   echo "7. Login to one of the nodes and start the cluster. For example, to login to the primary node:"
-   echo "      cd $POD_DIR"
-   echo "      vagrant ssh $NODE_NAME_PRIMARY"
-   echo "      password: vagrant"
-   echo "      start_cluster -pod $POD" 
-   echo "8. Execute 'show_cluster' to verify the cluster state."
+   echo "7. To use this pod, attach it to a cluster. For example,"
+   echo "      create_cluster -cluster mycluster -pod $POD"
+   echo "      start_cluster -cluster mycluster"
+   echo "8. You can login to the primary node as follows."
+   echo "      ssh vagrant@$NODE_NAME_PRIMARY"
 fi
-echo "----------------------------------------------------------------"
+echo "-----------------------------------------------------------------------------------"

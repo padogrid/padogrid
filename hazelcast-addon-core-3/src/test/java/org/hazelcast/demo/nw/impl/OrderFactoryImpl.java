@@ -20,7 +20,7 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 		Company company = faker.company();
 		order.setCustomerId(faker.idNumber().invalidSvSeSsn());
 		order.setEmployeeId(faker.idNumber().invalidSvSeSsn());
-		order.setFreight(200*random.nextDouble());
+		order.setFreight(Math.round(10000 * random.nextDouble())/100d);
 		order.setOrderDate(faker.date().past(7, TimeUnit.DAYS));
 		order.setOrderId(faker.idNumber().invalidSvSeSsn());
 		order.setRequiredDate(faker.date().future(20, TimeUnit.DAYS));
@@ -49,10 +49,15 @@ public class OrderFactoryImpl extends AbstractDataObjectFactory {
 	 * Returns an entry with the specified idNum as part of the primary key
 	 */
 	@Override
-	public DataObjectFactory.Entry createEntry(int idNum) {
+	public DataObjectFactory.Entry createEntry(int idNum, Object erKey) {
 		Order order = createOrder();
 		if (isKeyRandom == false) {
 			order.setOrderId(createKey(idNum));
+		}
+		
+		// parent ER
+		if (erKey != null) {
+			order.setCustomerId(erKey.toString());
 		}
 		return new DataObjectFactory.Entry(order.getOrderId(), order);
 	}
