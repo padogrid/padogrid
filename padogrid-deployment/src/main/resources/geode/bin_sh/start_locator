@@ -246,13 +246,20 @@ elif [ "$POD" == "local" ]; then
    done
    popd > /dev/null 2>&1
 else
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
    LOCATOR_COUNT=`getLocatorCount`
-   NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
-   LOCATOR_TCP_LIST="$NODE_LOCAL[$LOCATOR_START_PORT]"
-   BIND_ADDRESS=$NODE_LOCAL
-   HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+   if [ $BIND_ADDRESS != "" ]; then
+      LOCATOR_TCP_LIST="$BIND_ADDRESS[$LOCATOR_START_PORT]"
+      HOSTNAME_FOR_CLIENTS=$BIND_ADDRESS
+   else
+      NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+      LOCATOR_TCP_LIST="$NODE_LOCAL[$LOCATOR_START_PORT]"
+      BIND_ADDRESS=$NODE_LOCAL
+      HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+   fi
 fi
 
 #LOCATOR_PROPERTIES="-Dpadogrid.group=$CLUSTER \
