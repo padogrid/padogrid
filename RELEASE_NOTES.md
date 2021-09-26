@@ -5,9 +5,9 @@ https://github.com/padogrid
 
 ## Version 0.9.12-SNAPSHOT
 
-### Release Date: 09/25/21
+### Release Date: 09/26/21
 
-- 
+- Added installation support for Pado, PadoDesktop, and PadoWeb. This support is also available in the 0.9.11 release build.
 
 ----
 
