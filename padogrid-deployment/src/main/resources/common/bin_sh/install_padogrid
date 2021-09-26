@@ -37,7 +37,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss snappydata spark kafka hadoop"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss snappydata spark kafka hadoop"
 
 EXECUTABLE="`basename $0`"
 
@@ -70,7 +70,10 @@ CUnderline='\033[4m'
 CUrl=$CBlue$CUnderline
 
 PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases"
-PADO_DOWNLOAD_URL="https://github.com/netcrest/pado2/releases"
+#PADO_DOWNLOAD_URL="https://github.com/netcrest/pado2/releases"
+PADO_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
+PADODESKTOP_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
+PADOWEB_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
 GEODE_DOWNLOAD_URL="https://archive.apache.org/dist/geode/"
 HAZELCAST_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.org/imdg/download/archives/#hazelcast-imdg"
@@ -459,14 +462,29 @@ function unique_words
 
 function getDownloadablePadogridVersions
 {
-  local ALL_PADOGRID_VERSIONS=$(curl -s $PADOGRID_DOWNLOAD_URL |grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//')
+  local ALL_PADOGRID_VERSIONS=$(curl -s $PADOGRID_DOWNLOAD_URL |grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//' -e 's/\/padoweb.*//' -e 's/\/pado_.*//' -e 's/\/pado\-desktop.*//')
   unique_words "$ALL_PADOGRID_VERSIONS"
 }
 
 function getDownloadablePadoVersions
 {
-  local ALL_PADO_VERSIONS=$(curl -s $PADO_DOWNLOAD_URL |grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*pado_//' -e 's/\.tar\.gz.*//')
+  #local ALL_PADO_VERSIONS=$(curl -s $PADO_DOWNLOAD_URL |grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*pado_//' -e 's/\.tar\.gz.*//')
+  local ALL_PADO_VERSIONS=$(curl -s $PADO_DOWNLOAD_URL |grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado_.*" | sed -e 's/\.tar\.gz.*//')
   unique_words "$ALL_PADO_VERSIONS"
+}
+
+function getDownloadablePadowebVersions
+{
+  #local ALL_PADOWEB_VERSIONS=$(curl -s $PADOWEB_DOWNLOAD_URL |grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padoweb_//' -e 's/\.tar\.gz.*//')
+  local ALL_PADOWEB_VERSIONS=$(curl -s $PADOWEB_DOWNLOAD_URL |grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
+  unique_words "$ALL_PADOWEB_VERSIONS"
+}
+
+function getDownloadablePadodesktopVersions
+{
+  #local ALL_PADODESKTOP_VERSIONS=$(curl -s $PADODESKTOP_DOWNLOAD_URL |grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*pad-desktop_//' -e 's/\.tar\.gz.*//')
+  local ALL_PADODESKTOP_VERSIONS=$(curl -s $PADODESKTOP_DOWNLOAD_URL |grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
+  unique_words "$ALL_PADODESKTOP_VERSIONS"
 }
 
 function getDownloadableGeodeVersions
@@ -582,6 +600,9 @@ function sortVersionList
 # Determines versions of all installed products by scanning the products base directory.
 # This function sets the following arrays.
 #    PADOGRID_VERSIONS
+#    PADO_VERSIONS
+#    PADODESKTOP_VERSIONS
+#    PADOWEB_VERSIONS
 #    GEMFIRE_VERSIONS
 #    GEODE_VERSIONS
 #    HAZELCAST_ENTERPRISE_VERSIONS
@@ -599,6 +620,9 @@ function sortVersionList
 function determineInstalledProductVersions
 {
    PADOGRID_VERSIONS=""
+   PADO_VERSIONS=""
+   PADODESKTOP_VERSIONS=""
+   PADOWEB_VERSIONS=""
    GEMFIRE_VERSIONS=""
    GEODE_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
@@ -627,6 +651,30 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       PADOGRID_VERSIONS=$(sortVersionList "$__versions")
+
+      # Pado
+      __versions=""
+      for i in pado_*; do
+         __version=${i#pado_}
+         __versions="$__versions $__version "
+      done
+      PADO_VERSIONS=$(sortVersionList "$__versions")
+
+      # PadoDesktop
+      __versions=""
+      for i in pado-desktop_*; do
+         __version=${i#pado-desktop_}
+         __versions="$__versions $__version "
+      done
+      PADODESKTOP_VERSIONS=$(sortVersionList "$__versions")
+
+      # PadoWeb
+      __versions=""
+      for i in padoweb_*; do
+         __version=${i#padoweb_}
+         __versions="$__versions $__version "
+      done
+      PADOWEB_VERSIONS=$(sortVersionList "$__versions")
 
       # GemFire
       __versions=""
@@ -740,7 +788,8 @@ function doUserInput
    for i in ${PRODUCT_DOWNLOAD_VERSIONS[@]}; do
       __INSTALLED="false"
       for j in ${INSTALLED_VERSIONS[@]}; do
-         if [[ "$j" == "$i" ]]; then
+         #if [[ "$j" == "$i" ]]; then
+         if [[ "$j" == "${i#*_}" ]]; then
             __INSTALLED="true"
             break;
          fi
@@ -773,7 +822,8 @@ function doUserInput
             INSTALL_VERSION=$INPUT
          fi
          for j in ${INSTALLED_VERSIONS[@]}; do
-            if [ "$INSTALL_VERSION" == "$j" ]; then
+           # if [ "$INSTALL_VERSION" == "$j" ]; then
+            if [[ "$j" == "${INSTALL_VERSION#*_}" ]]; then
                __INSTALLED="true"
                break;
             fi
@@ -828,6 +878,12 @@ PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
    PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
 fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+   PADODESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadodesktopVersions)"))
+fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+   PADOWEB_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadowebVersions)"))
+fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
    GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
 fi
@@ -865,6 +921,8 @@ stty -igncr
 # Version variables set by user inputs
 PADOGRID_VERSION=""
 PADO_VERSION=""
+PADODESKTOP_VERSION=""
+PADOWEB_VERSION=""
 GEODE_VERSION=""
 HAZELCAST_ENTERPRISE_VERSION=""
 HAZELCAST_OSS_VERSION=""
@@ -880,6 +938,8 @@ if [ "$QUIET" == "true" ]; then
    # Set to the latest versions
    PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[0]}
    PADO_VERSION=${PADO_DOWNLOAD_VERSIONS[0]}
+   PADODESKTOP_VERSION=${PADODESKTOP_DOWNLOAD_VERSIONS[0]}
+   PADOWEB_VERSION=${PADOWEB_DOWNLOAD_VERSIONS[0]}
    GEODE_VERSION=${GEODE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_OSS_VERSION=${HAZELCAST_OSS_DOWNLOAD_VERSIONS[0]}
@@ -899,6 +959,8 @@ if [ "$QUIET" == "true" ]; then
    echo ""
    echo "PadoGrid             $PADOGRID_VERSION"
    echo "Pado                 $PADO_VERSION"
+   echo "PadoDesktop          $PADODESKTOP_VERSION"
+   echo "PadoWeb              $PADOWEB_VERSION"
    echo "Geode                $GEODE_VERSION"
    echo "Hazelcast Enterprise $HAZELCAST_ENTERPRISE_VERSION"
    echo "Hazelcast OSS        $HAZELCAST_OSS_VERSION"
@@ -974,6 +1036,38 @@ while [ "$REDO" == "true" ]; do
          let INSTALL_COUNT=INSTALL_COUNT+1
       fi
       PADO_VERSION=$INSTALL_VERSION
+      echo ""
+      fi
+   fi
+
+   # PadoDesktop
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+      PRODUCT_NAME="PadoDesktop"
+      PRODUCT_DOWNLOAD_VERSIONS=("${PADODESKTOP_DOWNLOAD_VERSIONS[@]}")
+      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+      INSTALLED_VERSIONS=$PADODESKTOP_VERSIONS
+      echo -e "PadoDesktop ${CUrl}$PADODESKTOP_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      PADODESKTOP_VERSION=$INSTALL_VERSION
+      echo ""
+      fi
+   fi
+
+   # PadoWeb
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+      PRODUCT_NAME="PadoWeb"
+      PRODUCT_DOWNLOAD_VERSIONS=("${PADOWEB_DOWNLOAD_VERSIONS[@]}")
+      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+      INSTALLED_VERSIONS=$PADOWEB_VERSIONS
+      echo -e "PadoWeb ${CUrl}$PADOWEB_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      PADOWEB_VERSION=$INSTALL_VERSION
       echo ""
       fi
    fi
@@ -1226,6 +1320,12 @@ while [ "$REDO" == "true" ]; do
    if [ "$PADO_VERSION" != "" ]; then
       echo -e "Pado: ${CLightGreen}$PADO_VERSION${CNone}"
    fi
+   if [ "$PADODESKTOP_VERSION" != "" ]; then
+      echo -e "PadoDesktop: ${CLightGreen}$PADODESKTOP_VERSION${CNone}"
+   fi
+   if [ "$PADOWEB_VERSION" != "" ]; then
+      echo -e "PadoWeb: ${CLightGreen}$PADOWEB_VERSION${CNone}"
+   fi
    if [ "$GEODE_VERSION" != "" ]; then
       echo -e "Geode: ${CLightGreen}$GEODE_VERSION${CNone}"
    fi
@@ -1289,6 +1389,14 @@ fi
 # @required PADO_RELEASE
 # @required PADO_TARBALL
 #
+# @required PADODESKTOP_DOWNLOAD_URL
+# @required PADODESKTOP_RELEASE
+# @required PADODESKTOP_TARBALL
+#
+# @required PADOWEB_DOWNLOAD_URL
+# @required PADOWEB_RELEASE
+# @required PADOWEB_TARBALL
+#
 # @required GEODE_VERSION
 # @required GEODE_TARBALL
 #
@@ -1348,26 +1456,83 @@ function installProduct
 
    elif [ "$__PRODUCT" == "pado" ]; then 
 
-      if [ "$QUIET" == "true" ] &&  [ -d "$PADO_PRODUCTS_PATH/$PADO_RELEASE" ]; then
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$PADO_RELEASE" ]; then
          echo "Already installed - $PADO_RELEASE"
       else
-      # --------------
-      # Download Pado
-      echo "+ Downloading $PADO_DOWNLOADS_PATH/$PADO_TAR_BALL..."
-      if [ "$__SIMULATE" == "simulate" ]; then
-         echo curl -sL -o "$PADO_DOWNLOADS_PATH/$PADO_TARBALL" "https://github.com/netcrest/pado2/releases/download/$PADO_RELEASE/$PADO_TARBALL"
-      else
-         curl -sL -o "$PADO_DOWNLOADS_PATH/$PADO_TARBALL" "https://github.com/netcrest/pado2/releases/download/$PADO_RELEASE/$PADO_TARBALL"
-      fi
+         # --------------
+         # Download Pado
+         local FILE_NAME=${PADO_TARBALL#*/}
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$FILE_NAME..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            #echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADO_TARBALL" "https://github.com/netcrest/pado2/releases/download/$PADO_RELEASE/$PADO_TARBALL"
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADO_TARBALL"
+         else
+            #curl -sL -o "$PADO_DOWNLOADS_PATH/$PADO_TARBALL" "https://github.com/netcrest/pado2/releases/download/$PADO_RELEASE/$PADO_TARBALL"
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADO_TARBALL"
+         fi
       
-      # Install Pado
-      echo "  Installing PadoGrid $PADO_TARBALL in $PADO_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "simulate" ]; then
-         echo tar -C $PADO_PRODUCTS_PATH -xzf "$PADO_DOWNLOADS_PATH/$PADO_TARBALL"
-      else
-         tar -C $PADO_PRODUCTS_PATH -xzf "$PADO_DOWNLOADS_PATH/$PADO_TARBALL"
-         echo "  Installed - $PADO_TARBALL"
+         # Install Pado
+         #echo "  Installing Pado $PADO_TARBALL in $PADO_PRODUCTS_PATH/..."
+         echo "  Installing Pado $FILE_NAME in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            #echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PADO_TARBALL"
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME"
+         else
+            #tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PADO_TARBALL"
+            #echo "  Installed - $PADO_TARBALL"
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME"
+            echo "  Installed - $FILE_NAME"
+         fi
       fi
+
+   elif [ "$__PRODUCT" == "padodesktop" ]; then 
+
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$PADODESKTOP_RELEASE" ]; then
+         echo "Already installed - $PADODESKTOP_RELEASE"
+      else
+         # --------------
+         # Download PadoDesktop
+         local FILE_NAME=${PADODESKTOP_TARBALL#*/}
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$FILE_NAME..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADODESKTOP_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADODESKTOP_TARBALL"
+         fi
+      
+         # Install PadoDesktop
+         echo "  Installing PadoDesktop $FILE_NAME in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME"
+         else
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME"
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME"
+            echo "  Installed - $FILE_NAME"
+         fi
+      fi
+
+   elif [ "$__PRODUCT" == "padoweb" ]; then 
+
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$PADOWEB_RELEASE" ]; then
+         echo "Already installed - $PADOWEB_RELEASE"
+      else
+         # --------------
+         # Download PadoWeb
+         local FILE_NAME=${PADOWEB_TARBALL#*/}
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$FILE_NAME..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADOWEB_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADOWEB_TARBALL"
+         fi
+      
+         # Install PadoWeb
+         echo "  Installing PadoWeb $FILE_NAME in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "simulate" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME"
+         else
+            echo "  Installed - $FILE_NAME"
+         fi
       fi
       
    elif [ "$__PRODUCT" == "geode" ]; then 
@@ -1667,10 +1832,25 @@ if [ "$PADOGRID_VERSION" != "" ]; then
    installProduct "padogrid"
 fi
 if [ "$PADO_VERSION" != "" ]; then
-   PADO_RELEASE="pado_$PADO_VERSION"
-   PADO_TARBALL="$PADO_RELEASE.tar.gz"
+   #PADODESKTOP_RELEASE="pado_$PADO_VERSION"
+   PADO_RELEASE="${PADO_VERSION#*/}"
+   PADO_TARBALL="padogrid_$PADO_VERSION.tar.gz"
    #installProduct "pado" "simulate"
    installProduct "pado"
+fi
+if [ "$PADODESKTOP_VERSION" != "" ]; then
+   #PADODESKTOP_RELEASE="pado-desktop_$PADODESKTOP_VERSION"
+   PADODESKTOP_RELEASE="${PADODESKTOP_VERSION#*/}"
+   PADODESKTOP_TARBALL="padogrid_$PADODESKTOP_VERSION.tar.gz"
+   #installProduct "padodesktop" "simulate"
+   installProduct "padodesktop"
+fi
+if [ "$PADOWEB_VERSION" != "" ]; then
+   #PADOWEB_RELEASE="padoweb_$PADOWEB_VERSION"
+   PADOWEB_RELEASE="${PADOWEB_VERSION#*/}"
+   PADOWEB_TARBALL="padogrid_$PADOWEB_VERSION.tar.gz"
+   #installProduct "padoweb" "simulate"
+   installProduct "padoweb"
 fi
 if [ "$GEODE_VERSION" != "" ]; then
    GEODE_RELEASE="apache-geode-$GEODE_VERSION"
@@ -1754,6 +1934,8 @@ popd > /dev/null 2>&1
 if [ "$RWE_EXISTS" == "false" ]; then
    __PADOGRID_HOME=""
    PADO_HOME=""
+   PADODESKTOP_HOME=""
+   PADOWEB_HOME=""
    GEODE_HOME=""
    HAZELCAST_HOME=""
    JET_HOME=""
@@ -1779,6 +1961,10 @@ if [ "$RWE_EXISTS" == "false" ]; then
        __PADOGRID_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"pado_"** ]]; then
        PADO_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"pado-desktop_"** ]]; then
+       PADODESKTOP_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"padoweb_"** ]]; then
+       PADOWEB_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"geode"** ]]; then
        GEODE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast-enterprise"** ]]; then
@@ -1849,6 +2035,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
       echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
       echo "PADO_HOME=\"$PADO_HOME\"" >> $TMP_ENV_FILE
+      echo "PADODESKTOP_HOME=\"$PADODESKTOP_HOME\"" >> $TMP_ENV_FILE
+      echo "PADOWEB_HOME=\"$PADOWEB_HOME\"" >> $TMP_ENV_FILE
       echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
