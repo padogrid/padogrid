@@ -242,6 +242,10 @@ kubectl delete pod paodgrid
 oc delete pod padogrid
 ```
 
+You may encounter a random userid assigned by Kubernetes and OpenShift instead of the required fixed userid, **padogrid**, especially when you deploy the PadoGrid container. The following link provides further details on running PadoGrid with the fixed userid when deployed in OpenShift.
+
+[Deploying PadoGrid in OpenShift](https://github.com/padogrid/padogrid/wiki/Kubernetes#deploying-padogrid-in-openshift)
+
 ## Data Grid Products
 
 PadoGrid natively supports the following data grid and analytics products.
