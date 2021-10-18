@@ -230,10 +230,16 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 			}
 
 			// Struct objects expected
-			log.info("*************************key:" + sinkRecord.key().getClass().toString());
-			log.info("*************************value:" + sinkRecord.value().getClass().toString());
+			log.info("*************************key: " + sinkRecord.key().getClass().toString());
+			if (sinkRecord.value() == null) {
+				log.info("*************************value: null");
+			} else {
+				log.info("*************************value: " + sinkRecord.value().getClass().toString());
+			}
 			log.info(sinkRecord.key().toString());
-			log.info(sinkRecord.value().toString());
+			if (sinkRecord.value() != null) {
+				log.info(sinkRecord.value().toString());
+			}
 
 			Object keyFieldValues[] = null;
 			Object valueFieldValues[] = null;
@@ -279,18 +285,20 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 
 				// Value
 				// Determine the value column names.
-				if (valueColumnNames == null) {
-					valueColumnNames = getColumnNames(valueStruct);
-				}
-				if (valueColumnNames != null) {
-					valueFieldValues = new Object[valueColumnNames.length];
-					Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
-					for (int j = 0; j < valueColumnNames.length; j++) {
-						valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
-						// TODO: This is a hack. Support other types also.
-						if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
-							if (valueFieldValues[j] instanceof Number) {
-								valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
+				if (afterStruct != null) {
+					if (valueColumnNames == null) {
+						valueColumnNames = getColumnNames(valueStruct);
+					}
+					if (valueColumnNames != null) {
+						valueFieldValues = new Object[valueColumnNames.length];
+						Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
+						for (int j = 0; j < valueColumnNames.length; j++) {
+							valueFieldValues[j] = afterStruct.get(valueColumnNames[j]);
+							// TODO: This is a hack. Support other types also.
+							if (valueFieldTypes[j] != null && valueFieldTypes[j] == Date.class) {
+								if (valueFieldValues[j] instanceof Number) {
+									valueFieldValues[j] = new Date((long) valueFieldValues[j] / MICRO_IN_MILLI);
+								}
 							}
 						}
 					}
