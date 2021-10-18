@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -num -fg -simulate -?"
+   echo "-cluster -num -standalone -fg -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -54,6 +54,10 @@ OPTIONS
 
    -num member_number
              Member number 1-99.
+
+   -standalone
+             If specified, then it starts the member as a standalone server that does not join the
+             cluster. The locators are ignored.
 
    -fg
              Run the member in the foreground until it is fully initialized and started. If this
@@ -428,8 +432,12 @@ GFSH_OPTS="$GFSH_OPTS --dir=$MEMBER_DIR \
       --max-heap=$MAX_HEAP_SIZE \
       --disable-default-server=true \
       --name=$MEMBER \
-      --locators=$LOCATOR_TCP_LIST \
       --statistic-archive-file=$STATS_FILE"
+
+if [ "$STANDALONE" != "true" ]; then
+   GFSH_OPTS="$GFSH_OPTS --locators=$LOCATOR_TCP_LIST"
+fi
+
 # server-port does not work geode-1.11.0
 #     --server-port=$MEMBER_PORT"
 if [ "$BIND_ADDRESS" != "" ]; then
@@ -471,6 +479,11 @@ JAVA_OPTS="$JAVA_OPTS \
 if [ "$REDUNDANCY_ZONE" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS --J=-Dgemfire.redundancy-zone=$REDUNDANCY_ZONE"
 fi
+
+# Convert gfsh options to gemfire properties for standalone edge devices
+for i in $GFSH_OPTS; do
+   JAVA_OPTS="$JAVA_OPTS --J=-Dgemfire.${i:2}"
+done
 
 #
 # Source in Pado specifics

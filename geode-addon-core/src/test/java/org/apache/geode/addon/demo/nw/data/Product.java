@@ -1,20 +1,37 @@
 package org.apache.geode.addon.demo.nw.data;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
 import org.apache.geode.pdx.PdxWriter;
 
+@Entity
+@Table(name = "products")
 public class Product implements PdxSerializable
 {
+	@Id
 	private String productId;
+	@Column (length=100)
 	private String productName;
+	@Column (length=30)
 	private String supplierId;
+	@Column (length=30)
 	private String categoryId;
+	@Column (length=30)
 	private String quantityPerUnit;
+	@Column
 	private double unitPrice;
+	@Column
 	private int unitsInStock;
+	@Column
 	private int unitsOnOrder;
+	@Column
 	private int reorderLevel;
+	@Column
 	private int discontinued;
 
 	public Product()

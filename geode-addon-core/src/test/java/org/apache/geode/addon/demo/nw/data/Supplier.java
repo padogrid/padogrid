@@ -1,22 +1,41 @@
 package org.apache.geode.addon.demo.nw.data;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
 import org.apache.geode.pdx.PdxWriter;
 
+@Entity
+@Table(name = "suppliers")
 public class Supplier implements PdxSerializable
 {
+	@Id
 	private String supplierId;
+	@Column(length = 100)
 	private String companyName;
+	@Column(length = 100)
 	private String contactName;
+	@Column(length = 50)
 	private String contactTitle;
+	@Column(length = 100)
 	private String address;
+	@Column(length = 100)
 	private String city;
+	@Column(length = 100)
 	private String region;
+	@Column(length = 30)
 	private String postalCode;
+	@Column(length = 100)
 	private String country;
+	@Column(length = 30)
 	private String phone;
+	@Column(length = 30)
 	private String fax;
+	@Column(length = 100)
 	private String homePage;
 
 	public Supplier()

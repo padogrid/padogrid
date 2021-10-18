@@ -25,6 +25,7 @@ import org.apache.geode.cache.CacheWriterException;
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.cache.EntryEvent;
 import org.apache.geode.cache.LoaderHelper;
+import org.apache.geode.cache.Region;
 import org.apache.geode.cache.RegionEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -248,7 +249,7 @@ public class CacheWriterLoaderPkDbImpl<K, V> implements CacheWriter<K, V>, Cache
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private Map<K, V> loadAll(Collection<K> keys) {
+	public Map<K, V> loadFromDb(Collection<K> keys) {
 		Map<K, V> result = new HashMap<K, V>();
 		String getterMethodName = null;
 		if (isDbRead) {
@@ -311,11 +312,22 @@ public class CacheWriterLoaderPkDbImpl<K, V> implements CacheWriter<K, V>, Cache
 	}
 
 	@SuppressWarnings("unchecked")
-	private Iterable<K> loadAllKeys() {
+	public Iterable<K> getAllPrimaryKeysFromDb() {
 		List<String> pkList = getPrimaryKeys(entityClass, initialKeyLimit);
 		return (Iterable<K>) pkList;
 	}
-
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public void loadAllFromDb() {
+		Region region = cache.getRegion(regionPath);
+		if (region == null) {
+			return;
+		}
+		List pkList = getPrimaryKeys(entityClass, initialKeyLimit);
+		Map map = loadFromDb(pkList);
+		region.putAll(map);
+	}
+	
 	@Override
 	public void beforeUpdate(EntryEvent<K, V> event) throws CacheWriterException {
 		if (isDbWrite) {

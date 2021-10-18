@@ -117,6 +117,7 @@ CONNECT=https
 LIST=false
 HEADER=false
 CATALOG=false
+STANDALONE=false
 TREE=false
 OVERWRITE=false
 ALL=false
@@ -383,6 +384,8 @@ do
       REMOTE_SPECIFIED=true
    elif [ "$i" == "-product-cluster" ]; then
       PRODUCT_CLUSTER_SPECIFIED=true
+   elif [ "$i" == "-standalone" ]; then
+      STANDALONE=true
    elif [ "$i" == "-tree" ]; then
       TREE=true
    elif [ "$i" == "-overwrite" ]; then
