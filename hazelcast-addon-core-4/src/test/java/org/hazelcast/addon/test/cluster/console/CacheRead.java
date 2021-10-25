@@ -16,12 +16,17 @@ public class CacheRead {
 	private static void usage() {
 		String executableName = System.getProperty(PROPERTY_executableName, CacheRead.class.getName());
 		writeLine();
-		writeLine("Usage:");
+		writeLine("NAME");
+		writeLine("   " + executableName + " - Dump the values of the specified map");
+		writeLine();
+		writeLine("SYNOPSIS");
 		writeLine("   " + executableName + " map_name [-?]");
 		writeLine();
+		writeLine("DESCRIPTION");
 		writeLine("   Dumps the values of the specified map.");
 		writeLine();
-		writeLine("       map_name   IMap name.");
+		writeLine("OPTIONS");
+		writeLine("   map_name   IMap name.");
 		writeLine();
 	}
 
