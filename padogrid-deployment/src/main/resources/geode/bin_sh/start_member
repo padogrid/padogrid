@@ -239,11 +239,12 @@ MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP
 let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
 let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
 let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
-MEMBER_TCP_LIST=""
+
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 BIND_ADDRESS=""
 HOSTNAME_FOR_CLIENTS=""
 REDUNDANCY_ZONE=""
+MEMBER_TCP_LIST=""
 if [ "$VM_ENABLED" == "true" ]; then
 
    VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
@@ -281,6 +282,10 @@ if [ "$VM_ENABLED" == "true" ]; then
    BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients"`
    REDUNDANCY_ZONE=`getClusterProperty "vm.${VM_HOST}.redundancyZone"`
+
+   # One member per VM -> same port number
+   MEMBER_PORT=$MEMBER_START_PORT
+   MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
 
 elif [ "$POD" == "local" ]; then
 
@@ -321,6 +326,10 @@ else
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
    BIND_ADDRESS=$NODE_LOCAL
    HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
+
+   # One member per Vagrant VM -> same port number
+   MEMBER_PORT=$MEMBER_START_PORT
+   MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
    
 fi
 
