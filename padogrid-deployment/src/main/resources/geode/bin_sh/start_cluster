@@ -52,7 +52,7 @@ OPTIONS
 
    -standalone
              If specified, then it starts the members as standalone servers that do not join the
-             cluster. The locators are ignored.
+             cluster. The locators are ignored and not started.
 
    -fg
              Run each member in the foreground serially until each member is fully started and
@@ -97,7 +97,7 @@ fi
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$VM_ENABLED" == "true" ]; then
    VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
-   if [ "$VM_LOCATOR_HOSTS" == "" ]; then
+   if [ "$VM_LOCATOR_HOSTS" == "" ] && [ "$STANDALONE" != "true" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
       echo "    ERROR: VM local hosts undefined. Set 'vm.local.hosts' in the following cluster.properties file."  
@@ -133,19 +133,21 @@ if [ "$VM_ENABLED" == "true" ]; then
       let LOCATOR_COUNT=LOCATOR_COUNT+1
    done
 
-   COUNT=0
-   MEMBER_NUM=1
-   for VM_HOST in $__LOCATOR_HOSTS; do
-      let COUNT=COUNT+1
-      if [ $COUNT -lt $LOCATOR_COUNT ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
-      else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
-      fi
-      if [ "$POD" != "local" ]; then
-         let MEMBER_NUM=MEMBER_NUM+1
-      fi
-   done
+   if [ "$STANDALONE" != "true" ]; then
+      COUNT=0
+      MEMBER_NUM=1
+      for VM_HOST in $__LOCATOR_HOSTS; do
+         let COUNT=COUNT+1
+         if [ $COUNT -lt $LOCATOR_COUNT ]; then
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+         else
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_locator -cluster $CLUSTER -vm VM_LOCATOR_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         fi
+         if [ "$POD" != "local" ]; then
+            let MEMBER_NUM=MEMBER_NUM+1
+         fi
+      done
+   fi
 
    # Replace , with space
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
@@ -208,25 +210,27 @@ for VM_HOST in $__LOCATOR_HOSTS; do
    let LOCATOR_COUNT=LOCATOR_COUNT+1
 done
 
-COUNT=0
-for i in ${LOCATOR_PREFIX}*; do
-   if [ -d "$i" ]; then
-      let COUNT=COUNT+1
-      pushd $i > /dev/null 2>&1
-      LOCATOR_NUMBER=${i:$LOCATOR_PREFIX_LEN}
-      if [ $COUNT -lt $LOCATOR_COUNT ]; then
-         start_locator -cluster $CLUSTER -num $LOCATOR_NUMBER &
-      else
-         start_locator -cluster $CLUSTER -num $LOCATOR_NUMBER
+if [ "$STANDALONE" != "true" ]; then
+   COUNT=0
+   for i in ${LOCATOR_PREFIX}*; do
+      if [ -d "$i" ]; then
+         let COUNT=COUNT+1
+         pushd $i > /dev/null 2>&1
+         LOCATOR_NUMBER=${i:$LOCATOR_PREFIX_LEN}
+         if [ $COUNT -lt $LOCATOR_COUNT ]; then
+            start_locator -cluster $CLUSTER -num $LOCATOR_NUMBER &
+         else
+            start_locator -cluster $CLUSTER -num $LOCATOR_NUMBER
+         fi
+         popd > /dev/null 2>&1
       fi
-      popd > /dev/null 2>&1
-   fi
-   if [ "$POD" != "local" ]; then
-      if [ "$COUNT" -ge "$NODE_COUNT" ]; then
-         break;
-       fi
-   fi
-done
+      if [ "$POD" != "local" ]; then
+         if [ "$COUNT" -ge "$NODE_COUNT" ]; then
+            break;
+         fi
+      fi
+   done
+fi
 
 # Start members in background
 COUNT=0

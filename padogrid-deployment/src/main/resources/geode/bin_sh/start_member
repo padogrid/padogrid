@@ -118,11 +118,14 @@ fi
 #
 # VM cluster
 #
+if [ "$STANDALONE" != "true" ]; then
+   STANDALONE=`getClusterProperty "standalone.enabled" "false"`
+fi
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
    if [ "$VM_ENABLED" == "true" ]; then
       VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
-      if [ "$VM_LOCATOR_HOSTS" == "" ]; then
+      if [ "$STANDALONE" != "true" ] && [ "$VM_LOCATOR_HOSTS" == "" ]; then
          echo >&2 "----------------------------------------------------------------"
          echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
          echo >&2 "    ERROR: VM locator hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
@@ -248,7 +251,7 @@ MEMBER_TCP_LIST=""
 if [ "$VM_ENABLED" == "true" ]; then
 
    VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
-   if [ "$VM_LOCATOR_HOSTS" == "" ]; then
+   if [ "$LOCATOR_ENABLED" == "true" && "$VM_LOCATOR_HOSTS" == "" ]; then
       echo >&2 "----------------------------------------------------------------"
       echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
       echo >&2 "    ERROR: VM locator hosts undefined. Set 'vm.locator.hosts' in the following cluster.properties file."  
@@ -343,7 +346,11 @@ if [ "$DEBUG_ENABLED" == "true" ]; then
    else
       DEBUG_PORT=$DEBUG_START_PORT
    fi
-   DEBUG="--J=-Xdebug --J='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT'"
+   if [[ $JAVA_VERSION == 1.8* ]]; then
+      DEBUG="--J=-Xdebug --J='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT'"
+   else
+      DEBUG="--J=-Xdebug --J='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:$DEBUG_PORT'"
+   fi
 else
    DEBUG_PORT="Disabled"
    DEBUG=""
