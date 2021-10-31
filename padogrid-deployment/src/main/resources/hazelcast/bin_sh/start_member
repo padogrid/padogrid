@@ -141,6 +141,15 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          echo >&2 "----------------------------------------------------------------"
          exit 1
       fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
       # Replace , with space
       __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
       DEFAULT_USER=$(whoami)

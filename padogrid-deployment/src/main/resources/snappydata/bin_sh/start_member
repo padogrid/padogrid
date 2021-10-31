@@ -135,6 +135,15 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          echo >&2 "----------------------------------------------------------------"
          exit 1
       fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
       LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
       # Replace , with space
       __VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
