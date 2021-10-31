@@ -101,6 +101,15 @@ function displayVmClusterShort()
 {
    # POD needed to get the correct node name
    POD=`getClusterProperty "pod.name" "local"`
+
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv $NODE`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+	 . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
    # Locators
    LOCATOR_COUNT=0
    RUNNING_LOCATOR_COUNT=0
@@ -192,7 +201,14 @@ function displayVmClusterLong()
       PROMETHEUS_PORT="Disabled"
    fi
  
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
    OS_ENV=`getOsEnv $NODE`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+	 . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
    RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
    pushd $RUN_DIR > /dev/null 2>&1
    MEMBER_PREFIX=`getMemberPrefix`
