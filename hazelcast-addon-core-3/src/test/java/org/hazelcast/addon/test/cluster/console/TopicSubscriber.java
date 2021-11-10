@@ -6,9 +6,9 @@ import org.hazelcast.addon.cluster.ClusterUtil;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.topic.ITopic;
-import com.hazelcast.topic.Message;
-import com.hazelcast.topic.MessageListener;
+import com.hazelcast.core.ITopic;
+import com.hazelcast.core.Message;
+import com.hazelcast.core.MessageListener;
 import com.hazelcast.topic.ReliableMessageListener;
 
 /**

@@ -1,5 +1,9 @@
 package org.hazelcast.addon.test.cluster.console;
 
+import java.util.Map;
+
+import org.hazelcast.addon.cluster.ClusterUtil;
+
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.topic.ITopic;
@@ -26,14 +30,19 @@ public class TopicSubscriber {
 		writeLine("   " + executableName + " - Listen on a topic and print received messages");
 		writeLine();
 		writeLine("SYNOPSIS");
-		writeLine("   " + executableName + " -type topic|rtopic topic_name [-?]");
+		writeLine("   " + executableName + " [-create-topic] -type topic|rtopic topic_name [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
-		writeLine("   Listens on the specified topic and prints received messages.");
+		writeLine("   Listens on the specified topic and prints received messages. To create the specified topic,");
+		writeLine("   specify the '-create-topic' option.");
 		writeLine();
 		writeLine("OPTIONS");
 		writeLine("   -type topic|rtopic");
 		writeLine("             Topic type. Specify 'topic' for non-reliable topic, 'rtopic' for reliable topic.");
+		writeLine();
+		writeLine("   -create-topic");
+		writeLine("             If specified, then creates the specified topic in the cluster. If unspecified");
+		writeLine("             and the topic does not exist in the cluster, then it aborts the command.");
 		writeLine();
 		writeLine("   topic_name");
 		writeLine("              Topic name.");
@@ -47,12 +56,13 @@ public class TopicSubscriber {
 	private static void writeLine(String line) {
 		System.out.println(line);
 	}
-
+	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static void main(String[] args) {
 		
 		String topicType = null;
 		String topicName = null;
+		boolean isCreateTopic = false;
 		String arg;
 		for (int i = 0; i < args.length; i++) {
 			arg = args[i];
@@ -63,6 +73,8 @@ public class TopicSubscriber {
 				if (i < args.length - 1) {
 					topicType = args[++i].trim();
 				}
+			} else if (arg.startsWith("-create-topic")) {
+				isCreateTopic = true;
 			} else if (arg.startsWith("-") == false) {
 				topicName = arg;
 			}
@@ -81,13 +93,28 @@ public class TopicSubscriber {
 			System.err.println("ERROR: Invalid topic type [" + topicType + "]. See usage (" + executableName + " -?). Command aborted.");
 			System.exit(1);
 		}
-		if (args.length == 0) {
+		if (topicName == null) {
 			System.err.println("Topic name not specified. See usage (" + executableName + " -?). Command aborted.");
 			System.exit(1);
 		}
 
 		final HazelcastInstance instance = HazelcastClient.newHazelcastClient();
-		ITopic topic;
+		
+		Map<String, ITopic> topicMap;
+		
+		if (isRTopic) {
+			topicMap = ClusterUtil.getAllReliableTopics(instance);
+		} else {
+			topicMap = ClusterUtil.getAllTopics(instance);
+		}
+		ITopic topic = topicMap.get(topicName);
+		if (isCreateTopic == false && topic == null) {
+			System.err.println("ERROR: Topic does not exist in the cluster: [" + topicName + "]. To create the topic in the cluster,");
+			System.err.println("       specify the '-create-topic' option. Command aborted.");
+			instance.shutdown();
+			System.exit(1);
+		}
+		
 		if (isRTopic) {
 			topic = instance.getReliableTopic(topicName);
 			writeLine("Listening on reliable topic: " + topicName);
