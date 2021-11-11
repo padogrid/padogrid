@@ -18,7 +18,7 @@ https://github.com/padogrid
 - Added installation support for Pado, PadoDesktop, and PadoWeb. This support is also available in the 0.9.11 release build.
 - Fixed a bug in `stop_*` and `kill_*` commands that failed to execute remote commands in Vagrant pod VMs.
 - Added the `subscribe_topic` script in the Hazelcast `perf_test` app for listening on topic messages.
-- By default, `read_cache` and `subscribe_topic` now fail if the specified data structure name does not exist in the cluster. You can create non-existent data structures by specifying the '-create-map' or '-create-topic' option.
+- By default, `read_cache` and `subscribe_topic` now fail if the specified data structure name does not exist in the cluster. You can create non-existent data structures by specifying the `-create-map` or `-create-topic` option.
 - Fixed a Java 11+ debug enablement issue. Previous versions supported only Java 8.
 
 ----
