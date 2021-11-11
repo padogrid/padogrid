@@ -38,6 +38,13 @@ public class CacheRead {
 		writeLine();
 		writeLine("   map_name   IMap name.");
 		writeLine();
+		writeLine("EXAMPLES");
+		writeLine("   # Read my_map if it exists");
+		writeLine("   ./" + executableName + " my_map");
+		writeLine();
+		writeLine("   # Create my_map if it does not exist");
+		writeLine("   ./" + executableName + " -create-map my_map");
+		writeLine();
 	}
 
 	private static void writeLine() {

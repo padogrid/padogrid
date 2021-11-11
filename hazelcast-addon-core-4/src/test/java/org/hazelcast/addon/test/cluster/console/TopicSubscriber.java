@@ -47,6 +47,13 @@ public class TopicSubscriber {
 		writeLine("   topic_name");
 		writeLine("              Topic name.");
 		writeLine();
+		writeLine("EXAMPLES");
+		writeLine("   # Listen on my_non_reliable_topic if it exists");
+		writeLine("   ./" + executableName + " -type topic my_non_reliable_topic");
+		writeLine();
+		writeLine("   # Create my_reliable_topic if it does not exist");
+		writeLine("   ./" + executableName + " -create-topic -type rtopic my_reliable_topic");		
+		writeLine();
 	}
 
 	private static void writeLine() {
