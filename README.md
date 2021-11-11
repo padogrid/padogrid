@@ -83,45 +83,18 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - Maven 3.x
 - JDK 1.8+
 
-### Building `padogrid` without Oracle Coherence
+### Building `padogrid` Distribution
 
-You can build `padogrid` using any of the following options (See the usage by running `./build_dist.sh -?`.) For distribution, always include man pages.
-
-```bash
-# Exclude man pages and Coherence (fast build)
-./build_dist.sh
-
-# Include man pages but exclude Coherence
-./build_dist.sh -man
-
-# Maven (without man pages and Coherence, fastest build)
-mvn install
-
-# Build all: 'build_dist.sh -man' + external apps (slowest and largest build)
-./build_all.sh -man
-```
-
-### Building `padogrid` with Oracle Coherence
-
-By default, Coherence is excluded in the build due to the lack of public Maven repositories. To build the Coherence module, you must manually install the Coherence package in your local Maven repository as described in the following article.
-
-[coherence-addon-core/README.md](coherence-addon-core/README.md)
-
-Once you have installed the Coherence package in your local Maven repository, in addition to other modules, you can include the Coherence module in the build by specifying the `-coherence` option as shown below.
+There are a number of ways to build a PadoGrid distribution. For building a standard distribution release, run the `build_dist.sh` script as follows.
 
 ```bash
-# Exclude man pages (fast build)
-./build_dist.sh -coherence
-
-# Include man pages (for distribution)
-./build_dist.sh -coherence -man
-
-# Maven (without man pages, fastest build)
-mvn install -Pcoherence
-
-# Build all: all modules + external apps (slowest and largest build)
-./build_all.sh -coherence -man
+# Include all products and their man pages (standard distribution)
+./build_dist.sh -all
 ```
+
+You can also build distributions that are tailored to your needs as described in the following link.
+
+[Building PadoGrid](https://github.com/padogrid/padogrid/wiki/Building-padogrid)
 
 ## Installing `padogrid` you have built
 
@@ -130,29 +103,23 @@ Released versions of PadoGrid are normally installed by running the `install_pad
 Upon successful build, the following distribution files will be generated.
 
 ```bash
-# The following distributions contain all the padogrid components.
 padogrid-deployment/target/assembly/padogrid_<version>.tar.gz
 padogrid-deployment/target/assembly/padogrid_<version>.zip
-
-# The following distributions contain all the padogrid components plus
-# external applications.
-padogrid-deployment/target/assembly/padogrid-all_<version>.tar.gz
-padogrid-deployment/target/assembly/padogrid-all_<version>.zip
 ```
 
 Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir -p ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.11-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.12-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.11-SNAPSHOT
+tree -L 1 padogrid_0.9.12-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.11-SNAPSHOT
+padogrid_0.9.12-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -171,15 +138,17 @@ padogrid_0.9.11-SNAPSHOT
 
 ## Initializing PadoGrid
 
-Run the `create_rwe` command to create the first RWE (Root Workspace Environment). The `create_rwe` command is an interactive command that prompts for the workspaces directory and required software installation paths.
+:pencil2: If you have run `install_padogrid`, then you have already initialized PadoGrid and you can skip this section.
+
+To use PadoGrid, you must first create an RWE (Root Workspace Environment) by running the interactive command, `create_rwe`, to specify the workspaces directory and the product installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.11-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.12-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid using Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.11-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.12-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 ```bash
 # docker
@@ -189,11 +158,9 @@ docker run -it --rm padogrid/padogrid /bin/bash
 podman run -it --rm padogrid/padogrid /bin/bash
 ```
 
-Once you are in the container, initialize PadoGrid as follows. Note that this is only required if you are running PadoGrid with `docker` or `podman`. This is not required for Kubernetes.
+If you are logged in the container and your container version is 0.9.9 and older, then you must intialize Padogrid as follows. Versions 0.9.10 and later do not require this step.
 
 ```bash
-# This is required for padogrid/padogrid:0.9.9 and older versions only.
-# padogrid/padogrid:0.9.10 and later versions do not require this step.
 ./padogrid_start -init
 . ~/.bashrc
 ```
@@ -203,7 +170,7 @@ Once you are in the container, initialize PadoGrid as follows. Note that this is
 You can run PadoGrid in Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
-# kubctl
+# kubectl
 kubectl run padogrid --image=docker.io/padogrid/padogrid
 
 # oc
@@ -213,7 +180,7 @@ oc run padogrid --image=docker.io/padogrid/padogrid
 To login to the PadoGrid pod, make sure to specify the command, `bash`, as follows.
 
 ```bash
-# kubctl
+# kubectl
 kubectl exec -it padogrid -- bash
 
 # oc
@@ -235,12 +202,16 @@ cd_app perf_test; cd bin_sh
 To delete the PadoGrid pod:
 
 ```bash
-# kubctl
+# kubectl
 kubectl delete pod paodgrid
 
 # oc
 oc delete pod padogrid
 ```
+
+You may encounter a random userid assigned by Kubernetes and OpenShift instead of the required fixed userid, **padogrid**, especially when you deploy the PadoGrid container. The following link provides further details on running PadoGrid with the fixed userid when deployed in OpenShift.
+
+[Deploying PadoGrid in OpenShift](https://github.com/padogrid/padogrid/wiki/Kubernetes#deploying-padogrid-in-openshift)
 
 ## Data Grid Products
 

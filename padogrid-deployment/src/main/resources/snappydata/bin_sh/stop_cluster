@@ -85,7 +85,9 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-# 
+POD=`getClusterProperty "pod.name" "local"`
+
+#
 # VM cluster
 #
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
@@ -119,6 +121,14 @@ if [ "$VM_ENABLED" == "true" ]; then
       echo "           Command aborted."
       echo "----------------------------------------------------------------"
       exit 1
+   fi
+
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+         . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
    fi
 
    DEFAULT_USER=$(whoami)
@@ -168,7 +178,6 @@ fi
 #
 # Local cluster
 #
-POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 LEADER_PREFIX=`getLeaderPrefix`

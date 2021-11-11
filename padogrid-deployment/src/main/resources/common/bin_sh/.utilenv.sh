@@ -153,7 +153,7 @@ function getOsEnv
       if [[ $1 == $__HOSTNAME* ]] || [[ $1 == $NODE_NAME_PRIMARY* ]]; then
          echo "gg"  # guest viewed from itself
       else
-         echo "hg"   # host (or unknonw) viewd from guest
+         echo "hg"   # host (or unknonw) viewed from guest
       fi
    fi
 }

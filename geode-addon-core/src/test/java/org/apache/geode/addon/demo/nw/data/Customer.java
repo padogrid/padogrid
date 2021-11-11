@@ -16,21 +16,21 @@ public class Customer implements PdxSerializable
 {
 	@Id
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(length = 20)
+	@Column(length = 30)
 	private String customerId;
-	@Column(length = 50)
+	@Column(length = 100)
 	private String companyName;
-	@Column(length = 50)
+	@Column(length = 100)
 	private String contactName;
-	@Column(length = 50)
+	@Column(length = 100)
 	private String contactTitle;
 	@Column(length = 100)
 	private String address;
-	@Column(length = 50)
+	@Column(length = 100)
 	private String city;
-	@Column(length = 10)
+	@Column(length = 100)
 	private String region;
-	@Column(length = 10)
+	@Column(length = 30)
 	private String postalCode;
 	@Column(length = 100)
 	private String country;

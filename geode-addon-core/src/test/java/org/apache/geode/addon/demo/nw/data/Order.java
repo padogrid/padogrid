@@ -22,11 +22,11 @@ public class Order implements PdxSerializable, Comparable<Order>
 	
 	@Id
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(length = 20)
+    @Column(length = 30)
 	private String orderId;
-	@Column(length = 20)
+	@Column(length = 30)
 	private String customerId;
-	@Column(length = 20)
+	@Column(length = 30)
 	private String employeeId;
 	@Column
 	private Date orderDate;
@@ -34,19 +34,19 @@ public class Order implements PdxSerializable, Comparable<Order>
 	private Date requiredDate;
 	@Column
 	private Date shippedDate;
-	@Column(length = 50)
+	@Column(length = 100)
 	private String shipVia;
 	@Column
 	private double freight;
-	@Column(length = 50)
+	@Column(length = 100)
 	private String shipName;
 	@Column(length = 100)
 	private String shipAddress;
-	@Column(length = 50)
+	@Column(length = 100)
 	private String shipCity;
-	@Column(length = 10)
+	@Column(length = 100)
 	private String shipRegion;
-	@Column(length = 10)
+	@Column(length = 30)
 	private String shipPostalCode;
 	@Column(length = 100)
 	private String shipCountry;

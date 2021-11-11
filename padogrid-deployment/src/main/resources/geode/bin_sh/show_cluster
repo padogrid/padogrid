@@ -102,6 +102,15 @@ function displayVmClusterShort()
 {
    # POD needed to get the correct node name
    POD=`getClusterProperty "pod.name" "local"`
+
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv $NODE`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+	 . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
    # Locators
    LOCATOR_COUNT=0
    RUNNING_LOCATOR_COUNT=0
@@ -184,7 +193,14 @@ function displayVmClusterLong()
       PROMETHEUS_PORT="Disabled"
    fi
  
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
    OS_ENV=`getOsEnv $NODE`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+	 . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
    RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
    pushd $RUN_DIR > /dev/null 2>&1
    MEMBER_PREFIX=`getMemberPrefix`
@@ -515,7 +531,6 @@ function displayClusterLong()
             NODE="${NODE_NAME_PRIMARY}.local"
          fi
 
-         
          if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
             ( [ "$OS_ENV" == "gg" ] );  then
 
@@ -588,8 +603,8 @@ function displayClusterLong()
                echo "             PID: $pid"
             fi
          else
-            echo "           STATE: Unknown"
-            echo "             PID: Unknown"
+            echo -e "           STATE: ${CYellow}Unknown${CNone}"
+            echo -e "             PID: ${CYellow}Unknown${CNone}"
             RUNNING_LOCATOR_COUNT=-1
             DOWN_LOCATOR_COUNT=-1
          fi
@@ -689,8 +704,8 @@ function displayClusterLong()
                echo "             PID: $pid"
             fi
          else
-            echo "           STATE: Unknown"
-            echo "             PID: Unknown"
+            echo -e "           STATE: ${CYellow}Unknown${CNone}"
+            echo -e "             PID: ${CYellow}Unknown${CNone}"
             RUNNING_MEMBER_COUNT=-1
             DOWN_MEMBER_COUNT=-1
          fi
@@ -719,7 +734,7 @@ function displayClusterLong()
    echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
    fi
    if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
-   echo -e " Members Running: ${CYellow}Unknown{CNone}"
+   echo -e " Members Running: ${CYellow}Unknown${CNone}"
    elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
    echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else

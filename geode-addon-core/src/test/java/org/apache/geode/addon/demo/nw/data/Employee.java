@@ -2,29 +2,54 @@ package org.apache.geode.addon.demo.nw.data;
 
 import java.util.Date;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
 import org.apache.geode.pdx.PdxWriter;
 
+@Entity
+@Table(name = "employees")
 public class Employee implements PdxSerializable
 {
+	@Id
 	private String employeeId;
+	@Column(length = 100)
 	private String lastName;
+	@Column(length = 100)
 	private String firstName;
+	@Column(length = 100)
 	private String title;
+	@Column(length = 100)
 	private String titleOfCourtesy;
+	@Column
 	private Date birthDate;
+	@Column
 	private Date hireDate;
+	@Column(length = 100)
 	private String address;
+	@Column(length = 100)
 	private String city;
+	@Column(length = 100)
 	private String region;
+	@Column(length = 30)
 	private String postalCode;
+	@Column(length = 100)
 	private String country;
+	@Column(length = 30)
 	private String homePhone;
+	@Column(length = 30)
 	private String extension;
+	@Column(length = 1000)
 	private String photo;
+	@Column(length = 100)
 	private String notes;
+	@Column(length = 100)
 	private String reportsTo;
+	@Column(length = 100)
 	private String photoPath;
 
 	public Employee()

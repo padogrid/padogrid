@@ -141,6 +141,15 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          echo >&2 "----------------------------------------------------------------"
          exit 1
       fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
       # Replace , with space
       __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
       DEFAULT_USER=$(whoami)
@@ -312,7 +321,11 @@ if [ "$DEBUG_ENABLED" == "true" ]; then
    else
       DEBUG_PORT=$DEBUG_START_PORT
    fi
-   DEBUG="-Xdebug -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT"
+   if [[ $JAVA_VERSION == 1.8* ]]; then
+      DEBUG="-Xdebug -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT"
+   else
+      DEBUG="-Xdebug -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:$DEBUG_PORT"
+   fi
 else
    DEBUG_PORT="Disabled"
    DEBUG=""

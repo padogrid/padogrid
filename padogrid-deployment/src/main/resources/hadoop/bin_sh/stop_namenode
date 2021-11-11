@@ -77,6 +77,7 @@ fi
 
 # Get workspace name
 WORKSPACE=${PADOGRID_WORKSPACE##*/}
+POD=`getClusterProperty "pod.name" "local"`
 
 #
 # VM cluster
@@ -91,6 +92,15 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          echo "       Command aborted."
          exit 1
       fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
       # Replace , with space
       __VM_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
       DEFAULT_USER=$(whoami)
@@ -125,7 +135,6 @@ fi
 # Local cluster
 #
 
-POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
 NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
 

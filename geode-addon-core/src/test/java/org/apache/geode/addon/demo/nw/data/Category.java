@@ -1,15 +1,27 @@
 package org.apache.geode.addon.demo.nw.data;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
 import org.apache.geode.pdx.PdxWriter;
 
+@Entity
+@Table(name = "categories")
 public class Category implements PdxSerializable
 {
+	@Id
 	private String categoryId;
+	@Column(length = 100)
 	private String categoryName;
+	@Column(length = 100)
 	private String description;
+	@Column(length = 100)
 	private String tag;
+	@Column(length = 1000)
 	private String picture;
 
 	public Category()

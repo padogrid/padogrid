@@ -135,6 +135,15 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          echo >&2 "----------------------------------------------------------------"
          exit 1
       fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
       NAMENODE_START_PORT=`getClusterProperty "namenode.tcp.startPort" $DEFAULT_NAMENODE_START_PORT`
       # Replace , with space
       __VM_NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
@@ -188,8 +197,6 @@ NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 if [ "$VM_ENABLED" == "true" ]; then
-   # POD needed to get the correct node name
-   POD=`getClusterProperty "pod.name" "local"`
    MEMBER=`getVmMemberName`
 else
    MEMBER=`getMemberName $MEMBER_NUMBER`
@@ -337,7 +344,11 @@ if [ "$DEBUG_ENABLED" == "true" ]; then
    else
       DEBUG_PORT=$DEBUG_START_PORT
    fi
-   DEBUG="-Xdebug '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT'"
+   if [[ $JAVA_VERSION == 1.8* ]]; then
+      DEBUG="-Xdebug '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$DEBUG_PORT'"
+   else
+      DEBUG="-Xdebug '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:$DEBUG_PORT'"
+   fi
 else
    DEBUG_PORT="Disabled"
    DEBUG=""
