@@ -170,7 +170,7 @@ If you are logged in the container and your container version is 0.9.9 and older
 You can run PadoGrid in Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
-# kubctl
+# kubectl
 kubectl run padogrid --image=docker.io/padogrid/padogrid
 
 # oc
@@ -180,7 +180,7 @@ oc run padogrid --image=docker.io/padogrid/padogrid
 To login to the PadoGrid pod, make sure to specify the command, `bash`, as follows.
 
 ```bash
-# kubctl
+# kubectl
 kubectl exec -it padogrid -- bash
 
 # oc
@@ -202,7 +202,7 @@ cd_app perf_test; cd bin_sh
 To delete the PadoGrid pod:
 
 ```bash
-# kubctl
+# kubectl
 kubectl delete pod paodgrid
 
 # oc
