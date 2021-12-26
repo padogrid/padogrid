@@ -5,8 +5,9 @@ https://github.com/padogrid
 
 ## Version 0.9.13-SNAPSHOT
 
-### Release Date: 11/10/21
+### Release Date: 12/25/21
 
+- Added support for installing downloaded zip bundles. You can now download online bundles in the form of zip files and install them using `install_bundle`.
 
 ----
 
