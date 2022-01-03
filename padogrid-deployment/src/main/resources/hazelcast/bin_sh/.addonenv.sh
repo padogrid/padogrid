@@ -681,6 +681,7 @@ else
          for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-*; do
             file=${file##*hazelcast\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
+            IS_HAZELCAST_ENTERPRISE=true
          done
       elif [ -f "$HAZELCAST_HOME/lib/hazelcast-all-"* ]; then
          for file in $HAZELCAST_HOME/lib/hazelcast-all-*; do
