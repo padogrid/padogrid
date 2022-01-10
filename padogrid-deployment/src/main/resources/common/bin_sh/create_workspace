@@ -190,16 +190,10 @@ if [ "$QUIET" == "true" ]; then
       exit 1
    fi
 
-   if [ "$PRODUCT_HOME_ARG" == "" ]; then
-      echo >&2 "ERROR: Product home path not specified. Use the '-product' option."
+   if [ "$PRODUCT_HOME_ARG" != "" ] && [ ! -d "$PRODUCT_HOME_ARG" ]; then
+      echo >&2 "ERROR: The specified product home path does not exists [$PRODUCT_HOME_ARG]."
       echo >&2 "       Command aborted."
       exit
-   else
-      if [ ! -d "$PRODUCT_HOME_ARG" ]; then
-         echo >&2 "ERROR: The specified product home path does not exists [$PRODUCT_HOME_ARG]."
-         echo >&2 "       Command aborted."
-         exit
-      fi
    fi
    if [ "$JAVA_HOME_ARG" != "" ]; then
       if [ ! -d "$JAVA_HOME_ARG" ]; then
@@ -215,7 +209,7 @@ if [ "$QUIET" == "true" ]; then
    JAVA_HOME="$JAVA_HOME_ARG"
    PRODUCT_HOME="$PRODUCT_HOME_ARG"
    WORKSPACE="$NAME_ARG"
-   
+
    determineProduct
 
    VM_JAVA_HOME="$VM_JAVA_HOME_ARG"
@@ -299,7 +293,10 @@ else
          if [[ $OS_NAME == CYGWIN* ]]; then
             __JAVA_HOME=$(cygpath -au "$__JAVA_HOME")
          fi
-         if [ ! -d "$__JAVA_HOME" ]; then
+         if [ "$__JAVA_HOME" == "" ]; then
+            echo "Java home path not specified and will not be set."
+            __REDO=false
+         elif [ ! -d "$__JAVA_HOME" ]; then
             echo "Directory does not exist or not a directory."
             __JAVA_HOME=$JAVA_HOME_ARG
             __REDO=true
@@ -357,9 +354,17 @@ else
             __PRODUCT_HOME="$(cygpath -au $__PRODUCT_HOME)"
          fi
          if [ ! -d "$__PRODUCT_HOME" ]; then
-            echo "Directory does not exist or not a directory."
-            __PRODUCT_HOME=$PRODUCT_HOME_ARG
+            echo "Directory does not exist or not a directory. Do you want to skip?"
             __REDO=true
+            INNER_LOOP=true
+            while [ "$INNER_LOOP" == "true" ]; do
+               read -p "Enter 'c' to skip this question and continue, 'r' to re-enter, 'q' to quit: " INPUT
+               case $INPUT in
+                  [Cc]* ) __REDO=false; INNER_LOOP=false; __PRODUCT_HOME="";;
+                  [Rr]* ) __REDO=true; INNER_LOOP=false; __PRODUCT_HOME="$PRODUCT_HOME_ARG";;
+                  [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+               esac
+            done
          else
             __REDO=false
          fi
@@ -573,6 +578,10 @@ mkdir -p $WORKSPACE_DIR/plugins
 mkdir -p $WORKSPACE_DIR/bundles
 mkdir -p $WORKSPACE_DIR/k8s
 mkdir -p $WORKSPACE_DIR/docker
+
+if [ "$PRODUCT" == "" ]; then
+   PRODUCT="geode"
+fi
 
 #
 # Create setenv.sh

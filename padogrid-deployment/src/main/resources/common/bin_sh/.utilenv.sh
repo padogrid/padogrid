@@ -1463,7 +1463,13 @@ function retrieveClusterEnvFile
 {
    local __CLUSTER_PATH="$1"
    if [ "$__CLUSTER_PATH" == "" ]; then
-      __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      if [ "$CLUSTER" == "" ]; then
+          PRODUCT="none"
+          CLUSTER_TYPE="none"
+          return
+      else
+         __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      fi
    fi
    if [ -f "$__CLUSTER_PATH/.cluster/clusterenv.sh" ]; then
       . "$__CLUSTER_PATH/.cluster/clusterenv.sh"
@@ -1498,6 +1504,9 @@ function retrieveClusterEnvFile
       elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then
          PRODUCT="hadoop"
          CLUSTER_TYPE="pseudo"
+      else
+         PRODUCT="none"
+         CLUSTER_TYPE="none"
       fi
    fi
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
@@ -1506,6 +1515,9 @@ function retrieveClusterEnvFile
       PRODUCT="geode"
    elif [ "$PRODUCT" == "jet" ]; then
       PRODUCT="hazelcast"
+   elif [ "$PRODUCT" == "" ]; then
+      PRODUCT="none"
+      CLUSTER_TYPE="none"
    fi
 }
 
@@ -1626,7 +1638,7 @@ function switch_rwe
             echo >&2 "ERROR: Invalid workspace name: [$__WORKSPACE]. Workspace does not exist. Command aborted."
             return 1
          fi
-         
+
          # Set PADOGRID_WORKSPACES_HOME here. It's a new RWE.
          export PADOGRID_WORKSPACES_HOME="$NEW_RWE_DIR"
 
@@ -3579,7 +3591,8 @@ function determineProduct
       CLUSTER_TYPE="pseudo"
       CLUSTER=$DEFAULT_HADOOP_CLUSTER
    else
-      PRODUCT=""
+      PRODUCT="none"
+      CLUSTER_TYPE="none"
    fi
 }
 

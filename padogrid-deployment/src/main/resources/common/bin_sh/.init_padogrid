@@ -292,25 +292,26 @@ else
          fi
          __JAVA_HOME="$(trimString "$__JAVA_HOME")"
 
-         if [[ ! -d "$__JAVA_HOME" ]]; then
+         if [ "$__JAVA_HOME" == "" ]; then
+            echo "Java home path not specified and will not be set."
+            __REDO=false
+         elif [[ ! -d "$__JAVA_HOME" ]]; then
             echo "Directory does not exist or not a directory."
             __JAVA_HOME="$JAVA_HOME_ARG"
-            __REDO=true
-         elif [ "$__JAVA_HOME" == "" ]; then
             __REDO=true
          else
             __REDO=false
          fi
       done
       JAVA_HOME="$__JAVA_HOME"
-     
+
       # PRODUCT_HOME
       __REDO=true
       while [ "$__REDO" == "true" ]; do
 
          echo "Enter product ($PRODUCT) home directory path."
          if [[ $OS_NAME == CYGWIN* ]]; then
-       echo "Enter only Unix absoulte path. Windows path not allowed."
+            echo "Enter only Unix absoulte path. Windows path not allowed."
          fi
          echo "[$__PRODUCT_HOME]:"
 
@@ -481,6 +482,9 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
       ;;
    spark)
       TEMPLATE_PRODUCT_HOME="\$SPARK_HOME"
+      ;;
+   none|*)
+      TEMPLATE_PRODUCT_HOME=""
       ;;
    esac
    
