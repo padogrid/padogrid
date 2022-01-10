@@ -275,7 +275,7 @@ else
       __REDO=true
       while [ "$__REDO" == "true" ]; do
 
-         echo "Enter Java home path."
+         echo "Enter Java home path. Leave blank to skip."
          if [[ $OS_NAME == CYGWIN* ]]; then
             echo "Enter only Unix absolute path. Windows path not allowed."
          fi
@@ -309,7 +309,7 @@ else
       __REDO=true
       while [ "$__REDO" == "true" ]; do
 
-         echo "Enter product ($PRODUCT) home directory path."
+         echo "Enter product ($PRODUCT) home directory path. Leave blank to skip."
          if [[ $OS_NAME == CYGWIN* ]]; then
             echo "Enter only Unix absoulte path. Windows path not allowed."
          fi
@@ -318,13 +318,14 @@ else
          read -p "" INPUT
          # trim string
          INPUT=`echo "$INPUT" | xargs`
-         if [ "$INPUT" != "" ]; then
-            __PRODUCT_HOME="$INPUT"
+         __PRODUCT_HOME="$INPUT"
+         if [ "$__PRODUCT_HOME" == "" ]; then
+            echo "Product home path not specified and will not be set."
          fi
          if [[ $OS_NAME == CYGWIN* ]]; then
             __PRODUCT_HOME="$(cygpath -au $__PRODUCT_HOME)"
          fi
-         if [[ ! -d "$__PRODUCT_HOME" ]]; then
+         if [ "$__PRODUCT_HOME" != "" ] && [[ ! -d "$__PRODUCT_HOME" ]]; then
             echo "Directory does not exist or not a directory. Do you want to skip?"
             __REDO=true
             INNER_LOOP=true
@@ -365,11 +366,18 @@ else
       WORKSPACE="$__WORKSPACE"
 
       # CLUSTER
-       read -p "Enter default cluster name [$CLUSTER]: " INPUT
-      # trim string
-      INPUT=`echo "$INPUT" | xargs`
-      if [ "$INPUT" != "" ]; then
-         CLUSTER="$INPUT"
+      if [ "$PRODUCT_HOME" == "" ]; then
+         CLUSTER=""
+      else
+         read -p "Enter default cluster name [$CLUSTER]: " INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            CLUSTER="$INPUT"
+         fi
+         if [ "$CLUSTER" == "" ]; then
+            echo "Cluster not specified and will not be set."
+         fi
       fi
 
       # VM
