@@ -5,10 +5,10 @@ https://github.com/padogrid
 
 ## Version 0.9.13-SNAPSHOT
 
-### Release Date: 01/09/22
+### Release Date: 01/10/22
 
 - Added support for installing downloaded zip bundles. You can now download online bundles in the form of zip files and install them using `install_bundle`.
-- Added support for installing PadoGrid without products.
+- Added support for installing PadoGrid without products. Previously, PadoGrid required at least one supported product locally installed before it can be operational. Starting this release, products are not required when installing PadoGrid and creating workspaces. This means you can now install and run applications on Kubernetes, Docker, and Vagrant VMs without having to locally install the corresponding products. Unfortunately, however, this also means the workspaces created with the previous releases are no longer compatible. You must manually migrate the existing workspaces by following the instructions provided in the [Migrating Workspaces](https://github.com/padogrid/padogrid/wiki/Migrating-Workspaces) of the PadoGrid manual.
 
 ----
 
