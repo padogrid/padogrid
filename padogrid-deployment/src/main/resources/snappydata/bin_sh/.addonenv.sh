@@ -606,23 +606,34 @@ fi
 #
 # Java version
 #
-__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
-JAVA_VERSION=$(eval $__COMMAND)
-JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+if [ "$(which $JAVA 2> /dev/null)" == "" ]; then
+   JAVA_VERSION=""
+   JAVA_MAJOR_VERSION_NUMBER=""
+else
+   __COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+   JAVA_VERSION=$(eval $__COMMAND)
+   JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+   JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+fi
 
 #
 # SNAPPYDATA_VERSION/PROUDCT_VERSION: Determine the SnappyData version
 #
-SNAPPYDATA_VERSION=""
 IS_ENTERPRISE=false
-for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
-   file=${file##*snappydata\-core*\-}
-   SNAPPYDATA_VERSION=${file%.jar}
-done
-SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
-PRODUCT_VERSION=$SNAPPYDATA_VERSION
-PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
+if [ "$SNAPPYDATA_HOME" == "" ]; then
+   SNAPPYDATA_VERSION=""
+   SNAPPYDATA_MAJOR_VERSION_NUMBER=""
+   PRODUCT_VERSION=""
+   PRODUCT_MAJOR_VERSION=""
+else
+   for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
+      file=${file##*snappydata\-core*\-}
+      SNAPPYDATA_VERSION=${file%.jar}
+   done
+   SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
+   PRODUCT_VERSION=$SNAPPYDATA_VERSION
+   PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
+fi
 
 #
 # PADOGRID_VERSION: Determine the padogrid version

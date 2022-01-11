@@ -611,27 +611,39 @@ fi
 #
 # Java version
 #
-__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
-JAVA_VERSION=$(eval $__COMMAND)
-JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+if [ "$(which $JAVA 2> /dev/null)" == "" ]; then
+   JAVA_VERSION=""
+   JAVA_MAJOR_VERSION_NUMBER=""
+else
+   __COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+   JAVA_VERSION=$(eval $__COMMAND)
+   JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+   JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+fi
 
 #
 # GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
 # Geode and GemFire share the same 'geode' prefix for jar names.
-GEODE_VERSION=""
-for file in "$PRODUCT_HOME/lib/geode-core-"*; do
-   file=${file##*geode\-core\-}
-   GEODE_VERSION=${file%.jar}
-done
-if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then
-   RUN_TYPE="pado"
-else
+if [ "$PRODUCT_HOME" == "" ]; then
+   GEODE_VERSION=""
    RUN_TYPE="default"
+   GEODE_MAJOR_VERSION_NUMBER=""
+   PRODUCT_VERSION=""
+   PRODUCT_MAJOR_VERSION=""
+else
+   for file in "$PRODUCT_HOME/lib/geode-core-"*; do
+      file=${file##*geode\-core\-}
+      GEODE_VERSION=${file%.jar}
+   done
+   if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then
+      RUN_TYPE="pado"
+   else
+      RUN_TYPE="default"
+   fi
+   GEODE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
+   PRODUCT_VERSION=$GEODE_VERSION
+   PRODUCT_MAJOR_VERSION=$GEODE_MAJOR_VERSION_NUMBER
 fi
-GEODE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
-PRODUCT_VERSION=$GEODE_VERSION
-PRODUCT_MAJOR_VERSION=$GEODE_MAJOR_VERSION_NUMBER
 
 #
 # PADOGRID_VERSION: Determine the padogrid version
