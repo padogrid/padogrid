@@ -445,7 +445,7 @@ fi
 
 # Set CLUSTER to the default cluster set in setenv.sh if it 
 # is not specified.
-if [ -z $CLUSTER ]; then
+if [ -z $CLUSTER ] && [ -z $POD ]; then
    retrieveWorkspaceEnvFile
 fi
 

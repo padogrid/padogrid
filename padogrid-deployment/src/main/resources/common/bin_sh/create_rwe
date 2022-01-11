@@ -167,18 +167,20 @@ function getLatestProductVersion
         lminor=$minor
         lupdate=$update
       elif [ $lmajor -eq $major ]; then
-        if [ $lminor -lt $minor ]; then
-           lminor=$minor
-           lupdate=$update
-        elif [ $lminor -eq $minor ]; then
-           if [ $lupdate == "-1" ]; then
+        if [ "$(isNumber $minor)" == "true" ]; then
+           if [ $lminor -lt $minor ]; then
+              lminor=$minor
               lupdate=$update
-           elif [ "$(isNumber $lupdate)" == "true" ] && [ "$(isNumber $update)" == "true" ]; then
-              if [ $lupdate -lt $update ]; then
+           elif [ $lminor -eq $minor ]; then
+              if [ $lupdate == "-1" ]; then
+                 lupdate=$update
+              elif [ "$(isNumber $lupdate)" == "true" ] && [ "$(isNumber $update)" == "true" ]; then
+                 if [ $lupdate -lt $update ]; then
+                    lupdate=$update
+                 fi
+              else
                  lupdate=$update
               fi
-           else
-              lupdate=$update
            fi
         fi
       fi

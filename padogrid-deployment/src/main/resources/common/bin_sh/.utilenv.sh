@@ -1383,9 +1383,9 @@ function retrieveWorkspaceEnvFile
       . "$__WORKSPACE_PATH/.workspace"
       rm "$__WORKSPACE_PATH/.workspace"
    fi
-   # If the cluster does not exist then pick the first cluster and pod in the workspace dir
+   # If the cluster does not exist then pick the first cluster and pod in the workspace dir.
    # Check to see if clusters and pods directories exist. During the initialization phase, 
-   # PadoGrid submits its own installation path as workspace. This needs to be correted.
+   # PadoGrid submits its own installation path as workspace. This needs to be corrected.
    # This causes this function to log errors.
    if [ -d "$__WORKSPACE_PATH/clusters" ]; then
       if [ "$CLUSTER" == "" ] || [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
@@ -1399,7 +1399,7 @@ function retrieveWorkspaceEnvFile
          updateWorkspaceEnvFile "$__WORKSPACE_PATH"
       fi
    fi
-   if [ -d "$__WORKSPACE_PATH/pods/$POD" ]; then
+   if [ -d "$__WORKSPACE_PATH/pods" ]; then
       if [ "$POD" == "" ] || [ ! -d "$__WORKSPACE_PATH/pods/$POD" ]; then
          local __PODS=$(ls $__WORKSPACE_PATH/pods)
          local __POD=""
