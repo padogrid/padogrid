@@ -50,6 +50,9 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        to be set only if you have the MC module separately installed.
 # JET_MC_HOME            Hazelcast Jet Management Center directory path. This needs
 #                        to be set only if you have the MC module separately installed.
+# DEFAULT_HAZELCAST_MAJOR_VERSION_NUMBER  The default Hazelcast major version number. This value is
+#                        sparingly used by scripts that can be run without having a Hazelcast product
+#                        installed.
 # DEFAULT_CLUSTER        The default IMDG cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: myhz
 # DEFAULT_JET_CLUSTER    The default Jet cluster name. The default cluster can be managed without
@@ -86,6 +89,9 @@ fi
 # JAVA_OPTS - Java options.
 #
 #JAVA_OPTS=
+
+# Default Hazelcast major version number
+DEFAULT_HAZELCAST_MAJOR_VERSION_NUMBER=5
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.

@@ -46,6 +46,9 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        system properties (-J-D), etc.
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
+# DEFAULT_SNAPPYDATA_MAJOR_VERSION_NUMBER  The default SnappyData major version number. This value is
+#                        sparingly used by scripts that can be run without having a SnappyData product
+#                        installed.
 # DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: mygeode
 # DEFAULT_LOCATOR_MIN_HEAP_SIZE  Default locator minimum heap size. Used initially when the cluster
@@ -83,6 +86,9 @@ fi
 # JAVA_OPTS - Java options.
 #
 #JAVA_OPTS=
+
+# Default SnappyData major version number
+DEFAULT_SNAPPYDATA_MAJOR_VERSION_NUMBER=1
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.

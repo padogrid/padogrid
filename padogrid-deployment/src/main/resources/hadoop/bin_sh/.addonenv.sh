@@ -46,6 +46,9 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        system properties (-D), etc.
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
+# DEFAULT_HADOOP_MAJOR_VERSION_NUMBER  The default Hadoop major version number. This value is
+#                        sparingly used by scripts that can be run without having a Hadoop product
+#                        installed.
 # DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: myhadoop
 # DEFAULT_NAMENODE_MIN_HEAP_SIZE  Default namenode minimum heap size. Used initially when the cluster
@@ -83,6 +86,9 @@ fi
 # JAVA_OPTS - Java options.
 #
 #JAVA_OPTS=
+
+# Default Hadoop major version number
+DEFAULT_HADOOP_MAJOR_VERSION_NUMBER=3
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.

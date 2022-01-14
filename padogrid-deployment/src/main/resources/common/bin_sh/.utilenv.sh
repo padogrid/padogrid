@@ -3075,7 +3075,7 @@ function getWorkspaceInfoList
       local __COMMAND="\"$__JAVA_HOME/bin/java\" -version 2>&1 | grep version "
       JAVA_VERSION=$(eval $__COMMAND)
       JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-      JAVA_INFO="java_$JAVA_VERSION";
+      JAVA_INFO="java_$JAVA_VERSION, ";
    fi
 
    local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
@@ -3093,7 +3093,7 @@ function getWorkspaceInfoList
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
 
    # TODO: For some reason, Cygwin does not print the beginning string...
-   echo "${VM_WORKSPACE}${JAVA_INFO}, padogrid_$PADOGRID_VERSION"
+   echo "${VM_WORKSPACE}${JAVA_INFO}padogrid_$PADOGRID_VERSION"
 }
 
 #

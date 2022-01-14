@@ -416,7 +416,8 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          file_name="`basename $BUNDLE_FILE_PATH $0`"
          keyvalue=$(getProductKeyValue "$file_name")
       
-         if [[ "$keyvalue" != "hazelcast"* ]] \
+         if [[ "$keyvalue" != "none"* ]] \
+            && [[ "$keyvalue" != "hazelcast"* ]] \
             && [[ "$keyvalue" != "jet"* ]] \
             && [[ "$keyvalue" != "geode"* ]] \
             && [[ "$keyvalue" != "gemfire"* ]] \
@@ -441,8 +442,18 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             PRODUCT=${keyvalue%%=*}
             PRODUCT_VERSIONS=${keyvalue#*=}
             found="false"
+
+            # If product version is not specified then treat it as none
+            if [[ ! $PRODUCT_VERSIONS =~ [0-9].* ]]; then
+               PRODUCT="none"
+               PRODUCT_VERSIONS=1
+            fi
+
             CLUSTER_TYPE=""
-            if [ "$PRODUCT" == "hazelcast-enterprise" ]; then
+            if [ "$PRODUCT" == "none" ]; then
+               found=true
+               CLUSTER_TYPE="none"
+            elif [ "$PRODUCT" == "hazelcast-enterprise" ]; then
                found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="imdg"
             elif [ "$PRODUCT" == "hazelcast" ]; then
@@ -541,7 +552,11 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
          TEMP_WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_NAME}
          # Copy the workspace files
-         create_workspace -name __ws-${BUNDLE_NAME} -product $PRODUCT_HOME -quiet > /dev/null
+         if [ "$PRODUCT_HOME" == "" ]; then
+            create_workspace -quiet -name __ws-${BUNDLE_NAME} > /dev/null
+         else
+            create_workspace -quiet -name __ws-${BUNDLE_NAME} -product $PRODUCT_HOME > /dev/null
+         fi
          rm -rf "$TEMP_WORKSPACE_DIR"/clusters/*
          cp -r "$TEMP_WORKSPACE_DIR"/* "$GIT_DIR"/
          cp "$TEMP_WORKSPACE_DIR"/.addonenv.sh "$GIT_DIR"/
