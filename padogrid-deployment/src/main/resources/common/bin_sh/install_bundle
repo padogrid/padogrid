@@ -354,7 +354,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          . $SETENV_FILE
       fi
 
-      REQUIRED_PRODUCTS_FILE_PATH=$PADOGRID_WORKSPACE/bundles/required_products.txt
+      REQUIRED_PRODUCTS_FILE_PATH=/tmp/required_products.txt
       if [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" ]; then
          pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
          jar xf $BUNDLE_FILE_PATH $DOWNLOADED_BUNDLE_NAME
@@ -377,9 +377,6 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             done
             if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
                mv $BUNDLE_NAME $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
-               if [ "$WORKSPACE_NAME" == "default" ]; then
-                  WORKSPACE_NAME=$BUNDLE_NAME
-               fi
             fi
          fi
          popd > /dev/null 2>&1 
@@ -401,11 +398,19 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             curl -sS $RAW_REQUIRED_PRODUCTS_URL > $REQUIRED_PRODUCTS_FILE_PATH 2>/dev/null
          fi
       fi
+
+      # Use the bundle name as the workspace name if it is not specified.
+      if [ "$WORKSPACE_NAME" == "default" ]; then
+         WORKSPACE_NAME=$BUNDLE_NAME
+      fi
       
       declare -a requiredProducts
       declare -a clusterTypes
       declare -a propArray
-      getPropertiesArray "$REQUIRED_PRODUCTS_FILE_PATH" propArray
+      if [ -f "$REQUIRED_PRODUCTS_FILE_PATH" ]; then
+         getPropertiesArray "$REQUIRED_PRODUCTS_FILE_PATH" propArray
+         rm "$REQUIRED_PRODUCTS_FILE_PATH"
+      fi
       let len=${#propArray[@]}
       if [ $len -eq 0 ]; then
          echo "Using bundle name to determine installed products..."
@@ -435,6 +440,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       # Determine if the required product versions are available.
       let len=${#propArray[@]}
       declare -a unfoundProducts
+      NONE_FOUND="false"
       if [ $len -gt 0 ]; then
          let last_index=len-1
          for i in $(seq 0 $last_index); do
@@ -453,6 +459,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             if [ "$PRODUCT" == "none" ]; then
                found=true
                CLUSTER_TYPE="none"
+               NONE_FOUND="true"
             elif [ "$PRODUCT" == "hazelcast-enterprise" ]; then
                found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="imdg"
@@ -492,20 +499,24 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          done
       fi
 
-      # Exit if there are unfound versions.
-      let len=${#unfoundProducts[@]}
-      if [ $len -gt 0 ]; then
-         let last_index=len-1
-         echo -e >&2 "${CLightRed}ERROR:${CNone} This bundle requires the following product version(s) configured for the workspace."
-         for i in $(seq 0 $last_index); do
-            echo >&2 "          ${unfoundProducts[$i]}"
-         done
-         echo >&2 ""
-         echo >&2 "       Use the following commands to verify and install products."
-         echo >&2 "          show_products, update_products, install_products, change_version"
-         echo >&2 ""
-         echo >&2 "       Command aborted."
-         exit 1
+      # Exit if there are unfound versions. none overrides all.
+      if [ "$NONE_FOUND" == "false" ]; then
+         let unfound_len=${#unfoundProducts[@]}
+         if [ $unfound_len -gt 0 ]; then
+            let last_index=len-1
+            echo -e >&2 "${CLightRed}ERROR:${CNone} This bundle requires the following product version(s) configured for the workspace."
+            for i in $(seq 0 $last_index); do
+               if [ "${unfoundProducts[$i]}" != "" ]; then
+                  echo >&2 "          ${unfoundProducts[$i]}"
+               fi
+            done
+            echo >&2 ""
+            echo >&2 "       Use the following commands to verify and install products."
+            echo >&2 "          show_products, update_products, install_products, change_version"
+            echo >&2 ""
+            echo >&2 "       Command aborted."
+            exit 1
+         fi
       fi
       
       if [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" ]; then
