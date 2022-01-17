@@ -41,9 +41,13 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 
 ### test_ingestion
 
-```console
+```bash
 ./test_ingestion -?
+```
 
+Output:
+
+```
 Usage:
    test_ingestion [-run] [-prop <properties-file>] [-?]
 
@@ -61,9 +65,13 @@ Usage:
 
 ### test_tx
 
-```console
+```bash
 ./test_tx -?
+```
 
+Output:
+
+```console
 Usage:
    test_tx [-run] [-prop <properties-file>] [-?]
 
@@ -80,6 +88,12 @@ Usage:
 ```
 
 ### test_group
+
+```bash
+./test_group -?
+```
+
+Output:
 
 ```console
 Usage:
@@ -148,13 +162,15 @@ public class Order implements PdxSerializable, Comparable<Order>
 
 To use `CacheWriterLoaderPkDbImpl `, you must first build the environment by executing the `build_app` script as shown below. This script runs Maven to download the dependency files into the `$PADOGRID_WORKSPACE/lib` directory, which is included in `CLASSPATH` for all the apps and clusters running in the workspace.
 
-```console
+:pencil2: If your application does not require Geode locally installed then you can set `GEODE_VERSION` in the `setenv.sh` file. If this environment variable is set then the `build_app` script downloads the specified version of Geode jar files.
+
+```bash
 ./build_app
 ```
 
 Upon successful build, you must also configure the cluster in `cache.xml` file as follows:
 
-```console
+```bash
 # Edit cache.xml
 vi $PADOGRID_WORKSPACE/clusters/$CLUSTER/etc/cache.xml
 ```
@@ -220,7 +236,7 @@ Add the following in the `cache.xml` file.
 
 The above configures the `/nw/customers` and `/nw/orders` regions to store and load data to/from the database. The database can be configured in the cluster's `hibernate.cfg.xml` file as follows:
 
-```console
+```bash
 # Edit hibernate.cfg.xml
 vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-mysql.xml
 vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-postresql.xml
@@ -263,7 +279,7 @@ The following is the `hibernate.cfg-mysql.xml` file provided by `geode-addon`. M
 
 The Hibernate configuration file path must be provided before you start the cluster. Edit the cluster's `setenv.sh` file and include the path as follows:
 
-```
+```bash
 vi $PADOGRID_WORKSPACE/clusters/$CLUSTER/bin_sh/setenv.sh
 
 # Set JAVA_OPTS in setenv.sh. Remember that geode-addon uses gfsh to start/stop
@@ -277,14 +293,14 @@ JAVA_OPTS="$JAVA_OPTS --J=-Dgeode-addon.hibernate.config=$HIBERNATE_CONFIG_FILE"
 
 You can now run the cluster.
 
-```
+```bash
 # After making the above changes, start the cluster
 start_cluster -cluster <cluster-name>
 ```
 
 Once the cluster is up, you are ready to run the `test_group` script to insert `Customer` and `Order` entity objects in to the cluster and database. Run the script as follows:
 
-```console
+```bash
 ./test_group -prop ../etc/group-factory.properties -run
 ```
 
@@ -294,8 +310,13 @@ You can reconfigure `group-factory.properties` to add more data, threads, etc.
 
 Upon successful run, the test results are outputted in the `results/` directory. The following shows an example.
 
-```
+```bash
 cat ../results/ingestion-profile-200114-112146_x.txt
+```
+
+Output:
+
+```console
 ******************************************
 Data Ingestion Test
 ******************************************

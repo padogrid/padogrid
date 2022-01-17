@@ -23,22 +23,42 @@ EXECUTABLE="`basename $0`"
 REPO_NAME=geode-desktop
 
 if [ "$HELP" == "true" ]; then
-   echo "Usage:"
-   echo "   ./$EXECUTABLE [-clean] [-?]"
-   echo ""
-   echo "   Builds the perf_test 'factory' environment for the workspace. It downloads"
-   echo "   the dependencies and places them in the workspace's lib directory."
-   echo "      $PADOGRID_WORKSPACE/lib"
-   echo ""
-   echo "   -clean Cleans up the build files after the build completes."
-   echo ""
-   echo "Default: ./$EXECUTABLE"
-   echo ""
+cat <<EOF
+NAME
+   $EXECUTABLE - Build the perf_test 'factory' environment for the workspace
+
+SYNOPSIS
+   $EXECUTABLE [-clean] [-?]
+
+DESCRIPTION
+   Builds the perf_test 'factory' environment for the workspace. It downloads
+   the dependencies and places them in the following workspace lib directory.
+
+   $PADOGRID_WORKSPACE/lib
+
+OPTIONS
+   -clean
+             Cleans up the build files after the build completes.
+
+ENVIRONMENT VARIABLES
+   GEODE_VERSION
+             If GEODE_VERSION is set in the 'setenv.sh' file, then this script
+             downloads the specified version of Geode. This variable should be
+             set if your application does not require Geode locally installed.
+
+DEFAULT
+   ./$EXECUTABLE
+EOF
    exit
 fi
 
 pushd $APP_DIR > /dev/null
-mvn install
+if [ "$GEODE_VERSION" != "" ]; then
+    sed -i$__SED_BACKUP  -e "s/>.*<\/geode.version>/>$GEODE_VERSION<\/geode.version>/" pom-geode.xml
+    mvn install -f pom-geode.xml
+else
+   mvn install
+fi
 popd > /dev/null
 
 # If -all is specified then do not remove the binary files. This option is used

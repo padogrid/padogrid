@@ -43,3 +43,8 @@ JAVA_OPTS="$JAVA_OPTS -DgemfirePropertyFile=$GEMFIRE_PROPERTY_FILE \
 JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
 
 # CLASSPATH="$CLASSPATH"
+
+# Set Geode version to download it via the 'build_app' script. This value overrides
+# the workspace product (Geode) version. This variable should be set if your
+# application does not require Geode locally installed.
+# GEODE_VERSION=
