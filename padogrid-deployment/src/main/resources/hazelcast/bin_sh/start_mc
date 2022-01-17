@@ -256,7 +256,13 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
 fi
 
-JAVA_OPTS="-Dhazelcast.mc.name=$MC_NAME -Dpadogrid.workspace=$WORKSPACE -Dhazelcast.mc.jmx.enabled=true -Dhazelcast.mc.jmx.port=$MC_JMX_PORT -Dhazelcast.mc.jmx.rmi.port=$MC_JMX_RMI_PORT -Dcom.sun.management.jmxremote.ssl=false -Dhazelcast.mc.allowMultipleLogin=true -Dhazelcast.mc.license=$IMDG_LICENSE_KEY"
+JAVA_OPTS="-Dhazelcast.mc.name=$MC_NAME -Dpadogrid.workspace=$WORKSPACE -Dhazelcast.mc.jmx.enabled=true -Dhazelcast.mc.jmx.port=$MC_JMX_PORT -Dhazelcast.mc.jmx.rmi.port=$MC_JMX_RMI_PORT -Dcom.sun.management.jmxremote.ssl=false -Dhazelcast.mc.allowMultipleLogin=true"
+
+if [ "$MC_LICENSE_KEY" != "" ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.license=$MC_LICENSE_KEY"
+elif [ "$IMDG_LICENSE_KEY" != "" ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.license=$IMDG_LICENSE_KEY"
+fi
 
 # Hazelcast Management Center bug introduced in 4.x:
 # A workaround to the following file corruption error when running in a non-local pod:
