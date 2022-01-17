@@ -3,7 +3,7 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
-## Version 0.9.13-SNAPSHOT
+## Version 0.9.13
 
 ### Release Date: 01/16/22
 
