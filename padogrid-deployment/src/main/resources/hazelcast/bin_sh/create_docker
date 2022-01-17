@@ -178,6 +178,13 @@ if [ ! -d $CLUSTER_DIR ]; then
    mkdir -p $CLUSTER_DIR
 fi
 
+if [ "$HAZELCAST_VERSION" == "" ]; then
+   HAZELCAST_VERSION="latest"
+   HAZELCAST_MAJOR_VERSION_NUMBER=$DEFAULT_HAZELCAST_MAJOR_VERSION_NUMBER
+   HAZELCAST_MC_VERSION=""
+   JET_MC_VERSION=""
+fi
+
 if [ "$DOCKER" == "compose" ]; then
 
    ETC_DIR=$CLUSTER_DIR/padogrid/etc
@@ -302,7 +309,9 @@ if [ "$DOCKER" == "compose" ]; then
    done
 
    # Insert cluster member list in hazelcast-client.xml
-   sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -lt 5 ]; then
+      sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-jet-client.xml
+   fi
 fi
 
 #

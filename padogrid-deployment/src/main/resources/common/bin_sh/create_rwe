@@ -167,18 +167,20 @@ function getLatestProductVersion
         lminor=$minor
         lupdate=$update
       elif [ $lmajor -eq $major ]; then
-        if [ $lminor -lt $minor ]; then
-           lminor=$minor
-           lupdate=$update
-        elif [ $lminor -eq $minor ]; then
-           if [ $lupdate == "-1" ]; then
+        if [ "$(isNumber $minor)" == "true" ]; then
+           if [ $lminor -lt $minor ]; then
+              lminor=$minor
               lupdate=$update
-           elif [ "$(isNumber $lupdate)" == "true" ] && [ "$(isNumber $update)" == "true" ]; then
-              if [ $lupdate -lt $update ]; then
+           elif [ $lminor -eq $minor ]; then
+              if [ $lupdate == "-1" ]; then
+                 lupdate=$update
+              elif [ "$(isNumber $lupdate)" == "true" ] && [ "$(isNumber $update)" == "true" ]; then
+                 if [ $lupdate -lt $update ]; then
+                    lupdate=$update
+                 fi
+              else
                  lupdate=$update
               fi
-           else
-              lupdate=$update
            fi
         fi
       fi
@@ -334,7 +336,7 @@ function determineInstalledProducts
       fi
 
       popd > /dev/null 2>&1
-            
+
       if [ ! -d "$GEODE_HOME" ]; then
          GEODE_HOME=""
       fi
@@ -373,34 +375,37 @@ determineInstalledProducts
 
 # Determine the default product
 if [ "$__PRODUCT_HOME" == "" ]; then
-   if [ "$PRODUCT" == "hazelcast" ]; then
-      if [ "$CLUSTER_TYPE" == "jet" ]; then
-         __PRODUCT_HOME="$JET_HOME"
+   if [  "$QUIET" == "true" ]; then
+      if [ "$PRODUCT" == "hazelcast" ]; then
+         if [ "$CLUSTER_TYPE" == "jet" ]; then
+            __PRODUCT_HOME="$JET_HOME"
+         else
+            __PRODUCT_HOME="$HAZELCAST_HOME"
+         fi
+      elif [ "$PRODUCT" == "geode" ]; then
+         __PRODUCT_HOME="$GEODE_HOME"
+      elif [ "$PRODUCT" == "coherence" ]; then
+         __PRODUCT_HOME="$COHERENCE_HOME"
+      elif [ "$PRODUCT" == "snappydata" ]; then
+         __PRODUCT_HOME="$SNAPPYDATA_HOME"
+      elif [ "$PRODUCT" == "spark" ]; then
+         __PRODUCT_HOME="$SPARK_HOME"
+      elif [ "$PRODUCT" == "kafka" ]; then
+         __PRODUCT_HOME="$KAFKA_HOME"
+      elif [ "$PRODUCT" == "hadoop" ]; then
+         __PRODUCT_HOME="$HADOOP_HOME"
       else
-         __PRODUCT_HOME="$HAZELCAST_HOME"
+         __PRODUCT_HOME=""
       fi
-   elif [ "$PRODUCT" == "geode" ]; then
-      __PRODUCT_HOME="$GEODE_HOME"
-   elif [ "$PRODUCT" == "coherence" ]; then
-      __PRODUCT_HOME="$COHERENCE_HOME"
-   elif [ "$PRODUCT" == "snappydata" ]; then
-      __PRODUCT_HOME="$SNAPPYDATA_HOME"
-   elif [ "$PRODUCT" == "spark" ]; then
-      __PRODUCT_HOME="$SPARK_HOME"
-   elif [ "$PRODUCT" == "kafka" ]; then
-      __PRODUCT_HOME="$KAFKA_HOME"
-   elif [ "$PRODUCT" == "hadoop" ]; then
-      __PRODUCT_HOME="$HADOOP_HOME"
-   else
-      __PRODUCT_HOME=""
    fi
 fi
+
 
 if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
    REDO=true
    while [ "$REDO" == "true" ]; do
-      echo "Enter the default product home path. The supported products are"
-      echo "Geode, GemFire, Hazelcast IMDG, Hazelcast Jet, Coherence, Spark."
+      echo "Enter the default product home path. Leave blank to skip. The supported products are"
+      echo "[$PRODUCTS]"
       if [[ $OS_NAME == CYGWIN* ]]; then
           echo "Enter only Unix absoulte path. Windows path not allowed."
       fi
@@ -438,20 +443,27 @@ if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
       if [ "$INPUT" != "" ]; then
          __PRODUCT_HOME=$INPUT
       fi
-      if [ ! -d "$__PRODUCT_HOME" ]; then
-         echo "Directory does not exist or not a directory."
-         __PRODUCT_HOME=$PRODUCT_HOME_ARG
-      fi
-      PRODUCT_HOME="$__PRODUCT_HOME"
-      determineProduct
-
-      echo "Product selected: $PRODUCT"
-
-      if [ `isValidProduct "$PRODUCT"` == "false" ]; then
-         echo "Invalid product home path entered. Supported products are Geode, GemFire, Hazelcast IMDG, Hazelcast Jet, Coherence."
-         REDO=true
+      if [ "$__PRODUCT_HOME" == "" ]; then
+        echo "Product not selected. The RWE will be configured without the default product."
+        PRODUCT_HOME=""
+        PRODUCT=""
+        REDO=false
       else
-         REDO=false
+         if [ ! -d "$__PRODUCT_HOME" ]; then
+            echo "Directory does not exist or not a directory."
+         fi
+         PRODUCT_HOME="$__PRODUCT_HOME"
+         determineProduct
+
+         echo "Product selected: $PRODUCT"
+
+         if [ `isValidProduct "$PRODUCT"` == "false" ]; then
+            echo "Invalid product home path entered [$__PRODUCT_HOME]"
+            REDO=true
+            __PRODUCT_HOME=$PRODUCT_HOME_ARG
+         else
+            REDO=false
+         fi
       fi
    done
 else
@@ -459,7 +471,11 @@ else
    determineProduct
 fi
 
-if [ `isValidProduct "$PRODUCT"` == "false" ]; then
+if [ "$PRODUCT" == "" ]; then
+   PRODUCT="none"
+fi
+
+if [ "$PRODUCT" != "none" ] && [ `isValidProduct "$PRODUCT"` == "false" ]; then
   echo >&2 "ERROR: Invalid product: [$PRODUCT]. Supported products are [$PRODUCTS]."
   echo >&2 "       Command aborted."
   exit 1
@@ -496,4 +512,6 @@ echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
 
 # Initialize the product RWE environment.
 $BASE_DIR/${PRODUCT}/bin_sh/.init_padogrid -env $TMP_ENV_FILE
-rm $TMP_ENV_FILE
+if [ -f $TMP_ENV_FILE ]; then
+   rm $TMP_ENV_FILE
+fi

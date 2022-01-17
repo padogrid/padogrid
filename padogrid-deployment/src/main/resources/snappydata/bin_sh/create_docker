@@ -176,6 +176,10 @@ if [ ! -d $CLUSTER_DIR ]; then
    mkdir -p $CLUSTER_DIR
 fi
 
+if [ "$SNAPPYDATA_VERSION" == "" ]; then
+   SNAPPYDATA_VERSION="latest"
+fi
+
 if [ "$DOCKER" == "compose" ]; then
 
    RUN_DIR=$CLUSTER_DIR/padogrid/run
@@ -222,7 +226,6 @@ if [ "$DOCKER" == "compose" ]; then
        $BASE_DIR/docker/compose/template-env > $CLUSTER_DIR/.env
 
    # Update docker-compose.yaml
-#   SNAPPYDATA_VERSION="latest"
    sed -e "s/\${VERSION}/$SNAPPYDATA_VERSION/g" \
        -e "s/\${CLIENT_PORT}/$CLIENT_PORT/g" \
        -e "s/\${LOCATOR_PORT}/$LOCATOR_PORT/g" \

@@ -46,6 +46,9 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        system properties (-J-D), etc.
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
+# DEFAULT_SNAPPYDATA_MAJOR_VERSION_NUMBER  The default SnappyData major version number. This value is
+#                        sparingly used by scripts that can be run without having a SnappyData product
+#                        installed.
 # DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: mygeode
 # DEFAULT_LOCATOR_MIN_HEAP_SIZE  Default locator minimum heap size. Used initially when the cluster
@@ -83,6 +86,9 @@ fi
 # JAVA_OPTS - Java options.
 #
 #JAVA_OPTS=
+
+# Default SnappyData major version number
+DEFAULT_SNAPPYDATA_MAJOR_VERSION_NUMBER=1
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.
@@ -546,7 +552,7 @@ __IFS=$IFS
 IFS=":"
 PATH_ARRAY=($PATH)
 for i in "${PATH_ARRAY[@]}"; do
-   if [ "$i" == "$JAVA_HOME/bin" ]; then
+   if [ "$JAVA_HOME" != "" ] && [ "$i" == "$JAVA_HOME/bin" ]; then
       continue;
    elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
       continue;
@@ -606,23 +612,34 @@ fi
 #
 # Java version
 #
-__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
-JAVA_VERSION=$(eval $__COMMAND)
-JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+if [ "$(which $JAVA 2> /dev/null)" == "" ]; then
+   JAVA_VERSION=""
+   JAVA_MAJOR_VERSION_NUMBER=""
+else
+   __COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+   JAVA_VERSION=$(eval $__COMMAND)
+   JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+   JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+fi
 
 #
 # SNAPPYDATA_VERSION/PROUDCT_VERSION: Determine the SnappyData version
 #
-SNAPPYDATA_VERSION=""
 IS_ENTERPRISE=false
-for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
-   file=${file##*snappydata\-core*\-}
-   SNAPPYDATA_VERSION=${file%.jar}
-done
-SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
-PRODUCT_VERSION=$SNAPPYDATA_VERSION
-PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
+if [ "$SNAPPYDATA_HOME" == "" ]; then
+   SNAPPYDATA_VERSION=""
+   SNAPPYDATA_MAJOR_VERSION_NUMBER=""
+   PRODUCT_VERSION=""
+   PRODUCT_MAJOR_VERSION=""
+else
+   for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
+      file=${file##*snappydata\-core*\-}
+      SNAPPYDATA_VERSION=${file%.jar}
+   done
+   SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
+   PRODUCT_VERSION=$SNAPPYDATA_VERSION
+   PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
+fi
 
 #
 # PADOGRID_VERSION: Determine the padogrid version

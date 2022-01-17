@@ -119,7 +119,13 @@ if [ "$PRODUCT_ARG" == "" ]; then
 fi
 
 PRODUCT_EXISTS="false"
-if [ "$PRODUCT_ARG" == "geode" ]; then
+if [ "$PRODUCT_ARG" == "none" ]; then
+   PRODUCT_EXISTS="true"
+   if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+      CLUSTER="$DEFAULT_NONE_CLUSTER"
+   fi
+   $PADOGRID_HOME/none/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type none "$@"
+elif [ "$PRODUCT_ARG" == "geode" ]; then
    if [ "$GEODE_HOME" != "" ]; then
       PRODUCT_EXISTS="true"
       if [ "$CLUSTER_SPECIFIED" == "false" ]; then

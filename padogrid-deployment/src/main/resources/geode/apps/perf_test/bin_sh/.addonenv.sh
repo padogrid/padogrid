@@ -47,3 +47,8 @@ fi
 
 # Log properties for log4j2. The log file name is set in executable scripts.
 JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=$LOG_CONFIG_FILE"
+
+# Set Geode addon class path. This is to handle 'none' product.
+if [[ "$CLASSPATH" != *"$PADOGRID_HOME/geode/plugins"* ]]; then
+   CLASSPATH="$PADOGRID_HOME/geode/plugins/*:$PADOGRID_HOME/geode/lib/*:$CLASSPATH"
+fi

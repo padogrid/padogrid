@@ -46,6 +46,9 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        system properties (--J=-D), etc.
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
+# DEFAULT_GEODE_MAJOR_VERSION_NUMBER  The default Geode major version number. This value is
+#                        sparingly used by scripts that can be run without having a Geode product
+#                        installed.
 # DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: mygeode
 # DEFAULT_LOCATOR_MIN_HEAP_SIZE  Default locator minimum heap size. Used initially when the cluster
@@ -82,6 +85,9 @@ fi
 # JAVA_OPTS - Java options.
 #
 #JAVA_OPTS=
+
+# Default Geode major version number
+DEFAULT_GEODE_MAJOR_VERSION_NUMBER=1
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.
@@ -533,7 +539,7 @@ __IFS=$IFS
 IFS=":"
 PATH_ARRAY=($PATH)
 for i in "${PATH_ARRAY[@]}"; do
-   if [ "$i" == "$JAVA_HOME/bin" ]; then
+   if [ "$JAVA_HOME" != "" ] && [ "$i" == "$JAVA_HOME/bin" ]; then
       continue;
    elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
       continue;
@@ -611,27 +617,39 @@ fi
 #
 # Java version
 #
-__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
-JAVA_VERSION=$(eval $__COMMAND)
-JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+if [ "$(which $JAVA 2> /dev/null)" == "" ]; then
+   JAVA_VERSION=""
+   JAVA_MAJOR_VERSION_NUMBER=""
+else
+   __COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+   JAVA_VERSION=$(eval $__COMMAND)
+   JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+   JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+fi
 
 #
 # GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
 # Geode and GemFire share the same 'geode' prefix for jar names.
-GEODE_VERSION=""
-for file in "$PRODUCT_HOME/lib/geode-core-"*; do
-   file=${file##*geode\-core\-}
-   GEODE_VERSION=${file%.jar}
-done
-if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then
-   RUN_TYPE="pado"
-else
+if [ "$PRODUCT_HOME" == "" ]; then
+   GEODE_VERSION=""
    RUN_TYPE="default"
+   GEODE_MAJOR_VERSION_NUMBER=""
+   PRODUCT_VERSION=""
+   PRODUCT_MAJOR_VERSION=""
+else
+   for file in "$PRODUCT_HOME/lib/geode-core-"*; do
+      file=${file##*geode\-core\-}
+      GEODE_VERSION=${file%.jar}
+   done
+   if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then
+      RUN_TYPE="pado"
+   else
+      RUN_TYPE="default"
+   fi
+   GEODE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
+   PRODUCT_VERSION=$GEODE_VERSION
+   PRODUCT_MAJOR_VERSION=$GEODE_MAJOR_VERSION_NUMBER
 fi
-GEODE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
-PRODUCT_VERSION=$GEODE_VERSION
-PRODUCT_MAJOR_VERSION=$GEODE_MAJOR_VERSION_NUMBER
 
 #
 # PADOGRID_VERSION: Determine the padogrid version

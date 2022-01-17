@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Remove the specified locator from the specified cluster in the current workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num locator_number] [-all] [-?]
+
+DESCRIPTION
+   Removes the specified locator. If the locator number is not specified then it
+   removes the last locator in the list, i.e., the locator with the highest locator
+   number. Note that this command aborts if the specified locator is running.
+
+   For VM clusters, the locator number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the file shown below.
+   (Run 'show_cluster -long' to see the VM locator numbers that map to hosts.)
+EOF
+if [ "$MAN_SPECIFIED" == "true" ]; then
+cat <<EOF
+   $CLUSTER_DIR/etc/cluster.properties
+EOF
+else
+cat <<EOF
+   etc/cluster.properties
+EOF
+fi
+cat <<EOF
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -num locator_number
+             Locator number 1-$LAST_LOCATOR_NUM
+
+   -all
+             This option applies to VM clusters only. If specified,
+             it removes from all VMs in the cluster and locator_number
+             is ignored.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*locator*" $EXECUTABLE
+   exit
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+
+POD=`getClusterProperty "pod.name" $POD`
+
+#
+# VM cluster
+#
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE $PADOGRID_WORKSPACE"
+         echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+         echo "           $ETC_DIR/cluster.properties"
+         echo "           Command aborted."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+      if [ "$ALL" == "true" ]; then
+         for VM_HOST in $__VM_HOSTS; do
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
+         done
+      else
+         # Determine the host
+         __LOCATOR_NUMBER=0
+         __FOUND="false"
+         
+         for VM_HOST in $__VM_HOSTS; do
+            let __LOCATOR_NUMBER=__LOCATOR_NUMBER+1
+            if [ $__LOCATOR_NUMBER -eq $LOCATOR_NUM_NO_LEADING_ZERO ]; then
+               __FOUND="true"
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
+               break;
+            fi
+         done
+         FIRST_NUMBER=1
+         LAST_NUMBER=$__LOCATOR_NUMBER
+         if [ "$__FOUND" == "false" ]; then
+            echo "ERROR: Invalid locator number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+         fi
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+LOCATOR_PREFIX=`getLocatorPrefix`
+LOCATOR_PREFIX_LEN=${#LOCATOR_PREFIX}
+LOCATOR_NUMBER=$MEMBER_NUM
+if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
+   # Find the last locator
+   pushd $RUN_DIR > /dev/null 2>&1
+   for i in ${LOCATOR_PREFIX}*; do
+      if [ -d "$i" ]; then
+        LOCATOR_NUMBER=${i:$LOCATOR_PREFIX_LEN}
+      fi
+   done
+   popd > /dev/null 2>&1
+fi
+
+if  [ -z $LOCATOR_NUMBER ]; then
+   echo "No locators configured for the cluster $CLUSTER. Command aborted." 
+   exit 1
+fi
+
+NODE_LOCAL=${NODE_NAME_PREFIX}-${LOCATOR_NUMBER}.local
+LOCATOR=${LOCATOR_PREFIX}${LOCATOR_NUMBER}
+LOCATOR_DIR=$RUN_DIR/$LOCATOR
+PID=`getLocatorPid $LOCATOR $WORKSPACE`
+
+if [ -n "$PID" ]; then
+   echo "----------------------------------------------------------------"
+   echo "      ERROR: The last locator ($LOCATOR) is running. Command aborted."
+   echo "             Please stop the locator first before executing this command." 
+   echo "     Locator: $LOCATOR"
+   echo "Working Dir: $LOCATOR_DIR"
+   echo "----------------------------------------------------------------"
+   exit 0
+fi
+
+LOCATOR_DIR_EXISTS="false"
+if [ -d $LOCATOR_DIR ]; then
+   LOCATOR_DIR_EXISTS="true"
+   rm -rf $LOCATOR_DIR
+fi
+
+echo "----------------------------------------------------------------"
+echo "       WORKSPACE $PADOGRID_WORKSPACE"
+if [ "$LOCATOR_DIR_EXISTS" == "true" ]; then
+echo "  Locator Removed: $LOCATOR"
+else
+echo "Locator Not Found: $LOCATOR"
+fi
+echo "     Working Dir: $LOCATOR_DIR"
+echo "----------------------------------------------------------------"

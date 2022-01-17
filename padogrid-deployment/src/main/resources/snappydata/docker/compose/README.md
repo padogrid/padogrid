@@ -99,7 +99,7 @@ Using SQL client applications such as [SQuirreL SQL](http://squirrel-sql.sourcef
 
 **JDBC URL:** jdbc:snappydata://localhost:1527/
 
-## Tear Down
+## Teardown
 
 Ctrl-C from the `docker-compose up` command and prune the containers.
 

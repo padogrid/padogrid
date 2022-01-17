@@ -1,7 +1,16 @@
 # PadoGrid Release Notes
 
-©2020-2021 Netcrest Technologies, LLC. All rights reserved.
+©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
+
+## Version 0.9.13-SNAPSHOT
+
+### Release Date: 01/16/22
+
+- Added support for installing downloaded zip bundles. You can now download online bundles in the form of zip files and install them using `install_bundle`.
+- Added support for installing PadoGrid without products. Previously, PadoGrid required at least one supported product locally installed before it can be operational. Starting this release, products are not required when installing PadoGrid and creating workspaces. This means you can now install and run applications on Kubernetes, Docker, and Vagrant VMs without having to locally install the corresponding products. Unfortunately, however, this also means the workspaces created with the previous releases are no longer compatible. You must manually migrate the existing workspaces by following the instructions provided in the [Migrating Workspaces](https://github.com/padogrid/padogrid/wiki/Migrating-Workspaces) of the PadoGrid manual.
+
+----
 
 ## Version 0.9.12
 
@@ -11,7 +20,7 @@ https://github.com/padogrid
 - Added installation support for Pado, PadoDesktop, and PadoWeb. This support is also available in the 0.9.11 release build.
 - Fixed a bug in `stop_*` and `kill_*` commands that failed to execute remote commands in Vagrant pod VMs.
 - Added the `subscribe_topic` script in the Hazelcast `perf_test` app for listening on topic messages.
-- By default, `read_cache` and `subscribe_topic` now fail if the specified data structure name does not exist in the cluster. You can create non-existent data structures by specifying the '-create-map' or '-create-topic' option.
+- By default, `read_cache` and `subscribe_topic` now fail if the specified data structure name does not exist in the cluster. You can create non-existent data structures by specifying the `-create-map` or `-create-topic` option.
 - Fixed a Java 11+ debug enablement issue. Previous versions supported only Java 8.
 
 ----

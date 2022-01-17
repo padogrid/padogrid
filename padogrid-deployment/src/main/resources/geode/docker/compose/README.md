@@ -123,7 +123,7 @@ cd_app perf_test; cd bin_sh
 ./test_ingestion -run
 ```
 
-## Tear Down
+## Teardown
 
 Ctrl-C from the `docker-compose up` command and prune the containers.
 

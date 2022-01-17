@@ -1383,9 +1383,9 @@ function retrieveWorkspaceEnvFile
       . "$__WORKSPACE_PATH/.workspace"
       rm "$__WORKSPACE_PATH/.workspace"
    fi
-   # If the cluster does not exist then pick the first cluster and pod in the workspace dir
+   # If the cluster does not exist then pick the first cluster and pod in the workspace dir.
    # Check to see if clusters and pods directories exist. During the initialization phase, 
-   # PadoGrid submits its own installation path as workspace. This needs to be correted.
+   # PadoGrid submits its own installation path as workspace. This needs to be corrected.
    # This causes this function to log errors.
    if [ -d "$__WORKSPACE_PATH/clusters" ]; then
       if [ "$CLUSTER" == "" ] || [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
@@ -1399,7 +1399,7 @@ function retrieveWorkspaceEnvFile
          updateWorkspaceEnvFile "$__WORKSPACE_PATH"
       fi
    fi
-   if [ -d "$__WORKSPACE_PATH/pods/$POD" ]; then
+   if [ -d "$__WORKSPACE_PATH/pods" ]; then
       if [ "$POD" == "" ] || [ ! -d "$__WORKSPACE_PATH/pods/$POD" ]; then
          local __PODS=$(ls $__WORKSPACE_PATH/pods)
          local __POD=""
@@ -1463,7 +1463,13 @@ function retrieveClusterEnvFile
 {
    local __CLUSTER_PATH="$1"
    if [ "$__CLUSTER_PATH" == "" ]; then
-      __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      if [ "$CLUSTER" == "" ]; then
+          PRODUCT="none"
+          CLUSTER_TYPE="none"
+          return
+      else
+         __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      fi
    fi
    if [ -f "$__CLUSTER_PATH/.cluster/clusterenv.sh" ]; then
       . "$__CLUSTER_PATH/.cluster/clusterenv.sh"
@@ -1498,6 +1504,9 @@ function retrieveClusterEnvFile
       elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then
          PRODUCT="hadoop"
          CLUSTER_TYPE="pseudo"
+      else
+         PRODUCT="none"
+         CLUSTER_TYPE="none"
       fi
    fi
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
@@ -1506,6 +1515,9 @@ function retrieveClusterEnvFile
       PRODUCT="geode"
    elif [ "$PRODUCT" == "jet" ]; then
       PRODUCT="hazelcast"
+   elif [ "$PRODUCT" == "" ]; then
+      PRODUCT="none"
+      CLUSTER_TYPE="none"
    fi
 }
 
@@ -1626,7 +1638,7 @@ function switch_rwe
             echo >&2 "ERROR: Invalid workspace name: [$__WORKSPACE]. Workspace does not exist. Command aborted."
             return 1
          fi
-         
+
          # Set PADOGRID_WORKSPACES_HOME here. It's a new RWE.
          export PADOGRID_WORKSPACES_HOME="$NEW_RWE_DIR"
 
@@ -3063,7 +3075,7 @@ function getWorkspaceInfoList
       local __COMMAND="\"$__JAVA_HOME/bin/java\" -version 2>&1 | grep version "
       JAVA_VERSION=$(eval $__COMMAND)
       JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-      JAVA_INFO="java_$JAVA_VERSION";
+      JAVA_INFO="java_$JAVA_VERSION, ";
    fi
 
    local VM_ENABLED=$(isWorkspaceVmEnabled "$WORKSPACE" "$RWE_PATH")
@@ -3081,7 +3093,7 @@ function getWorkspaceInfoList
    PADOGRID_VERSION=$(echo "$PADOGRID_VERSION" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/^.*padogrid_//' -e 's/"//')
 
    # TODO: For some reason, Cygwin does not print the beginning string...
-   echo "${VM_WORKSPACE}${JAVA_INFO}, padogrid_$PADOGRID_VERSION"
+   echo "${VM_WORKSPACE}${JAVA_INFO}padogrid_$PADOGRID_VERSION"
 }
 
 #
@@ -3579,7 +3591,8 @@ function determineProduct
       CLUSTER_TYPE="pseudo"
       CLUSTER=$DEFAULT_HADOOP_CLUSTER
    else
-      PRODUCT=""
+      PRODUCT="none"
+      CLUSTER_TYPE="none"
    fi
 }
 

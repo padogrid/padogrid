@@ -69,3 +69,11 @@ JAVA_OPTS="$JAVA_OPTS -Dhazelcast.logging.type=log4j2 \
 if [ "$K8S_PROPERTIES" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS $K8S_PROPERTIES"
 fi
+
+# Set Hazelcast addon class path. This is to handle 'none' product.
+if [[ "$CLASSPATH" != *"$PADOGRID_HOME/hazelcast/plugins"* ]]; then
+   if [ "$HAZELCAST_VERSION" != "" ]; then
+      MAJOR_VERSION_NUMBER=${HAZELCAST_VERSION:0:1}
+      CLASSPATH="$PADOGRID_HOME/hazelcast/plugins/*:$PADOGRID_HOME/hazelcast/lib/*:$PADOGRID_HOME/hazelcast/plugins/v$MAJOR_VERSION_NUMBER/*:$PADOGRID_HOME/hazelcast/lib/v$MAJOR_VERSION_NUMBER/*:$CLASSPATH"
+   fi
+fi

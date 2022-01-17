@@ -60,9 +60,13 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 
 ### test_ingestion
 
-```console
+```bash
 ./test_ingestion -?
+```
 
+Output:
+
+```console
 Usage:
    test_ingestion [-run] [-prop <properties-file>] [-?]
 
@@ -84,9 +88,13 @@ Usage:
 
 ### test_tx
 
-```console
+```bash
 ./test_tx -?
+```
 
+Output:
+
+```console
 Usage:
    test_tx [-run] [-failover] [-prop <properties-file>] [-?]
 
@@ -108,9 +116,13 @@ Usage:
 
 ### test_group
 
-```console
+```bash
 ./test_group -?
+```
 
+Output:
+
+```console
 Usage:
    test_group [-run|-list] [-db|-delete] [-prop <properties-file>] [-?]
 
@@ -197,13 +209,15 @@ public class Order implements VersionedPortable, Comparable<Order>
 
 To use `MapStorePkDbImpl`, you must first build the environment by executing the `build_app` script as shown below. This script runs Maven to download the dependency files into the `$PADOGRID_WORKSPACE/lib` directory, which is included in `CLASSPATH` for all the apps and clusters running in the workspace.
 
-```console
+:pencil2: If your application does not require Hazelcast locally installed then you can set `HAZELCAST_VERSION` in the `setenv.sh` file. If this environment variable is set then the `build_app` script downloads the specified version of Hazelcast jar files. **Note that you might need to make adjustments in the `pom-hazelcast.xml` file to handle different major versions of Hazelcast.**
+
+```bash
 ./build_app
 ```
 
 Upon successful build, you must also configure the cluster in `hazelcast.xml` file as follows:
 
-```console
+```bash
 # Edit hazelcast.xml
 vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hazelcast.xml
 ```
@@ -255,7 +269,7 @@ Add the following in the `hazelcast.xml` file. Make sure to add `org.hazelcast.d
 
 The above configures the `nw/customers` and `nw/orders` maps to store and load data to/from the database. The database can be configured in the cluster's `hibernate.cfg.xml` file as follows:
 
-```console
+```bash
 # Edit hibernate.cfg.xml
 vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-mysql.xml
 vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/etc/hibernate.cfg-postresql.xml
@@ -314,7 +328,7 @@ start_cluster -cluster <cluster-name>
 
 Once the cluster is up, you are ready to run the `test_group` script to insert `Customer` and `Order` entity objects in to the cluster and database. Run the script as follows:
 
-```console
+```bash
 ./test_group -prop ../etc/group-factory.properties -run
 ```
 
@@ -324,8 +338,13 @@ You can reconfigure `group-factory.properties` to add more data, threads, etc.
 
 Upon successful run, the test results are outputted in the `results/` directory. The following shows an example.
 
-```
+```bash
 cat ../results/ingestion-profile-190630-151618_x.txt
+```
+
+Output:
+
+```console
 ******************************************
 Data Ingestion Test
 ******************************************
@@ -384,7 +403,7 @@ Stop Time: Sun Jun 30 15:16:18 EDT 2019
 
 The `group_test -db` command directly loads mock data into database tables without connecting to Hazelcast. You can use this command to pre-populate the database before testing database synchronization tests in Hazelcast. This command is also useful for testing the CDC use case in which database changes are automacally ingested into Hazelcast via a CDC product such as Debezium ansd Striim.
 
-```console
+```bash
 # Edit setenv.sh to set the correct hibernate configuration file.
 vi setenv.sh
 ```

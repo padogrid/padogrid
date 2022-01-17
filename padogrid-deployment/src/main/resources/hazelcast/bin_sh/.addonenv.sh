@@ -50,6 +50,9 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        to be set only if you have the MC module separately installed.
 # JET_MC_HOME            Hazelcast Jet Management Center directory path. This needs
 #                        to be set only if you have the MC module separately installed.
+# DEFAULT_HAZELCAST_MAJOR_VERSION_NUMBER  The default Hazelcast major version number. This value is
+#                        sparingly used by scripts that can be run without having a Hazelcast product
+#                        installed.
 # DEFAULT_CLUSTER        The default IMDG cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: myhz
 # DEFAULT_JET_CLUSTER    The default Jet cluster name. The default cluster can be managed without
@@ -86,6 +89,9 @@ fi
 # JAVA_OPTS - Java options.
 #
 #JAVA_OPTS=
+
+# Default Hazelcast major version number
+DEFAULT_HAZELCAST_MAJOR_VERSION_NUMBER=5
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.
@@ -535,7 +541,7 @@ __IFS=$IFS
 IFS=":"
 PATH_ARRAY=($PATH)
 for i in "${PATH_ARRAY[@]}"; do
-   if [ "$i" == "$JAVA_HOME/bin" ]; then
+   if [ "$JAVA_HOME" != "" ] && [ "$i" == "$JAVA_HOME/bin" ]; then
       continue;
    elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
       continue;
@@ -595,10 +601,15 @@ fi
 #
 # Java version
 #
-__COMMAND="\"$JAVA\" -version 2>&1 | grep version"
-JAVA_VERSION=$(eval $__COMMAND)
-JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
-JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+if [ "$(which $JAVA 2> /dev/null)" == "" ]; then
+   JAVA_VERSION=""
+   JAVA_MAJOR_VERSION_NUMBER=""
+else
+   __COMMAND="\"$JAVA\" -version 2>&1 | grep version"
+   JAVA_VERSION=$(eval $__COMMAND)
+   JAVA_VERSION=$(echo $JAVA_VERSION |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+   JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
+fi
 
 #
 # HAZELCAST_VERSION/PROUDCT_VERSION: Determine the Hazelcast version
@@ -681,6 +692,7 @@ else
          for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-*; do
             file=${file##*hazelcast\-enterprise\-}
             HAZELCAST_VERSION=${file%.jar}
+            IS_HAZELCAST_ENTERPRISE=true
          done
       elif [ -f "$HAZELCAST_HOME/lib/hazelcast-all-"* ]; then
          for file in $HAZELCAST_HOME/lib/hazelcast-all-*; do
@@ -725,7 +737,7 @@ done
 #
 # JAVA_OPTS
 #
-if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" != "" ] && [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
    JAVA_OPTS="$JAVA_OPTS -Djet.custom.lib.dir=$HAZELCAST_HOME/custom-lib"
 fi
 
@@ -748,19 +760,22 @@ __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __VERSION_DIR=v${HAZELCAST_VERSION:0:1}
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/$__VERSION_DIR/*:$BASE_DIR/lib/$__VERSION_DIR/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
-      __CLASSPATH="$__CLASSPATH:$JET_HOME/lib/hazelcast-jet-enterprise-${HAZELCAST_VERSION}.jar"
+
+if [ "$HAZELCAST_VERSION" != "" ]; then
+   if [ "$CLUSTER_TYPE" == "jet" ]; then
+      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+         __CLASSPATH="$__CLASSPATH:$JET_HOME/lib/hazelcast-jet-enterprise-${HAZELCAST_VERSION}.jar"
+      else
+         __CLASSPATH="$__CLASSPATH:$JET_HOME/lib/hazelcast-jet-${HAZELCAST_VERSION}.jar"
+      fi
    else
-      __CLASSPATH="$__CLASSPATH:$JET_HOME/lib/hazelcast-jet-${HAZELCAST_VERSION}.jar"
-   fi
-else
-   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
-      __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib:$__CLASSPATH:$HAZELCAST_HOME/lib/*:$HAZELCAST_HOME/user-lib:$HAZELCAST_HOME/user-lib/*"
-   elif [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
-      __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-enterprise-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/user-lib/*"
-   else
-      __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/user-lib/*"
+      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+         __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib:$__CLASSPATH:$HAZELCAST_HOME/lib/*:$HAZELCAST_HOME/user-lib:$HAZELCAST_HOME/user-lib/*"
+      elif [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+         __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-enterprise-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/user-lib/*"
+      else
+         __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/user-lib/*"
+      fi
    fi
 fi
 export CLASSPATH="$__CLASSPATH"

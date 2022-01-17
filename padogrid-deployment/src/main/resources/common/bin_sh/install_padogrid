@@ -387,25 +387,31 @@ function getLatestProductVersion
          local minor=${i#*\.}
          local update=-1
       fi
-      #echo lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
+      # echo debug: lmajor=$lmajor, lminor=$lminor, lupdate=$lupdate
       if [ $lmajor -lt $major ]; then
         lmajor=$major
         lminor=$minor
         lupdate=$update
       elif [ $lmajor -eq $major ]; then
-        if [ $lminor -lt $minor ]; then
-           lminor=$minor
-           lupdate=$update
-        elif [ $lminor -eq $minor ]; then
-           if [ $lupdate -eq -1 ]; then
+        if [ "$(isNumber $minor)" == "true" ]; then
+           if [ $lminor -lt $minor ]; then
+              lminor=$minor
               lupdate=$update
-           elif [ $lupdate -lt $update ]; then
-              lupdate=$update
+           elif [ $lminor -eq $minor ]; then
+              if [ $lupdate == "-1" ]; then
+                 lupdate=$update
+              elif [ "$(isNumber $lupdate)" == "true" ] && [ "$(isNumber $update)" == "true" ]; then
+                 if [ $lupdate -lt $update ]; then
+                    lupdate=$update
+                 fi
+              else
+                 lupdate=$update
+              fi
            fi
         fi
       fi
    done
-   if [ $lupdate -eq -1 ]; then
+   if [ $lupdate == "-1" ]; then
       echo "$lmajor.$lminor"
    else
       echo "$lmajor.$lminor.$lupdate"

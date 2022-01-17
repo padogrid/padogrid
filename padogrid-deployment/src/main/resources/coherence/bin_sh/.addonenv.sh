@@ -46,6 +46,9 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #                        system properties (-D), etc.
 # CLASSPATH              Class paths that includes your server components such as data (domain) classes.
 #                        This will be prepended to the padogrid class paths.
+# DEFAULT_COHERENCE_MAJOR_VERSION_NUMBER  The default Coherence major version number. This value is
+#                        sparingly used by scripts that can be run without having a Coherence product
+#                        installed.
 # DEFAULT_CLUSTER        The default cluster name. The default cluster can be managed without
 #                        specifying the '-cluster' command option. Default: mycoherence
 # DEFAULT_MIN_HEAP_SIZE  Default minimum heap size. Used initially when the cluster is created.
@@ -80,6 +83,9 @@ fi
 # JAVA_OPTS - Java options.
 #
 #JAVA_OPTS=
+
+# Default Coherence major version number
+DEFAULT_COHERENCE_MAJOR_VERSION_NUMBER=14
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.
@@ -495,7 +501,7 @@ __IFS=$IFS
 IFS=":"
 PATH_ARRAY=($PATH)
 for i in "${PATH_ARRAY[@]}"; do
-   if [ "$i" == "$JAVA_HOME/bin" ]; then
+   if [ "$JAVA_HOME" != "" ] && [ "$i" == "$JAVA_HOME/bin" ]; then
       continue;
    elif [[ "$i" == **"padogrid_"** ]] && [[ "$i" == **"bin_sh"** ]]; then
       continue;

@@ -117,7 +117,7 @@ If you have changed the Hazelcast cluster name, then add the `<cluster-name>` el
 </hazelcast>
 ```
 
-## Tear Down
+## Teardown
 
 Ctrl-C from the `docker compose up` command and prune the containers.
 
