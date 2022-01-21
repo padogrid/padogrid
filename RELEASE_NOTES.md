@@ -5,7 +5,9 @@ https://github.com/padogrid
 
 ## Version 0.9.14-SNAPSHOT
 
-### Release Date: 01/16/22
+### Release Date: 01/21/22
+
+- Upgraded library versions including log4j that fixes security issues.
 
 ---
 
