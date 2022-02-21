@@ -8,6 +8,8 @@ https://github.com/padogrid
 ### Release Date: 01/21/22
 
 - Upgraded library versions including log4j that fixes security issues.
+- Fixed `find_padogrid` to properly handle component types.
+- `show_jupyter` now executes `jupyter notebook list` instead of `jupyter lab list` which no longer works.
 
 ---
 
