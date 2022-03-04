@@ -3,6 +3,17 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
+## Version 0.9.14
+
+### Release Date: 03/04/22
+
+- Upgraded library versions including log4j that fixes security issues.
+- Fixed `find_padogrid` to properly handle component types.
+- Fixed `install_bundle` which set the wrong current workspace name when the `-download` option is specified.
+- `show_jupyter` now executes `jupyter notebook list` instead of `jupyter lab list` which no longer works.
+
+---
+
 ## Version 0.9.13
 
 ### Release Date: 01/16/22
