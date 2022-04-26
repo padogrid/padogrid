@@ -7,7 +7,7 @@ https://github.com/padogrid
 
 ### Release Date: 04/26/22
 
-- Updated hazelcast OSS download URL for `install_padogrid`.
+- Updated Hazelcast OSS and Enterprise download URLs for `install_padogrid`. Hazelcast has changed the download URLs.
 - Updated Coherence port number and http blocker for Maven build.
 - Added support for gemfire and coherence products in `update_products`.
 
