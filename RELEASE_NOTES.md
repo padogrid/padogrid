@@ -5,7 +5,11 @@ https://github.com/padogrid
 
 ## Version 0.9.15-SNAPSHOT
 
-### Release Date: 03/04/22
+### Release Date: 04/26/22
+
+- Updated hazelcast OSS download URL for `install_padogrid`.
+- Updated Coherence port number and http blocker for Maven build.
+- Added support for gemfire and coherence products in `update_products`.
 
 ---
 
