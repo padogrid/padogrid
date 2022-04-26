@@ -92,15 +92,14 @@ fi
 
 # Exit if invalid product specified
 if [ "$PRODUCT_ARG" != "" ]; then
-   if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS java pado padodesktop padoweb jet-mc" "$PRODUCT_ARG")" == "false" ]; then
+   if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc" "$PRODUCT_ARG")" == "false" ]; then
       echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid product name: [$PRODUCT_ARG]. Please enter one of the following products."
       for i in $DOWNLOADABLE_PRODUCTS; do
          echo >&2 "          $i"
       done
+      echo >&2 "          coherence"
+      echo >&2 "          gemfire"
       echo >&2 "          java"
-      echo >&2 "          pado"
-      echo >&2 "          padodesktop"
-      echo >&2 "          padoweb"
       echo >&2 "          jet-mc"
       echo >&2 "       Command aborted."
       exit 1
@@ -296,6 +295,8 @@ for i in $(seq 0 $LAST_INDEX); do
   PRODUCT_EVAL_ARRAY[$i]="none"
 done
 
+__COHERENCE_HOME=$COHERENCE_HOME
+NEW_COHERENCE_HOME=$COHERENCE_HOME
 __JAVA_HOME=$JAVA_HOME
 NEW_JAVA_HOME=$JAVA_HOME
 
@@ -307,6 +308,38 @@ while [ "$REDO" == "true" ]; do
       echo "Selected: [$SELECTED_INDEX] ${__PADOGRID_VERSIONS[$SELECTED_INDEX]}"
       SELECTED_INDEX_PADOGRID=$SELECTED_INDEX
       PRODUCT_EVAL_ARRAY[$INDEX_PADOGRID]=${__PADOGRID_VERSIONS[$SELECTED_INDEX]}
+   fi
+
+   # Coherence
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         echo "Enter Coherence home path."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$__COHERENCE_HOME]:"
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __COHERENCE_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __COHERENCE_HOME="$(cygpath -au "$__COHERENCE_HOME")"
+         fi
+         __COHERENCE_HOME="$(trimString "$__COHERENCE_HOME")"
+         if [[ ! -d "$__COHERENCE_HOME" ]]; then
+            echo "Directory does not exist or not a directory."
+            __COHERENCE_HOME="$COHERENCE_HOME_ARG"
+            __REDO=true
+         elif [ "$__COHERENCE_HOME" == "" ]; then
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      NEW_COHERENCE_HOME="$__COHERENCE_HOME"
    fi
 
    # Java
@@ -583,6 +616,7 @@ while [ "$REDO" == "true" ]; do
    echo "      Spark: ${__SPARK_VERSIONS[$SELECTED_INDEX_SPARK]}"
    echo "      Kafka: ${__KAFKA_VERSIONS[$SELECTED_INDEX_KAFKA]}"
    echo "     Hadoop: ${__HADOOP_VERSIONS[$SELECTED_INDEX_HADOOP]}"
+   echo "  Coherence: ${NEW_COHERENCE_HOME}"
    echo ""
    echo "The selected product(s) will be applied to"
    if [ "$UPDATE_RWE" == "true" ]; then
@@ -775,6 +809,9 @@ if [ "$UPDATE_RWE" == "true" ]; then
       fi
       let PRODUCT_INDEX=PRODUCT_INDEX+1
    done
+   if [ "$NEW_COHERENCE_HOME" != "" ] && [ "$NEW_COHERENCE_HOME" != "$COHERENCE_HOME" ]; then
+      updateEVAL_RWE_HOME_PATH "COHERENCE_HOME" "$NEW_COHERENCE_HOME" "$RWE_SETENV"
+   fi
    if [ "$NEW_JAVA_HOME" != "" ] && [ "$NEW_JAVA_HOME" != "$JAVA_HOME" ]; then
       updateEVAL_RWE_HOME_PATH "JAVA_HOME" "$NEW_JAVA_HOME" "$RWE_SETENV"
    fi
@@ -809,6 +846,9 @@ for WORKSPACE in $WORKSPACES; do
       fi
       let PRODUCT_INDEX=PRODUCT_INDEX+1
    done
+   if [ "$NEW_COHERENCE_HOME" != "" ] && [ "$NEW_COHERENCE_HOME" != "$COHERENCE_HOME" ]; then
+      updateEVAL_WORKSPACE_HOME_PATH "COHERENCE_HOME" "$NEW_COHERENCE_HOME" "$WORKSPACE_SETENV"
+   fi
    if [ "$NEW_JAVA_HOME" != "" ] && [ "$NEW_JAVA_HOME" != "$JAVA_HOME" ]; then
       updateEVAL_WORKSPACE_HOME_PATH "JAVA_HOME" "$NEW_JAVA_HOME" "$WORKSPACE_SETENV"
    fi
