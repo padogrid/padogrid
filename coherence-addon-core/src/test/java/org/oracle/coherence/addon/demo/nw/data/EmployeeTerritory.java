@@ -6,7 +6,7 @@ import com.tangosol.io.pof.PofReader;
 import com.tangosol.io.pof.PofWriter;
 import com.tangosol.io.pof.PortableObject;
 
-public class EmployeeTerritory implements PortableObject {
+public class EmployeeTerritory extends BaseEntity implements PortableObject {
 	private String employeeId;
 	private String territoryId;
 
@@ -36,14 +36,14 @@ public class EmployeeTerritory implements PortableObject {
 
 	@Override
 	public void readExternal(PofReader reader) throws IOException {
-		int i = 0;
+		int i = super.readExternal(0, reader);
 		this.employeeId = reader.readString(i++);
 		this.territoryId = reader.readString(i++);
 	}
 
 	@Override
 	public void writeExternal(PofWriter writer) throws IOException {
-		int i = 0;
+		int i = super.writeExternal(0, writer);
 		writer.writeString(i++, employeeId);
 		writer.writeString(i++, territoryId);
 	}

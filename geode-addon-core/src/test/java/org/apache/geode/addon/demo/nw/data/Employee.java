@@ -13,7 +13,7 @@ import org.apache.geode.pdx.PdxWriter;
 
 @Entity
 @Table(name = "employees")
-public class Employee implements PdxSerializable
+public class Employee extends BaseEntity implements PdxSerializable
 {
 	@Id
 	private String employeeId;
@@ -225,6 +225,7 @@ public class Employee implements PdxSerializable
 
 	@Override
 	public void toData(PdxWriter writer) {
+		super.toData(writer);
 		writer.writeString("employeeId", employeeId);
 		writer.writeString("lastName", lastName);
 		writer.writeString("firstName", firstName);
@@ -247,6 +248,7 @@ public class Employee implements PdxSerializable
 
 	@Override
 	public void fromData(PdxReader reader) {
+		super.fromData(reader);
 		this.employeeId = reader.readString("employeeId");
 		this.lastName = reader.readString("lastName");
 		this.firstName = reader.readString("firstName");

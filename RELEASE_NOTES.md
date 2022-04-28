@@ -5,11 +5,12 @@ https://github.com/padogrid
 
 ## Version 0.9.15-SNAPSHOT
 
-### Release Date: 04/26/22
+### Release Date: 04/28/22
 
 - Updated Hazelcast OSS and Enterprise download URLs for `install_padogrid`. Hazelcast has changed the download URLs.
 - Updated Coherence port number and http blocker for Maven build.
 - Added support for gemfire and coherence products in `update_products`.
+- Added timestamps to `nw` data classes for Hibernate to auto-update timestamps in databases. For non-database apps, the timestamps are set when they are created in the JVM.
 
 ---
 

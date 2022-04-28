@@ -17,7 +17,7 @@ import nonapi.io.github.classgraph.json.Id;
 
 @Entity
 @Table(name = "orders")
-public class Order implements PortableObject, Comparable<Order> {
+public class Order extends BaseEntity implements PortableObject, Comparable<Order> {
 	@Id
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(length = 20)
@@ -212,7 +212,7 @@ public class Order implements PortableObject, Comparable<Order> {
 
 	@Override
 	public void readExternal(PofReader reader) throws IOException {
-		int i = 0;
+		int i = super.readExternal(0, reader);
 		this.orderId = reader.readString(i++);
 		this.customerId = reader.readString(i++);
 		this.employeeId = reader.readString(i++);
@@ -231,7 +231,7 @@ public class Order implements PortableObject, Comparable<Order> {
 
 	@Override
 	public void writeExternal(PofWriter writer) throws IOException {
-		int i = 0;
+		int i = super.writeExternal(0, writer);
 		writer.writeString(i++, orderId);
 		writer.writeString(i++, customerId);
 		writer.writeString(i++, employeeId);

@@ -6,7 +6,7 @@ import com.tangosol.io.pof.PofReader;
 import com.tangosol.io.pof.PofWriter;
 import com.tangosol.io.pof.PortableObject;
 
-public class OrderDetail implements PortableObject
+public class OrderDetail extends BaseEntity implements PortableObject
 {
 	private String orderId;
 	private String productId;
@@ -70,7 +70,7 @@ public class OrderDetail implements PortableObject
 
 	@Override
 	public void readExternal(PofReader reader) throws IOException {
-		int i = 0;
+		int i = super.readExternal(0, reader);
 		this.orderId = reader.readString(i++);
 		this.productId = reader.readString(i++);
 		this.unitPrice = reader.readDouble(i++);
@@ -80,7 +80,7 @@ public class OrderDetail implements PortableObject
 
 	@Override
 	public void writeExternal(PofWriter writer) throws IOException {
-		int i = 0;
+		int i = super.writeExternal(0, writer);
 		writer.writeString(i++, orderId);
 		writer.writeString(i++, productId);
 		writer.writeDouble(i++, unitPrice);

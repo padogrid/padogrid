@@ -13,7 +13,7 @@ import org.apache.geode.pdx.PdxWriter;
 
 @Entity
 @Table(name = "orders")
-public class Order implements PdxSerializable, Comparable<Order>
+public class Order extends BaseEntity implements PdxSerializable, Comparable<Order>
 {
 	/**
 	 * Source time factor. Date long values are divided by this number. 
@@ -233,6 +233,7 @@ public class Order implements PdxSerializable, Comparable<Order>
 
 	@Override
 	public void toData(PdxWriter writer) {
+		super.toData(writer);
 		writer.writeString("orderId", orderId);
 		writer.writeString("customerId", customerId);
 		writer.writeString("employeeId", employeeId);
@@ -262,6 +263,7 @@ public class Order implements PdxSerializable, Comparable<Order>
 
 	@Override
 	public void fromData(PdxReader reader) {
+		super.fromData(reader);
 		this.orderId = reader.readString("orderId");
 		this.customerId = reader.readString("customerId");
 		this.employeeId = reader.readString("employeeId");

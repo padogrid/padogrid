@@ -19,7 +19,7 @@ import com.hazelcast.nio.serialization.VersionedPortable;
   * @schema categories.schema
   * @date Fri May 17 20:50:06 EDT 2019
 **/
-public class Category implements VersionedPortable
+public class Category extends BaseEntity implements VersionedPortable
 {
 	private String categoryId;
 	private String categoryName;
@@ -90,6 +90,7 @@ public class Category implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
+		super.writePortable(writer);
 		writer.writeUTF("categoryId", categoryId);
 		writer.writeUTF("categoryName", categoryName);
 		writer.writeUTF("description", description);
@@ -99,6 +100,7 @@ public class Category implements VersionedPortable
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
+		super.readPortable(reader);
 		this.categoryId = reader.readUTF("categoryId");
 		this.categoryName = reader.readUTF("categoryName");
 		this.description = reader.readUTF("description");

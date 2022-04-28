@@ -19,7 +19,7 @@ import com.hazelcast.nio.serialization.VersionedPortable;
   * @schema regions.schema
   * @date Fri May 17 20:50:06 EDT 2019
 **/
-public class Region implements VersionedPortable
+public class Region extends BaseEntity implements VersionedPortable
 {
 	private String regionId;
 	private String regionDescription;
@@ -63,12 +63,14 @@ public class Region implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
+		super.writePortable(writer);
 		writer.writeUTF("regionId", regionId);
 		writer.writeUTF("regionDescription", regionDescription);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
+		super.readPortable(reader);
 		this.regionId = reader.readUTF("regionId");
 		this.regionDescription = reader.readUTF("regionDescription");
 	}

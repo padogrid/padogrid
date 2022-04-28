@@ -25,7 +25,7 @@ import com.hazelcast.nio.serialization.VersionedPortable;
 **/
 @Entity
 @Table(name = "customers")
-public class Customer implements VersionedPortable
+public class Customer extends BaseEntity implements VersionedPortable
 {
 	@Id
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -163,6 +163,7 @@ public class Customer implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
+		super.writePortable(writer);
 		writer.writeUTF("customerId", customerId);
 		writer.writeUTF("companyName", companyName);
 		writer.writeUTF("contactName", contactName);
@@ -178,6 +179,7 @@ public class Customer implements VersionedPortable
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
+		super.readPortable(reader);
 		this.customerId = reader.readUTF("customerId");
 		this.companyName = reader.readUTF("companyName");
 		this.contactName = reader.readUTF("contactName");
