@@ -6,8 +6,6 @@ The `padodesktop` app provides scripts to run PadoDeskop for monitoring Pado clu
 
 PadoDesktop requires a Pado cluster. Pado can be installed by running the `install_padogrid` and `update_products` commands.
 
-:pencil2: *Pado for PadoGrid is still undergoing version migration and enhancements. Its availability has not been announced yet.*
-
 ```bash
 install_padogrid -product pado
 update_padogrid -product pado 
