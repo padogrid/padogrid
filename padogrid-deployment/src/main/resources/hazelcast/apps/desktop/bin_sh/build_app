@@ -38,6 +38,34 @@ if [ "$HELP" == "true" ]; then
 fi
 
 #
+# Returns the sorted list of the specified list that contains product versions
+# @param versionList
+#
+function sortVersionList
+{
+   local VERSION_LIST="$1"
+   local TMP_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").txt
+   echo 
+   echo "" > $TMP_FILE
+   if [ -f $TMP_FILE ]; then
+      rm $TMP_FILE
+   fi
+   touch $TMP_FILE
+   for i in $VERSION_LIST; do
+      echo "$i" >> $TMP_FILE
+   done
+   
+   # The -V option may not be available for some OS's.
+   SORTED_VERSIONS=$(sort -rV $TMP_FILE 2> /dev/null)
+   case ${?} in
+   0) echo ;;
+   *) SORTED_VERSIONS=$(sort -r $TMP_FILE) ;;
+   esac
+   rm $TMP_FILE
+   echo $SORTED_VERSIONS
+}
+
+#
 # Determine the addon version
 #
 ADDON_CORE_JAR_FILE_PATH=`ls $BASE_DIR/lib/v$HAZELCAST_MAJOR_VERSION_NUMBER/hazelcast-addon-core-*.jar`
@@ -50,6 +78,7 @@ PADOGRID_COMMON_JAR_FILE_PATH="$PADOGRID_HOME/lib/padogrid-common-$ADDON_VERSION
 ADDON_COMMON_JAR_FILE_PATH="$BASE_DIR/lib/hazelcast-addon-common-$ADDON_VERSION.jar"
 ADDON_CORE_JAR_FILE_PATH_3="$BASE_DIR/lib/v3/hazelcast-addon-core-3-$ADDON_VERSION.jar"
 ADDON_CORE_JAR_FILE_PATH_4="$BASE_DIR/lib/v4/hazelcast-addon-core-4-$ADDON_VERSION.jar"
+ADDON_CORE_JAR_FILE_PATH_5="$BASE_DIR/lib/v5/hazelcast-addon-core-5-$ADDON_VERSION.jar"
 
 # Install the addon-core jar to the local Maven repo
 if [[ ${OS_NAME} == CYGWIN* ]]; then
@@ -57,6 +86,7 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    ADDON_COMMON_JAR_FILE_PATH="$(cygpath -wp "$ADDON_COMMON_JAR_FILE_PATH")"
    ADDON_CORE_JAR_FILE_PATH_3="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_3")"
    ADDON_CORE_JAR_FILE_PATH_4="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_4")"
+   ADDON_CORE_JAR_FILE_PATH_5="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_5")"
    __SED_BACKUP="0"
 fi
 
@@ -77,6 +107,8 @@ mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_3 -DgroupId=padogrid.a
     -DartifactId=hazelcast-addon-core-3 -Dversion=$ADDON_VERSION -Dpackaging=jar
 mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_4 -DgroupId=padogrid.addon \
     -DartifactId=hazelcast-addon-core-4 -Dversion=$ADDON_VERSION -Dpackaging=jar
+mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_5 -DgroupId=padogrid.addon \
+    -DartifactId=hazelcast-addon-core-5 -Dversion=$ADDON_VERSION -Dpackaging=jar
 
 #
 # Build hazelcast-desktop
@@ -94,8 +126,10 @@ popd > /dev/null
 # Determine the latest release version
 pushd $BUILD_DIR/hazelcast-desktop
 TAGS=`git tag`
-for i in $TAGS; do
+REPO_VERSIONS=$(sortVersionList "$TAGS")
+for i in $REPO_VERSIONS; do
    REPO_VERSION=$i
+   break;
 done
 
 # Checkout the latest desktop release
@@ -127,6 +161,7 @@ cp $PADOGRID_HOME/lib/padogrid-common*.jar $APP_DIR/$REPO_NAME_VERSION/lib/
 #
 cp $PADOGRID_HOME/hazelcast/plugins/v3/* $APP_DIR/$REPO_NAME_VERSION/lib/v3/
 cp $PADOGRID_HOME/hazelcast/plugins/v4/* $APP_DIR/$REPO_NAME_VERSION/lib/v4/
+cp $PADOGRID_HOME/hazelcast/plugins/v5/* $APP_DIR/$REPO_NAME_VERSION/lib/v5/
 cp $HAZELCAST_HOME/lib/hazelcast-*-all-*.jar $APP_DIR/$REPO_NAME_VERSION/lib/
 
 # Copy the .addonenv.sh to hazelcast-desktop/bin_sh and adjust the directory level.
