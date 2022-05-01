@@ -49,7 +49,7 @@ From the login prompt, enter the Pado locator(s) and any user name. Password is 
 
 ![PadoDesktop Login](images/padodesktop-login.png)
 
-Upon successful login, the desktop should display as shown below.
+Upon successful login, the desktop should display as shown below. If the desktop shows empty, then select the pull-down menu, **File/Open Template**, which will refresh the screen by displaying all the desktop components.
 
 ![PadoDesktop Screenshot](images/padodesktop.png)
 
