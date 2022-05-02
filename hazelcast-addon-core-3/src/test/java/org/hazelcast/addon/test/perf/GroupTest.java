@@ -443,6 +443,8 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.rmap.put(entry.key, entry.value);
+									// ER objects
+									writeEr(operation, entry, i, threadStopIndex, threadStopIndex);
 								}
 							}
 								break;
@@ -489,6 +491,8 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.icache.put(entry.key, entry.value);
+									// ER objects
+									writeEr(operation, entry, i, threadStopIndex, threadStopIndex);
 								}
 							}
 								break;
@@ -569,6 +573,8 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.iqueue.offer(entry.value);
+									// ER objects
+									writeEr(operation, entry, i, threadStopIndex, threadStopIndex);
 								}
 							}
 								break;
@@ -589,6 +595,8 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.itopic.publish(entry.value);
+									// ER objects
+									writeEr(operation, entry, i, threadStopIndex, threadStopIndex);
 								}
 							}
 								break;
@@ -612,28 +620,8 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.imap.set(entry.key, entry.value);
-
-									// Child objects
-									if (operation.dataObjectFactory.isEr()) {
-										int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
-										Operation childOperation = operationMap
-												.get(operation.dataObjectFactory.getErOperationName());
-										int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
-										int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
-										startErKeyIndex = i * maxErKeys + 1;
-										if (childOperation != null) {
-											boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
-											if (isErMaxRandom) {
-												maxErKeys = operation.random.nextInt(maxErKeys) + 1;
-											}
-											for (int k = 0; k < maxErKeys; k++) {
-												int childIdNum = startErKeyIndex + k;
-												DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory
-														.createEntry(childIdNum, entry.key);
-												childOperation.imap.set(childEntry.key, childEntry.value);
-											}
-										}
-									}
+									// ER objects
+									writeEr(operation, entry, i, threadStopIndex, threadStopIndex);
 								}
 							}
 								break;
@@ -648,28 +636,8 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.imap.put(entry.key, entry.value);
-
-									// Child objects
-									if (operation.dataObjectFactory.isEr()) {
-										int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
-										Operation childOperation = operationMap
-												.get(operation.dataObjectFactory.getErOperationName());
-										int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
-										int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
-										startErKeyIndex = i * maxErKeys + 1;
-										if (childOperation != null) {
-											boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
-											if (isErMaxRandom) {
-												maxErKeys = operation.random.nextInt(maxErKeys) + 1;
-											}
-											for (int k = 0; k < maxErKeys; k++) {
-												int childIdNum = startErKeyIndex + k;
-												DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory
-														.createEntry(childIdNum, entry.key);
-												childOperation.imap.put(childEntry.key, childEntry.value);
-											}
-										}
-									}
+									// ER objects
+									writeEr(operation, entry, i, threadStopIndex, threadStopIndex);
 								}
 							}
 								break;
@@ -726,6 +694,75 @@ public class GroupTest implements Constants {
 			long stopTime = System.currentTimeMillis();
 
 			elapsedTimeInMsec = stopTime - startTime;
+		}
+	}
+
+	/**
+	 * Recursively writes to the the specified operation's ER data structures.
+	 * @param operation 
+	 * @param entry
+	 * @param index
+	 * @param threadStartIndex
+	 * @param threadStopIndex
+	 */
+	@SuppressWarnings("unchecked")
+	private void writeEr(Operation operation, DataObjectFactory.Entry entry, int index, int threadStartIndex,
+			int threadStopIndex) {
+		// Child objects
+		if (operation.dataObjectFactory.isEr()) {
+			int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
+			Operation childOperation = operationMap.get(operation.dataObjectFactory.getErOperationName());
+			int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
+			int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
+			startErKeyIndex = index * maxErKeys + 1;
+			if (childOperation != null) {
+				boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
+				if (isErMaxRandom) {
+					maxErKeys = operation.random.nextInt(maxErKeys) + 1;
+				}
+				for (int k = 0; k < maxErKeys; k++) {
+					int childIdNum = startErKeyIndex + k;
+					DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory.createEntry(childIdNum,
+							entry.key);
+					switch (childOperation.ds) {
+					case rmap:
+						if (childOperation.rmap != null) {
+							childOperation.rmap.put(childEntry.key, childEntry.value);
+						}
+						break;
+					case cache:
+						if (childOperation.icache != null) {
+							childOperation.icache.put(childEntry.key, childEntry.value);
+						}
+						break;
+					case queue:
+						if (childOperation.iqueue != null) {
+							childOperation.iqueue.offer(childEntry.value);
+						}
+						break;
+					case topic:
+					case rtopic:
+						if (childOperation.itopic != null) {
+							childOperation.itopic.publish(entry.value);
+						}
+						break;
+					case map:
+					default:
+						if (childOperation.imap != null) {
+							switch (childOperation.testCase) {
+							case set:
+								childOperation.imap.set(childEntry.key, childEntry.value);
+								break;
+							case put:
+							default:
+								childOperation.imap.put(childEntry.key, childEntry.value);
+								break;
+							}
+						}
+					}
+					writeEr(childOperation, entry, index, threadStartIndex, threadStopIndex);
+				}
+			}
 		}
 	}
 
