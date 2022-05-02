@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
@@ -182,6 +183,23 @@ public class GroupTest implements Constants {
 			op.random = random;
 			return op;
 		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(name);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Operation other = (Operation) obj;
+			return Objects.equals(name, other.name);
+		}
 	}
 
 	public GroupTest(boolean runDb) throws Exception {
@@ -195,6 +213,31 @@ public class GroupTest implements Constants {
 			} else {
 				hazelcastInstance = HazelcastClient.newHazelcastClient();
 			}
+
+			// Get data structures
+			for (Operation operation : operationMap.values()) {
+				switch (operation.ds) {
+				case map:
+					operation.imap = hazelcastInstance.getMap(operation.dsName);
+					break;
+				case rmap:
+					operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
+					break;
+				case cache:
+					operation.icache = hazelcastInstance.getCacheManager().getCache(operation.dsName);
+					break;
+				case queue:
+					operation.iqueue = hazelcastInstance.getQueue(operation.dsName);
+					break;
+				case topic:
+					operation.itopic = hazelcastInstance.getTopic(operation.dsName);
+					break;
+				case rtopic:
+					operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
+					break;
+				}
+			}
+
 		}
 	}
 
@@ -374,27 +417,6 @@ public class GroupTest implements Constants {
 			int keyIndexes[] = new int[group.operations.length];
 			for (int i = 0; i < keyIndexes.length; i++) {
 				Operation operation = group.operations[i];
-				switch (operation.ds) {
-				case map:
-					operation.imap = hazelcastInstance.getMap(operation.dsName);
-					break;
-				case rmap:
-					operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
-					break;
-				case cache:
-					operation.icache = hazelcastInstance.getCacheManager().getCache(operation.dsName);
-					break;
-				case queue:
-					operation.iqueue = hazelcastInstance.getQueue(operation.dsName);
-					break;
-				case topic:
-					operation.itopic = hazelcastInstance.getTopic(operation.dsName);
-					break;
-				case rtopic:
-					operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
-					break;
-				}
-
 				int entryCount = operation.totalEntryCount / group.threadCount;
 				keyIndexes[i] = (threadNum - 1) * entryCount;
 			}
@@ -590,6 +612,28 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.imap.set(entry.key, entry.value);
+
+									// Child objects
+									if (operation.dataObjectFactory.isEr()) {
+										int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
+										Operation childOperation = operationMap
+												.get(operation.dataObjectFactory.getErOperationName());
+										int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
+										int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
+										startErKeyIndex = i * maxErKeys + 1;
+										if (childOperation != null) {
+											boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
+											if (isErMaxRandom) {
+												maxErKeys = operation.random.nextInt(maxErKeys) + 1;
+											}
+											for (int k = 0; k < maxErKeys; k++) {
+												int childIdNum = startErKeyIndex + k;
+												DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory
+														.createEntry(childIdNum, entry.key);
+												childOperation.imap.set(childEntry.key, childEntry.value);
+											}
+										}
+									}
 								}
 							}
 								break;
@@ -604,6 +648,28 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.imap.put(entry.key, entry.value);
+
+									// Child objects
+									if (operation.dataObjectFactory.isEr()) {
+										int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
+										Operation childOperation = operationMap
+												.get(operation.dataObjectFactory.getErOperationName());
+										int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
+										int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
+										startErKeyIndex = i * maxErKeys + 1;
+										if (childOperation != null) {
+											boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
+											if (isErMaxRandom) {
+												maxErKeys = operation.random.nextInt(maxErKeys) + 1;
+											}
+											for (int k = 0; k < maxErKeys; k++) {
+												int childIdNum = startErKeyIndex + k;
+												DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory
+														.createEntry(childIdNum, entry.key);
+												childOperation.imap.put(childEntry.key, childEntry.value);
+											}
+										}
+									}
 								}
 							}
 								break;
@@ -898,6 +964,91 @@ public class GroupTest implements Constants {
 		}
 	}
 
+	/**
+	 * Recursive deletes data structures including child operations.
+	 * 
+	 * @param operation Parent operation
+	 * @param delete    true to delete, false to print size info only.
+	 */
+	private void deleteOperation(Operation operation, boolean delete) {
+		switch (operation.ds) {
+		case rmap:
+			operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
+			int size = operation.rmap.size();
+			if (delete) {
+				operation.rmap.destroy();
+			}
+			writeLine("  - name: " + operation.dsName);
+			writeLine("    data: ReplicatedMap");
+			writeLine("    size: " + size);
+			writeLine("    deleted: " + delete);
+			break;
+		case cache:
+			operation.icache = hazelcastInstance.getCacheManager().getCache(operation.dsName);
+			size = operation.icache.size();
+			if (delete) {
+				operation.icache.destroy();
+			}
+			writeLine("  - name: " + operation.dsName);
+			writeLine("    data: ICache");
+			writeLine("    size: " + size);
+			writeLine("    deleted: " + operation.icache.isDestroyed());
+			break;
+		case queue:
+			operation.iqueue = hazelcastInstance.getQueue(operation.dsName);
+			size = operation.iqueue.size();
+			if (delete) {
+				operation.iqueue.destroy();
+			}
+			writeLine("  - name: " + operation.dsName);
+			writeLine("    data: IQueue");
+			writeLine("    size: " + size);
+			writeLine("    deleted: " + delete);
+			break;
+		case topic:
+			operation.itopic = hazelcastInstance.getTopic(operation.dsName);
+			if (delete) {
+				operation.itopic.destroy();
+			}
+			writeLine("  - name: " + operation.dsName);
+			writeLine("    data: ITopic");
+			writeLine("    deleted: " + delete);
+			break;
+		case rtopic:
+			operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
+			if (delete) {
+				operation.itopic.destroy();
+			}
+			writeLine("  - name: " + operation.dsName);
+			writeLine("    data: ReliableTopic");
+			writeLine("    deleted: " + delete);
+			break;
+		case map:
+		default:
+			operation.imap = hazelcastInstance.getMap(operation.dsName);
+			size = operation.imap.size();
+			if (delete) {
+				operation.imap.destroy();
+			}
+			writeLine("  - name: " + operation.dsName);
+			writeLine("    data: IMap");
+			writeLine("    size: " + size);
+			writeLine("    deleted: " + delete);
+			break;
+		}
+
+		if (operation.dataObjectFactory != null && operation.dataObjectFactory.getErOperationName() != null) {
+			Operation childOperation = operationMap.get(operation.dataObjectFactory.getErOperationName());
+			deleteOperation(childOperation, delete);
+		}
+	}
+
+	/**
+	 * Deletes all data structures in all groups
+	 * 
+	 * @param delete If true, deletes; otherwise, prints each data structure size
+	 *               info.
+	 */
 	private void deleteDataStructures(boolean delete) {
 		for (Group[] groups : concurrentGroupList) {
 			String groupNames = getGroupNames(groups);
@@ -907,70 +1058,7 @@ public class GroupTest implements Constants {
 			for (Group group : groups) {
 				writeLine("group: " + group.name);
 				for (Operation operation : group.operations) {
-					switch (operation.ds) {
-					case map:
-						operation.imap = hazelcastInstance.getMap(operation.dsName);
-						int size = operation.imap.size();
-						if (delete) {
-							operation.imap.destroy();
-						}
-						writeLine("  - name: " + operation.dsName);
-						writeLine("    data: IMap");
-						writeLine("    size: " + size);
-						writeLine("    deleted: " + delete);
-						break;
-					case rmap:
-						operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
-						size = operation.rmap.size();
-						if (delete) {
-							operation.rmap.destroy();
-						}
-						writeLine("  - name: " + operation.dsName);
-						writeLine("    data: ReplicatedMap");
-						writeLine("    size: " + size);
-						writeLine("    deleted: " + delete);
-						break;
-					case cache:
-						operation.icache = hazelcastInstance.getCacheManager().getCache(operation.dsName);
-						size = operation.icache.size();
-						if (delete) {
-							operation.icache.destroy();
-						}
-						writeLine("  - name: " + operation.dsName);
-						writeLine("    data: ICache");
-						writeLine("    size: " + size);
-						writeLine("    deleted: " + operation.icache.isDestroyed());
-						break;
-					case queue:
-						operation.iqueue = hazelcastInstance.getQueue(operation.dsName);
-						size = operation.iqueue.size();
-						if (delete) {
-							operation.iqueue.destroy();
-						}
-						writeLine("  - name: " + operation.dsName);
-						writeLine("    data: IQueue");
-						writeLine("    size: " + size);
-						writeLine("    deleted: " + delete);
-						break;
-					case topic:
-						operation.itopic = hazelcastInstance.getTopic(operation.dsName);
-						if (delete) {
-							operation.itopic.destroy();
-						}
-						writeLine("  - name: " + operation.dsName);
-						writeLine("    data: ITopic");
-						writeLine("    deleted: " + delete);
-						break;
-					case rtopic:
-						operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
-						if (delete) {
-							operation.itopic.destroy();
-						}
-						writeLine("  - name: " + operation.dsName);
-						writeLine("    data: ReliableTopic");
-						writeLine("    deleted: " + delete);
-						break;
-					}
+					deleteOperation(operation, delete);
 				}
 			}
 		}
@@ -1002,8 +1090,8 @@ public class GroupTest implements Constants {
 		writeLine("   " + executableName + " [-run|-list] [-db|-delete] [-prop <properties-file>] [-?]");
 		writeLine();
 		writeLine("   Displays or runs group test cases specified in the properties file.");
-		writeLine("   A group represents a function that executes one or more Hazelcast IMap");
-		writeLine("   operations. This program measures average latencies and throughputs");
+		writeLine("   A group represents a function that executes one or more Hazelcast data");
+		writeLine("   structure operations. This program measures average latencies and throughputs");
 		writeLine("   of group (or function) executions.");
 		writeLine("   The default properties file is");
 		writeLine("      " + DEFAULT_groupPropertiesFile);
@@ -1038,11 +1126,85 @@ public class GroupTest implements Constants {
 	}
 
 	@SuppressWarnings("unchecked")
+	private static Operation parseOperation(String operationName, HashSet<String> erOperationNamesSet)
+			throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+
+		String dsName = null;
+		DataStructureEnum ds = null;
+		for (DataStructureEnum ds2 : DataStructureEnum.values()) {
+			dsName = System.getProperty(operationName + "." + ds2.name());
+			if (dsName != null) {
+				ds = ds2;
+				break;
+			}
+		}
+		Operation operation = operationMap.get(operationName);
+		if (operation == null) {
+			operation = new Operation();
+			operation.name = operationName;
+			operationMap.put(operationName, operation);
+			operation.ds = ds;
+			if (ds == DataStructureEnum.sleep) {
+				try {
+					operation.sleep = Integer.parseInt(dsName);
+					if (operation.sleep <= 0) {
+						operation = null;
+					}
+				} catch (Exception ex) {
+					throw new RuntimeException("Parsing error: " + operation.name + ".sleep=" + dsName, ex);
+				}
+			} else {
+				operation.ref = System.getProperty(operationName + ".ref");
+				operation.dsName = dsName;
+
+				String testCase = System.getProperty(operationName + ".testCase");
+				if (testCase != null) {
+					operation.testCase = TestCaseEnum.getTestCase(testCase);
+				}
+				Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
+				if (payloadSize != null) {
+					operation.payloadSize = payloadSize;
+				}
+				operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
+				Integer startNum = Integer.getInteger(operationName + ".key.startNum");
+				if (startNum != null) {
+					operation.startNum = startNum;
+				}
+				Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
+				if (totalEntryCount != null) {
+					operation.totalEntryCount = totalEntryCount;
+				}
+				Integer batchSize = Integer.getInteger(operationName + ".batchSize");
+				if (batchSize != null) {
+					operation.batchSize = batchSize;
+				}
+				Long randomSeed = Long.getLong(operationName + ".randomSeed");
+				if (randomSeed != null) {
+					operation.random = new Random(randomSeed);
+				}
+				String factoryClassName = System.getProperty(operationName + ".factory.class");
+				if (factoryClassName != null) {
+					Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class.forName(factoryClassName);
+					operation.dataObjectFactory = clazz.newInstance();
+					Properties factoryProps = getFactoryProps(operationName);
+					operation.dataObjectFactory.initialize(factoryProps);
+					String factoryErOperationName = factoryProps.getProperty("factory.er.operation");
+					if (factoryErOperationName != null) {
+						erOperationNamesSet.add(factoryErOperationName);
+					}
+				}
+			}
+		}
+		return operation;
+	}
+
+	@SuppressWarnings("unchecked")
 	private static void parseConfig() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		int defaultThreadCount = (int) (Runtime.getRuntime().availableProcessors() * 1.5);
 		int defaultTotalInvocationCount = 10000;
 		String groupNamesStr = System.getProperty("groupNames");
 		String preGroupNames[] = groupNamesStr.split(",");
+		HashSet<String> erOperationNamesSet = new <String>HashSet(10);
 
 		for (int i = 0; i < preGroupNames.length; i++) {
 			String preGroupName = preGroupNames[i];
@@ -1061,80 +1223,32 @@ public class GroupTest implements Constants {
 				String operationsStr = System.getProperty(groupName + ".operations", "putall");
 				group.operationsStr = operationsStr;
 				String[] split = operationsStr.split(",");
-				ArrayList<Operation> operationList = new ArrayList<Operation>(split.length);
+
+				HashSet<Operation> groupOperationSet = new HashSet<Operation>(split.length);
 				for (int k = 0; k < split.length; k++) {
 					String operationName = split[k];
 					operationName = operationName.trim();
-					String dsName = null;
-					DataStructureEnum ds = null;
-					for (DataStructureEnum ds2 : DataStructureEnum.values()) {
-						dsName = System.getProperty(operationName + "." + ds2.name());
-						if (dsName != null) {
-							ds = ds2;
-							break;
-						}
-					}
-					Operation operation = operationMap.get(operationName);
-					if (operation == null) {
-						operation = new Operation();
-						operation.name = operationName;
-						operationMap.put(operationName, operation);
-						operation.ds = ds;
-						if (ds == DataStructureEnum.sleep) {
-							try {
-								operation.sleep = Integer.parseInt(dsName);
-								if (operation.sleep <= 0) {
-									operation = null;
-								}
-							} catch (Exception ex) {
-								throw new RuntimeException("Parsing error: " + operation.name + ".sleep=" + dsName, ex);
-							}
-						} else {
-							operation.ref = System.getProperty(operationName + ".ref");
-							operation.dsName = dsName;
-
-							String testCase = System.getProperty(operationName + ".testCase");
-							if (testCase != null) {
-								operation.testCase = TestCaseEnum.getTestCase(testCase);
-							}
-							Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
-							if (payloadSize != null) {
-								operation.payloadSize = payloadSize;
-							}
-							operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
-							Integer startNum = Integer.getInteger(operationName + ".key.startNum");
-							if (startNum != null) {
-								operation.startNum = startNum;
-							}
-							Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
-							if (totalEntryCount != null) {
-								operation.totalEntryCount = totalEntryCount;
-							}
-							Integer batchSize = Integer.getInteger(operationName + ".batchSize");
-							if (batchSize != null) {
-								operation.batchSize = batchSize;
-							}
-							Long randomSeed = Long.getLong(operationName + ".randomSeed");
-							if (randomSeed != null) {
-								operation.random = new Random(randomSeed);
-							}
-							String factoryClassName = System.getProperty(operationName + ".factory.class");
-							if (factoryClassName != null) {
-								Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class
-										.forName(factoryClassName);
-								operation.dataObjectFactory = clazz.newInstance();
-								Properties factoryProps = getFactoryProps(operationName);
-								operation.dataObjectFactory.initialize(factoryProps);
-							}
-						}
-					}
+					Operation operation = parseOperation(operationName, erOperationNamesSet);
 					if (operation != null) {
-						operationList.add(operation);
+						groupOperationSet.add(operation);
 					}
 				}
 
+				// ER
+				HashSet<Operation> erOperationSet = new HashSet<Operation>(split.length);
+				for (String eRperationName : erOperationNamesSet) {
+					Operation operation = parseOperation(eRperationName, erOperationNamesSet);
+					if (operation != null) {
+						erOperationSet.add(operation);
+					}
+				}
+
+				// Combined
+				HashSet<Operation> allOperationSet = new HashSet<Operation>(groupOperationSet);
+				allOperationSet.addAll(erOperationSet);
+
 				// Set references
-				for (Operation operation : operationList) {
+				for (Operation operation : allOperationSet) {
 					if (operation.ref != null) {
 						Operation refOperation = operationMap.get(operation.ref);
 						if (refOperation != null) {
@@ -1173,7 +1287,7 @@ public class GroupTest implements Constants {
 				}
 
 				// Set default values if not defined.
-				for (Operation operation : operationList) {
+				for (Operation operation : allOperationSet) {
 					if (operation.ds == DataStructureEnum.sleep) {
 						continue;
 					}
@@ -1203,7 +1317,7 @@ public class GroupTest implements Constants {
 					}
 				}
 
-				group.operations = operationList.toArray(new Operation[0]);
+				group.operations = groupOperationSet.toArray(new Operation[0]);
 				group.comment = System.getProperty(groupName + ".comment", "");
 			}
 		}
