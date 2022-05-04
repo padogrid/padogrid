@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+. setenv_desktop.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start HazelcastDesktop
+
+DESCRIPTION
+   Starts HazelcastDesktop.
+
+EOF
+exit
+fi
+
+LAF=-Dswing.defaultlaf=org.jvnet.substance.SubstanceLookAndFeel
+# LAF=-Dswing.defaultlaf=com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel
+# LAF=-Dswing.defaultlaf=com.sun.java.swing.plaf.gtk.GTKLookAndFeel
+# LAF=-Dswing.defaultlaf=javax.swing.plaf.metal.MetalLookAndFeel
+# LAF=-Dswing.defaultlaf=com.sun.java.swing.plaf.windows.WindowsLookAndFeel
+
+LOG_FILE=$LOG_DIR/desktop.log
+
+pushd $BASE_DIR > /dev/null 2>&1
+"$JAVA" $JAVA_OPTS $LAF com.netcrest.ui.desktop.Desktop > $LOG_FILE 2>&1 &
+popd > /dev/null 2>&1
+

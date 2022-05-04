@@ -3331,6 +3331,7 @@ function sortVersionList
 #    HAZELCAST_ENTERPRISE_VERSIONS
 #    HAZELCAST_OSS_VERSIONS
 #    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+#    HAZELCAST_DESKTOP_VERSIONS
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
 #    JET_MANAGEMENT_CENTER_VERSIONS
@@ -3351,6 +3352,7 @@ function determineInstalledProductVersions
    GEODE_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
+   HAZELCAST_DESKTOP_VERSIONS=""
    JET_ENTERPRISE_VERSIONS=""
    JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
@@ -3367,7 +3369,7 @@ function determineInstalledProductVersions
       shopt -s nullglob
 
       local __versions
-      local henterv hmanv jenterv jmanv jossv hossv
+      local henterv hmanv hdesktopv jenterv jmanv jossv hossv
 
       # PadoGrid
       __versions=""
@@ -3434,6 +3436,9 @@ function determineInstalledProductVersions
          elif [[ "$i" == "hazelcast-management-center-"** ]]; then
             __version=${i#hazelcast-management-center-}
             hmanv="$hmanv $__version"
+         elif [[ "$i" == "hazelcast-desktop_"** ]]; then
+            __version=${i#hazelcast-desktop_}
+            hdesktopv="$hdesktopv $__version"
          elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
             __version=${i#hazelcast-jet-enterprise-}
             jenterv="$jenterv $__version"
@@ -3460,6 +3465,7 @@ function determineInstalledProductVersions
       hmanv=$(unique_words "$hmanv")
       HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
       HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
+      HAZELCAST_DESKTOP_VERSIONS=$(sortVersionList "$hdesktopv")
       JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
       JET_OSS_VERSIONS=$(sortVersionList "$jossv")
       HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")

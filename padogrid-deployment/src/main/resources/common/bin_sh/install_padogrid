@@ -37,7 +37,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc jet-enterprise jet-oss snappydata spark kafka hadoop"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss snappydata spark kafka hadoop"
 
 EXECUTABLE="`basename $0`"
 
@@ -78,6 +78,7 @@ GEODE_DOWNLOAD_URL="https://archive.apache.org/dist/geode/"
 HAZELCAST_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.org/imdg/download/archives/#hazelcast-imdg"
 HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
+HAZELCAST_DESKTOP_DOWNLOAD_URL="https://github.com/netcrest/hazelcast-desktop/releases"
 JET_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 JET_OSS_DOWNLOAD_URL="https://github.com/hazelcast/hazelcast-jet/releases"
 SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
@@ -181,6 +182,7 @@ echo -e "      - Apache Geode                ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
 echo -e "      - Hazelcast Enterprise        ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
 echo -e "      - Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
 echo -e "      - Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+echo -e "      - HazelcastDesktop            ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
 echo -e "      - Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
 echo -e "      - Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
 echo -e "      - TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
@@ -195,6 +197,7 @@ echo -e "      - Apache Geode                $GEODE_DOWNLOAD_URL"
 echo -e "      - Hazelcast Enterprise        $HAZELCAST_ENTERPRISE_DOWNLOAD_URL"
 echo -e "      - Hazelcst OSS                $HAZELCAST_OSS_DOWNLOAD_URL"
 echo -e "      - Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL"
+echo -e "      - HazelcastDesktop            $HAZELCAST_DESKTOP_DOWNLOAD_URL"
 echo -e "      - Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
 echo -e "      - Jet OSS                     $JET_OSS_DOWNLOAD_URL"
 echo -e "      - TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
@@ -307,12 +310,13 @@ echo -e "[1]  Apache Geode                ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
 echo -e "[2]  Hazelcast Enterprise        ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
 echo -e "[3]  Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
 echo -e "[4]  Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+echo -e "[5]  HazelcastDesktop            ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
 echo -e "[5]  Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
-echo -e "[6]  Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
-echo -e "[7]  TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
-echo -e "[8]  Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
-echo -e "[9]  Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
-echo -e "[10] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
+echo -e "[7]  Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
+echo -e "[8]  TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+echo -e "[9]  Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+echo -e "[10] Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
+echo -e "[11] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
 
 else
 
@@ -321,12 +325,13 @@ echo -e "[1]  Apache Geode                $GEODE_DOWNLOAD_URL"
 echo -e "[2]  Hazelcast Enterprise        $HAZELCAST_ENTERPRISE_DOWNLOAD_URL"
 echo -e "[3]  Hazelcst OSS                $HAZELCAST_OSS_DOWNLOAD_URL"
 echo -e "[4]  Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL"
-echo -e "[5]  Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
-echo -e "[6]  Jet OSS                     $JET_OSS_DOWNLOAD_URL"
-echo -e "[7]  TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
-echo -e "[8]  Apache Spark                $SPARK_DOWNLOAD_URL"
-echo -e "[9]  Apache Kafka                $KAFKA_DOWNLOAD_URL"
-echo -e "[10] Apache Hadoop               $HADOOP_DOWNLOAD_URL"
+echo -e "[5]  HazelcastDesktop            $HAZELCAST_DESKTOP_DOWNLOAD_URL"
+echo -e "[6]  Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
+echo -e "[7]  Jet OSS                     $JET_OSS_DOWNLOAD_URL"
+echo -e "[8]  TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
+echo -e "[9]  Apache Spark                $SPARK_DOWNLOAD_URL"
+echo -e "[10] Apache Kafka                $KAFKA_DOWNLOAD_URL"
+echo -e "[11] Apache Hadoop               $HADOOP_DOWNLOAD_URL"
 
 fi
 
@@ -529,6 +534,12 @@ function getDownloadableHazelcastManCenterVersions
   unique_words "$ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS"
 }
 
+function getDownloadableHazelcastDesktopVersions
+{
+  local ALL_HAZELCAST_DESKTOP_VERSIONS=$(curl -s $HAZELCAST_DESKTOP_DOWNLOAD_URL |grep "hazelcast-desktop_" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-desktop_//' -e 's/\.tar\.gz.*//')
+  unique_words "$ALL_HAZELCAST_DESKTOP_VERSIONS"
+}
+
 function getDownloadableJetEnterpriseVersions
 {
    local ALL_JET_ENTERPRISE_VERSIONS=$(curl -sL $JET_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-jet-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-jet-enterprise-//' -e 's/\.tar\.gz.*//')
@@ -619,6 +630,7 @@ function sortVersionList
 #    HAZELCAST_ENTERPRISE_VERSIONS
 #    HAZELCAST_OSS_VERSIONS
 #    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+#    HAZELCAST_DESKTOP_VERSIONS
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
 #    SNAPPYDATA_VERSIONS
@@ -638,6 +650,7 @@ function determineInstalledProductVersions
    GEODE_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
+   HAZELCAST_DESKTOP_CENTER_VERSIONS=""
    JET_ENTERPRISE_VERSIONS=""
    JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
@@ -704,7 +717,7 @@ function determineInstalledProductVersions
       GEODE_VERSIONS=$(sortVersionList "$__versions")
 
       # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise
-      local hossv henterv hmanv jossv jenterv jmanv
+      local hossv henterv hmanv hdesktopv jossv jenterv jmanv
       for i in hazelcast-*; do
          if [[ "$i" == "hazelcast-enterprise-"** ]]; then
             __version=${i#hazelcast-enterprise-}
@@ -712,6 +725,9 @@ function determineInstalledProductVersions
          elif [[ "$i" == "hazelcast-management-center-"** ]]; then
             __version=${i#hazelcast-management-center-}
             hmanv="$hmanv $__version"
+         elif [[ "$i" == "hazelcast-desktop_"** ]]; then
+            __version=${i#hazelcast-desktop_}
+            hdesktopv="$hdesktopv $__version"
          elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
             __version=${i#hazelcast-jet-enterprise-}
             jenterv="$jenterv $__version"
@@ -726,6 +742,7 @@ function determineInstalledProductVersions
 
       HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
       HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
+      HAZELCAST_DESKTOP_VERSIONS=$(sortVersionList "$hdesktopv")
       JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
       JET_OSS_VERSIONS=$(sortVersionList "$jossv")
       HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
@@ -914,6 +931,9 @@ fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
    HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastManCenterVersions))
 fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
+   HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastDesktopVersions))
+fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
    JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableJetEnterpriseVersions))
 fi
@@ -945,6 +965,7 @@ GEODE_VERSION=""
 HAZELCAST_ENTERPRISE_VERSION=""
 HAZELCAST_OSS_VERSION=""
 HAZELCAST_MANAGEMENT_CENTER_VERSION=""
+HAZELCAST_DESKTOP_VERSION=""
 JET_ENTERPRISE_VERSION=""
 JET_OSS_VERSION=""
 SNAPPYDATA_VERSION=""
@@ -962,6 +983,7 @@ if [ "$QUIET" == "true" ]; then
    HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_OSS_VERSION=${HAZELCAST_OSS_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_MANAGEMENT_CENTER_VERSION=${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[0]}
+   HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[0]}
    JET_ENTERPRISE_VERSION=${JET_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    JET_OSS_VERSION=${JET_OSS_DOWNLOAD_VERSIONS[0]}
    SNAPPYDATA_VERSION=${SNAPPYDATA_DOWNLOAD_VERSIONS[0]}
@@ -983,6 +1005,7 @@ if [ "$QUIET" == "true" ]; then
    echo "Hazelcast Enterprise $HAZELCAST_ENTERPRISE_VERSION"
    echo "Hazelcast OSS        $HAZELCAST_OSS_VERSION"
    echo "Hazelcast Man Center $HAZELCAST_MANAGEMENT_CENTER_VERSION"
+   echo "HazelcastDesktop     $HAZELCAST_DESKTOP_VERSION"
    echo "Jet Enterprise       $JET_ENTERPRISE_VERSION"
    echo "Jet OSS              $JET_OSS_VERSION"
    echo "SnappyData           $SNAPPYDATA_VERSION"
@@ -1143,6 +1166,20 @@ while [ "$REDO" == "true" ]; do
          let INSTALL_COUNT=INSTALL_COUNT+1
       fi
       HAZELCAST_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+
+   # HazelcastDesktop
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
+      PRODUCT_NAME="HazelcastDesktop"
+      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$HAZELCAST_DESKTOP_VERSIONS
+      echo -e "HazelcastDesktop ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      HAZELCAST_DESKTOP_VERSION=$INSTALL_VERSION
       echo ""
    fi
    
@@ -1356,6 +1393,9 @@ while [ "$REDO" == "true" ]; do
    if [ "$HAZELCAST_MANAGEMENT_CENTER_VERSION" != "" ]; then
       echo -e "Hazelcast Management Center: ${CLightGreen}$HAZELCAST_MANAGEMENT_CENTER_VERSION${CNone}"
    fi
+   if [ "$HAZELCAST_DESKTOP_VERSION" != "" ]; then
+      echo -e "HazelcastDesktop: ${CLightGreen}$HAZELCAST_DESKTOP_VERSION${CNone}"
+   fi
    if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
       echo -e "Jet Enterprise: ${CLightGreen}$JET_ENTERPRISE_VERSION${CNone}"
    fi
@@ -1393,7 +1433,7 @@ fi
 #
 # Installs the specified product in the PadoGrid products directory.
 # @param productName Product name, i.e., padogrid, pado, geode, hazelcast-oss, hazelcast-enterprise, hazelcast-management-center, 
-#                    jet-oss, jet-enterprise, snappydata, spark
+#                    hazelcast-desktop, jet-oss, jet-enterprise, snappydata, spark
 # @param simulate If 'true' then outputs the installation commands without actually executing them.
 #
 # @required PADOGRID_PRODUCTS_PATH
@@ -1426,6 +1466,10 @@ fi
 #
 # @required HAZELCAST_MC_RELEASE
 # @required HAZELCAST_MC_TARBALL
+#
+# @required HAZELCAST_DESKTOP_VERSION
+# @required HAZELCAST_DESKTOP_RELEASE
+# @required HAZELCAST_DESKTOP_TARBALL
 #
 # @required JET_MC_RELEASE
 # @required JET_MC_TARBALL
@@ -1651,6 +1695,30 @@ function installProduct
       else
          tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_MC_TARBALL
          echo "  Installed - $HAZELCAST_MC_TARBALL"
+      fi
+      fi
+
+   elif [ "$__PRODUCT" == "hazelcast-desktop" ]; then 
+
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$HAZELCAST_DESKTOP_RELEASE" ]; then
+         echo "Already installed - $HAZELCAST_DESKTOP_RELEASE"
+      else
+      # --------------
+      # Download HazelcastDesktop
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_DESKTOP_TARBALL..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_DESKTOP_TARBALL" "https://github.com/netcrest/hazelcast-desktop/releases/download/$HAZELCAST_DESKTOP_VERSION/$HAZELCAST_DESKTOP_TARBALL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HAZELCAST_DESKTOP_TARBALL" "https://github.com/netcrest/hazelcast-desktop/releases/download/$HAZELCAST_DESKTOP_VERSION/$HAZELCAST_DESKTOP_TARBALL"
+      fi
+      
+      # Install HazelcastDesktop
+      echo "  Installing HazelcastDesktop $HAZELCAST_DESKTOP_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_DESKTOP_TARBALL
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_DESKTOP_TARBALL
+         echo "  Installed - $HAZELCAST_DESKTOP_TARBALL"
       fi
       fi
 
@@ -1891,6 +1959,11 @@ if [ "$HAZELCAST_MANAGEMENT_CENTER_VERSION" != "" ]; then
    HAZELCAST_MC_RELEASE="hazelcast-management-center-$HAZELCAST_MANAGEMENT_CENTER_VERSION"
    HAZELCAST_MC_TARBALL="$HAZELCAST_MC_RELEASE.tar.gz"
    installProduct "hazelcast-management-center" "$SIMULATE"
+fi
+if [ "$HAZELCAST_DESKTOP_VERSION" != "" ]; then
+   HAZELCAST_DESKTOP_RELEASE="hazelcast-desktop_$HAZELCAST_DESKTOP_VERSION"
+   HAZELCAST_DESKTOP_TARBALL="$HAZELCAST_DESKTOP_RELEASE.tar.gz"
+   installProduct "hazelcast-desktop" "$SIMULATE"
 fi
 if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
    JET_ENTERPRISE_RELEASE="hazelcast-jet-enterprise-$JET_ENTERPRISE_VERSION"
