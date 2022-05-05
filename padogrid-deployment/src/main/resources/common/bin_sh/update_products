@@ -128,7 +128,7 @@ function getProductVersions
    __HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_HOME#*hazelcast-desktop_}
    __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
    __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
-   __HAZELCAST_OSS_VERSION=${JET_HOME#*hazelcast-}
+   __HAZELCAST_OSS_VERSION=${HAZELCAST_HOME#*hazelcast-}
    if [[ "$JET_MC_HOME" == *"4.2021"* ]]; then
       __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-management-center-}
    else
@@ -319,7 +319,7 @@ while [ "$REDO" == "true" ]; do
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
       __REDO=true
       while [ "$__REDO" == "true" ]; do
-         echo "Enter Coherence home path."
+         echo "Enter Coherence home path. Leave blank to skip."
          if [[ $OS_NAME == CYGWIN* ]]; then
             echo "Enter only Unix absolute path. Windows path not allowed."
          fi
@@ -334,11 +334,9 @@ while [ "$REDO" == "true" ]; do
             __COHERENCE_HOME="$(cygpath -au "$__COHERENCE_HOME")"
          fi
          __COHERENCE_HOME="$(trimString "$__COHERENCE_HOME")"
-         if [[ ! -d "$__COHERENCE_HOME" ]]; then
+         if [ "$__COHERENCE_HOME" != "" ] && [[ ! -d "$__COHERENCE_HOME" ]]; then
             echo "Directory does not exist or not a directory."
             __COHERENCE_HOME="$COHERENCE_HOME_ARG"
-            __REDO=true
-         elif [ "$__COHERENCE_HOME" == "" ]; then
             __REDO=true
          else
             __REDO=false
@@ -351,7 +349,7 @@ while [ "$REDO" == "true" ]; do
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "java" ]; then
       __REDO=true
       while [ "$__REDO" == "true" ]; do
-         echo "Enter Java home path."
+         echo "Enter Java home path. Leave blank to skip."
          if [[ $OS_NAME == CYGWIN* ]]; then
             echo "Enter only Unix absolute path. Windows path not allowed."
          fi
@@ -366,11 +364,9 @@ while [ "$REDO" == "true" ]; do
             __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
          fi
          __JAVA_HOME="$(trimString "$__JAVA_HOME")"
-         if [[ ! -d "$__JAVA_HOME" ]]; then
+         if [ "$JAVA_HOME" != "" ] && [[ ! -d "$__JAVA_HOME" ]]; then
             echo "Directory does not exist or not a directory."
             __JAVA_HOME="$JAVA_HOME_ARG"
-            __REDO=true
-         elif [ "$__JAVA_HOME" == "" ]; then
             __REDO=true
          else
             __REDO=false
