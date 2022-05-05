@@ -315,36 +315,6 @@ while [ "$REDO" == "true" ]; do
       PRODUCT_EVAL_ARRAY[$INDEX_PADOGRID]=${__PADOGRID_VERSIONS[$SELECTED_INDEX]}
    fi
 
-   # Coherence
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
-      __REDO=true
-      while [ "$__REDO" == "true" ]; do
-         echo "Enter Coherence home path. Leave blank to skip."
-         if [[ $OS_NAME == CYGWIN* ]]; then
-            echo "Enter only Unix absolute path. Windows path not allowed."
-         fi
-         echo "[$__COHERENCE_HOME]:"
-         read -p "" INPUT
-         # trim string
-         INPUT=`echo "$INPUT" | xargs`
-         if [ "$INPUT" != "" ]; then
-            __COHERENCE_HOME="$INPUT"
-         fi
-         if [[ $OS_NAME == CYGWIN* ]]; then
-            __COHERENCE_HOME="$(cygpath -au "$__COHERENCE_HOME")"
-         fi
-         __COHERENCE_HOME="$(trimString "$__COHERENCE_HOME")"
-         if [ "$__COHERENCE_HOME" != "" ] && [[ ! -d "$__COHERENCE_HOME" ]]; then
-            echo "Directory does not exist or not a directory."
-            __COHERENCE_HOME="$COHERENCE_HOME_ARG"
-            __REDO=true
-         else
-            __REDO=false
-         fi
-      done
-      NEW_COHERENCE_HOME="$__COHERENCE_HOME"
-   fi
-
    # Java
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "java" ]; then
       __REDO=true
@@ -537,6 +507,37 @@ while [ "$REDO" == "true" ]; do
       SELECTED_INDEX_SNAPPYDATA=$SELECTED_INDEX
       echo ""
    fi
+
+   # Coherence
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
+      __REDO=true
+      while [ "$__REDO" == "true" ]; do
+         echo "Enter Coherence home path. Leave blank to skip."
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            echo "Enter only Unix absolute path. Windows path not allowed."
+         fi
+         echo "[$__COHERENCE_HOME]:"
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            __COHERENCE_HOME="$INPUT"
+         fi
+         if [[ $OS_NAME == CYGWIN* ]]; then
+            __COHERENCE_HOME="$(cygpath -au "$__COHERENCE_HOME")"
+         fi
+         __COHERENCE_HOME="$(trimString "$__COHERENCE_HOME")"
+         if [ "$__COHERENCE_HOME" != "" ] && [[ ! -d "$__COHERENCE_HOME" ]]; then
+            echo "Directory does not exist or not a directory."
+            __COHERENCE_HOME="$COHERENCE_HOME_ARG"
+            __REDO=true
+         else
+            __REDO=false
+         fi
+      done
+      NEW_COHERENCE_HOME="$__COHERENCE_HOME"
+   fi
+
 
    # Spark
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
