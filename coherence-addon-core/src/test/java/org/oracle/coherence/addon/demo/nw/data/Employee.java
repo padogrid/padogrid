@@ -7,7 +7,7 @@ import com.tangosol.io.pof.PofReader;
 import com.tangosol.io.pof.PofWriter;
 import com.tangosol.io.pof.PortableObject;
 
-public class Employee implements PortableObject
+public class Employee extends BaseEntity implements PortableObject
 {
 	private String employeeId;
 	private String lastName;
@@ -201,7 +201,7 @@ public class Employee implements PortableObject
 	
 	@Override
 	public void readExternal(PofReader reader) throws IOException {
-		int i = 0;
+		int i = super.readExternal(0, reader);
 		this.employeeId = reader.readString(i++);
 		this.lastName = reader.readString(i++);
 		this.firstName = reader.readString(i++);
@@ -224,7 +224,7 @@ public class Employee implements PortableObject
 
 	@Override
 	public void writeExternal(PofWriter writer) throws IOException {
-		int i = 0;
+		int i = super.writeExternal(0, writer);
 		writer.writeString(i++, employeeId);
 		writer.writeString(i++, lastName);
 		writer.writeString(i++, firstName);

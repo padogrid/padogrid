@@ -186,6 +186,20 @@ if [ "$APP" != "desktop" ] && [ "$APP" != "jet_demo" ]; then
    cp $PADOGRID_HOME/$PRODUCT/etc/template-hibernate.cfg-postgresql.xml $APP_DIR/etc/hibernate.cfg-postgresql.xml
 fi
 
+# Copy desktop files
+if [ "$HAZELCAST_DESKTOP_HOME" == "" ]; then
+   echo -e "${CBrownOrange}WARNING:${CNone} Hazelcast Desktop is not installed. You can install it by running"
+   echo "         'install_padogrid -product hazelcast-desktop' or build it by running 'bin_sh/build_app'."
+elif [ ! -d "$HAZELCAST_DESKTOP_HOME" ]; then
+   echo -e "${CBrownOrange}WARNING: ${CNone}Hazelcast Desktop directory does not exist. You can install it by running"
+   echo "         'install_padogrid -product hazelcast-desktop' or build it by running 'bin_sh/build_app'."
+   echo "         [$HAZELCAST_DESKTOP_HOME]"
+else
+   if [ "$APP" == "desktop" ]; then
+      cp -rf $HAZELCAST_DESKTOP_HOME/etc $APP_DIR/
+   fi
+fi
+
 # Make bin_sh scripts executables
 if [ -d "$APP_DIR/bin_sh" ]; then
    chmod 755 $APP_DIR/bin_sh/*

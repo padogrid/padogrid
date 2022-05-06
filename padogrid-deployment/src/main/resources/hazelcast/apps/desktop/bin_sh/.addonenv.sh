@@ -39,9 +39,6 @@ fi
 # Source in app specifics
 . $APP_DIR/bin_sh/setenv.sh
 
-# Hazelcast client config file
-JAVA_OPT="$JAVA_OPT -Dhazelcast.client.config=$APP_ETC_DIR/hazelcast-client.xml"
-
 # Log properties for lo4j2. The log file name is set in executable scripts.
 # Do not use the add log. Use the desktop log instead.
 #JAVA_OPT="$JAVA_OPT -Dhazelcast.logging.type=log4j2 \

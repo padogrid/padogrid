@@ -6,8 +6,6 @@ The `padodesktop` app provides scripts to run PadoDeskop for monitoring Pado clu
 
 PadoDesktop requires a Pado cluster. Pado can be installed by running the `install_padogrid` and `update_products` commands.
 
-:pencil2: *Pado for PadoGrid is still undergoing version migration and enhancements. Its availability has not been announced yet.*
-
 ```bash
 install_padogrid -product pado
 update_padogrid -product pado 
@@ -51,7 +49,7 @@ From the login prompt, enter the Pado locator(s) and any user name. Password is 
 
 ![PadoDesktop Login](images/padodesktop-login.png)
 
-Upon successful login, the desktop should display as shown below.
+Upon successful login, the desktop should display as shown below. If the desktop shows empty, then select the pull-down menu, **File/Open Template**, which will refresh the screen by displaying all the desktop components.
 
 ![PadoDesktop Screenshot](images/padodesktop.png)
 

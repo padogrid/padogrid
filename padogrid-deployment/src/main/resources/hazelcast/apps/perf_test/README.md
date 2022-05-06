@@ -401,7 +401,7 @@ Stop Time: Sun Jun 30 15:16:18 EDT 2019
 
 ## Inserting and Updating Database Tables
 
-The `group_test -db` command directly loads mock data into database tables without connecting to Hazelcast. You can use this command to pre-populate the database before testing database synchronization tests in Hazelcast. This command is also useful for testing the CDC use case in which database changes are automacally ingested into Hazelcast via a CDC product such as Debezium ansd Striim.
+The `group_test -db` command directly loads mock data into database tables without connecting to Hazelcast. You can use this command to pre-populate the database before testing database synchronization tests in Hazelcast. This command is also useful for testing the CDC use case in which database changes are automatically ingested into Hazelcast via a CDC product such as Debezium ansd Striim.
 
 ```bash
 # Edit setenv.sh to set the correct hibernate configuration file.
@@ -425,7 +425,7 @@ Run `test_group -db`.
 
 ## Generating Entity Relationships (ER)
 
-If you want to add entity relationships to your data, then you can implement `DataObjectFactory` or extend `AbstractDataObjectFactory` and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see `org.hazelcast.demo.nw.impl.OrderFactoryImpl` for details. You can run the example as follows:
+If you want to add entity relationships to your data, then you can implement [`DataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/addon/test/perf/data/DataObjectFactory.java) or extend [`AbstractDataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/AbstractDataObjectFactory.java) and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see [`org.hazelcast.demo.nw.impl.OrderFactoryImpl`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/OrderFactoryImpl.java) for details. You can run the example as follows:
 
 ```bash
 ./test_group -run -prop ../etc/group-factory-er.properties

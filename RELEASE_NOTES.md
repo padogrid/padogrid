@@ -3,6 +3,20 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
+## Version 0.9.15
+
+### Release Date: 05/06/22
+
+- Updated Hazelcast OSS and Enterprise download URLs for `install_padogrid`. Hazelcast has changed the download URLs.
+- Updated Coherence port number and http blocker for Maven build.
+- Added support for gemfire and coherence products in `update_products`.
+- Added timestamps to `nw` data classes for Hibernate to auto-update timestamps in databases. For non-database apps, the timestamps are set when they are created in the JVM.
+- Added desktop support for Hazecast 5.x.
+- Added ER support for Hazelcast rmap, cache, queue, topic, rtopic, and (i)map. The `test_group` command in the `perf_test` app now includes support for recursively ingesting mock data with entity relationships.
+- HazelcastDesktop is now part of PadoGrid. You can install it by running `install_padogrid -product hazelcast-desktop` and update your workspaces by running `update_products -product hazelcast-desktop`. Once installed, run `create_app -app desktop` to create a desktop app instance.
+
+---
+
 ## Version 0.9.14
 
 ### Release Date: 03/04/22

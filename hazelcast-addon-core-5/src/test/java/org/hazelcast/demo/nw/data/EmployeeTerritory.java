@@ -19,7 +19,7 @@ import com.hazelcast.nio.serialization.VersionedPortable;
   * @schema employee_territories.schema
   * @date Fri May 17 20:50:06 EDT 2019
 **/
-public class EmployeeTerritory implements VersionedPortable
+public class EmployeeTerritory extends BaseEntity implements VersionedPortable
 {
 	private String employeeId;
 	private String territoryId;
@@ -63,12 +63,14 @@ public class EmployeeTerritory implements VersionedPortable
 
 	@Override
 	public void writePortable(PortableWriter writer) throws IOException {
+		super.writePortable(writer);
 		writer.writeString("employeeId", employeeId);
 		writer.writeString("territoryId", territoryId);
 	}
 
 	@Override
 	public void readPortable(PortableReader reader) throws IOException {
+		super.readPortable(reader);
 		this.employeeId = reader.readString("employeeId");
 		this.territoryId = reader.readString("territoryId");
 	}
