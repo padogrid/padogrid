@@ -25,7 +25,7 @@ cp <your-domain-class-jars> plugins/
 
 You can optionally build Hazelcast Desktop by running the `build_app` script found in the `bin_sh` directory.
 
-:Pencil2: *Note that `build_app` script has been deprecated as of PadoGrid v0.9.15.*
+:pencil2: *Note that `build_app` script has been deprecated as of PadoGrid v0.9.15.*
 
 ```bash
 # 1. Create desktop app
