@@ -3,9 +3,9 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
-## Version 0.9.15-SNAPSHOT
+## Version 0.9.15
 
-### Release Date: 05/04/22
+### Release Date: 05/06/22
 
 - Updated Hazelcast OSS and Enterprise download URLs for `install_padogrid`. Hazelcast has changed the download URLs.
 - Updated Coherence port number and http blocker for Maven build.
