@@ -3,6 +3,14 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
+## Version 0.9.16-SNAPSHOT
+
+### Release Date: 05/07/22
+
+- Fixed `show_products` to include HazelcastDesktop.
+
+---
+
 ## Version 0.9.15
 
 ### Release Date: 05/06/22
