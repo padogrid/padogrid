@@ -230,3 +230,34 @@ order by freight;
 ## Screenshot
 
 ![Desktop Screenshot](/images/desktop-screenshot.png)
+
+## Running Hazelcast Desktop in Docker Container
+
+If you have X Server running in your host machine then you can run the desktop app as follows.
+
+### macOS
+
+1. Install XQuarts: https://www.xquartz.org/
+
+2. Open XQuarts and activate **Allow connections from network clients** under **Preferences > Security**.
+
+3. Reboot macOS (This is required.)
+
+4. Start XQuartz upon macOS reboot.
+
+5. Open **Terminal* from the XQuartz menu.
+
+6. From the terminal (xterm), run the xhost to allow client connection.
+
+```bash
+# Disable access control to allow clients to connect from any host
+xhost +
+```
+
+7. Run PadoGrid container as follows:
+
+```bash
+docker run --run -it -e DISPLAY=<macOS host IP>:0 -v /tmp/.X11-unix:/tmp/.X11-unix padogrid/padogrid bash
+```
+
+8. Install Hazelcast Desktop by following the instructions in the section, [Installing Hazelcast Desktop](#installing-hazelcast-desktop).
