@@ -70,7 +70,23 @@ If you prefer to configure Hazelcast client settings in `etc/hazelcast-client.xm
 
 ## WSL Users
 
-If you are running PadoGrid in WSL, then you will need to run X Server on Windows in order to run the desktop app as shown in the previous section. 
+### X Server
+
+If you are running PadoGrid in WSL, then you can use X Server on Windows to display the desktop app.
+
+1. Download and install Xming X Server for Windows. https://sourceforge.net/projects/xming/
+
+2. Run **XLaunch** and select the **No Access Control** check box in the **Additional parameters** window.
+
+3. From WSL, set the DISPLAY environment variable to your Windows host name or IP address as follows.
+
+```bash
+export DISPLAY=<Windows host name>:0
+```
+
+4. Run the desktop following the instructions in the section, [Running Hazelcast Desktop](#running-hazelcast-desktop).
+
+### `bin_win/desktop.bat`
 
 You can also run the desktop app without X Server by executing the `bin_win/desktop.bat` as follows.
 
@@ -229,7 +245,7 @@ order by freight;
 
 ## Screenshot
 
-![Desktop Screenshot](/images/desktop-screenshot.png)
+![Desktop Screenshot](images/desktop-screenshot.png)
 
 ## Running Hazelcast Desktop in Docker Container
 
