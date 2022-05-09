@@ -245,7 +245,7 @@ order by freight;
 
 ## Screenshot
 
-![Desktop Screenshot](images/desktop-screenshot.png)
+![Desktop Screenshot](https://github.com/padogrid/padogrid/raw/develop/images/desktop-screenshot.png)
 
 ## Running Hazelcast Desktop in Docker Container
 
