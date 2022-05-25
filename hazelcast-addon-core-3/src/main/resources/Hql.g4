@@ -247,7 +247,7 @@ id
     | SQUARE_BRACKET_ID
     ;   
     
- simple_id
+simple_id
     : ID
     | ABSOLUTE
     | COUNT
