@@ -1,11 +1,10 @@
 #
-# .padoenv.sh file is sourced in by start_member to intialize the Pado environment. Pado is
-# enabled only if PADO_HOME is defined. PADO_HOME must be set in the workspace's setenv.sh file.
+# .padoenv.sh file is sourced in by start_member to intialize the Pado environment. Pado
+# is enabled if PADO_HOME is defined and the pado.properties file exists in the cluster's
+# etc/grid directory. PADO_HOME must be set in the workspace's setenv.sh file.
 #
-
-if [ "$PADO_HOME" == "" ]; then
-  PADO_ENABLED="false"
-else
+PADO_ENABLED="false"
+if [ "$PADO_HOME" != "" ] && [ -f "$CLUSTER_DIR/etc/grid/pado.properties" ]; then
   PADO_ENABLED="true"
 fi
 
