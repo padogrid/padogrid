@@ -29,6 +29,8 @@ import org.apache.geode.cache.query.internal.DefaultQuery;
 import org.apache.geode.cache.query.internal.ExecutionContext;
 import org.apache.geode.cache.query.internal.QueryExecutionContext;
 import org.apache.geode.internal.cache.LocalDataSet;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * EligFunction is executed in the cluster to insert {@linkplain GroupSummary}
@@ -43,6 +45,7 @@ public class EligFunction implements Function, Declarable {
 
 	public final static String ID = "addon.EligFunction";
 
+	private Logger logger = LogManager.getLogger(this.getClass());
 	private Cache cache;
 	private String ELIG_QUERY = "select e.key,e.value from /eligibility.entrySet e where e.key.groupNumber=$1";
 
@@ -137,8 +140,7 @@ public class EligFunction implements Function, Declarable {
 			sr = getEligibilityByGroupNumberInternalAPI(context, groupNumber);
 		} catch (FunctionDomainException | TypeMismatchException | NameResolutionException
 				| QueryInvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.warn(e.getMessage(), e);
 		}
 		if (sr == null) {
 			summary = new GroupSummary(profileKey, new Date());
