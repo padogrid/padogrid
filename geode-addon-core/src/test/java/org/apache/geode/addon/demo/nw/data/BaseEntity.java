@@ -1,11 +1,11 @@
 package org.apache.geode.addon.demo.nw.data;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 
 import org.apache.geode.pdx.PdxReader;
 import org.apache.geode.pdx.PdxSerializable;
@@ -16,33 +16,35 @@ import org.hibernate.annotations.UpdateTimestamp;
 @MappedSuperclass
 public class BaseEntity implements PdxSerializable {
 	@Column(name = "created_on", columnDefinition = "DATETIME(3)")
+	@Temporal(TemporalType.TIMESTAMP)
 	@CreationTimestamp
-	private LocalDateTime createdOn = LocalDateTime.now();
+	private Date createdOn = new Date();
 
 	@Column(name = "updated_on", columnDefinition = "DATETIME(3)")
+	@Temporal(TemporalType.TIMESTAMP)
 	@UpdateTimestamp
-	private LocalDateTime updatedOn = LocalDateTime.now();
+	private Date updatedOn = new Date();
 
-	public LocalDateTime getCreatedOn() {
+	public Date getCreatedOn() {
 		return createdOn;
 	}
 
-	public LocalDateTime getUpdatedOn() {
+	public Date getUpdatedOn() {
 		return updatedOn;
 	}
 
 	@Override
 	public void toData(PdxWriter writer) {
-		writer.writeLong("createdOn", createdOn.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
-		writer.writeLong("updatedOn", updatedOn.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+		writer.writeLong("createdOn", createdOn.getTime());
+		writer.writeLong("updatedOn", updatedOn.getTime());
 		
 	}
 
 	@Override
 	public void fromData(PdxReader reader) {
 		long epoch = reader.readLong("createdOn");
-		createdOn = LocalDateTime.ofInstant(Instant.ofEpochMilli(epoch), ZoneId.systemDefault());
+		createdOn = new Date(epoch);
 		epoch = reader.readLong("updatedOn");
-		updatedOn = LocalDateTime.ofInstant(Instant.ofEpochMilli(epoch), ZoneId.systemDefault());
+		updatedOn = new Date(epoch);
 	}
 }
