@@ -57,7 +57,7 @@ public class HibernatePool {
 	private static int poolSize = 1;
 	private static ILogger logger = Logger.getLogger(HibernatePool.class);
 
-	// Session is not thread-safe. This map holds Session objects create for
+	// Session is not thread-safe. This map holds Session objects created for
 	// individual threads
 	private static ArrayBlockingQueue<Session> sessionPoolQueue;
 
@@ -99,8 +99,7 @@ public class HibernatePool {
 				poolSize = Integer
 						.valueOf(sessionFactory.getProperties().getOrDefault("connection.pool_size", "1").toString());
 			} catch (Exception e) {
-				
-				// Flush the error. The logger has no fluch capability.
+				// Flush the error. The logger has no flush capability.
 				System.err.println("Hibernate initialization error.");
 				e.printStackTrace(System.err);
 				System.err.flush();
