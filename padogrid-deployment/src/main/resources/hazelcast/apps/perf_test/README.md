@@ -282,7 +282,7 @@ The following is the `hibernate.cfg-mysql.xml` file provided by `padogrid`. Make
 	<session-factory>
 		<!-- JDBC Database connection settings -->
 		<property name="connection.driver_class">com.mysql.cj.jdbc.Driver</property>
-		<property name="connection.url">jdbc:mysql://localhost:3306/nw?useSSL=false</property>
+		<property name="connection.url">jdbc:mysql://localhost:3306/nw?allowPublicKeyRetrieval=true&amp;useSSL=false</property>
 		<property name="connection.username">root</property>
 		<property name="connection.password">password</property>
 		<!-- JDBC connection pool settings ... using built-in test pool -->
@@ -295,17 +295,24 @@ The following is the `hibernate.cfg-mysql.xml` file provided by `padogrid`. Make
 		<property name="current_session_context_class">thread</property>
 		<!-- Update the database schema on startup -->
 		<property name="hbm2ddl.auto">update</property>
-		<!-- dbcp connection pool configuration -->
-		<property name="hibernate.dbcp.initialSize">5</property>
-		<property name="hibernate.dbcp.maxTotal">20</property>
-		<property name="hibernate.dbcp.maxIdle">10</property>
-		<property name="hibernate.dbcp.minIdle">5</property>
-		<property name="hibernate.dbcp.maxWaitMillis">-1</property>
 		<property name="hibernate.connection.serverTimezone">UTC</property>
-        <!-- Disable the second-level cache -->
+		
+		<!-- c3p0 connection pool -->
+		<property name="hibernate.connection.provider_class">
+			org.hibernate.connection.C3P0ConnectionProvider
+		</property>
+		<property name="hibernate.c3p0.min_size">5</property>
+		<property name="hibernate.c3p0.max_size">10</property>
+		<property name="hibernate.c3p0.acquire_increment">1</property>
+		<property name="hibernate.c3p0.idle_test_period">3000</property>
+		<property name="hibernate.c3p0.max_statements">50</property>
+		<property name="hibernate.c3p0.timeout">1800</property>
+		<property name="hibernate.c3p0.validate">1800</property>
+		
+		<!-- Disable the second-level cache -->
 		<property name="cache.provider_class">org.hibernate.cache.internal.NoCacheProvider</property>
-		<mapping class="org.hazelcast.demo.nw.data.Customer" />
-		<mapping class="org.hazelcast.demo.nw.data.Order" />
+		<mapping class="org.apache.geode.addon.demo.nw.data.Customer" />
+		<mapping class="org.apache.geode.addon.demo.nw.data.Order" />
 	</session-factory>
 </hibernate-configuration>
 ```
