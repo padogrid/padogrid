@@ -5,10 +5,11 @@ https://github.com/padogrid
 
 ## Version 0.9.16-SNAPSHOT
 
-### Release Date: 05/26/22
+### Release Date: 05/29/22
 
 - Fixed a Pado enablement bug. Without this fix, Geode/GemFire clusters with WAN enabled may not start.
 - Fixed `show_products` to include HazelcastDesktop.
+- Replaced the Hibernate connection pool from dbcp to c3p0. The built-in dbcp pool is not for production use.
 
 ---
 
