@@ -9,7 +9,7 @@ https://github.com/padogrid
 
 - Fixed a Pado enablement bug. Without this fix, WAN enabled Geode/GemFire clusters may not start.
 - Fixed `show_products` to include HazelcastDesktop.
-- Replaced the Hibernate connection pool from dbcp to c3p0. The built-in dbcp pool is not for production use.
+- Replaced the Hibernate connection pool from dbcp to c3p0. The previous built-in dbcp pool is not for production use.
 - Added initial support for bootstrapping Geode/GemFire clusters with the Spring Container. To use Spring, after creating a Geode/GemFire cluster, run the `bin_sh/build_app` to download the Spring Data GemFire packages into the workspace. Edit the `setenv.sh` file and set SPRING_BOOTSTRAP_ENABLED="true". For details, run `build_app -?` to display the usage.
 
 ---
