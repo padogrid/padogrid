@@ -55,7 +55,7 @@ public class UndefinedMapTest {
 	@Test
 	public void testUndefinedMap() {
 		HqlQuery<String> hql = HqlQuery.newHqlQueryInstance(hz);
-		String query = "select * from undefeind_map";
+		String query = "select * from undefined_map";
 		HqlException ex = null;
 		try {
 			IPageResults<String> results = hql.execute(query, 100);

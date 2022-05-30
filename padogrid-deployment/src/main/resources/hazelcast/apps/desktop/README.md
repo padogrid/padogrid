@@ -70,7 +70,23 @@ If you prefer to configure Hazelcast client settings in `etc/hazelcast-client.xm
 
 ## WSL Users
 
-If you are running PadoGrid in WSL, then you will need to run X Server on Windows in order to run the desktop app as shown in the previous section. 
+### X Server
+
+If you are running PadoGrid in WSL, then you can use X Server on Windows to display the desktop app.
+
+1. Download and install Xming X Server for Windows. https://sourceforge.net/projects/xming/
+
+2. Run **XLaunch** and select the **No Access Control** check box in the **Additional parameters** window.
+
+3. From WSL, set the DISPLAY environment variable to your Windows host name or IP address as follows.
+
+```bash
+export DISPLAY=<Windows host name>:0
+```
+
+4. Run the desktop following the instructions in the section, [Running Hazelcast Desktop](#running-hazelcast-desktop).
+
+### `bin_win/desktop.bat`
 
 You can also run the desktop app without X Server by executing the `bin_win/desktop.bat` as follows.
 
@@ -229,4 +245,35 @@ order by freight;
 
 ## Screenshot
 
-![Desktop Screenshot](/images/desktop-screenshot.png)
+![Desktop Screenshot](https://github.com/padogrid/padogrid/raw/develop/images/desktop-screenshot.png)
+
+## Running Hazelcast Desktop in Docker Container
+
+If you have X Server running in your host machine then you can run the desktop app as follows.
+
+### macOS
+
+1. Install XQuarts: https://www.xquartz.org/
+
+2. Open XQuarts and activate **Allow connections from network clients** under **Preferences > Security**.
+
+3. Reboot macOS (This is required.)
+
+4. Start XQuartz upon macOS reboot.
+
+5. Open **Terminal* from the XQuartz menu.
+
+6. From the terminal (xterm), run `xhost` to allow client connection.
+
+```bash
+# Disable access control to allow clients to connect from any host
+xhost +
+```
+
+7. Run PadoGrid container as follows:
+
+```bash
+docker run -it -e DISPLAY=<macOS host IP>:0 -v /tmp/.X11-unix:/tmp/.X11-unix padogrid/padogrid bash
+```
+
+8. Install Hazelcast Desktop by following the instructions in the section, [Installing Hazelcast Desktop](#installing-hazelcast-desktop).
