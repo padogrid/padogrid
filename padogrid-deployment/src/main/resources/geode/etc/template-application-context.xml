@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:gfe="http://www.springframework.org/schema/gemfire"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+	   	http://www.springframework.org/schema/gemfire https://www.springframework.org/schema/gemfire/spring-gemfire.xsd
+		http://www.springframework.org/schema/util https://www.springframework.org/schema/util/spring-util.xsd
+">
+
+	<gfe:cache lock-lease="120" lock-timeout="60"
+		search-timeout="300" copy-on-read="false" />
+
+	<!-- cache-server port is assigned by padogrid at member startup. If you 
+		have a multi-homed machine then make sure to set the bind-address and hostname-for-clients 
+		attributes with the proper IP address. -->
+	<gfe:cache-server port="#{systemProperties['geode-addon.server.port']}" />
+
+	<!--
+	============================================================= 
+	The regions defined here are for the perf_test app. Replace
+	them with your regions.
+	=============================================================
+	-->
+	
+	<!-- PBM example regions accessed by the perf_test app's DataIngestionTest 
+		(bin_sh/test_ingestion) and TransactionTest (bin_sh/test_tx). -->
+	<gfe:partitioned-region id="eligibility" />
+	<gfe:partitioned-region id="profile" />
+	<gfe:partitioned-region id="summary" />
+
+	<!-- Microsoft's Northwind data regions accessed by the perf_test app. -->
+	<gfe:replicated-region id="nw">
+		<gfe:partitioned-region name="categories" />
+		<gfe:partitioned-region name="customers" />
+		<gfe:partitioned-region name="employees" />
+		<gfe:partitioned-region name="employee_territories" />
+		<gfe:partitioned-region name="orders" />
+		<gfe:partitioned-region name="order_details" />
+		<gfe:partitioned-region name="products" />
+		<gfe:partitioned-region name="regions" />
+		<gfe:partitioned-region name="shippers" />
+		<gfe:partitioned-region name="suppliers" />
+		<gfe:partitioned-region name="territories" />
+	</gfe:replicated-region>
+
+	<!-- Example regions accessed by the perf_test app's GroupTest (bin_sh/test_group) -->
+	<gfe:partitioned-region id="map1" />
+	<gfe:partitioned-region id="map2" />
+	<gfe:partitioned-region id="map3" />
+	<gfe:partitioned-region id="map4" />
+	<gfe:partitioned-region id="map5" />
+	<gfe:partitioned-region id="map6" />
+	<gfe:partitioned-region id="map7" />
+	<gfe:partitioned-region id="map8" />
+	<gfe:partitioned-region id="map9" />
+	<gfe:partitioned-region id="map10" />
+	<gfe:partitioned-region id="map11" />
+	<gfe:partitioned-region id="map12" />
+	<gfe:partitioned-region id="map13" />
+	<gfe:partitioned-region id="map14" />
+	<gfe:partitioned-region id="map15" />
+	<gfe:partitioned-region id="map16" />
+	<gfe:partitioned-region id="map17" />
+	<gfe:partitioned-region id="map18" />
+	<gfe:partitioned-region id="map19" />
+	<gfe:partitioned-region id="map20" />
+	<gfe:partitioned-region id="map21" />
+	<gfe:partitioned-region id="map22" />
+
+	<!-- PadoGrid functions -->
+	<gfe:function-service>
+		<gfe:function>
+			<!-- ClearFunction clears the specified region. -->
+			<bean class="org.apache.geode.addon.function.ClearFunction" />
+			<!-- QueryFunction executes the specified OQL query and returns the results  as a list. -->
+			<bean class="org.apache.geode.addon.function.QueryFunction" />
+			<!-- EligFunction invoked by TransationTest (bin_sh/test_tx). -->
+			<bean class="org.apache.geode.addon.test.perf.EligFunction" />
+		</gfe:function>
+	</gfe:function-service>
+</beans>

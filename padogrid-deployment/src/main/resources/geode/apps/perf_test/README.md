@@ -4,7 +4,7 @@ The `perf_test` app provides scripts to ingest and transact mock data for testin
 
 The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of `Region` operations and execute them in parallel. A group is analogous to a function that makes multiple `Region` method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files that have been preconfigured to invoke 22 put calls and 22 get calls on 22 different regions. You can configure the Near Cache in `etc/geode-client.xml` to measure the throughput.
 
-You can also ingest `Customer` and `Order` domain objects with mock data. These objects have been annotated with Hibernate such that you can synchronize Geode with a database of your choice. See the [CacheWriterLoaderPkDbImpl (Database Integration)](#cachewriterloaderpkdbimpl-database-ntegration) section for configuration instructions.
+You can also ingest `Customer` and `Order` domain objects with mock data. These objects have been annotated with Hibernate such that you can synchronize Geode with a database of your choice. See the [CacheWriterLoaderPkDbImpl (Database Integration)](#cachewriterloaderpkdbimpl-database-integration) section for configuration instructions.
 
 ## Regions
 

@@ -1,9 +1,7 @@
 package org.apache.geode.addon.function;
 
-import java.util.Properties;
 import java.util.Set;
 
-import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.Function;
@@ -28,8 +26,6 @@ public class ClearFunction implements Function, Declarable {
 	private static final long serialVersionUID = 1L;
 
 	public final static String ID = "addon.ClearFunction";
-
-	private Cache cache;
 	
 	public enum ClearStatus { SUCCESS, ERROR_REGION_PATH_UNDEFINED, ERROR_REGION_PATH_NOT_FOUND };
 	
@@ -41,7 +37,7 @@ public class ClearFunction implements Function, Declarable {
 			context.getResultSender().lastResult(ClearStatus.ERROR_REGION_PATH_UNDEFINED);
 			return;
 		}
-		Region region = cache.getRegion(fullPath);
+		Region region = context.getCache().getRegion(fullPath);
 		if (region == null) {
 			context.getResultSender().lastResult(ClearStatus.ERROR_REGION_PATH_NOT_FOUND);
 			return;
@@ -64,12 +60,7 @@ public class ClearFunction implements Function, Declarable {
 		}
 		context.getResultSender().lastResult(ClearStatus.SUCCESS);
 	}
-	
-	@Override
-	public void initialize(Cache cache, Properties properties) {
-		this.cache = cache;
-	}
-	
+
 	@Override
 	public String getId() {
 		return ID;

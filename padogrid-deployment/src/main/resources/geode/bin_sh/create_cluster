@@ -196,6 +196,10 @@ function writeCluster()
    cp $BASE_DIR/etc/template-gemfire.properties $ETC_DIR/gemfire.properties
    # Copy the template cache.xml file
    cp $BASE_DIR/etc/template-cache.xml $ETC_DIR/cache.xml
+   # Copy the template cache-spring.xml file
+   cp $BASE_DIR/etc/template-cache-spring.xml $ETC_DIR/cache-spring.xml
+   # Copy the template application-context.xml file
+   cp $BASE_DIR/etc/template-application-context.xml $ETC_DIR/application-context.xml
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
    # Copy the template prometheus config file
@@ -204,11 +208,22 @@ function writeCluster()
    cp $BASE_DIR/etc/template-hibernate.cfg-mysql.xml $ETC_DIR/hibernate.cfg-mysql.xml
    cp $BASE_DIR/etc/template-hibernate.cfg-postgresql.xml $ETC_DIR/hibernate.cfg-postgresql.xml
 
+   # Copy clusters/bin_sh
+   cp -r $BASE_DIR/clusters/* $CLUSTER_DIR/
+
    # Create bin_sh/setenv.sh
-   mkdir -p $CLUSTER_DIR/bin_sh
    echo "#" > $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Add cluster specific environment variables in this file." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Set SPRING_BOOTSTRAP_ENABLED to "true" to bootstrap cache servers using Spring."  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "SPRING_BOOTSTRAP_ENABLED=\"false\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "if [ \"\$SPRING_BOOTSTRAP_ENABLED\" == \"true\" ]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   CONFIG_FILE=\$ETC_DIR/cache-spring.xml"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   JAVA_OPTS=\"\$JAVA_OPTS --J=-Dgeode-addon.application.context.file=application-context.xml\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   CLASSPATH="\$CLASSPATH:\$ETC_DIR/""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Set Java options, i.e., -Dproperty=xyz" >> $CLUSTER_DIR/bin_sh/setenv.sh

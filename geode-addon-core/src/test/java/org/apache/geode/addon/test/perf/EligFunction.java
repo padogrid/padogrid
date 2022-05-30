@@ -3,14 +3,12 @@ package org.apache.geode.addon.test.perf;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.Set;
 
 import org.apache.geode.addon.test.perf.data.Blob;
 import org.apache.geode.addon.test.perf.data.ClientProfileKey;
 import org.apache.geode.addon.test.perf.data.EligKey;
 import org.apache.geode.addon.test.perf.data.GroupSummary;
-import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.Declarable;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.execute.Function;
@@ -46,7 +44,6 @@ public class EligFunction implements Function, Declarable {
 	public final static String ID = "addon.EligFunction";
 
 	private Logger logger = LogManager.getLogger(this.getClass());
-	private Cache cache;
 	private String ELIG_QUERY = "select e.key,e.value from /eligibility.entrySet e where e.key.groupNumber=$1";
 
 	/**
@@ -63,9 +60,9 @@ public class EligFunction implements Function, Declarable {
 	 * @throws NameResolutionException
 	 * @throws QueryInvocationTargetException
 	 */
-	private SelectResults getEligibilityByGroupNumberPublicAPI(String groupNumber) throws FunctionDomainException,
+	private SelectResults getEligibilityByGroupNumberPublicAPI(RegionFunctionContext context, String groupNumber) throws FunctionDomainException,
 			TypeMismatchException, NameResolutionException, QueryInvocationTargetException {
-		QueryService queryService = cache.getQueryService();
+		QueryService queryService = context.getCache().getQueryService();
 		Query query = queryService.newQuery(ELIG_QUERY);
 		Object[] params = new Object[] { groupNumber };
 		SelectResults sr = (SelectResults) query.execute(params);
@@ -102,15 +99,10 @@ public class EligFunction implements Function, Declarable {
 
 	private Entry<ClientProfileKey, Blob> getClientProfileByGroupNumber(RegionFunctionContext context,
 			String groupNumber) {
-		Region<ClientProfileKey, Blob> region = cache.getRegion("profile");
+		Region<ClientProfileKey, Blob> region = context.getCache().getRegion("profile");
 		ClientProfileKey key = new ClientProfileKey(groupNumber, "", "");
 		Entry<ClientProfileKey, Blob> entry = region.getEntry(key);
 		return entry;
-	}
-
-	@Override
-	public void initialize(Cache cache, Properties properties) {
-		this.cache = cache;
 	}
 
 	@Override
@@ -152,7 +144,7 @@ public class EligFunction implements Function, Declarable {
 				Blob blob = (Blob) struct.get("value");
 				totalBlobSize += blob.getBlob().length;
 			}
-			Region<String, GroupSummary> summaryMap = cache.getRegion(RegionNameEnum.summary.name());
+			Region<String, GroupSummary> summaryMap = fc.getCache().getRegion(RegionNameEnum.summary.name());
 			summary = new GroupSummary(profileKey, sr.size(), totalBlobSize, new Date());
 			summaryMap.put(groupNumber, summary);
 		}
