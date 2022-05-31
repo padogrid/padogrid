@@ -4,8 +4,6 @@ The `perf_test` app provides scripts to ingest and transact mock data for testin
 
 The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of `NamedCache` operations and execute them in parallel. A group is analogous to a function that makes multiple `NamedCache` method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files that have been preconfigured to invoke 22 put calls and 22 get calls on 22 different caches. You can configure the Near Cache in `etc/client-config.xml` to measure the throughput.
 
-You can also ingest `Customer` and `Order` domain objects with mock data. These objects have been annotated with Hibernate such that you can synchronize Coherence with a database of your choice. See the [CacheWriterLoaderPkDbImpl (Database Integration)](#cachewriterloaderpkdbimpl-database-ntegration) section for configuration instructions.
-
 ## NamedCaches
 
 All the test cases are performed on three (3) partitioned caches with a simple PBM (Pharmacy Benefit Management) data model that associates the client group number with group members. Simply put, all of the members that belong to a group are co-located in the same Coherence partition. This enables each Coherence member to complete transactions with their local datasets without encountering additional network hops.
