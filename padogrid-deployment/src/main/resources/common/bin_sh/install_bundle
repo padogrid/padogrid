@@ -366,17 +366,22 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             if [ "$DOWNLOADED_BUNDLE_NAME" != "$BUNDLE_NAME" ]; then
                mv $DOWNLOADED_BUNDLE_NAME $BUNDLE_NAME
             fi
-            if [ -f $BUNDLE_NAME/required_products.txt ]; then
-               cp $BUNDLE_NAME/required_products.txt .
-            fi
+            #if [ -f $BUNDLE_NAME/required_products.txt ]; then
+            #   cp $BUNDLE_NAME/required_products.txt .
+            #fi
             # Make all scripts in bin_sh executable
             for i in $(find $BUNDLE_NAME -name bin_sh); do
                if [ -d $i ]; then
                   chmod 755 $i/*
                fi
             done
+
             if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-               mv $BUNDLE_NAME $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
+               if [ "$WORKSPACE_NAME" == "default" ]; then
+                  mv $BUNDLE_NAME $PADOGRID_WORKSPACES_HOME/
+               else
+                  mv $BUNDLE_NAME $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
+               fi
             fi
          fi
          popd > /dev/null 2>&1 
