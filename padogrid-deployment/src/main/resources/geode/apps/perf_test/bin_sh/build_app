@@ -41,8 +41,8 @@ OPTIONS
              Cleans up the build files after the build completes.
 
 ENVIRONMENT VARIABLES
-   GEODE_VERSION
-             If GEODE_VERSION is set in the 'setenv.sh' file, then this script
+   ANOTHER_GEODE_VERSION
+             If ANOTHER_GEODE_VERSION is set in the 'setenv.sh' file, then this script
              downloads the specified version of Geode. This variable should be
              set if your application does not require Geode locally installed.
 
@@ -53,17 +53,17 @@ EOF
 fi
 
 pushd $APP_DIR > /dev/null
-if [ "$GEODE_VERSION" != "" ]; then
+if [ "$ANOTHER_GEODE_VERSION" != "" ]; then
    # Update pom-geode.xml to Geode or GemFire
    if [ "$CLUSTER_TYPE" == "gemfire" ]; then
       sed -i$__SED_BACKUP \
           -e "s/org.apache.geode/io.pivotal.gemfire/" \
-          -e "s/>.*<\/geode.version>/>$GEODE_VERSION<\/geode.version>/" \
+          -e "s/>.*<\/geode.version>/>$ANOTHER_GEODE_VERSION<\/geode.version>/" \
           pom-geode.xml
    else
       sed -i$__SED_BACKUP \
           -e "s/io.pivotal.gemfire/org.apache.geode/" \
-          -e "s/>.*<\/geode.version>/>$GEODE_VERSION<\/geode.version>/" \
+          -e "s/>.*<\/geode.version>/>$ANOTHER_GEODE_VERSION<\/geode.version>/" \
           pom-geode.xml
    fi
    mvn install -f pom-geode.xml
