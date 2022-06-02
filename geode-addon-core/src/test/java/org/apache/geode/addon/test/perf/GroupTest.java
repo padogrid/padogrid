@@ -162,6 +162,17 @@ public class GroupTest implements Constants {
 		if (runDb == false) {
 			clientCache = new ClientCacheFactory().create();
 		}
+		// Get data structures
+		for (Operation operation : operationMap.values()) {
+			switch (operation.ds) {
+			case map:
+			case region:
+				operation.region = clientCache.getRegion(operation.dsName);
+				break;
+			default:
+				break;
+			}
+		}
 	}
 
 	private void printTotalInvocations(Group[] groups, int timeElapsedInSec) {
@@ -340,13 +351,6 @@ public class GroupTest implements Constants {
 			int keyIndexes[] = new int[group.operations.length];
 			for (int i = 0; i < keyIndexes.length; i++) {
 				Operation operation = group.operations[i];
-				switch (operation.ds) {
-				case map:
-				case region:
-				default:
-					operation.region = clientCache.getRegion(operation.dsName);
-					break;
-				}
 				int entryCount = operation.totalEntryCount / group.threadCount;
 				keyIndexes[i] = (threadNum - 1) * entryCount;
 			}
@@ -378,6 +382,7 @@ public class GroupTest implements Constants {
 									DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
 											null);
 									operation.region.put(entry.key, entry.value);
+									writeEr(operation, entry, i, threadStopIndex, threadStopIndex);
 								}
 							}
 								break;
@@ -469,6 +474,58 @@ public class GroupTest implements Constants {
 			long stopTime = System.currentTimeMillis();
 
 			elapsedTimeInMsec = stopTime - startTime;
+		}
+	}
+
+	/**
+	 * Recursively writes to the the specified operation's ER data structures.
+	 * @param operation 
+	 * @param entry
+	 * @param index
+	 * @param threadStartIndex
+	 * @param threadStopIndex
+	 * @throws InterruptedException 
+	 */
+	private void writeEr(Operation operation, DataObjectFactory.Entry entry, int index, int threadStartIndex,
+			int threadStopIndex) throws InterruptedException {
+		// Child objects
+		if (operation.dataObjectFactory.isEr()) {
+			int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
+			Operation childOperation = operationMap.get(operation.dataObjectFactory.getErOperationName());
+			int maxErKeysPerThread = maxErKeys * (threadStopIndex - threadStartIndex + 1);
+			int startErKeyIndex = (threadStartIndex - 1) * maxErKeysPerThread + 1;
+			startErKeyIndex = index * maxErKeys + 1;
+			if (childOperation != null) {
+				boolean isErMaxRandom = operation.dataObjectFactory.isErMaxRandom();
+				if (isErMaxRandom) {
+					maxErKeys = operation.random.nextInt(maxErKeys) + 1;
+				}
+				for (int k = 0; k < maxErKeys; k++) {
+					int childIdNum = startErKeyIndex + k;
+					DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory.createEntry(childIdNum,
+							entry.key);
+					switch (childOperation.ds) {
+					case sleep:
+						Thread.sleep(childOperation.sleep);
+						break;
+						
+					case region:
+					case map:
+					default:
+						if (childOperation.region != null) {
+							switch (childOperation.testCase) {
+							case put:
+								childOperation.region.put(childEntry.key, childEntry.value);
+								break;
+							default:
+								// Only put supported. Others ignore.
+								break;
+							}
+						}
+					}
+					writeEr(childOperation, entry, index, threadStartIndex, threadStopIndex);
+				}
+			}
 		}
 	}
 
@@ -831,11 +888,85 @@ public class GroupTest implements Constants {
 	}
 
 	@SuppressWarnings("unchecked")
+	private static Operation parseOperation(String operationName, HashSet<String> erOperationNamesSet)
+			throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+
+		String dsName = null;
+		DataStructureEnum ds = null;
+		for (DataStructureEnum ds2 : DataStructureEnum.values()) {
+			dsName = System.getProperty(operationName + "." + ds2.name());
+			if (dsName != null) {
+				ds = ds2;
+				break;
+			}
+		}
+		Operation operation = operationMap.get(operationName);
+		if (operation == null) {
+			operation = new Operation();
+			operation.name = operationName;
+			operationMap.put(operationName, operation);
+			operation.ds = ds;
+			if (ds == DataStructureEnum.sleep) {
+				try {
+					operation.sleep = Integer.parseInt(dsName);
+					if (operation.sleep <= 0) {
+						operation = null;
+					}
+				} catch (Exception ex) {
+					throw new RuntimeException("Parsing error: " + operation.name + ".sleep=" + dsName, ex);
+				}
+			} else {
+				operation.ref = System.getProperty(operationName + ".ref");
+				operation.dsName = dsName;
+
+				String testCase = System.getProperty(operationName + ".testCase");
+				if (testCase != null) {
+					operation.testCase = TestCaseEnum.getTestCase(testCase);
+				}
+				Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
+				if (payloadSize != null) {
+					operation.payloadSize = payloadSize;
+				}
+				operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
+				Integer startNum = Integer.getInteger(operationName + ".key.startNum");
+				if (startNum != null) {
+					operation.startNum = startNum;
+				}
+				Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
+				if (totalEntryCount != null) {
+					operation.totalEntryCount = totalEntryCount;
+				}
+				Integer batchSize = Integer.getInteger(operationName + ".batchSize");
+				if (batchSize != null) {
+					operation.batchSize = batchSize;
+				}
+				Long randomSeed = Long.getLong(operationName + ".randomSeed");
+				if (randomSeed != null) {
+					operation.random = new Random(randomSeed);
+				}
+				String factoryClassName = System.getProperty(operationName + ".factory.class");
+				if (factoryClassName != null) {
+					Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class.forName(factoryClassName);
+					operation.dataObjectFactory = clazz.newInstance();
+					Properties factoryProps = getFactoryProps(operationName);
+					operation.dataObjectFactory.initialize(factoryProps);
+					String factoryErOperationName = factoryProps.getProperty("factory.er.operation");
+					if (factoryErOperationName != null) {
+						erOperationNamesSet.add(factoryErOperationName);
+					}
+				}
+			}
+		}
+		return operation;
+	}
+
+	@SuppressWarnings("unchecked")
 	private static void parseConfig() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		int defaultThreadCount = (int) (Runtime.getRuntime().availableProcessors() * 1.5);
 		int defaultTotalInvocationCount = 10000;
 		String groupNamesStr = System.getProperty("groupNames");
 		String preGroupNames[] = groupNamesStr.split(",");
+		HashSet<String> erOperationNamesSet = new <String>HashSet(10);
 
 		for (int i = 0; i < preGroupNames.length; i++) {
 			String preGroupName = preGroupNames[i];
@@ -854,80 +985,32 @@ public class GroupTest implements Constants {
 				String operationsStr = System.getProperty(groupName + ".operations", "putall");
 				group.operationsStr = operationsStr;
 				String[] split = operationsStr.split(",");
-				ArrayList<Operation> operationList = new ArrayList<Operation>(split.length);
+
+				HashSet<Operation> groupOperationSet = new HashSet<Operation>(split.length);
 				for (int k = 0; k < split.length; k++) {
 					String operationName = split[k];
 					operationName = operationName.trim();
-					String dsName = null;
-					DataStructureEnum ds = null;
-					for (DataStructureEnum ds2 : DataStructureEnum.values()) {
-						dsName = System.getProperty(operationName + "." + ds2.name());
-						if (dsName != null) {
-							ds = ds2;
-							break;
-						}
-					}
-					Operation operation = operationMap.get(operationName);
-					if (operation == null) {
-						operation = new Operation();
-						operation.name = operationName;
-						operationMap.put(operationName, operation);
-						operation.ds = ds;
-						if (ds == DataStructureEnum.sleep) {
-							try {
-								operation.sleep = Integer.parseInt(dsName);
-								if (operation.sleep <= 0) {
-									operation = null;
-								}
-							} catch (Exception ex) {
-								throw new RuntimeException("Parsing error: " + operation.name + ".sleep=" + dsName, ex);
-							}
-						} else {
-							operation.ref = System.getProperty(operationName + ".ref");
-							operation.dsName = dsName;
-
-							String testCase = System.getProperty(operationName + ".testCase");
-							if (testCase != null) {
-								operation.testCase = TestCaseEnum.getTestCase(testCase);
-							}
-							Integer payloadSize = Integer.getInteger(operationName + ".payloadSize");
-							if (payloadSize != null) {
-								operation.payloadSize = payloadSize;
-							}
-							operation.keyPrefix = System.getProperty(operationName + ".key.prefix");
-							Integer startNum = Integer.getInteger(operationName + ".key.startNum");
-							if (startNum != null) {
-								operation.startNum = startNum;
-							}
-							Integer totalEntryCount = Integer.getInteger(operationName + ".totalEntryCount");
-							if (totalEntryCount != null) {
-								operation.totalEntryCount = totalEntryCount;
-							}
-							Integer batchSize = Integer.getInteger(operationName + ".batchSize");
-							if (batchSize != null) {
-								operation.batchSize = batchSize;
-							}
-							Long randomSeed = Long.getLong(operationName + ".randomSeed");
-							if (randomSeed != null) {
-								operation.random = new Random(randomSeed);
-							}
-							String factoryClassName = System.getProperty(operationName + ".factory.class");
-							if (factoryClassName != null) {
-								Class<DataObjectFactory> clazz = (Class<DataObjectFactory>) Class
-										.forName(factoryClassName);
-								operation.dataObjectFactory = clazz.newInstance();
-								Properties factoryProps = getFactoryProps(operationName);
-								operation.dataObjectFactory.initialize(factoryProps);
-							}
-						}
-					}
+					Operation operation = parseOperation(operationName, erOperationNamesSet);
 					if (operation != null) {
-						operationList.add(operation);
+						groupOperationSet.add(operation);
 					}
 				}
 
+				// ER
+				HashSet<Operation> erOperationSet = new HashSet<Operation>(split.length);
+				for (String eRperationName : erOperationNamesSet) {
+					Operation operation = parseOperation(eRperationName, erOperationNamesSet);
+					if (operation != null) {
+						erOperationSet.add(operation);
+					}
+				}
+
+				// Combined
+				HashSet<Operation> allOperationSet = new HashSet<Operation>(groupOperationSet);
+				allOperationSet.addAll(erOperationSet);
+
 				// Set references
-				for (Operation operation : operationList) {
+				for (Operation operation : allOperationSet) {
 					if (operation.ref != null) {
 						Operation refOperation = operationMap.get(operation.ref);
 						if (refOperation != null) {
@@ -966,7 +1049,10 @@ public class GroupTest implements Constants {
 				}
 
 				// Set default values if not defined.
-				for (Operation operation : operationList) {
+				for (Operation operation : allOperationSet) {
+					if (operation.ds == DataStructureEnum.sleep) {
+						continue;
+					}
 					if (operation.dsName == null) {
 						operation.dsName = "map1";
 					}
@@ -993,7 +1079,7 @@ public class GroupTest implements Constants {
 					}
 				}
 
-				group.operations = operationList.toArray(new Operation[0]);
+				group.operations = groupOperationSet.toArray(new Operation[0]);
 				group.comment = System.getProperty(groupName + ".comment", "");
 			}
 		}

@@ -15,6 +15,10 @@ import org.apache.geode.internal.cache.PartitionedRegion;
  * regions. This function allows clients to clear both partitioned and
  * replicated regions.
  * <p>
+ * For partitioned regions, this function must be invoked on all members, i.e.,
+ * onMembers(). For replicated regions, it should be invoked on a single member,
+ * i.e., onMember().
+ * <p>
  * <b>Arguments:</b>
  * <ul>
  * <li><b>fullPath</b> String Region full path</li>
