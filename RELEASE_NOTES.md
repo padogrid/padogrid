@@ -5,10 +5,11 @@ https://github.com/padogrid
 
 ## Version 0.9.17-SNAPSHOT
 
-### Release Date: 05/31/22
+### Release Date: 06/02/22
 
 - Fixed `install_bundle` to correctly install a workspace bundle.
 - Updated `perf_test` README.md files.
+- Added entity relationship (ER) support for Geode `perf_test` that generates customer mock data.
 
 ---
 
