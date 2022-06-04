@@ -120,7 +120,7 @@ fi
 
 CLASSPATH="$APP_DIR:$APP_DIR/plugins/*:$APP_DIR/lib/*:$APP_JARS:$GEODE_HOME/lib/*"
 if [ "$PADOGRID_HOME" != "" ]; then
-   CLASSPATH="$CLASSPATH:$PADOGRID_HOME/geode/plugins:$PADOGRID_HOME/geode/lib/*"
+   CLASSPATH="$CLASSPATH:$PADOGRID_HOME/geode/plugins/*:$PADOGRID_HOME/geode/lib/*"
 fi
 if [ "$PADOGRID_WORKSPACE" != "" ]; then
    CLASSPATH="$CLASSPATH:$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*"
