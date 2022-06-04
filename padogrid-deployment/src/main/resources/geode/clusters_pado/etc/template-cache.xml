@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://geode.apache.org/schema/cache"
+	xsi:schemaLocation="http://geode.apache.org/schema/cache 
+http://geode.apache.org/schema/cache/cache-1.0.xsd"
+	version="1.0" lock-lease="120" lock-timeout="60" search-timeout="300"
+	is-server="false" copy-on-read="false">
+
+	<!-- cache-server port is assigned by padogrid at member startup. If you 
+		have a multi-homed machine then make sure to set the bind-address
+		and hostname-for-clients attributes with the proper IP address. -->
+	<cache-server port="${geode-addon.server.port}" />
+
+	<!--
+	============================================================= 
+	The regions defined here are for the perf_test app. Replace
+	them with your regions.
+	=============================================================
+	-->
+
+	<!-- PBM example regions accessed by the perf_test app's DataIngestionTest 
+		(bin_sh/test_ingestion) and TransactionTest (bin_sh/test_tx). -->
+	<region name="eligibility" refid="PARTITION"></region>
+	<region name="profile" refid="PARTITION"></region>
+	<region name="summary" refid="PARTITION"></region>
+
+	<!-- Microsoft's Northwind data regions accessed by the perf_test app. -->
+	<region name="nw">
+		<region name="categories" refid="PARTITION"></region>
+		<region name="customers" refid="PARTITION"></region>
+		<region name="employees" refid="PARTITION"></region>
+		<region name="employee_territories" refid="PARTITION"></region>
+		<region name="orders" refid="PARTITION"></region>
+		<region name="order_details" refid="PARTITION"></region>
+		<region name="products" refid="PARTITION"></region>
+		<region name="regions" refid="PARTITION"></region>
+		<region name="shippers" refid="PARTITION"></region>
+		<region name="suppliers" refid="PARTITION"></region>
+		<region name="territories" refid="PARTITION"></region>
+	</region>
+
+	<!-- Example regions accessed by the perf_test app's GroupTest (bin_sh/test_group) -->
+	<region name="map1" refid="PARTITION"></region>
+	<region name="map2" refid="PARTITION"></region>
+	<region name="map3" refid="PARTITION"></region>
+	<region name="map4" refid="PARTITION"></region>
+	<region name="map5" refid="PARTITION"></region>
+	<region name="map6" refid="PARTITION"></region>
+	<region name="map7" refid="PARTITION"></region>
+	<region name="map8" refid="PARTITION"></region>
+	<region name="map9" refid="PARTITION"></region>
+	<region name="map10" refid="PARTITION"></region>
+	<region name="map11" refid="PARTITION"></region>
+	<region name="map12" refid="PARTITION"></region>
+	<region name="map13" refid="PARTITION"></region>
+	<region name="map14" refid="PARTITION"></region>
+	<region name="map15" refid="PARTITION"></region>
+	<region name="map16" refid="PARTITION"></region>
+	<region name="map17" refid="PARTITION"></region>
+	<region name="map18" refid="PARTITION"></region>
+	<region name="map19" refid="PARTITION"></region>
+	<region name="map20" refid="PARTITION"></region>
+	<region name="map21" refid="PARTITION"></region>
+	<region name="map22" refid="PARTITION"></region>
+
+	<!-- padogrid provides a member initialization entry point. You can plugin 
+		your member initialization class that implements org.apache.geode.addon.cluster.cache.CacheInitializable. 
+		The following adds the CacheServerInitializer plugin. -->
+	<!-- 
+	<region name="init">
+		<region-attributes data-policy="empty">
+			<cache-listener>
+				<class-name> org.apache.geode.addon.cluster.cache.CacheInitializer
+				</class-name>
+				<parameter name="initDelay">
+					<string>5000</string>
+				</parameter>
+				<parameter name="cacheserver">
+					<declarable>
+						<class-name>org.apache.geode.addon.cluster.cache.CacheServerInitializer
+						</class-name>
+						<parameter name="system.property.prefix">
+							<string>cacheserver</string>
+						</parameter>
+					</declarable>
+				</parameter>
+			</cache-listener>
+		</region-attributes>
+	</region>
+	-->
+
+	<function-service>
+		<!-- ClearFunction clears the specified region. -->
+		<function>
+			<class-name>org.apache.geode.addon.function.ClearFunction</class-name>
+		</function>
+		<!-- QueryFunction executes the specified OQL query and returns the results 
+			as a list. -->
+		<function>
+			<class-name>org.apache.geode.addon.function.QueryFunction</class-name>
+		</function>
+		<!-- EligFunction invoked by TransationTest (bin_sh/test_tx). -->
+		<function>
+			<class-name>org.apache.geode.addon.test.perf.EligFunction</class-name>
+		</function>
+	</function-service>
+
+	<!-- Pado initializer -->
+		<initializer>
+			<class-name>com.netcrest.pado.gemfire.GemfirePadoServerInitializer</class-name>
+		</initializer>
+</cache>

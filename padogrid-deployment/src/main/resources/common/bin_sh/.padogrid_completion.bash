@@ -208,7 +208,7 @@ __padogrid_complete()
       elif [ "$command" == "create_cluster" ]; then
          case "$PRODUCT" in
          geode)
-            type_list="default pado";;
+            type_list="default pado pado-lite";;
          hazelcast|snappydata|spark|coherence)
             type_list="default";;
          esac
@@ -915,7 +915,7 @@ __command_complete()
       elif [ "$command" == "create_cluster" ]; then
          case "$PRODUCT" in
          geode)
-            type_list="default pado";;
+            type_list="default pado pado-lite";;
          hazelcast|snappydata|spark|coherence)
             type_list="default";;
          esac

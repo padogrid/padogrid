@@ -46,7 +46,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name]
-               [-type default|pado]
+               [-type default|pado|pado-lite]
                [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-locator comma_separated_locator_hosts]
@@ -64,10 +64,11 @@ OPTIONS
              Unique cluster name. The cluster name is prepended
              to all member names.
 
-   -type default|pado
-             If the 'pado' option is specified, then it creates a Pado cluster that includes
-             full support for grid federation. The 'default' option creates a normal cluster
-             without any Pado dependencies.
+   -type normal|pado|pado-lite
+             The 'pado' option creates a Pado cluster that includes full support for grid federation.
+             The 'pado-lite' option creates a normal cluster with Pado enabled allowing Pado tools
+             to connect. The 'default' option creates a normal cluster without any Pado dependencies.
+             Default: default
   
    -pod pod_name
              Pod name. The 'local' pod is the local machine. This option overrides the '-vm'
@@ -168,7 +169,21 @@ if [ "`isPodExist $POD`" == "false" ]; then
    exit 1
 fi
 
-if [ "$TYPE_ARG" == "pado" ]; then
+PADO_TYPE=$TYPE_ARG
+if [ "$PADO_TYPE" == "" ]; then
+   PADO_TYPE="default"
+else
+   case "$PADO_TYPE" in
+   default|pado|pado-lite)
+      ;;
+   *)
+      echo -e "${CLightRed}ERROR:${CNone} Invalid '-type' value [$PADO_TYPE]. Command aborted."
+      exit 1
+      ;;
+   esac
+fi
+
+if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "pado-lite" ]; then
   if [ "$PADO_HOME" == "" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -210,6 +225,14 @@ function writeCluster()
 
    # Copy clusters/bin_sh
    cp -r $BASE_DIR/clusters/* $CLUSTER_DIR/
+   if [ "$PADO_TYPE" == "pado-lite" ]; then
+      cp -r $BASE_DIR/clusters_pado/* $CLUSTER_DIR/
+      mkdir -p $CLUSTER_DIR/pado/db/vp
+      mkdir -p $CLUSTER_DIR/pado/security
+      if [ "$PADO_HOME" != "" ] && [ -d "$PADO_HOME/etc" ]; then
+          cp $PADO_HOME/etc/pado*.dtd $CLUSTER_DIR/pado/
+      fi
+   fi
 
    # Create bin_sh/setenv.sh
    echo "#" > $CLUSTER_DIR/bin_sh/setenv.sh
@@ -223,6 +246,11 @@ function writeCluster()
    echo "   CONFIG_FILE=\$ETC_DIR/cache-spring.xml"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "   JAVA_OPTS=\"\$JAVA_OPTS --J=-Dgeode-addon.application.context.file=application-context.xml\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "   CLASSPATH="\$CLASSPATH:\$ETC_DIR/""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Enable Pado if defined in setenv_pado.sh"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "if [ -f "\$CLUSTER_DIR/bin_sh/setenv_pado.sh" ]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   . \$CLUSTER_DIR/bin_sh/setenv_pado.sh"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -376,7 +404,7 @@ function writeCluster()
    echo "# Default GC log file flag. If true then GC information is logged in a separate log file." >> $ETC_DIR/cluster.properties
    echo "gc.log.file.enabled=$DEFAULT_GC_LOG_FILE_ENABLED" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
-   if [ "$TYPE_ARG" == "pado" ]; then
+   if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "pado-lite" ]; then
       echo "# PadoWeb properties" >> $ETC_DIR/cluster.properties
       echo "padoweb.host=$PADOWEB_HOST" >> $ETC_DIR/cluster.properties
       echo "padoweb.http.port=$NEW_PADOWEB_HTTP_PORT" >> $ETC_DIR/cluster.properties
@@ -418,7 +446,7 @@ function writeCluster()
    fi
 
    # Pado
-   if [ "$TYPE_ARG" == "pado" ]; then
+   if [ "$PADO_TYPE" == "pado" ]; then
       cp -r $PADO_HOME/data $CLUSTER_DIR/
       cp -r $PADO_HOME/db $CLUSTER_DIR/
       cp -r $PADO_HOME/etc/pado1_0.dtd $ETC_DIR/
@@ -556,7 +584,7 @@ mkdir -p $PLUGINS_DIR
 
 # Copy the plugin jars in the cluster plugins directory.
 # All plugins will be hot-deployed to the cluster plugins directory.
-if [ "$TYPE_ARG" == "pado" ]; then
+if [ "$PADO_TYPE" == "pado" ]; then
    if [ -d "$PADO_HOME/plugins" ]; then
       cp -r "$PADO_HOME/plugins"/* "$PLUGINS_DIR"/
    fi
@@ -701,6 +729,7 @@ echo "----------------------------------------------------------------"
 echo "                  WORKSPACE: $PADOGRID_WORKSPACE"
 echo "            Cluster Created: $CLUSTER"
 echo "               CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "                  PADO_TYPE: $PADO_TYPE"
 if [ "$VM_ENABLED" == "true" ]; then
 echo "                 Deployment: VM"
 else
@@ -718,7 +747,7 @@ echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
 echo "JMX_MANAGER_HTTP_START_PORT: $NEW_JMX_MANAGER_HTTP_START_PORT"
 echo "     JMX_MANAGER_START_PORT: $NEW_JMX_MANAGER_START_PORT"
 echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
-if [ "$TYPE_ARG" == "pado" ]; then
+if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "pado-lite" ]; then
 echo "          PADOWEB_HTTP_PORT: $NEW_PADOWEB_HTTP_PORT"
 echo "         PADOWEB_HTTPS_PORT: $NEW_PADOWEB_HTTPS_PORT"
 fi
