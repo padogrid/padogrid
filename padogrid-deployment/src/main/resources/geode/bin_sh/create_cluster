@@ -232,6 +232,14 @@ function writeCluster()
       if [ "$PADO_HOME" != "" ] && [ -d "$PADO_HOME/etc" ]; then
           cp $PADO_HOME/etc/pado*.dtd $CLUSTER_DIR/pado/
       fi
+      # Place Pado biz jars in the plugins directory, which serves as the IBiz repo.
+      cp $PADO_HOME/plugins/* $CLUSTER_DIR/plugins/
+
+      # Generate pado.xml
+      sed -e "s/\${GRID_ID}/$CLUSTER/g" \
+          $BASE_DIR/clusters_pado/pado/etc/template-pado.xml \
+          | tr '|' '\n' \
+          > $CLUSTER_DIR/pado/etc/pado.xml
    fi
 
    # Create bin_sh/setenv.sh
