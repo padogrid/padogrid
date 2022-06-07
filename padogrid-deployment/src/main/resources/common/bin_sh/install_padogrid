@@ -1500,10 +1500,16 @@ function installProduct
       # --------------
       # Download PadoGrid
       echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
+      PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases/download"
+      if [[ "$PADOGRID_RELEASE" == *"SNAPSHOT" ]]; then
+         PADOGRID_DOWNLOAD_URL="$PADOGRID_DOWNLOAD_URL/snapshot/$PADOGRID_TARBALL"
       else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
+         PADOGRID_DOWNLOAD_URL="$PADOGRID_DOWNLOAD_URL/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
+      fi
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "$PADOGRID_DOWNLOAD_URL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "$PADOGRID_DOWNLOAD_URL"
       fi
       
       # Install PadoGrid
