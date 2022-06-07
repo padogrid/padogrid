@@ -11,6 +11,7 @@ https://github.com/padogrid
 - Updated `perf_test` README.md files.
 - Added entity relationship (ER) support for Geode `perf_test` that generates customer mock data.
 - Added support for **pado-lite** clusters. This support enables normal Geode/GemFire clusters to accept Pado client connections. The immediate benefit of **pado-lite** is that the users can now use Pado tools such as Pado Desktop and PadoWeb to navigate and monitor Geode/GemFire clusters. To create a normal cluster with Pado enabled, execute `create_cluster -type pado-lite`.
+- Build Test.
 
 ---
 
