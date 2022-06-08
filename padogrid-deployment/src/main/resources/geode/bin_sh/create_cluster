@@ -46,7 +46,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name]
-               [-type default|pado|pado-lite]
+               [-type default|pado|padolite]
                [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-locator comma_separated_locator_hosts]
@@ -64,9 +64,9 @@ OPTIONS
              Unique cluster name. The cluster name is prepended
              to all member names.
 
-   -type normal|pado|pado-lite
+   -type normal|pado|padolite
              The 'pado' option creates a Pado cluster that includes full support for grid federation.
-             The 'pado-lite' option creates a normal cluster with Pado enabled allowing Pado tools
+             The 'padolite' option creates a normal cluster with Pado enabled allowing Pado tools
              to connect. The 'default' option creates a normal cluster without any Pado dependencies.
              Default: default
   
@@ -174,7 +174,7 @@ if [ "$PADO_TYPE" == "" ]; then
    PADO_TYPE="default"
 else
    case "$PADO_TYPE" in
-   default|pado|pado-lite)
+   default|pado|padolite)
       ;;
    *)
       echo -e "${CLightRed}ERROR:${CNone} Invalid '-type' value [$PADO_TYPE]. Command aborted."
@@ -183,7 +183,7 @@ else
    esac
 fi
 
-if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "pado-lite" ]; then
+if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "padolite" ]; then
   if [ "$PADO_HOME" == "" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -213,6 +213,8 @@ function writeCluster()
    cp $BASE_DIR/etc/template-cache.xml $ETC_DIR/cache.xml
    # Copy the template cache-spring.xml file
    cp $BASE_DIR/etc/template-cache-spring.xml $ETC_DIR/cache-spring.xml
+   # Copy the template cache-spring-padolite.xml file
+   cp $BASE_DIR/etc/template-cache-spring-padolite.xml $ETC_DIR/cache-spring-padolite.xml
    # Copy the template application-context.xml file
    cp $BASE_DIR/etc/template-application-context.xml $ETC_DIR/application-context.xml
    # Copy the template log4j2.properties file
@@ -225,7 +227,7 @@ function writeCluster()
 
    # Copy clusters/bin_sh
    cp -r $BASE_DIR/clusters/* $CLUSTER_DIR/
-   if [ "$PADO_TYPE" == "pado-lite" ]; then
+   if [ "$PADO_TYPE" == "padolite" ]; then
       cp -r $BASE_DIR/clusters_pado/* $CLUSTER_DIR/
       mkdir -p $CLUSTER_DIR/pado/db/vp
       mkdir -p $CLUSTER_DIR/pado/security
@@ -240,6 +242,12 @@ function writeCluster()
           $BASE_DIR/clusters_pado/pado/etc/template-pado.xml \
           | tr '|' '\n' \
           > $CLUSTER_DIR/pado/etc/pado.xml
+
+      # Generate cache.xml
+      sed -e "s/\${PADO_INITIALIZER}/\t<\\!-- @PADOGRID-START (marker generated and used by PadoGrid) -->\n\t<\\!-- Pado Initializer - Enables PadoLite -->\n\t<initializer>\n\t\t<class-name>com.netcrest.pado.gemfire.GemfirePadoServerInitializer<\/class-name>\n\t<\/initializer>\n\t<\\!-- @PADOGRID-END -->/" \
+          $BASE_DIR/clusters_pado/etc/template-cache.xml \
+          | tr '|' '\n' \
+          > $CLUSTER_DIR/etc/cache.xml
    fi
 
    # Create bin_sh/setenv.sh
@@ -247,18 +255,26 @@ function writeCluster()
    echo "# Add cluster specific environment variables in this file." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# Set SPRING_BOOTSTRAP_ENABLED to "true" to bootstrap cache servers using Spring."  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "SPRING_BOOTSTRAP_ENABLED=\"false\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# The 'padolite.enabled' property in 'etc/cluster.properties' enables"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# PadoLite in cluster members."  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "PADOLITE_ENABLED=\$(getClusterProperty \"padolite.enabled\" \"false\")"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# The 'spring.bootstrap.enabled' property in 'etc/cluster.properties'"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# enables bootstrapping cache servers using Spring."  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "SPRING_BOOTSTRAP_ENABLED=\$(getClusterProperty \"spring.bootstrap.enabled\" \"false\")"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "if [ \"\$SPRING_BOOTSTRAP_ENABLED\" == \"true\" ]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "   CONFIG_FILE=\$ETC_DIR/cache-spring.xml"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   if [ \"\$PADOLITE_ENABLED\" == \"true\" ]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "      CONFIG_FILE=\$ETC_DIR/cache-spring-padolite.xml"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   else"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "      CONFIG_FILE=\$ETC_DIR/cache-spring.xml"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "   JAVA_OPTS=\"\$JAVA_OPTS --J=-Dgeode-addon.application.context.file=application-context.xml\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "   CLASSPATH="\$CLASSPATH:\$ETC_DIR/""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Enable Pado if defined in setenv_pado.sh"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "if [ -f "\$CLUSTER_DIR/bin_sh/setenv_pado.sh" ]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "   . \$CLUSTER_DIR/bin_sh/setenv_pado.sh"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "if [ -f "\$CLUSTER_DIR/pado/bin_sh/setenv_pado.sh" ]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "   . \$CLUSTER_DIR/pado/bin_sh/setenv_pado.sh"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -412,15 +428,38 @@ function writeCluster()
    echo "# Default GC log file flag. If true then GC information is logged in a separate log file." >> $ETC_DIR/cluster.properties
    echo "gc.log.file.enabled=$DEFAULT_GC_LOG_FILE_ENABLED" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
-   if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "pado-lite" ]; then
-      echo "# PadoWeb properties" >> $ETC_DIR/cluster.properties
-      echo "padoweb.host=$PADOWEB_HOST" >> $ETC_DIR/cluster.properties
-      echo "padoweb.http.port=$NEW_PADOWEB_HTTP_PORT" >> $ETC_DIR/cluster.properties
-      echo "padoweb.https.port=$NEW_PADOWEB_HTTPS_PORT" >> $ETC_DIR/cluster.properties
-      echo "padoweb.https.enabled=false" >> $ETC_DIR/cluster.properties
-      echo "padoweb.contextPath=$DEFAULT_PADOWEB_CONTEXT_PATH" >> $ETC_DIR/cluster.properties
-      echo "" >> $ETC_DIR/cluster.properties
+
+   # Spring
+   echo "# Enable/disable Spring to bootstrap members. If enabled (true), then" >> $ETC_DIR/cluster.properties
+   echo "# 'etc/application-context.xml' configures members. Note that Spring Data" >> $ETC_DIR/cluster.properties
+   echo "# for Geode/GemFire is not part of PadoGrid distributions. If this property" >> $ETC_DIR/cluster.properties
+   echo "# is set to "true", then you must first run 'bin_sh/build_app' to download" >> $ETC_DIR/cluster.properties
+   echo "# the required 'spring-data-gemfire' artifact before starting the cluster." >> $ETC_DIR/cluster.properties
+   echo "spring.bootstrap.enabled=false" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+
+   # Pado
+   echo "# --- Pado properties." >> $ETC_DIR/cluster.properties
+   echo "# Pado properties have no effect unless PadoLite is enabled or this cluster" >> $ETC_DIR/cluster.properties
+   echo "# is a full-blown Pado grid." >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   echo "# PadoLite" >> $ETC_DIR/cluster.properties
+   echo "# Enable/disable PadoLite. If enabled (true), then a Pado installation is required." >> $ETC_DIR/cluster.properties
+   if [ "$PADO_TYPE" == "padolite" ]; then
+      echo "padolite.enabled=true" >> $ETC_DIR/cluster.properties
+   else
+      echo "padolite.enabled=false" >> $ETC_DIR/cluster.properties
    fi
+   echo "" >> $ETC_DIR/cluster.properties
+   echo "# PadoWeb" >> $ETC_DIR/cluster.properties
+   echo "# PadoWeb properties are for PadoWeb only. Cluster members do not use them." >> $ETC_DIR/cluster.properties
+   echo "padoweb.host=$PADOWEB_HOST" >> $ETC_DIR/cluster.properties
+   echo "padoweb.http.port=$NEW_PADOWEB_HTTP_PORT" >> $ETC_DIR/cluster.properties
+   echo "padoweb.https.port=$NEW_PADOWEB_HTTPS_PORT" >> $ETC_DIR/cluster.properties
+   echo "padoweb.https.enabled=false" >> $ETC_DIR/cluster.properties
+   echo "padoweb.contextPath=$DEFAULT_PADOWEB_CONTEXT_PATH" >> $ETC_DIR/cluster.properties
+   echo "# ---" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
    
    # VM
    echo "# Enable/disable VM cluster" >> $ETC_DIR/cluster.properties
@@ -755,7 +794,7 @@ echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
 echo "JMX_MANAGER_HTTP_START_PORT: $NEW_JMX_MANAGER_HTTP_START_PORT"
 echo "     JMX_MANAGER_START_PORT: $NEW_JMX_MANAGER_START_PORT"
 echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
-if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "pado-lite" ]; then
+if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "padolite" ]; then
 echo "          PADOWEB_HTTP_PORT: $NEW_PADOWEB_HTTP_PORT"
 echo "         PADOWEB_HTTPS_PORT: $NEW_PADOWEB_HTTPS_PORT"
 fi

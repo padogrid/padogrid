@@ -39,10 +39,12 @@ OPTIONS
    -clean
              Cleans up the build files after the build completes.
 
-ENVIRONMENT VARIABLES
-   SPRING_BOOTSTRAP_ENABLED
-             To bootstrap Geode/GemFire with the Spring Container you must set
-             SPRING_BOOTSTRAP_ENABLED to "true" in the 'setenv.sh' file.
+PROPERTIES
+   spring.bootstrap.enabled
+             To enable Spring bootstrap, this property must be set to "true" in
+             the following 'cluster.properties' file.
+
+             $CLUSTER_DIR/etc/cluster.properties
 
 NOTES
    You can configure Geode/GemFire members in the 'etc/application-context.xml' file.
@@ -77,14 +79,17 @@ Downloaded the required library files into the following directory.
 CLASSPATH includes the above directory for all apps and clusters running under
 this workspace.
 
-Environment Variables (setenv.sh):
 EOF
 
-echo -e "   ${CBrownOrange}SPRING_BOOTSTRAP_ENABLED=\"$SPRING_BOOTSTRAP_ENABLED\"${CNone}"
+echo -e "   ${CBrownOrange}spring.bootstrap.enabled=$SPRING_BOOTSTRAP_ENABLED${CNone}"
 echo ""
 
-if [ "$SPRING_BOOTSTRAP_ENABLED" != "true" ]; then
-   echo "To bootstrap this cluster with the Spring Container, make sure to"
-   echo "set SPRING_BOOTSTRAP_ENABLED=\"true\" in the 'setenv.sh' file."
-   echo ""
+SPRING_BOOTSTRAP_ENABLED=$(getClusterProperty "spring.bootstrap.enabled" "false")
+if [ "$SPRING_BOOTSTRAP_ENABLED" == "true" ]; then
+   echo "Spring bootstrap is enabled. This cluster will boostrap using the Spring Container."
+   echo "To disable Spring boostrap, set spring.bootstrap.enabled=false in 'etc/cluster.properties'."
+else
+  echo "Spring bootstrap is disabled. To bootstrap this cluster with the Spring Container,"
+  echo "you must set spring.bootstrap.enabled=true in the 'etc/cluster.properties' file."
 fi
+echo ""
