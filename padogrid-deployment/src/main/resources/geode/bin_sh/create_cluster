@@ -228,7 +228,7 @@ function writeCluster()
    # Copy clusters/bin_sh
    cp -r $BASE_DIR/clusters/* $CLUSTER_DIR/
    if [ "$PADO_TYPE" == "padolite" ]; then
-      cp -r $BASE_DIR/clusters_pado/* $CLUSTER_DIR/
+      cp -r $BASE_DIR/clusters_padolite/* $CLUSTER_DIR/
       mkdir -p $CLUSTER_DIR/pado/db/vp
       mkdir -p $CLUSTER_DIR/pado/security
       if [ "$PADO_HOME" != "" ] && [ -d "$PADO_HOME/etc" ]; then
@@ -239,13 +239,13 @@ function writeCluster()
 
       # Generate pado.xml
       sed -e "s/\${GRID_ID}/$CLUSTER/g" \
-          $BASE_DIR/clusters_pado/pado/etc/template-pado.xml \
+          $BASE_DIR/clusters_padolite/pado/etc/template-pado.xml \
           | tr '|' '\n' \
           > $CLUSTER_DIR/pado/etc/pado.xml
 
       # Generate cache.xml
       sed -e "s/\${PADO_INITIALIZER}/\t<\\!-- @PADOGRID-START (marker generated and used by PadoGrid) -->\n\t<\\!-- Pado Initializer - Enables PadoLite -->\n\t<initializer>\n\t\t<class-name>com.netcrest.pado.gemfire.GemfirePadoServerInitializer<\/class-name>\n\t<\/initializer>\n\t<\\!-- @PADOGRID-END -->/" \
-          $BASE_DIR/clusters_pado/etc/template-cache.xml \
+          $BASE_DIR/clusters_padolite/etc/template-cache.xml \
           | tr '|' '\n' \
           > $CLUSTER_DIR/etc/cache.xml
    fi
