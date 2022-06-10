@@ -24,7 +24,7 @@ chmod 755 install_padogrid
 
 [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
 
-:pencil2: *The latest PadoGrid snapshot release is available if you cannot wait till the next release. It is automatically built whenver there are changes made in [RELEASE_NOTES.md](RELEASE_NOTES.md). You can download it from [Releases](release) or using `install_padogrid`.*
+:pencil2: *The latest PadoGrid snapshot release is available if you cannot wait till the next release. It is automatically built whenver there are changes made in [RELEASE_NOTES.md](RELEASE_NOTES.md). You can download it from [Releases](https://github.com/padogrid/padogrid/releases) or using `install_padogrid`.*
 
 ## PadoGrid Container
 
