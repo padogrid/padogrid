@@ -315,7 +315,7 @@ In the `mygeode` directory, you will find `etc/cluster.properties` which defines
 #   vm.hosts=
 vi etc/cluster.properties
 
-# A comma separated list of host names or addresses. IMPORANT: No spaces allowed.
+# A comma separated list of host names or addresses. IMPORTANT: No spaces allowed.
 vm.locator.hosts=ubuntu1
 
 # Set the private key file path. If this property is set then it overwrites the

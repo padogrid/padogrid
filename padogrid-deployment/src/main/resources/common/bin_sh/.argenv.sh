@@ -65,6 +65,8 @@ HOST_SPECIFIED=false
 COUNT=
 INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
+VERSION_ARG=
+FORCE_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_SPECIFIED=false
 CLUSTER_TYPE_SPECIFIED=false
@@ -282,12 +284,16 @@ do
       FOLDER=$i
    elif [ "$PREV" == "-datasource" ]; then
       DATASOURCE=$i
+   elif [ "$PREV" == "-version" ]; then
+      VERSION_ARG=$i
 
 # options with no value
    elif [ "$i" == "-init" ]; then
       INIT_SPECIFIED=true
    elif [ "$i" == "-version" ]; then
       VERSION_SPECIFIED=true
+   elif [ "$i" == "-force" ]; then
+      FORCE_SPECIFIED=true
    elif [ "$i" == "-man" ]; then
       MAN_SPECIFIED=true
    elif [ "$i" == "-fg" ]; then

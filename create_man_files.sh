@@ -166,8 +166,8 @@ for PRODUCT in $PRODUCTS; do
             section="WARNING"
             echo ".SH $section" >> $MAN_FILE
             continue
-         elif [ "$line" == "IMPORANT" ]; then
-            section="IMPORANT"
+         elif [ "$line" == "IMPORTANT" ]; then
+            section="IMPORTANT"
             echo ".SH $section" >> $MAN_FILE
             continue
          elif [ "$line" == "CAUTION" ]; then

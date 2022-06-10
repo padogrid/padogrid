@@ -2961,7 +2961,7 @@ cat <<EOF
 |   ___/  /  /_\  \   |  |  |  |  |  |  | |  | |_ | |      /     |  | |  |  |  |
 |  |     /  _____  \  |  '--'  |  '--'  | |  |__| | |  |\  \----.|  | |  '--'  |
 | _|    /__/     \__\ |_______/ \______/   \______| | _| '._____||__| |_______/ 
-Copyright 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+Copyright 2020-2021 Netcrest Technologies, LLC. All rights reserved.
 v$PADOGRID_VERSION
 EOF
 echo -e "Manual: ${CUrl}https://github.com/padogrid/padogrid/wiki${CNone}"
@@ -3322,7 +3322,7 @@ function sortVersionList
 }
 
 #
-# Determines versions of all installed products by scanning the products base directory.
+# Determines the versions of all installed products by scanning the products base directory.
 # This function sets the following arrays.
 #    PADOGRID_VERSIONS
 #    PADO_VERSIONS

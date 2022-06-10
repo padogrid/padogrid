@@ -88,7 +88,7 @@ HADOOP_DOWNLOAD_URL="https://archive.apache.org/dist/hadoop/common/"
 
 __options()
 {
-   echo "-product -quiet -?"
+   echo "-product -quiet -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -261,7 +261,7 @@ NOTES
 EOF
 if [ "$IS_STANDALONE_SCRIPT" == "false" ]; then
 echo "SEE ALSO"
-   printSeeAlsoList "change_version show_products update_products" $EXECUTABLE
+   printSeeAlsoList "change_version show_products uninstall_product update_products" $EXECUTABLE
 fi
    exit
 fi
@@ -1779,10 +1779,11 @@ function installProduct
       # --------------
       # Download SnappyData
       echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$SNAPPYDATA_TARBALL..."
+      SNAPPY_VDIR="v${SNAPPYDATA_VERSION%-bin}"
       if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SNAPPYDATA_TARBALL" "https://github.com/TIBCOSoftware/snappydata/releases/download/v$SNAPPYDATA_VERSION/$SNAPPYDATA_TARBALL"
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SNAPPYDATA_TARBALL" "https://github.com/TIBCOSoftware/snappydata/releases/download/$SNAPPY_VDIR/$SNAPPYDATA_TARBALL"
       else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SNAPPYDATA_TARBALL" "https://github.com/TIBCOSoftware/snappydata/releases/download/v$SNAPPYDATA_VERSION/$SNAPPYDATA_TARBALL"
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$SNAPPYDATA_TARBALL" "https://github.com/TIBCOSoftware/snappydata/releases/download/$SNAPPY_VDIR/$SNAPPYDATA_TARBALL"
       fi
       
       # Install SnappyData
@@ -1978,7 +1979,7 @@ fi
 if [ "$SNAPPYDATA_VERSION" != "" ]; then
    SNAPPYDATA_RELEASE="snappydata-$SNAPPYDATA_VERSION"
    SNAPPYDATA_TARBALL="$SNAPPYDATA_RELEASE.tar.gz"
-   installProduct "snappydata"
+   installProduct "snappydata" "$SIMULATE"
 fi
 if [ "$SPARK_VERSION" != "" ] && [ "$SPARK_DIST_VERSION" != "" ]; then
    SPARK_RELEASE="spark-$SPARK_VERSION"
