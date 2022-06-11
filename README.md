@@ -9,15 +9,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 You can install PadoGrid and the supported data grid products by simply running the [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script.
 
 ```bash
-# Download the installer script
-curl -sO https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid
-chmod 755 install_padogrid
-
-# Install interactively:
-./install_padogrid
-
-# View the usage:
-./install_padogrid -?
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid)"
 ```
 
 :pencil2: *Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
