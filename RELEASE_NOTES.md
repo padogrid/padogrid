@@ -15,6 +15,7 @@ https://github.com/padogrid
 - Added support for installing PadoGrid SNAPSHOT releases in [`install_padogrid`](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid). If your PadoGrid version is older than this release, then you must download the updated `install_padogrid` script as described in the [PadoGrid Manual](https://github.com/padogrid/padogrid/wiki/Quick-Start#install-padogrid). PadoGrid snapshots are now automatically built whenever there are changes made in the `RELEASE_NOTES.md` file. You can download the latest snapshot by running the `install_padogrid` command shown below. Note that `install_padogrid` does not remove the existing snapshot installation. It simply overwrites it. Furthermore, **the downloadable snapshots do not include man pages and Coherence addons.**
 - Added support for Hazelcast OSS in building PadoGrid pods. Prior to this, only Hazelcast Enterprise was supported in building PadoGrid pods.
 - Fixed PadoGrid pod relevant commands that improperly handled the Management Center.
+- Added PadoGrid pod support in `shutdown_cluster`.
 
 ```bash
 install_padogrid -product padogrid
