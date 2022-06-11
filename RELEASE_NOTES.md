@@ -13,11 +13,12 @@ https://github.com/padogrid
 - Added support for **padolite** clusters. This support enables normal Geode/GemFire clusters to accept Pado client connections. The immediate benefit of **padolite** is that the users can now use Pado tools such as Pado Desktop and PadoWeb to navigate and monitor Geode/GemFire clusters. To create a normal cluster with Pado enabled, execute `create_cluster -type padolite`. You can also enable/disable PadoLite by setting the `padolite.enabled` property in the `etc/cluster.properties` file. PadoLite allows connections by any Geode/GemFire clients including Pado clients.
 - Added `MultiInitializer` for configuring multiple Geode/GemFire initializers. This addon lifts the single initializer limitation in Geode/GemFire.
 - Added support for installing PadoGrid SNAPSHOT releases in [`install_padogrid`](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid). If your PadoGrid version is older than this release, then you must download the updated `install_padogrid` script as described in the [PadoGrid Manual](https://github.com/padogrid/padogrid/wiki/Quick-Start#install-padogrid). PadoGrid snapshots are now automatically built whenever there are changes made in the `RELEASE_NOTES.md` file. You can download the latest snapshot by running the `install_padogrid` command shown below. Note that `install_padogrid` does not remove the existing snapshot installation. It simply overwrites it. Furthermore, **the downloadable snapshots do not include man pages and Coherence addons.**
-- Added `unstall_product` for uninstalling products. By default, the `uninstall_product` command uninstalls the specified product version only if the product version is not in use. You can override it by specifying the `-force` option.
 
 ```bash
 install_padogrid -product padogrid
 ```
+
+- Added `unstall_product` for uninstalling products. By default, the `uninstall_product` command uninstalls the specified product version only if the product version is not in use. You can override it by specifying the `-force` option.
 
 ---
 
