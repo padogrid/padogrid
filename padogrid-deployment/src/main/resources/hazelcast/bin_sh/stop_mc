@@ -73,6 +73,15 @@ MC_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
    VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
    if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_MC_HOST" ]; then
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
       DEFAULT_USER=$(whoami)
       VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
@@ -83,7 +92,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
-         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
+         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote $MC_HOST -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
          exit
       fi
    fi

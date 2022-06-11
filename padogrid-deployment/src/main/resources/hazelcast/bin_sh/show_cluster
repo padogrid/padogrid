@@ -128,7 +128,8 @@ function displayVmClusterShort()
    else
       MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
    fi
-   MC_PID=`getMcPid $MC_NAME $WORKSPACE`
+   MC_HOST=`getClusterProperty "mc.host"`
+   MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE`
 
    echo "         CLUSTER: $CLUSTER"
    if [ "$SHORT" == "false" ]; then
@@ -264,12 +265,29 @@ function displayVmClusterLong()
       echo ""
    done
 
+   # Determine MC
+   MC_HOST=`getClusterProperty "mc.host"`
+   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" $DEFAULT_MC_HTTPS_ENABLED`
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+      MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+   else
+      MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+   fi
+   MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE`
+ 
+   show_mc -long
+
    echo "         CLUSTER: $CLUSTER"
    echo "    Member Count: $MEMBER_COUNT"
     if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
    echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
    echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   if [ "$MC_PID" != "" ]; then
+   echo -e "      MC Running: ${CLightGreen}1/1${CNone}"
+   else
+   echo -e "      MC Running: ${CLightRed}0/1${CNone}"
    fi
    echo "         Version: $HAZELCAST_VERSION"
    echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
@@ -325,7 +343,7 @@ function displayClusterShort()
    else
       MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
    fi
-   MC_PID=`getMcPid $MC_NAME $WORKSPACE`
+   MC_PID=`getMcPid  $MC_NAME $WORKSPACE`
 
    echo "         CLUSTER: $CLUSTER"
    if [ "$SHORT" == "false" ]; then
