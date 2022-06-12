@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -501,6 +501,17 @@ fi
 if [ "$ENV_ARG" != "" ]; then
    . $ENV_ARG
 fi
+
+# 
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      export PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      export PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi      
 
 DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss snappydata spark kafka hadoop"
 

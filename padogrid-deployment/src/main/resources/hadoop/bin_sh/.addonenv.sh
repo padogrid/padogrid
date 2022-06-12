@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -425,10 +425,10 @@ fi
 
 #
 # The directory path where the required products are installed in the host OS. The default
-# path is "<padogrid-dir>/products". This path is mounted as "~/products" in the
+# path is <padogrid-env-dir>/products". This path is mounted as "~/products" in the
 # guest OS.
 #
-DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_WORKSPACE/products"
+DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
 
 # Supported Bundle Products
 BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark kafka hadoop"
