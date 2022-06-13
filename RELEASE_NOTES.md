@@ -16,6 +16,7 @@ https://github.com/padogrid
 - Added support for Hazelcast OSS in building PadoGrid pods. Prior to this, only Hazelcast Enterprise was supported in building PadoGrid pods.
 - Fixed PadoGrid pod relevant commands that improperly handled the Management Center.
 - Added PadoGrid pod support in `shutdown_cluster`.
+- Fixed `show_bundle` to pagenate all bundles in GitHub. Prior to this fix, only the first page of 30 bundles were shown.
 
 ```bash
 install_padogrid -product padogrid
