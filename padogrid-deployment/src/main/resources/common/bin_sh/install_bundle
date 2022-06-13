@@ -195,7 +195,7 @@ fi
 #
 function isProductExist
 {
-   local product=$1          # hazelcast
+   local product=$1         # hazelcast
    local productHome=$2     # HAZELCAST_HOME
    local productVersions=$3 # 3,4
    local found="false"
@@ -207,6 +207,15 @@ function isProductExist
       elif [ "$product" == "jet-enterprise" ] && [[ "$productHome" == *"jet-enterprise-$token"* ]]; then
          found="true"
          break;
+      elif [ "$product" == "coherence" ]; then
+         if [ -f "$COHERENCE_HOME/product.xml" ]; then
+            COHERENCE_VERSION=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+            if [[ "$COHERENCE_VERSION" == "$token"* ]]; then
+               found="true"
+               break;
+            fi
+         fi
+
       elif [[ "$productHome" == *"$token"* ]]; then
          found="true"
          break;
@@ -461,7 +470,6 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
                PRODUCT="none"
                PRODUCT_VERSIONS=1
             fi
-
             CLUSTER_TYPE=""
             if [ "$PRODUCT" == "none" ]; then
                found=true
