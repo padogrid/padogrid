@@ -285,6 +285,6 @@ Creating your own online bundles is made easy by using the bundle templates. The
 
 ### FAQ
 
-The FAQ link aims to provide a collection of PadoGrid Q&As along with a series of topics on how to build distributed systems using PadoGrid.
+The FAQ link aims to provide a comprensive collection of PadoGrid Q&As including a series of topics on how to build distributed systems using PadoGrid.
 
 [FAQ](https://github.com/padogrid/padogrid/wiki/faq)
