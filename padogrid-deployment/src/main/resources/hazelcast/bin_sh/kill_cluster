@@ -100,6 +100,16 @@ if [ "$VM_ENABLED" == "true" ]; then
       exit 1
    fi
 
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+         . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    DEFAULT_USER=$(whoami)
    VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
    VM_KEY=`getClusterProperty "vm.privateKeyFile"`
@@ -108,18 +118,15 @@ if [ "$VM_ENABLED" == "true" ]; then
    elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
       VM_KEY="-i $VM_PRIVATE_KEY_FILE"
    fi
-
-   # Members
-   # Replace , with space
-   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_member -cluster $CLUSTER -remote -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
       if [ "$POD" != "local" ]; then
          let MEMBER_NUM=MEMBER_NUM+1
       fi
    done
-   # Stop management center if -all specified.
+
+   # Stop management center if -all specified - kill_mc not available.
    if [ "$ALL" == "true" ]; then
       stop_mc "$@"
    fi

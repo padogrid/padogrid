@@ -219,9 +219,6 @@ public class GroupTest implements Constants {
 			// Get data structures
 			for (Operation operation : operationMap.values()) {
 				switch (operation.ds) {
-				case map:
-					operation.imap = hazelcastInstance.getMap(operation.dsName);
-					break;
 				case rmap:
 					operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
 					break;
@@ -237,9 +234,12 @@ public class GroupTest implements Constants {
 				case rtopic:
 					operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
 					break;
+				case map:
+				default:
+					operation.imap = hazelcastInstance.getMap(operation.dsName);
+					break;
 				}
 			}
-
 		}
 	}
 
@@ -737,10 +737,11 @@ public class GroupTest implements Constants {
 	 * @param index
 	 * @param threadStartIndex
 	 * @param threadStopIndex
+	 * @throws InterruptedException 
 	 */
 	@SuppressWarnings("unchecked")
 	private void writeEr(Operation operation, DataObjectFactory.Entry entry, int index, int threadStartIndex,
-			int threadStopIndex) {
+			int threadStopIndex) throws InterruptedException {
 		// Child objects
 		if (operation.dataObjectFactory.isEr()) {
 			int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
@@ -758,6 +759,10 @@ public class GroupTest implements Constants {
 					DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory.createEntry(childIdNum,
 							entry.key);
 					switch (childOperation.ds) {
+					case sleep:
+						Thread.sleep(childOperation.sleep);
+						break;
+						
 					case rmap:
 						if (childOperation.rmap != null) {
 							childOperation.rmap.put(childEntry.key, childEntry.value);

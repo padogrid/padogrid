@@ -208,7 +208,7 @@ __padogrid_complete()
       elif [ "$command" == "create_cluster" ]; then
          case "$PRODUCT" in
          geode)
-            type_list="default pado";;
+            type_list="default pado padolite";;
          hazelcast|snappydata|spark|coherence)
             type_list="default";;
          esac
@@ -265,8 +265,10 @@ __padogrid_complete()
          type_list="$K8S_PRODUCT_LIST"
       elif [ "$command" == "create_app" ]; then
          type_list="$APP_PRODUCT_LIST"
-      elif [ "$command" == "install_padogrid" ]; then 
+      elif [ "$command" == "install_padogrid" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
+      elif [ "$command" == "uninstall_product" ]; then
+         type_list="$DOWNLOADABLE_PRODUCTS gemfire"
       elif [ "$command" == "update_products" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire jet-mc"
       elif [ $len -gt 3 ]; then
@@ -455,7 +457,7 @@ __padogrid_complete()
          else
             type_list=`ls $SCRIPT_DIR`
             type_list=$(removeTokens "$type_list" "setenv.sh")
-            type_list="-product -rwe -version $type_list"
+            type_list="-product -rwe -version -? $type_list"
          fi
       fi
       ;;
@@ -915,7 +917,7 @@ __command_complete()
       elif [ "$command" == "create_cluster" ]; then
          case "$PRODUCT" in
          geode)
-            type_list="default pado";;
+            type_list="default pado padolite";;
          hazelcast|snappydata|spark|coherence)
             type_list="default";;
          esac
@@ -946,6 +948,8 @@ __command_complete()
          type_list="$APP_PRODUCT_LIST"
       elif [ "$command" == "install_padogrid" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
+      elif [ "$command" == "uninstall_product" ]; then
+         type_list="$DOWNLOADABLE_PRODUCTS gemfire"
       elif [ "$command" == "update_products" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire jet-mc"
       else

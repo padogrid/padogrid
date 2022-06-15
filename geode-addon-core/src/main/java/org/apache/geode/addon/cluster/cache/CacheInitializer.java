@@ -28,7 +28,7 @@ import org.apache.geode.cache.util.CacheListenerAdapter;
 /**
  * CacheInitializer is a general purpose utility class for passing
  * initialization information to the application during the cache startup
- * period. It allows the application to register classes that implement
+ * time. It allows the application to register classes that implement
  * CacheInitializable in the cache.xml file. It instantiates the registered
  * classes and invokes CacheInitializable.postInit() after a delay period
  * specified by the <code>"initDelay"</code> parameter. For example, the

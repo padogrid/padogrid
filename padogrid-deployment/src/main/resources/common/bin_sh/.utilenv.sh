@@ -3322,7 +3322,7 @@ function sortVersionList
 }
 
 #
-# Determines versions of all installed products by scanning the products base directory.
+# Determines the versions of all installed products by scanning the products base directory.
 # This function sets the following arrays.
 #    PADOGRID_VERSIONS
 #    PADO_VERSIONS

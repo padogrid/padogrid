@@ -11,28 +11,36 @@ import org.apache.geode.internal.cache.PartitionedRegion;
 
 /**
  * ClearFunction clears the specified region. Geode does not permit clearing
- * partitioned regions. Furthermore, clients can only clear local regions such
- * that they cannot clear replicated regions. This function allows clearing
- * both partitioned and replicated regions.
+ * partitioned regions. Furthermore, clients are not permitted to clear remote
+ * regions. This function allows clients to clear both partitioned and
+ * replicated regions.
+ * <p>
+ * For partitioned regions, this function must be invoked on all members, i.e.,
+ * onMembers(). For replicated regions, it should be invoked on a single member,
+ * i.e., onMember().
  * <p>
  * <b>Arguments:</b>
- * <ul><li><b>fullPath</b> String Region full path </li></ul>
+ * <ul>
+ * <li><b>fullPath</b> String Region full path</li>
+ * </ul>
  * 
  * @author dpark
  *
  */
-@SuppressWarnings({ "rawtypes"})
+@SuppressWarnings({ "rawtypes" })
 public class ClearFunction implements Function, Declarable {
 	private static final long serialVersionUID = 1L;
 
 	public final static String ID = "addon.ClearFunction";
-	
-	public enum ClearStatus { SUCCESS, ERROR_REGION_PATH_UNDEFINED, ERROR_REGION_PATH_NOT_FOUND };
-	
+
+	public enum ClearStatus {
+		SUCCESS, ERROR_REGION_PATH_UNDEFINED, ERROR_REGION_PATH_NOT_FOUND
+	};
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void execute(FunctionContext context) {
-		String fullPath = (String)context.getArguments();
+		String fullPath = (String) context.getArguments();
 		if (fullPath == null || fullPath.length() == 0) {
 			context.getResultSender().lastResult(ClearStatus.ERROR_REGION_PATH_UNDEFINED);
 			return;

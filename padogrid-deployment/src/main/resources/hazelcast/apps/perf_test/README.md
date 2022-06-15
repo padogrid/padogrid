@@ -34,7 +34,7 @@ The following table describes a list of preconfigured properties files in the `e
 | `ingestion.properties` | Defines properties for ingesting data into the `eligibility` and `profile` maps. |
 | `tx.properties`        | Defines properties for performing transactions. |
 | `group.properties`     | Defines properties for performing groups of `IMap` method calls. |
-| `group-put.properties` | Dfines properties for making 22 put calls on 22 different maps in a single group. |
+| `group-put.properties` | Defines properties for making 22 put calls on 22 different maps in a single group. |
 | `group-get.properties` | Defines properties for making 22 get calls on 22 different maps in a single group. Note that before invoking this file, `group-put.properties` must be invoked first to ingest data. |
 | `group-cache.properties` | Defines properties for `ICache` (JCache) operations. Unlike other, data structures, `ICache` requires you to first configure the cluster with the caches that you want to test before running the `test_group` script. |
 | `group-queue.properties` |  Defines properties for `IQueue` operations. |
@@ -317,18 +317,22 @@ The following is the `hibernate.cfg-mysql.xml` file provided by `padogrid`. Make
 </hibernate-configuration>
 ```
 
-The Hibernate configuration file path must be provided before you start the cluster. Edit the cluster's `setenv.sh` file and include the path as follows:
+The Hibernate configuration file path must be provided before you start the cluster. Edit the cluster's `setenv.sh` file and include the path as follows.
 
-```
+```bash
 vi $PADOGRID_WORKSPACE/clusters/<your-cluster>/bin_sh/setenv.sh
+```
 
+In `setenv.sh`, set the following:
+
+```bash
 # Set JAVA_OPTS in setenv.sh
 JAVA_OPTS="$JAVA_OPTS -Dhazelcast-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
 ```
 
 You can now run the cluster.
 
-```
+```bash
 # After making the above changes, start the cluster
 start_cluster -cluster <cluster-name>
 ```

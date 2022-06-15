@@ -3,6 +3,29 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
+## Version 0.9.17-SNAPSHOT
+
+### Release Date: 06/11/22
+
+- Fixed `install_bundle` to correctly install a workspace bundle.
+- Updated `perf_test` README.md files.
+- Added entity relationship (ER) support for Geode `perf_test` that generates customer mock data.
+- Added support for **padolite** clusters. This support enables normal Geode/GemFire clusters to accept Pado client connections. The immediate benefit of **padolite** is that the users can now use Pado tools such as Pado Desktop and PadoWeb to navigate and monitor Geode/GemFire clusters. To create a normal cluster with Pado enabled, execute `create_cluster -type padolite`. You can also enable/disable PadoLite by setting the `padolite.enabled` property in the `etc/cluster.properties` file. PadoLite allows connections by any Geode/GemFire clients including Pado clients.
+- Added `MultiInitializer` for configuring multiple Geode/GemFire initializers. This addon lifts the single initializer limitation in Geode/GemFire.
+- Added support for installing PadoGrid SNAPSHOT releases in [`install_padogrid`](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid). If your PadoGrid version is older than this release, then you must download the updated `install_padogrid` script as described in the [PadoGrid Manual](https://github.com/padogrid/padogrid/wiki/Quick-Start#install-padogrid). PadoGrid snapshots are now automatically built whenever there are changes made in the `RELEASE_NOTES.md` file. You can download the latest snapshot by running the `install_padogrid` command shown below. Note that `install_padogrid` does not remove the existing snapshot installation. It simply overwrites it. Furthermore, **the downloadable snapshots do not include man pages and Coherence addons.**
+- Added support for Hazelcast OSS in building PadoGrid pods. Prior to this, only Hazelcast Enterprise was supported in building PadoGrid pods.
+- Fixed PadoGrid pod relevant commands that improperly handled the Management Center.
+- Added PadoGrid pod support in `shutdown_cluster`.
+- Fixed `show_bundle` to pagenate all bundles in GitHub. Prior to this fix, only the first page of 30 bundles were shown.
+
+```bash
+install_padogrid -product padogrid
+```
+
+- Added `unstall_product` for uninstalling products. By default, the `uninstall_product` command uninstalls the specified product version only if the product version is not in use. You can override it by specifying the `-force` option.
+
+---
+
 ## Version 0.9.16
 
 ### Release Date: 05/30/22

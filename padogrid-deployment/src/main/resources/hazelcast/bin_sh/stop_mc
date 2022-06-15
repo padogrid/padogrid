@@ -73,6 +73,15 @@ MC_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
    VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
    if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_MC_HOST" ]; then
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
       DEFAULT_USER=$(whoami)
       VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
@@ -83,7 +92,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
-         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
+         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote $MC_HOST -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
          exit
       fi
    fi
@@ -126,7 +135,7 @@ else
 
    echo "----------------------------------------------------------------"
    echo "        WORKSPACE $PADOGRID_WORKSPACE"
-   echo "       MC Stopped: $MC_NAME"
+   echo "             Name: $MC_NAME"
    echo "          Cluster: $CLUSTER"
    echo "Management Center: hazelcast-mancenter"
    if [ "$MC_HTTPS_ENABLED" == "true" ]; then
@@ -135,7 +144,6 @@ else
    echo "              URL: http://${NODE}:${MC_HTTP_PORT}/hazelcast-mancenter"
    fi
    echo "              PID: $PID"
-   echo "      WORKING_DIR: ${WORKING_DIR}"
    if [ "$MC_HTTPS_ENABLED" == "true" ]; then
    echo "       HTTPS_PORT: $MC_HTTPS_PORT"
    else
@@ -144,5 +152,7 @@ else
    echo "         JMX_PORT: $MC_JMX_PORT"
    echo "          LOG_DIR: $LOG_DIR"
    echo "         LOG_FILE: $LOG_FILE"
+   echo "      WORKING_DIR: ${WORKING_DIR}"
+   echo "           Status: Stopped"
    echo "----------------------------------------------------------------"
 fi

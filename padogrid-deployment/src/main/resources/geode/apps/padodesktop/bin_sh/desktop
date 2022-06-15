@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,10 +40,28 @@ EOF
 exit
 fi
 
-JMX_PORT=30014
-#DEBUG="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=9001"
-JMX_PARAMETERS="-Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
+# ---
+# IndexMatrix page size. IndexMatrix breaks up the result set into pages. The client
+# application receives only a single page that pertains to the current pagenation view.
+# This allows the client to scroll the received (or local) page. When the client
+# scrolls beyond the local page, IndxeMatrix automatically fetches the page that matches
+# the scrolled view and replaces the current page. This enables IndexMatrix to send the
+# first page to the client while building the rest of the pages, providing very quick
+# responses to the client.
+#
+# For large result sets, increasing this value can provide better performance at the
+# exenpense of the increased delay in receiving the first page. The smaller the value
+# the faster the intial page will be received by the client, but the more load will
+# be put on IndexMatrix for creating the larger number of smaller pages.
+# ---
 PADO_PROPERTIES="-Dpado.index.pageSize=10000"
+
+# --- Uncomment the following to enabled JXM
+#JMX_PORT=30014
+#JMX_PARAMETERS="-Dcom.sun.management.jmxremote.port=${JMX_PORT} -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
+
+# --- Uncomment the following to enabled remote debugging
+#DEBUG="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=9001"
 
 if [[ ${OS_NAME} == CYGWIN* ]]; then
   CLASSPATH="$(cygpath -wp "$CLASSPATH")"

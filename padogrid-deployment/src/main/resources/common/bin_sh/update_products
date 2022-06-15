@@ -85,7 +85,7 @@ EOF
 cat <<EOF
 SEE ALSO
 EOF
-   printSeeAlsoList "change_version install_padogrid show_products" $EXECUTABLE
+   printSeeAlsoList "change_version install_padogrid show_products uninstall_product" $EXECUTABLE
    exit
 fi
 
@@ -105,15 +105,22 @@ if [ "$PRODUCT_ARG" != "" ]; then
    fi
 fi
 
+#
+# Sets product version env variables based on the exported *_HOME env variables.
+# The product version env varialbles begin with the prefix "__" (2 underscores).
+# 
 function getProductVersions
 {
    __PADOGRID_VERSION=${PADOGRID_HOME#*padogrid_}
    __PADO_VERSION=${PADO_HOME#*pado_}
    __PADODESKTOP_VERSION=${PADODESKTOP_HOME#*pado-desktop_}
-   __PADOWEB_VERSION=${PADOWEB_HOME#*padoweb_}
+   __PADOWEB_VERSION=${PADO_HOME#*padoweb_}
    __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
    __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
    __HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_HOME#*hazelcast-enterprise-}
+   if [[ ! $__HAZELCAST_ENTERPRISE_VERSION =~ ^[0-9] ]]; then
+      __HAZELCAST_ENTERPRISE_VERSION=""
+   fi
    if [[ "$HAZELCAST_MC_HOME" == *"management-center" ]] && [ -d "$HAZELCAST_MC_HOME" ]; then
       for i in $HAZELCAST_MC_HOME/*.jar; do
          if [[ "$i" == *"hazelcast-management-center"* ]]; then
@@ -129,6 +136,9 @@ function getProductVersions
    __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
    __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
    __HAZELCAST_OSS_VERSION=${HAZELCAST_HOME#*hazelcast-}
+   if [[ ! $__HAZELCAST_OSS_VERSION =~ ^[0-9] ]]; then
+      __HAZELCAST_OSS_VERSION=""
+   fi
    if [[ "$JET_MC_HOME" == *"4.2021"* ]]; then
       __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-management-center-}
    else
@@ -136,7 +146,6 @@ function getProductVersions
    fi
    __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
    __SPARK_VERSION=${SPARK_HOME#*spark-}
-   __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
    __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
 }
 

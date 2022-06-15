@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -117,6 +117,13 @@ done
 if [ "$GEODE_HOME" == "" ]; then
    GEODE_HOME="$GEMFIRE_HOME"
 fi
+
 CLASSPATH="$APP_DIR:$APP_DIR/plugins/*:$APP_DIR/lib/*:$APP_JARS:$GEODE_HOME/lib/*"
+if [ "$PADOGRID_HOME" != "" ]; then
+   CLASSPATH="$CLASSPATH:$PADOGRID_HOME/geode/plugins/*:$PADOGRID_HOME/geode/lib/*"
+fi
+if [ "$PADOGRID_WORKSPACE" != "" ]; then
+   CLASSPATH="$CLASSPATH:$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*"
+fi
 
 JAVA="$JAVA_HOME/bin/java"

@@ -1,0 +1,61 @@
+#
+# Build and publish PadoGrid snapshot upon RELEASE_NOTES.md push
+#
+name: padogrid-SNAPSHOT Publish
+
+on:
+  push:
+    branches:
+      - 'develop'
+    paths:
+      - 'RELEASE_NOTES.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        maven: [ '3.6.3' ]
+        java: [ '8' ]
+        
+    steps:
+      - name: Setup Maven Action
+        uses: s4u/setup-maven-action@v1.2.1
+        with:
+          java-version: ${{ matrix.java }}
+          maven-version: ${{ matrix.maven }}
+
+      - name: Prepare Release Notes
+        run: echo "*The latest Padogrid binary snapshot release without man pages and Coherence support.*" > snapshot-release-notes.md
+        shell: bash
+
+      - name: Extract Snapshot Release Notes
+        run: sed -n '/.*SNAPSHOT/,/---/p' RELEASE_NOTES.md  | sed '/^---.*$/d' >> snapshot-release-notes.md
+        shell: bash
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      - name: Delete Tag/Release - snapshot
+        uses: dev-drprasad/delete-tag-and-release@v0.2.0
+        with:
+          delete_release: true # default: false
+          tag_name: 'snapshot' # tag name to delete
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine PadoGrid Snapshot Version
+        run: echo "PADOGRID_VERSION=$(grep -m 1 Version RELEASE_NOTES.md | sed 's/^.*Version //')" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Create Tag/Release - snapshot
+        uses: ncipollo/release-action@v1.10.0
+        with:
+          name: "Padogrid v${{ env.PADOGRID_VERSION }}"
+          prerelease: true
+          tag: "snapshot"
+          artifacts: "padogrid-deployment/target/assembly/*.tar.gz,padogrid-deployment/target/assembly/*.zip"
+          bodyFile: "snapshot-release-notes.md"
+          removeArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}

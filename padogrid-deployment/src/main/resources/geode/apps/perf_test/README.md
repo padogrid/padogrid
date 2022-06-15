@@ -1,14 +1,23 @@
 # Geode `perf_test` App
 
-The `perf_test` app provides scripts to ingest and transact mock data for testing Geode throughputs and latencies. It provides a quick way to run your performance tests by configuring a few properties such as the payload size, the number of objects (entries), and the number of worker threads. Out of the box, these properties have already been pre-configured in `etc/ingestion.properties` and `etc/tx.properties`, which you can modify as needed to meet your test criteria.
+The `perf_test` app provides Geode client programs to perform the following:
 
-The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of `Region` operations and execute them in parallel. A group is analogous to a function that makes multiple `Region` method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files that have been preconfigured to invoke 22 put calls and 22 get calls on 22 different regions. You can configure the Near Cache in `etc/geode-client.xml` to measure the throughput.
+- Ingest mock data of any size
+- Ingest transactional data of any size
+- Ingest mock data with entity relationships (ER)
+- Ingest mock data directly to databases
+- Simulate complex appliation workflows that invoke Geode operations without coding
+- Measure Geode latencies and throughputs in a multi-threaded user session environment
+
+The `perf_test` app provides a pair of scripts to ingest and transact mock data for testing Geode throughputs and latencies. It provides a quick way to run your performance tests by configuring a few properties such as the payload size, the number of objects (entries), and the number of worker threads. Out of the box, these properties have already been pre-configured in `etc/ingestion.properties` and `etc/tx.properties`, which you can modify as needed to meet your test criteria.
+
+The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of `Region` operations and execute them in parallel. A group is analogous to a function that makes multiple `Region` method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files that have been preconfigured to invoke 22 put calls and 22 get calls on 22 different regions. You can configure the Near Cache in `etc/geode-client.xml` to measure the throughput. There are also several additional example `group-*.properties` files. You can also configure a local or near cache in `etc/client-cache.xml` to measure the improved throughput. 
 
 You can also ingest `Customer` and `Order` domain objects with mock data. These objects have been annotated with Hibernate such that you can synchronize Geode with a database of your choice. See the [CacheWriterLoaderPkDbImpl (Database Integration)](#cachewriterloaderpkdbimpl-database-integration) section for configuration instructions.
 
-## Regions
+## Transaction Test Cases
 
-All the test cases are performed on three (3) partitioned regions with a simple PBM (Pharmacy Benefit Management) data model that associates the client group number with group members. Simply put, all of the members that belong to a group are co-located in the same Geode partition. This enables each Geode member to complete transactions with their local datasets without encountering additional network hops.
+All of the transaction test cases are performed on three (3) partitioned regions with a simple PBM (Pharmacy Benefit Management) data model that associates the client group number with group members. Simply put, all of the members that belong to a group are co-located in the same Geode partition. This enables each Geode member to complete transactions with their local datasets without encountering additional network hops.
 
 |Region    | Description | Script |
 |------ | ------------| ------ |
@@ -18,12 +27,23 @@ All the test cases are performed on three (3) partitioned regions with a simple 
 
 ## Configuration Files
 
+
 There are two configuration files with preconfigured properties as follows:
 - `etc/ingestion.properties` - This file defines properties for ingesting data into the `eligibility` and `profile` regions.
 - `etc/tx.properties` - This file defines properties for performing transactions.
 - `etc/group.properties` - This file defines properties for performing groups of `Region` method calls.
 - `etc/group-put.properties` - This file defines properties for making 22 put calls on 22 different regions in a single group.
 - `etc/group-get.properties` - This file defines properties for making 22 get calls on 22 different regions in a single group. Note that group-put must be invoked first to ingest data. 
+
+| Properties File | Description |
+| --------------- | ----------- |
+| `ingestion.properties` | Defines properties for ingesting data into the `eligibility` and `profile` regions. |
+| `tx.properties`        | Defines properties for performing transactions. |
+| `group.properties`     | Defines properties for performing groups of `Region` method calls. |
+| `group-put.properties` | Defines properties for making 22 put calls on 22 different regions in a single group. |
+| `group-get.properties` | Defines properties for making 22 get calls on 22 different regions in a single group. Note that before invoking this file, `group-put.properties` must be invoked first to ingest data. |
+| `group-factory.properties` | Defines properties for ingesting mock data. |
+| `group-factory-er.properties` | Defines properties for ingesting mock data with entity relationships. |
 
 You can introduce your own test criteria by modifying the properties the above files or supply another properties file by specifying the `-prop` option of the scripts described below.
 
@@ -35,7 +55,7 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 | ------ | ----------- |
 | `test_ingestion` | Displays or runs data ingestion test cases (`putall` or `put`) specified in the `etc/ingestion.properties` file. It ingests mock data into the `eligibility` and `profile` regions. |
 | `test_tx` | Displays or runs transaction and query test cases specified in the `etc/tx.properties` file. It runs `get`, `getall`, `tx` test cases specified in the `perf.properties` file. |
-| `test_group` | Displays or runs group test cases (`put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Geode Region operations. |
+| `test_group` | Displays or runs group test cases (`put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Geode `Region` operations. |
 
 ## Script Usages
 
@@ -47,7 +67,7 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 
 Output:
 
-```
+```console
 Usage:
    test_ingestion [-run] [-prop <properties-file>] [-?]
 
@@ -97,21 +117,42 @@ Output:
 
 ```console
 Usage:
-   test_group [-run] [-prop <properties-file>] [-?]
+   test_group [-run|-list] [-db|-clear] [-prop <properties-file>] [-?]
 
    Displays or runs group test cases specified in the properties file.
-   A group represents a function that executes one or more Geode Region
+   A group represents a function that executes one or more Geode/GemFire Region
    operations. This program measures average latencies and throughputs
    of group (or function) executions.
    The default properties file is
       ../etc/group.properties
 
-       -run                Run test cases
-        <properties-file>  Optional properties file path.
+       -run              Run test cases.
+
+       -list             Lists data structures and their sizes.
+
+       -db               Runs test cases on database instead of Geode/GemFire. To use this
+                         option, each test case must supply a data object factory class
+                         by specifying the 'factory.class' property and Hibernate must
+                         be configured by running the 'build_app' command.
+
+       -clear            Clears all the data structures pertaining to the group test cases that
+                         were created in the Geode/GemFire cluster. If the '-run' option is not
+                         ospecified, then it has the same effect as the '-list' option. It only
+                         lists data strcutures and their without deleting them.
+
+                         Note that the 'clear' operation is an extension to the Geode/GemFire API.
+                         Geode/GemFire does not allow clearing partitioned regions in particuar.
+                         To use this operation, you must register the following function found in
+                         the 'geode-addon-core' plugin. By default, this function is registered
+                         in the Geode cluster's 'etc/cache.xml' file.
+
+                             org.apache.geode.addon.function.ClearFunction
+
+       <properties-file> Optional properties file path.
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
-      /Users/dpark/padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
+      /Users/dpark/Padogrid/workspaces/rwe-gemfire/ws-spring/apps/perf_test/results
 ```
 
 ### CacheWriterLoaderPkDbImpl (Database Integration)
@@ -284,11 +325,14 @@ The following is the `hibernate.cfg-mysql.xml` file provided by `geode-addon`. M
 </hibernate-configuration>
 ```
 
-The Hibernate configuration file path must be provided before you start the cluster. Edit the cluster's `setenv.sh` file and include the path as follows:
+The Hibernate configuration file path must be provided before you start the cluster. Edit the cluster's `setenv.sh` file and include the path as follows.
 
 ```bash
 vi $PADOGRID_WORKSPACE/clusters/$CLUSTER/bin_sh/setenv.sh
+```
+In `setenv.sh`, add the following:
 
+```bash
 # Set JAVA_OPTS in setenv.sh. Remember that geode-addon uses gfsh to start/stop
 # locators and members. For Java options, you must prepend '--J='.
 HIBERNATE_CONFIG_FILE="$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
@@ -377,3 +421,37 @@ Time unit: msec
 
 Stop Time: Tue Jan 14 11:21:46 EDT 2020
 ```
+
+## Inserting and Updating Database Tables
+
+The `group_test -db` command directly loads mock data into database tables without connecting to Geode. You can use this command to pre-populate the database before testing database synchronization tests in Geode. This command is also useful for testing the CDC use case in which database changes are automatically ingested into Geode via a CDC product such as Debezium.
+
+```bash
+# Edit setenv.sh to set the correct hibernate configuration file.
+vi setenv.sh
+```
+
+By default, `setenv.sh` is configured with `hibernate.cfg-mysql.xml`. Change it to another if you are using a different database. Please see the `etc` directory for all the available database configuration files. If your database is not listed, then you can create one by copying one of the `hibernate-*` files and specifying that file name in the `setenv.sh` file.
+
+Make sure to set the correct database user name and password in the Hibernate configuration file.
+
+```bash
+# Hibernate
+JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
+```
+
+Run `test_group -db`.
+
+```bash
+./test_group -db -run -prop ../etc/group-factory.properties
+```
+
+## Generating Entity Relationships (ER)
+
+If you want to add entity relationships to your data, then you can implement [`DataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/geode-addon-core-5/src/test/java/org/geode/addon/test/perf/data/DataObjectFactory.java) or extend [`AbstractDataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/geode-addon-core-5/src/test/java/org/geode/demo/nw/impl/AbstractDataObjectFactory.java) and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see [`org.apache.geode.addon.demo.nw.impl.OrderFactoryImpl`](https://github.com/padogrid/padogrid/blob/develop/geode-addon-core/src/test/java/org/apache/geode/addon/demo/nw/impl/OrderFactoryImpl.java) for details. You can run the example as follows:
+
+```bash
+./test_group -run -prop ../etc/group-factory-er.properties
+```
+
+The ER capbility provides you a quick way to ingest co-located data into Geode and test server-side operations that take advatange of data affinity.

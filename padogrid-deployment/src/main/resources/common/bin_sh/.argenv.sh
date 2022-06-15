@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,6 +65,8 @@ HOST_SPECIFIED=false
 COUNT=
 INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
+VERSION_ARG=
+FORCE_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_SPECIFIED=false
 CLUSTER_TYPE_SPECIFIED=false
@@ -282,12 +284,16 @@ do
       FOLDER=$i
    elif [ "$PREV" == "-datasource" ]; then
       DATASOURCE=$i
+   elif [ "$PREV" == "-version" ]; then
+      VERSION_ARG=$i
 
 # options with no value
    elif [ "$i" == "-init" ]; then
       INIT_SPECIFIED=true
    elif [ "$i" == "-version" ]; then
       VERSION_SPECIFIED=true
+   elif [ "$i" == "-force" ]; then
+      FORCE_SPECIFIED=true
    elif [ "$i" == "-man" ]; then
       MAN_SPECIFIED=true
    elif [ "$i" == "-fg" ]; then
@@ -495,6 +501,17 @@ fi
 if [ "$ENV_ARG" != "" ]; then
    . $ENV_ARG
 fi
+
+# 
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      export PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      export PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi      
 
 DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss snappydata spark kafka hadoop"
 

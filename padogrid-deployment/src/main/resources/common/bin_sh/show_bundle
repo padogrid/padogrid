@@ -223,17 +223,23 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
    # GitHub
    for GITHUB_USER in $GITHUB_USERS; do
       GITHUB_USER_HOME="$GITHUB_BASE_URL/$GITHUB_USER"
-      BUNDLE_REPOS="$GITHUB_USER_HOME?tab=repositories"
+      BUNDLE_REPOS="$GITHUB_USER_HOME?tab=repositories&sort=true&page="
       RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
 
       echo -e "(Repo: ${CLightGreen}$GITHUB_USER_HOME${CNone})"
-
-      NEXT_URL=$BUNDLE_REPOS
+      PAGE_NUM=1
+      NEXT_URL=${BUNDLE_REPOS}$PAGE_NUM
       let BUNDLE_INDEX=0
       while [ "$NEXT_URL" != "" ]; do
          BUFFER=$(curl -sSL $NEXT_URL)
-         NEXT_URL=$(echo "$BUFFER" | grep "Next" | grep "$GITHUB_USER_HOME?after=" | sed -e 's/.*href="//' -e 's/">Next.*$//')
-
+         # Look for "Next" link. If not found then this is the last page.
+         #NEXT_URL=$(echo "$BUFFER" | grep "Next" | grep "$GITHUB_USER_HOME?after=" | sed -e 's/.*href="//' -e 's/">Next.*$//')
+         HREF=$(echo "$BUFFER" | grep "Next" | sed -e 's/.*href="//' -e 's/">Next.*$//')
+         let PAGE_NUM=PAGE_NUM+1
+         NEXT_URL=""
+         if [ "$HREF" != "" ]; then
+            NEXT_URL=${BUNDLE_REPOS}$PAGE_NUM
+         fi
          for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
             HREF=$(echo "$BUFFER" | grep "\/$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-")
             BUNDLE_LIST=""

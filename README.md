@@ -1,28 +1,23 @@
 # PadoGrid
 
-The PadoGrid project aims to deliver a data grid platform with out-of-the-box turnkey solutions to many enterprise architecture use cases. The solutions come in the form of bundles which you simply *install and run*. See the PaodGrid manual for details.
+The PadoGrid project aims to deliver a data grid platform with out-of-the-box turnkey solutions to many enterprise architecture use cases. The solutions come in the form of bundles which you simply *install and run*. See the PaodGrid manual and FAQ for details.
 
-[**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
+- [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
+- [**FAQ**](https://github.com/padogrid/padogrid/wiki/faq)
 
 ## Installation
 
-You can install PadoGrid and the supported data grid products by simply running the [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script.
+You can install PadoGrid and the supported data grid products by running the interactive [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script. Copy and paste the following command into your terminal.
 
 ```bash
-# Download the installer script
-curl -sO https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid
-chmod 755 install_padogrid
-
-# Install interactively:
-./install_padogrid
-
-# View the usage:
-./install_padogrid -?
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid)"
 ```
 
 :pencil2: *Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
 
 [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
+
+:pencil2: *The latest PadoGrid snapshot release is available if you cannot wait till the next release. It is automatically built whenver there are changes made in [RELEASE_NOTES.md](RELEASE_NOTES.md). You can download it from [Releases](https://github.com/padogrid/padogrid/releases) or using `install_padogrid`.*
 
 ## PadoGrid Container
 
@@ -287,3 +282,9 @@ You can also create online bundles hosted by your repos. The following link prov
 Creating your own online bundles is made easy by using the bundle templates. The following link povides template links.
 
 [Using Bundle Templates](https://github.com/padogrid/padogrid/wiki/Using-Bundle-Templates)
+
+### FAQ
+
+The FAQ link aims to provide a comprensive collection of PadoGrid Q&As including a series of topics on how to build distributed systems using PadoGrid.
+
+[FAQ](https://github.com/padogrid/padogrid/wiki/faq)
