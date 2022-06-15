@@ -3,9 +3,9 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
-## Version 0.9.17-SNAPSHOT
+## Version 0.9.17
 
-### Release Date: 06/11/22
+### Release Date: 06/15/22
 
 - Fixed `install_bundle` to correctly install a workspace bundle.
 - Updated `perf_test` README.md files.
