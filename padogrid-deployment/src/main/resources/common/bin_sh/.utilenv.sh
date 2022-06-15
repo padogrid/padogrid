@@ -1495,6 +1495,9 @@ function retrieveClusterEnvFile
       elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then
          PRODUCT="coherence"
          CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/redis.conf" ]; then
+         PRODUCT="redis"
+         CLUSTER_TYPE=$PRODUCT
       elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then
          PRODUCT="spark"
          CLUSTER_TYPE="standalone"
@@ -2101,6 +2104,9 @@ function __switch_cluster
       elif [ "$PRODUCT" == "coherence" ]; then
          export PRODUCT_HOME=$COHERENCE_HOME
          __PRODUCT="coherence"
+      elif [ "$PRODUCT" == "redis" ]; then
+         export PRODUCT_HOME=$REDIS_HOME
+         __PRODUCT="redis"
       elif [ "$PRODUCT" == "kafka" ]; then
          export PRODUCT_HOME=$KAFKA_HOME
          __PRODUCT="kafka"
@@ -3520,7 +3526,7 @@ function determineInstalledProductVersions
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, hadoop, kafka, spark
+#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, redis, hadoop, kafka, spark
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
@@ -3581,6 +3587,11 @@ function determineProduct
       COHERENCE_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="coherence"
       CLUSTER=$DEFAULT_COHERENCE_CLUSTER
+   elif [[ "$PRODUCT_HOME" == *"redis"* ]]; then
+      PRODUCT="redis"
+      REDIS_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="redis"
+      CLUSTER=$DEFAULT_REDIS_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"spark"* ]]; then
       PRODUCT="spark"
       PRODUCT_HOME="$PRODUCT_HOME"
@@ -3605,7 +3616,7 @@ function determineProduct
 #
 # Determines the product by examining cluster files. The following environment variables
 # are set after invoking this function.
-#   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
+#   PRODUCT         geode, hazelcast, snappydata, coherence, redis, spark, hadoop
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   set to standalone if PRODUCT is spark,
 #                   set to PRODUCT for all others.
@@ -3668,6 +3679,9 @@ function getInstalledProducts
   if [ "$COHERENCE_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS coherence"
   fi
+  if [ "$REDIS_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS redis"
+  fi
   if [ "$KAFKA_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS kafka"
   fi
@@ -3682,7 +3696,7 @@ function getInstalledProducts
 # .coherenceenv.sh, or .sparkenv.sh in the specified RWE directory if it does not exist.
 #
 # @optional PADOGRID_WORKSPACES_HOME
-# @param productName      Valid value are 'geode', 'hazelcast', 'snappydata', 'coherence', or 'spark'.
+# @param productName      Valid value are 'geode', 'hazelcast', 'snappydata', 'coherence', 'redis', 'spark', 'hadoop'.
 # @param workspacesHome   RWE directory path. If not specified then it creates .geodeenv.sh, 
 #                         .hazelcastenv.sh, .snappydataenv.sh, .coherenceenv.sh, or .sparkenv.sh in
 #                         PADOGRID_WORKSPACES_HOME.
@@ -3734,6 +3748,13 @@ function createProductEnvFile
          echo "# Enter Coherence product specific environment variables and initialization" >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "#" >> $WORKSPACES_HOME/.coherenceenv.sh
+      fi
+   elif [ "$PRODUCT_NAME" == "redis" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.redisenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.redisenv.sh
+         echo "# Enter Redis product specific environment variables and initialization" >> $WORKSPACES_HOME/.redisenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.redisenv.sh
+         echo "#" >> $WORKSPACES_HOME/.redisenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "spark" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.sparkenv.sh ]; then
@@ -3799,7 +3820,7 @@ function getOptValue
 
 #
 # Returns the default start port number of the specified product.
-# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, spark, kafka.
+# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, redis, spark, kafka.
 #
 function getDefaultStartPortNumber
 {
@@ -3812,6 +3833,8 @@ function getDefaultStartPortNumber
       echo "10334"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "9000"
+   elif [ "$__PRODUCT" == "redis" ]; then
+      echo "6379"
    elif [ "$__PRODUCT" == "spark" ]; then
       echo "7077"
    elif [ "$__PRODUCT" == "kafka" ]; then

@@ -70,6 +70,7 @@ FORCE_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_SPECIFIED=false
 CLUSTER_TYPE_SPECIFIED=false
+REPLICAS=1
 FG_SPECIFIED=false
 MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
@@ -205,6 +206,8 @@ do
    elif [ "$PREV" == "-cluster-type" ]; then
       CLUSTER_TYPE=$i
       CLUSTER_TYPE_SPECIFIED="true"
+   elif [ "$PREV" == "-replicas" ]; then
+      REPLICAS=$i
    elif [ "$PREV" == "-num" ]; then
       MEMBER_NUM=$i
    elif [ "$PREV" == "-password" ]; then
