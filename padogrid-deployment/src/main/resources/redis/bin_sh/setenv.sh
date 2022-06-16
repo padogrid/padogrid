@@ -30,7 +30,7 @@
 #
 # Required:
 # ---------
-# COHERENCE_HOME         Coherence IMDG root directory path
+# REDIS_HOME         Redis root directory path
 #
 # Optional:
 # ---------
@@ -65,9 +65,9 @@
 CLASSPATH=""
 
 # 
-# Enter your Coherence home directory.
+# Enter your Redis home directory.
 #
-#COHERENCE_HOME=
+#REDIS_HOME=
 
 # 
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
