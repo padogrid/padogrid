@@ -3364,6 +3364,7 @@ function determineInstalledProductVersions
    JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
    JET_MANAGEMENT_CENTER_VERSIONS=""
+   REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
    KAFKA_VERSIONS=""
@@ -3484,6 +3485,15 @@ function determineInstalledProductVersions
          fi
       done
       JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
+
+      # Redis
+      __versions=""
+      for i in redis-*; do
+         __version=${i#redis-}
+         #__version=${__version%-bin}
+         __versions="$__versions $__version "
+      done
+      REDIS_VERSIONS=$(sortVersionList "$__versions")
 
       # SnappyData
       __versions=""
