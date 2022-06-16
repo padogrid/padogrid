@@ -56,7 +56,6 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # DEFAULT_MAX_HEAP_SIZE  Maximum heap size. Used initially when the cluster is created.  
 # ----------------------------------------------------------------------------------------------------
 
-
 # 
 # Unset variables
 # 
@@ -96,14 +95,15 @@ DEFAULT_WORKSPACE=myws
 # Default Cluster - If the -cluster option is not specified in any of the commands, then
 # the commands default to this cluster.
 #
+DEFAULT_NONE_CLUSTER="none"
 DEFAULT_PADO_CLUSTER="mypado"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
+DEFAULT_REDIS_CLUSTER="myredis"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
-DEFAULT_REDIS_CLUSTER="myredis"
 DEFAULT_SPARK_CLUSTER="myspark"
 DEFAULT_KAFKA_CLUSTER="mykafka"
 DEFAULT_HADOOP_CLUSTER="myhadoop"
@@ -347,7 +347,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence redis spark kafka hadoop"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet redis snappydata coherence spark kafka hadoop"
 
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
