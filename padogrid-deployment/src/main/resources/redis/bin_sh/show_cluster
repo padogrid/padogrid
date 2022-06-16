@@ -260,15 +260,7 @@ function displayClusterShort()
                NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
                NODE_LOCAL=`getOsNodeName $NODE`
             fi
-            if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
-               ( [ "$OS_ENV" == "gg" ] );  then
-               # Same port number for guest OS
-               MEMBER_PORT=$MEMBER_START_PORT
-            else
-               # Increment port numbers for host OS
-               let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-            fi
-            pid=`getRedisMemberPid $MEMBER_PORT`
+            pid=`getRedisMemberPid $MEMBER_NUM`
             if [ "$pid" != "" ]; then
                 let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
             fi
@@ -372,7 +364,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getRedisMemberPid $MEMBER_PORT`
+            pid=`getRedisMemberPid $MEMBER_NUM`
             if [ -z $pid ]; then
                let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"

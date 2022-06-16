@@ -224,6 +224,11 @@ DEFAULT_MEMBER_HTTP_ENABLED=true
 DEFAULT_MEMBER_HTTP_START_PORT=7080
 
 #
+# Default number of Redis node rpelicas
+#
+DEFAULT_REPLICAS=1
+
+#
 # The max number of members per cluster. The port number ranges are determined
 # by this value. All default port numbers begin from DEFAULT_*_START_PORT and end at 
 # DEFAULT_*_START_PORT+MAX_MEMBER_COUNT-1.

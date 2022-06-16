@@ -165,8 +165,15 @@ done
 popd > /dev/null 2>&1
 
 # Remove all logs of members that are not part of the member list.
+# Remove leading zero
+MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUMBER))
 while true; do
-   let MEMBER_NUMBER=MEMBER_NUMBER+1
+   let MEMBER_NUM_NO_LEADING_ZERO=MEMBER_NUM_NO_LEADING_ZERO+1
+   if [ $MEMBER_NUM_NO_LEADING_ZERO -ge 10 ]; then
+      MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+   else
+      MEMBER_NUMBER=0$MEMBER_NUM_NO_LEADING_ZERO
+   fi
    MEMBER=${MEMBER_PREFIX}${MEMBER_NUMBER}
    IS_CONTINUE=false
    for file in "$LOG_DIR"/${MEMBER}*; do
@@ -186,4 +193,3 @@ while true; do
       break
    fi
 done
-

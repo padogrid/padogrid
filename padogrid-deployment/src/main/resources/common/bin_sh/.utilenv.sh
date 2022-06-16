@@ -857,9 +857,11 @@ function getVmMemberName
 
 #
 # Returns the member PID if it is running. Empty value otherwise.
-# @required NODE_LOCAL     Node name with the local extenstion. For remote call only.
-# @param    memberName     Unique member name
-# @param    workspaceName  Workspace name
+# @required NODE_LOCAL       Node name with the local extension. For remote call only.
+# @optional POD              Pod type. Default: local
+# @optional REMOTE_SPECIFIED true if remote node, false if local node. Default: false
+# @param    memberName       Unique member name
+# @param    workspaceName    Workspace name
 #
 function getMemberPid
 {
@@ -873,7 +875,6 @@ function getMemberPid
       local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__MEMBER"
       members=$(eval $__COMMAND)
       members=$(echo $members | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
-      #members=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MEMBER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    fi
    spids=""
    for j in $members; do

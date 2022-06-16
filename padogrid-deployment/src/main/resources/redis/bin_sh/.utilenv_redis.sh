@@ -19,31 +19,6 @@
 # -----------------------------------------------------
 
 #
-# Returns the member PID if it is running. Empty value otherwise.
-# @required POD
-# @required REMOTE_SPECIFIED
-# @required NODE_LOCAL     Node name with the local extenstion. For remote call only.
-# @param    port           Port number
-#
-function getRedisMemberPid
-{
-   local __MEMBER_PORT="$1"
-   if [ "$__MEMBER_PORT" == "" ]; then
-     echo ""
-     return
-   fi
-   local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
-
-   if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      pid=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
-   else
-      # Use eval to handle commands with spaces
-      pid=$(ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
-   fi
-   echo $pid
-}
-
-#
 # Returns the member PID of VM if it is running. Empty value otherwise.
 # This function is for clusters running on VMs whereas the getMemberPid
 # is for pods running on the same machine.
@@ -119,4 +94,47 @@ function getRedisActiveMemberCount
       popd > /dev/null 2>&1
    fi
    echo $MEMBER_RUNNING_COUNT
+}
+
+#
+# Returns the current cluster's member PID if it is running. Empty value otherwise.
+# @required NODE_LOCAL       Node name with the local extension. For remote call only.
+# @optional POD              Pod type. Default: local
+# @optional REMOTE_SPECIFIED true if remote node, false if local node. Default: false
+# @param    memberNumber     Member number. If not specified then the first member, i.e.,
+#                            1, is assigned. Optional.
+# @param    workspaceName    Workspace name. If not specified, then the current workspace
+#                            is assumed. This parameter is currently used for remote calls.
+#                            Optional.
+#
+function getRedisMemberPid
+{
+   local __MEMBER_NUM=$1
+   local __WORKSPACE="$2"
+   if [ "$__MEMBER_NUM" == "" ]; then
+      __MEMBER_NUM="1"
+   fi
+   # Remove leading zero
+   __MEMBER_NUM=$((10#$__MEMBER_NUM))
+   if [ "$__WORKSPACE" == "" ]; then
+      __WORKSPACE="$PADOGRID_WORKSPACE"
+   fi
+   local __MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   local __MEMBER_PORT
+   let __MEMBER_PORT=__MEMBER_START_PORT+__MEMBER_NUM-1
+   local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
+
+   # TODO: remote call needs to follow the same search as local
+   if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+      pid=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
+   else
+      NODE_LOCAL=`getOsNodeName`
+      # Use eval to handle commands with spaces
+      TARGET_HOST=$NODE_LOCAL:$__MEMBER_PORT 
+      INFO=$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slots)
+      if [ "$INFO" != "" ]; then
+         pid=$(ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
+      fi
+   fi
+   echo $pid
 }

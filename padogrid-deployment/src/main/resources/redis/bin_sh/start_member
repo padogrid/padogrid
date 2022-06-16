@@ -210,7 +210,7 @@ fi
 
 # If the member is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getRedisMemberPid $MEMBER $WORKSPACE`
+   PID=`getRedisMemberPid $MEMBER_NUM`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -298,6 +298,8 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
 fi
 export LOG_DIR=$__LOG_DIR
 
+REPLICAS=`getClusterProperty "redis.replicas" "$DEFAULT_REPLICAS"`
+
 POD=`getClusterProperty "pod.name" $POD`
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
@@ -331,8 +333,49 @@ else
          nohup redis-server $CONFIG_FILE --port $MEMBER_PORT >> $LOG_FILE &
       fi
       popd > /dev/null 2>&1
+
+      # If "no-add-node" is NOT specified, then add this node as master or slave based
+      # on the number of replica. For example, 'start_cluster' may issue "no-add-node"
+      # if it were to initialze the cluster.
+      if [ "$ARG_ARG" != "no-add-node" ]; then
+         FIRST_NODE=$BIND_ADDRESS:$MEMBER_START_PORT
+         TARGET_NODE=$BIND_ADDRESS:$MEMBER_PORT
+         redis-cli --cluster info $FIRST_NODE | sed -e 's/ .*\|//' -e 's/slaves.*//'
+         INFO="$(redis-cli --cluster info $FIRST_NODE 2> /dev/null | grep slaves | sed -e 's/ .*\|//' -e 's/slaves.*//')"
+         INDEX=0
+         ADDED_AS_SLAVE="false"
+         for ITEM in $INFO; do
+            case "$INDEX" in
+              0)
+                MASTER_NODE=$ITEM
+                MASTER_HOST=${MASTER_NODE%:*}
+                MASTER_PORT=$(echo $MASTER_NODE | sed 's/.*://')
+                ;;
+              1)
+                SLAVE_COUNT=$ITEM
+                if [ $SLAVE_COUNT -lt $REPLICAS ]; then
+                   # Add this node as a slave to this master node
+                   MASTER_ID=$(redis-cli -h $MASTER_HOST -p $MASTER_PORT cluster nodes | grep "$MASTER_NODE" | grep master | sed 's/ .*//')
+                   redis-cli --cluster add-node $TARGET_NODE $MASTER_NODE --cluster-slave --cluster-master-id $MASTER_ID
+                   ADDED_AS_SLAVE="true"
+                   NODE_TYPE=slave
+                   break;
+                fi
+                ;;
+            esac
+            let INDEX=INDEX+1
+            if [ $INDEX -ge 2 ]; then
+               INDEX=0
+            fi
+         done
+         if [ "$ADDED_AS_SLAVE" == "false" ]; then
+            # Add as master
+            redis-cli --cluster add-node $TARGET_NODE $FIRST_NODE
+            NODE_TYPE=master
+         fi
+      fi
    fi
-   PID=`getRedisMemberPid $MEMBER $WORKSPACE`
+   PID=`getRedisMemberPid $MEMBER_NUM`
 fi
 
 echo "----------------------------------------------------------------"
@@ -348,6 +391,7 @@ if [ "$FG_SPECIFIED" == "true" ]; then
 echo "             PID: $PID"
 fi
 echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "       NOTE_TYPE: $NODE_TYPE"
 echo "     WORKING_DIR: $MEMBER_DIR"
 echo "      CONFIG_DIR: $ETC_DIR"
 echo "     CONFIG_FILE: $CONFIG_FILE"

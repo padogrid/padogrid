@@ -114,7 +114,11 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
 fi
 
 # Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
+if [ "$WORKSPACE_ARG" != "" ]; then
+   WORKSPACE=$WORKSPACE_ARG
+else
+   WORKSPACE=${PADOGRID_WORKSPACE##*/}
+fi
 POD=`getClusterProperty "pod.name" "local"`
 
 #
@@ -195,7 +199,7 @@ if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
 fi
 
 # Local execution
-PID=`getMemberPid $MEMBER $WORKSPACE`
+PID=`getRedisMemberPid $MEMBER_NUMBER $WORKSPACE`
 if [ -z $PID ]; then
    echo "Member not running [$MEMBER]. Command aborted."
    exit
