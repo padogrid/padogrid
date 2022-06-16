@@ -3,11 +3,12 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
-## Version 0.9.18-REDIS
+## Version 0.9.18-SNAPSHOT
 
-### Release Date: 06/15/22
+### Release Date: 06/16/22
 
-- Initial checkpoint. Branched from develop (padogrid_0.9.18-SNAPSHOT).
+- Added initial support for Redis. Redis joins the growing list of data grid products supported by PadoGrid. Redis OSS is installable with [`install_padogrid`](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid). Note that Redis OSS comes in the form of source code only. You must manually build upon installation by running the **`make`** command. The `install_padogrid` command provides details.
+- PadoGrid automates boostrapping of Redis replicas with fully integrate support for distributed workspaces.
 
 ---
 
