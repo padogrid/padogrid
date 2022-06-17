@@ -289,6 +289,22 @@ function determineInstalledProducts
          fi
       fi
 
+      # Redis
+      if [ "$REDIS_HOME" == "" ]; then
+         __versions=""
+         for i in redis-*; do
+            if [[ "$i" == *"redis-stack-server"* ]]; then
+               __version=${i#redis-stack-server-}
+               __version=${__version%\-*}
+            else
+               __version=${i#redis-}
+            fi
+            __versions="$__versions $__version "
+         done
+         __version=$(getLatestProductVersion "$__versions")
+         REDIS_HOME=$PADOGRID_ENV_BASE_PATH/products/redis-$__version-bin
+      fi
+
       # SnappyData
       if [ "$SNAPPYDATA_HOME" == "" ]; then
          __versions=""
@@ -354,6 +370,9 @@ function determineInstalledProducts
       fi
       if [ ! -d "$JET_MC_HOME" ]; then
          JET_MC_HOME=""
+      fi
+      if [ ! -d "$REDIS_HOME" ]; then
+         REDIS_HOME=""
       fi
       if [ ! -d "$SNAPPYDATA_HOME" ]; then
          SNAPPYDATA_HOME=""
@@ -425,6 +444,9 @@ if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
       fi
       if [ "$COHERENCE_HOME" != "" ]; then
          echo "   $COHERENCE_HOME"
+      fi
+      if [ "$REDIS_HOME" != "" ]; then
+         echo "   $REDIS_HOME"
       fi
       if [ "$SNAPPYDATA_HOME" != "" ]; then
          echo "   $SNAPPYDATA_HOME"

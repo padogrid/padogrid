@@ -10,7 +10,6 @@ https://github.com/padogrid
 - Added initial support for Redis. Redis joins the growing list of data grid products supported by PadoGrid. Redis OSS is installable with [`install_padogrid`](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid). Note that Redis OSS comes in the form of source code only. You must manually build upon installation by running the **`make`** command. The `install_padogrid` command provides details.
 - PadoGrid automates boostrapping of Redis replicas with fully integrate support for distributed workspaces.
 
-
 ---
 
 ## Version 0.9.17

@@ -3588,6 +3588,11 @@ function determineProduct
          fi
       fi
       GEODE_HOME="$PRODUCT_HOME"
+   elif [[ "$PRODUCT_HOME" == *"redis"* ]]; then
+      PRODUCT="redis"
+      REDIS_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="redis"
+      CLUSTER=$DEFAULT_REDIS_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"snappydata"* ]]; then
       PRODUCT="snappydata"
       SNAPPYDATA_HOME="$PRODUCT_HOME"
@@ -3598,11 +3603,6 @@ function determineProduct
       COHERENCE_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="coherence"
       CLUSTER=$DEFAULT_COHERENCE_CLUSTER
-   elif [[ "$PRODUCT_HOME" == *"redis"* ]]; then
-      PRODUCT="redis"
-      REDIS_HOME="$PRODUCT_HOME"
-      CLUSTER_TYPE="redis"
-      CLUSTER=$DEFAULT_REDIS_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"spark"* ]]; then
       PRODUCT="spark"
       PRODUCT_HOME="$PRODUCT_HOME"
