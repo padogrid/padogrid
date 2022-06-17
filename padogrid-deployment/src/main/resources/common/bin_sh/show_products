@@ -65,6 +65,40 @@ EOF
    exit
 fi
 
+function getCurrentProductVersions
+{
+   __PADOGRID_VERSION=${PADOGRID_HOME#*padogrid_}
+   __PADO_VERSION=${PADO_HOME#*pado_}
+   __PADODESKTOP_VERSION=${PADODESKTOP_HOME#*pado-desktop_}
+   __PADOWEB_VERSION=${PADO_HOME#*padoweb_}
+   __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
+   __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
+   __HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_HOME#*hazelcast-enterprise-}
+   if [[ "$HAZELCAST_MC_HOME" == *"management-center" ]] && [ -d "$HAZELCAST_MC_HOME" ]; then
+      for i in $HAZELCAST_MC_HOME/*.jar; do
+         if [[ "$i" == *"hazelcast-management-center"* ]]; then
+            __HAZELCAST_MC_VERSION=${i#*hazelcast-management-center-}
+            __HAZELCAST_MC_VERSION=${__HAZELCAST_MC_VERSION%.jar}
+            break;
+         fi
+      done
+   else
+      __HAZELCAST_MC_VERSION=${HAZELCAST_MC_HOME#*hazelcast-management-center-}
+   fi
+   __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
+   __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
+   __HAZELCAST_OSS_VERSION=${JET_HOME#*hazelcast-}
+   if [[ "$JET_MC_HOME" == *"4.2021"* ]]; then
+      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-management-center-}
+   else
+      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-jet-management-center-}
+   fi
+   __REDIS_VERSION=${REDIS_HOME#*redis-}
+   __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
+   __SPARK_VERSION=${SPARK_HOME#*spark-}
+   __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
+}
+
 function printVersionTree
 {
    local index=0
@@ -99,6 +133,7 @@ function printVersionTree
 }
 
 determineInstalledProductVersions
+getCurrentProductVersions
 
 echo ""
 echo "Products Directoy:"
@@ -132,6 +167,8 @@ echo ""
 printVersionTree "Jet OSS" "$JET_OSS_VERSIONS" "$__JET_OSS_VERSION"
 echo ""
 printVersionTree "Jet Management Center" "$JET_MANAGEMENT_CENTER_VERSIONS" "$__JET_MC_VERSION"
+echo ""
+printVersionTree "Redis" "$REDIS_VERSIONS" "$__REDIS_VERSION"
 echo ""
 printVersionTree "SnappyData" "$SNAPPYDATA_VERSIONS" "$__SNAPPYDATA_VERSION"
 echo ""

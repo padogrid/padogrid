@@ -2096,6 +2096,9 @@ function __switch_cluster
       elif [ "$PRODUCT" == "jet" ]; then
          export PRODUCT_HOME=$JET_HOME
          __PRODUCT="hazelcast"
+      elif [ "$PRODUCT" == "redis" ]; then
+         export PRODUCT_HOME=$REDIS_HOME
+         __PRODUCT="snappydata"
       elif [ "$PRODUCT" == "snappydata" ]; then
          export PRODUCT_HOME=$SNAPPYDATA_HOME
          __PRODUCT="snappydata"
@@ -3342,6 +3345,7 @@ function sortVersionList
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
 #    JET_MANAGEMENT_CENTER_VERSIONS
+#    REDIS_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
 #    KAFKA_VERSIONS
@@ -3490,7 +3494,6 @@ function determineInstalledProductVersions
       __versions=""
       for i in redis-*; do
          __version=${i#redis-}
-         #__version=${__version%-bin}
          __versions="$__versions $__version "
       done
       REDIS_VERSIONS=$(sortVersionList "$__versions")
@@ -3550,6 +3553,7 @@ function determineInstalledProductVersions
 #   GEMFIRE_HOME    Set to PRODUCT_HOME if PRODUCT is geode and CLUSTER_TYPE is gemfire.
 #   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is imdg.
 #   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is jet.
+#   REDIS_HOME      Set to PRODUCT_HOME if PRODUCT is redis.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 #   SPARK_HOME      Set to PRODUCT_HOME if PRODUCT is spark.
 #   KAFKA_HOME      Set to PRODUCT_HOME if PRODUCT is kafka.
@@ -3680,6 +3684,9 @@ function getInstalledProducts
   fi
   if [ "$JET_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS jet"
+  fi
+  if [ "$REDIS_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS redis"
   fi
   if [ "$SNAPPYDATA_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS snappydata"
