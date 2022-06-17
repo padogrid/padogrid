@@ -153,6 +153,7 @@ if [ "$(isClusterExist $CLUSTER)" == "false" ]; then
 fi
 
 # Determine whether the cluster needs initialization
+REPLICAS=`getClusterProperty "redis.replicas" "$DEFAULT_REPLICAS"`
 MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
 MEMBER_TCP_LIST=""
 INIT_REQUIRED="true"
@@ -161,14 +162,24 @@ if [ "$POD" == "local" ]; then
    BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
    TARGET_NODE=""
-   for MEMBER_NUMBER in $(seq $1 $MEMBER_COUNT); do
+   for MEMBER_NUMBER in $(seq 1 $MEMBER_COUNT); do
       if [ "$(getRedisMemberPid $MEMBER_NUMBER)" != "" ]; then
          let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
-         INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
          TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
-         if [ "$INFO" != "" ]; then
-            INIT_REQUIRED="false"
-            break;
+         if [ $REPLICAS -eq 0 ]; then         
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -gt 1 ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
          fi
       fi
    done
@@ -184,6 +195,8 @@ fi
 # TODO: The following assumes that the member numbers exist consecutively.
 #       Need a way to pass the node number to start_member.
 # Start members
+HOST_NAME=`hostname`
+BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
 pushd $RUN_DIR > /dev/null 2>&1
 COUNT=0
 for i in ${MEMBER_PREFIX}*; do
@@ -191,7 +204,29 @@ for i in ${MEMBER_PREFIX}*; do
       let COUNT=COUNT+1
       pushd $i > /dev/null 2>&1
       MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
-      start_member -cluster $CLUSTER -num $MEMBER_NUMBER -arg $ARG_ARG $*
+      MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUMBER))
+      ARG_ARG="no-add-node"
+      if [ "$(getRedisMemberPid $MEMBER_NUM_NO_LEADING_ZERO)" != "" ]; then
+         let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+         TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+         if [ $REPLICAS -eq 0 ]; then         
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -le 1 ]; then
+               ARG_ARG="add-node"
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               ARG_ARG="add-node"
+            fi
+         fi
+      else
+          ARG_ARG="add-node"
+      fi
+
+      start_member -cluster $CLUSTER -num $MEMBER_NUM_NO_LEADING_ZERO -arg $ARG_ARG $*
       popd > /dev/null 2>&1
    fi
    if [ "$POD" != "local" ]; then
@@ -201,6 +236,7 @@ for i in ${MEMBER_PREFIX}*; do
    fi
 done
 popd > /dev/null 2>&1
+
 # Initialize the cluster
 WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
 #if [ $(getRedisActiveMemberCount $WORKSPACE $CLUSTER) -gt 0 ]; then
@@ -213,25 +249,39 @@ if [ "$POD" == "local" ]; then
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
    INIT_REQUIRED="true"
    TARGET_NODE=""
-   for MEMBER_NUMBER in $(seq $1 $MEMBER_COUNT); do
+   for MEMBER_NUMBER in $(seq 1 $MEMBER_COUNT); do
       if [ "$(getRedisMemberPid $MEMBER_NUMBER)" != "" ]; then
          let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
-         INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
          TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
-         if [ "$INFO" != "" ]; then
-            INIT_REQUIRED="false"
-            break;
+         if [ $REPLICAS -eq 0 ]; then
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -gt 1 ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
          fi
       fi
    done
    if [ "$INIT_REQUIRED" == "true" ]; then
-      for MEMBER_NUMBER in $(seq $1 $MEMBER_COUNT); do
+      # Build MEMBER_TCP_LIST for active members only.
+      for MEMBER_NUMBER in $(seq 1 $MEMBER_COUNT); do
          let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
-         TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
-         if [ "$MEMBER_TCP_LIST" == "" ]; then
-            MEMBER_TCP_LIST="$TARGET_NODE"
-         else
-            MEMBER_TCP_LIST="$MEMBER_TCP_LIST $TARGET_NODE"
+         PID=$(getRedisMemberPid $MEMBER_NUMBER)
+         if [ "$PID" != "" ]; then
+            TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+            if [ "$MEMBER_TCP_LIST" == "" ]; then
+               MEMBER_TCP_LIST="$TARGET_NODE"
+            else
+               MEMBER_TCP_LIST="$MEMBER_TCP_LIST $TARGET_NODE"
+            fi
          fi
       done
       redis-cli --cluster create $MEMBER_TCP_LIST --cluster-replicas $REPLICAS --cluster-yes

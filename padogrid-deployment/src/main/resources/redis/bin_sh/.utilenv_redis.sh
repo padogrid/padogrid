@@ -97,6 +97,27 @@ function getRedisActiveMemberCount
 }
 
 #
+# Returns any running Redis server that matches the specified member number's port number.
+# The returned PID does not necessarily represent the cluster's member PID. It might be
+# another cluster's member PID.
+#
+# @param memberNumber Member number. If unspecified, then 1 is assigned. Leading zero (0) allowed.
+#
+function getRedisServerPortPid
+{
+   local MEMBER_NUM=$1
+   if [ "$MEMBER_NUM" == "" ]; then
+      MEMBER_NUM="1"
+   fi
+   local MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+   local MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   local MEMBER_PORT
+   let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM-1
+   local pid=$(ps -opid,command |grep redis-server |grep $MEMBER_PORT | grep -v grep | awk '{print $1}')
+   echo $pid
+}
+
+#
 # Returns the current cluster's member PID if it is running. Empty value otherwise.
 # @required NODE_LOCAL       Node name with the local extension. For remote call only.
 # @optional POD              Pod type. Default: local
@@ -119,6 +140,8 @@ function getRedisMemberPid
    if [ "$__WORKSPACE" == "" ]; then
       __WORKSPACE="$PADOGRID_WORKSPACE"
    fi
+   local __MEMBER=`getMemberName $__MEMBER_NUM`
+   local MEMBER_DIR=$RUN_DIR/$__MEMBER
    local __MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    local __MEMBER_PORT
    let __MEMBER_PORT=__MEMBER_START_PORT+__MEMBER_NUM-1
@@ -128,13 +151,47 @@ function getRedisMemberPid
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       pid=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
    else
-      NODE_LOCAL=`getOsNodeName`
-      # Use eval to handle commands with spaces
-      TARGET_HOST=$NODE_LOCAL:$__MEMBER_PORT 
-      INFO=$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slot)
-      if [ "$INFO" != "" ]; then
-         pid=$(ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
+      local NODE_LOCAL=`getOsNodeName`
+      local TARGET_HOST=$NODE_LOCAL:$__MEMBER_PORT 
+      local __MEMBER_DIR="$(redis-cli -h $NODE_LOCAL -p $__MEMBER_PORT --csv config get dir 2> /dev/null | sed -e 's/.*,\"//' -e 's/\"//')"
+      if [ "$__MEMBER_DIR" == "$MEMBER_DIR" ]; then
+         INFO="$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slot)"
+         if [ "$INFO" != "" ]; then
+            pid=$(ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
+         fi
       fi
    fi
    echo $pid
+}
+
+#
+# Returns the first live Redis node (host:port) in the current cluster.
+#
+# @required CLUSTER
+# @required RUN_DIR
+#
+function getRedisFirstLiveNode
+{
+   local NODE=""
+   local MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   local MEMBER_PREFIX=`getMemberPrefix`
+   local MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+   local HOST_NAME=`hostname`
+   local BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   pushd ${RUN_DIR} > /dev/null 2>&1
+   for i in ${MEMBER_PREFIX}*; do
+      if [ -d "$i" ]; then
+         let COUNT=COUNT+1
+         local MEMBER_NUM=${i:$MEMBER_PREFIX_LEN}
+         local PID=`getRedisMemberPid $MEMBER_NUM`
+         if [ "$PID" != "" ]; then
+            local MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+            NODE=$BIND_ADDRESS:$MEMBER_PORT
+            break; 
+         fi
+      fi
+   done 
+   popd > /dev/null 2>&1
+   echo "$NODE"
 }

@@ -249,6 +249,7 @@ function displayClusterShort()
          REMOTE_SPECIFIED=true
       fi
       # Members
+      PIDS=""
       for i in ${MEMBER_PREFIX}*; do
          if [ -d "$i" ]; then
             MEMBER=$i
@@ -262,7 +263,13 @@ function displayClusterShort()
             fi
             pid=`getRedisMemberPid $MEMBER_NUM`
             if [ "$pid" != "" ]; then
-                let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+               # PIDS is used to remove duplicate PIDs. Duplicates
+               # may occur when there is an error that is not
+               # properly handled by the function.
+               if [[ "$PIDS" != *"$pid"* ]]; then
+                  let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+                  PIDS="$PIDS $pid"
+               fi
             fi
          fi
       done
@@ -331,6 +338,7 @@ function displayClusterLong()
    MEMBER_COUNT=0
    RUNNING_MEMBER_COUNT=0
    DOWN_MEMBER_COUNT=0
+   PIDS=""
    for i in ${MEMBER_PREFIX}*; do
       if [ -d "$i" ]; then
          let MEMBER_COUNT=MEMBER_COUNT+1
@@ -365,6 +373,16 @@ function displayClusterLong()
                REMOTE_SPECIFIED=true
             fi
             pid=`getRedisMemberPid $MEMBER_NUM`
+            if [ "$pid" != "" ]; then
+               # PIDS is used to remove duplicate PIDs. Duplicates
+               # may occur when there is an error that is not
+               # properly handled by the function.
+               if [[ "$PIDS" == *"$pid"* ]]; then
+                  pid=""
+               else
+                  PIDS="$PIDS $pid"
+               fi
+            fi
             if [ -z $pid ]; then
                let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
