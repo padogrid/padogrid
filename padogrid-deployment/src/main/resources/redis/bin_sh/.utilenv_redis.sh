@@ -131,7 +131,7 @@ function getRedisMemberPid
       NODE_LOCAL=`getOsNodeName`
       # Use eval to handle commands with spaces
       TARGET_HOST=$NODE_LOCAL:$__MEMBER_PORT 
-      INFO=$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slots)
+      INFO=$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slot)
       if [ "$INFO" != "" ]; then
          pid=$(ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
       fi
