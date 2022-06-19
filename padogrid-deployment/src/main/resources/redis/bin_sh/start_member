@@ -569,14 +569,6 @@ function writeLocalTopBody()
    echo "MEMBER_HTTP_START_PORT=$DEFAULT_MEMBER_HTTP_START_PORT" >> $__SCRIPT_FILE
    echo "" >> $__SCRIPT_FILE
    echo "#" >> $__SCRIPT_FILE
-   echo "# Locator JMX Manager start port numbers." >> $__SCRIPT_FILE
-   echo "#" >> $__SCRIPT_FILE
-   JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
-   JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
-   echo "JMX_MANAGER_HTTP_START_PORT=$JMX_MANAGER_HTTP_START_PORT" >> $__SCRIPT_FILE
-   echo "JMX_MANAGER_START_PORT=$JMX_MANAGER_START_PORT" >> $__SCRIPT_FILE
-   echo "" >> $__SCRIPT_FILE
-   echo "#" >> $__SCRIPT_FILE
    echo "# Member JMX start port number." >> $__SCRIPT_FILE
    echo "#" >> $__SCRIPT_FILE
    echo "JMX_START_PORT=$JMX_START_PORT" >> $__SCRIPT_FILE
@@ -655,7 +647,7 @@ function writeBottomBody()
    __SCRIPT_FILE=$1
    echo "" >> $__SCRIPT_FILE
    echo "#" >> $__SCRIPT_FILE
-   echo "# Instance (locator/member) name" >> $__SCRIPT_FILE
+   echo "# Instance (member) name" >> $__SCRIPT_FILE
    echo "#" >> $__SCRIPT_FILE
    echo "INSTANCE_NAME=\$CLUSTER\${TYPE}-\$HOST_NAME-\$MEMBER_NUMBER" >> $__SCRIPT_FILE
    echo "" >> $__SCRIPT_FILE
@@ -937,15 +929,15 @@ function writeStartScript
    echo "" >> $README_FILE
    echo "bin/" >> $README_FILE
    echo "   setenv.sh" >> $README_FILE
-   echo "             Sets REDIS_HOME and other required environment variables." >> $README_FILE
+   echo "             Sets REDIS_HOME, REDISSON_OPTS and other required environment variables." >> $README_FILE
    echo "" >> $README_FILE
    echo "   setenv_local.sh" >> $README_FILE
-   echo "             Sets REDIS_OPTS and JAVA_OPTS required by 'gfsh start' for running locators and" >> $README_FILE
-   echo "             members on the same local machine." >> $README_FILE
+   echo "             Sets REDISSON_OPTS and JAVA_OPTS required for running reddison nodes" >> $README_FILE
+   echo "             nodes on the same local machine." >> $README_FILE
    echo "" >> $README_FILE
    echo "   setenv_vm.sh" >> $README_FILE
-   echo "             Sets REDIS_OPTS and JAVA_OPTS required by 'gfsh start' for running locators and" >> $README_FILE
-   echo "             menbers on separate machines." >> $README_FILE
+   echo "             Sets REDISSON_OPTS and JAVA_OPTS required for running reddison nodes" >> $README_FILE
+   echo "             nodes on separate  machine." >> $README_FILE
    echo "" >> $README_FILE
    echo "   start_member.sh" >> $README_FILE
    echo "             Runs 'start.sh' with the specified option ('-local' or '-vm')." >> $README_FILE
@@ -975,7 +967,7 @@ function writeStartScript
    echo "      REDIS_OPTS" >> $README_FILE
    echo "      JAVA_OPTS" >> $README_FILE
    echo "" >> $README_FILE
-   echo "4. The changes you made in the above steps apply to all locators and members. If you are" >> $README_FILE
+   echo "4. The changes you made in the above steps apply to all members. If you are" >> $README_FILE
    echo "   running Redis on multiple machines then you can deploy the same changes to" >> $README_FILE
    echo "   other machines." >> $README_FILE
    echo "" >> $README_FILE
@@ -986,9 +978,7 @@ function writeStartScript
    echo "" >> $README_FILE
    echo "6. Stop a member by running 'stop_member -num member_number'" >> $README_FILE
    echo "" >> $README_FILE
-   echo "7. Stop a locator by running 'stop_locator -num member_number'" >> $README_FILE
-   echo "" >> $README_FILE
-   echo "8. The locator and member log files are written in the $CLUSTER/log directory." >> $README_FILE
+   echo "7. The member log files are written in the $CLUSTER/log directory." >> $README_FILE
 
    cp $README_FILE ${CLUSTER_DIR}/generated/
 

@@ -82,10 +82,7 @@ function getRedisActiveMemberCount
          if [ -d "$i" ]; then
             MEMBER=$i
             MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
-            MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
-            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-            let MEMBER_COUNT=MEMBER_COUNT+1
-            pid=`getRedisMemberPid $MEMBER_PORT`
+            pid=`getRedisMemberPid $MEMBER_NUM`
             if [ "$pid" != "" ]; then
                let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
        fi
@@ -94,6 +91,18 @@ function getRedisActiveMemberCount
       popd > /dev/null 2>&1
    fi
    echo $MEMBER_RUNNING_COUNT
+}
+
+#
+# Returns the number of active (or running) members in the specified cluster.
+# Returns 0 if the workspace name or cluster name is unspecified or invalid.
+# This function works for both VM and non-VM workspaces.
+# @param workspaceName Workspace name.
+# @param clusterName   Cluster name.
+#
+function getActiveMemberCount
+{
+   getRedisActiveMemberCount "$@"
 }
 
 #
