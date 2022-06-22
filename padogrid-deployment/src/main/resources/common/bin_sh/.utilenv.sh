@@ -823,7 +823,7 @@ function getMemberPrefix
 #
 function getMemberName
 {
-   __MEMBER_NUM=`trimString "$1"`
+   local __MEMBER_NUM=`trimString "$1"`
    len=${#__MEMBER_NUM}
    if [ $len == 1 ]; then
       __MEMBER_NUM=0$__MEMBER_NUM
@@ -831,6 +831,26 @@ function getMemberName
       __MEMBER_NUM=$__MEMBER_NUM
    fi
    echo "`getMemberPrefix`$__MEMBER_NUM"
+}
+
+#
+# Returns the member number of the specified member name. By convention, member
+# names end with a member number, i.e., "-01". It returns an empty string if
+# the trailing string is not a number.
+#
+# @param memberName
+#
+function getMemberNumber
+{
+   local __MEMBER_NAME="$1"
+   local __MEMBER_NUMBER=${__MEMBER_NAME##*-}
+   if [ "__MEMBER_NUMBER$__MEMBER_NUMBER" != "" ]; then
+      __MEMBER_NUMBER=$(trimLeadingZero $__MEMBER_NUMBER)
+      if [ $(isNumber "$__MEMBER_NUMBER") == "false" ]; then
+         __MEMBER_NUMBER=""
+      fi
+   fi
+   echo $__MEMBER_NUMBER
 }
 
 #

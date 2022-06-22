@@ -170,7 +170,7 @@ function getRedisMemberPid
       if [ "$__MEMBER_DIR" == "$MEMBER_DIR" ]; then
          INFO="$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slot)"
          if [ "$INFO" != "" ]; then
-            pid=$(ps -eo pid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
+            pid=$(ps -eo pid,command | grep redis-server | grep :$__MEMBER_PORT | grep -v grep | awk '{print $1}')
          fi
       fi
    fi
@@ -182,15 +182,19 @@ function getRedisMemberPid
 # @required NODE_LOCAL       Node name with the local extension. For remote call only.
 # @optional POD              Pod type. Default: local
 # @optional REMOTE_SPECIFIED true if remote node, false if local node. Default: false
-# @param    memberNumber     Member number. If not specified then the first member, i.e.,
-#                            1, is assigned. Optional.
+# @param    memberName       Unique member name
 # @param    workspaceName    Workspace name. If not specified, then the current workspace
 #                            is assumed. This parameter is currently used for remote calls.
 #                            Optional.
 #
 function getMemberPid
 {
-   getRedisMemberPid "$@"
+  local MEMBER_NUMBER=$(getMemberNumber "$1")
+  if [ "$MEMBER_NUMBER" != "" ]; then
+     getRedisMemberPid "$MEMBER_NUMBER" "$2"
+  else
+     echo ""
+  fi
 }
 
 #
