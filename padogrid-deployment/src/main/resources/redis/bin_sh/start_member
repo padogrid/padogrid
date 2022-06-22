@@ -335,6 +335,7 @@ else
       # If "no-add-node" is NOT specified, then add this node as master or slave based
       # on the number of replicas. For example, 'start_cluster' may issue "no-add-node"
       # if it were to initialze the cluster.
+      IS_SLAVE="false"
       if [ "$ARG_ARG" != "no-add-node" ]; then
          FIRST_NODE=$(getRedisFirstLiveNode)
          if [ "$FIRST_NODE" != "" ]; then
@@ -352,10 +353,7 @@ else
                 1)
                   SLAVE_COUNT=$ITEM
                   if [ $SLAVE_COUNT -lt $REPLICAS ]; then
-                     # Add this node as a slave to this master node
-                     MASTER_ID=$(redis-cli -h $MASTER_HOST -p $MASTER_PORT cluster nodes | grep "$MASTER_NODE" | grep master | sed 's/ .*//')
-                     redis-cli --cluster add-node $TARGET_NODE $MASTER_NODE --cluster-slave --cluster-master-id $MASTER_ID
-                     ADDED_AS_SLAVE="true"
+                     IS_SLAVE="true"
                      NODE_TYPE=slave
                      break;
                   fi
@@ -366,7 +364,17 @@ else
                  INDEX=0
               fi
            done
-           if [ "$ADDED_AS_SLAVE" == "false" ]; then
+           # Version 6 does not support localhost. Must use the IP address. 
+           if [ $REDIS_MAJOR_VERSION_NUMBER -lt 7 ]; then
+              TARGET_NODE=$(echo "$TARGET_NODE" | sed 's/localhost/127.0.0.1/g')
+              FIRST_NODE=$(echo "$FIRST_NODE" | sed 's/localhost/127.0.0.1/g')
+              MASTER_NODE=$(echo "$MASTER_NODE" | sed 's/localhost/127.0.0.1/g')
+           fi
+           if [ "$IS_SLAVE" == "true" ]; then
+              # Add this node as a slave to this master node
+               MASTER_ID=$(redis-cli -h $MASTER_HOST -p $MASTER_PORT cluster nodes | grep "$MASTER_NODE" | grep master | sed 's/ .*//')
+               redis-cli --cluster add-node $TARGET_NODE $MASTER_NODE --cluster-slave --cluster-master-id $MASTER_ID
+           else
               # Add as master
               redis-cli --cluster add-node $TARGET_NODE $FIRST_NODE
               NODE_TYPE=master

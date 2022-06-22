@@ -332,6 +332,10 @@ else
 fi
 
 if [ "$INIT_REQUIRED" == "true" ]; then
+   # Version 6 does not support localhost. Must use the IP address. 
+   if [ $REDIS_MAJOR_VERSION_NUMBER -lt 7 ]; then
+      MEMBER_TCP_LIST=$(echo "$MEMBER_TCP_LIST" | sed 's/localhost/127.0.0.1/g')
+   fi
    redis-cli --cluster create $MEMBER_TCP_LIST --cluster-replicas $REPLICAS --cluster-yes
 fi
 

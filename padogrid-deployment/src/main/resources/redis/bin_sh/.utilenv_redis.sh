@@ -121,7 +121,7 @@ function getRedisServerPortPid
    local MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
    local MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    local MEMBER_PORT
-   let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM-1
+   let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
    local pid=$(ps -opid,command |grep redis-server |grep $MEMBER_PORT | grep -v grep | awk '{print $1}')
    echo $pid
 }
