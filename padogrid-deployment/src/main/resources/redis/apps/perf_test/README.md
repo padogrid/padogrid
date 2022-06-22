@@ -36,11 +36,12 @@ The following table describes a list of preconfigured properties files in the `e
 | `group.properties`     | Defines properties for performing groups of `IMap` method calls. |
 | `group-put.properties` | Defines properties for making 22 put calls on 22 different maps in a single group. |
 | `group-get.properties` | Defines properties for making 22 get calls on 22 different maps in a single group. Note that before invoking this file, `group-put.properties` must be invoked first to ingest data. |
-| `group-cache.properties` | Defines properties for `ICache` (JCache) operations. Unlike other, data structures, `ICache` requires you to first configure the cluster with the caches that you want to test before running the `test_group` script. |
-| `group-queue.properties` |  Defines properties for `IQueue` operations. |
-| `group-rmap.properties` | Defines properties for `ReplicatedMap` operations. |
+| `group-put-sleep.properties` | Defines properties for tesing the sleep operation. |
+| `group-cache.properties` | Defines properties for `MapCache` operations. Unlike other, data structures, `MapCache` requires you to first configure the cluster with the caches that you want to test before running the `test_group` script. |
+| `group-queue.properties` |  Defines properties for `Queue` operations. |
 | `group-rtopic.properties` | Defines properties for `ReliableTopic` operations.|
-| `group-topic.properties` | Defines properties for `ITopic` operations. |
+| `group-sopic.properties` | Defines properties for `ShardedTopic` operations. |
+| `group-topic.properties` | Defines properties for `Topic` operations. |
 | `group-factory.properties` | Defines properties for ingesting mock data. |
 | `group-factory-er.properties` | Defines properties for ingesting mock data with entity relationships. |
 
@@ -81,7 +82,12 @@ Usage:
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
-      /Users/dpark/padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
+      /Users/dpark/Padogrid/workspaces/rwe-redis/myws/apps/perf_test_pod/results
+
+Notes:
+   The 'perf_test' app requires you to first run the 'build_app' command to download Redisson.
+   If you are behind a firewall then you can manually download 'redisson-<version>.jar' and
+   place it in the workspace lib directory. Please see 'pom.xml' for Redisson artifact details.
 ```
 
 ### test_tx
@@ -94,7 +100,7 @@ Output:
 
 ```console
 Usage:
-   test_tx [-run] [-prop <properties-file>] [-?]
+   test_tx [-run] [-failover] [-prop <properties-file>] [-?]
 
    Displays or runs transaction and query test cases specified in the properties file.
    The default properties file is
@@ -106,7 +112,12 @@ Usage:
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
-      /Users/dpark/padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
+      /Users/dpark/Padogrid/workspaces/rwe-redis/myws/apps/perf_test_pod/results
+
+Notes:
+   The 'perf_test' app requires you to first run the 'build_app' command to download Redisson.
+   If you are behind a firewall then you can manually download 'redisson-<version>.jar' and
+   place it in the workspace lib directory. Please see 'pom.xml' for Redisson artifact details.
 ```
 
 ### test_group
@@ -122,8 +133,8 @@ Usage:
    test_group [-run|-list] [-db|-delete] [-prop <properties-file>] [-?]
 
    Displays or runs group test cases specified in the properties file.
-   A group represents a function that executes one or more Redisson IMap
-   operations. This program measures average latencies and throughputs
+   A group represents a function that executes one or more Redis data
+   structure operations. This program measures average latencies and throughputs
    of group (or function) executions.
    The default properties file is
       ../etc/group.properties
@@ -132,13 +143,13 @@ Usage:
 
        -list             Lists data structures and their sizes.
 
-       -db               Runs test cases on database instead of Redisson. To use this
+       -db               Runs test cases on database instead of Redis. To use this
                          option, each test case must supply a data object factory class
                          by specifying the 'factory.class' property and Hibernate must
                          be configured by running the 'build_app' command.
 
        -delete           Deletes (destroys) all the data structures pertaining to the group
-                         test cases that were created in the Redisson cluster. If the '-run'
+                         test cases that were created in the Redis cluster. If the '-run'
                          option is not specified, then it has the same effect as the '-list'
                          option. It only lists data strcutures and their without deleting them.
 
@@ -146,11 +157,12 @@ Usage:
 
    To run the the test cases, specify the '-run' option. Upon run completion, the results
    will be outputted in the following directory:
-      /Users/dpark/Padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
+      /Users/dpark/Padogrid/workspaces/rwe-redis/myws/apps/perf_test_pod/results
 
 Notes:
-   ICache requires explicit configuration. It will fail if you run it without first configuring
-   the cluster with caches.
+   The 'perf_test' app requires you to first run the 'build_app' command to download Redisson.
+   If you are behind a firewall then you can manually download 'redisson-<version>.jar' and
+   place it in the workspace lib directory. Please see 'pom.xml' for Redisson artifact details
 ```
 
 ## Results
@@ -172,39 +184,40 @@ Data Ingestion Test
                          Map: profile
            PutAll Batch Size: 100
               Test Run Count: 1
+    Test Run Interval (msec): 0
    Total Entry Count Per Run: 10000
                 Thread Count: 16
         Payload Size (bytes): 10240
                       Prefix: x
       Entry Count per Thread: 625
 
-Start Time: Sun Jun 30 15:16:18 EDT 2019
+Start Time: Tue Jun 21 21:08:31 EDT 2022
 
 Actual Total Entry (Put) Count: 10000
 
 Time unit: msec
-   Thread 1: 660
-   Thread 2: 664
-   Thread 3: 664
-   Thread 4: 664
-   Thread 5: 662
-   Thread 6: 658
-   Thread 7: 662
-   Thread 8: 662
-   Thread 9: 660
-   Thread 10: 664
-   Thread 11: 662
-   Thread 12: 656
-   Thread 13: 655
-   Thread 14: 653
-   Thread 15: 653
-   Thread 16: 651
+   Thread 1: 714
+   Thread 2: 758
+   Thread 3: 715
+   Thread 4: 756
+   Thread 5: 750
+   Thread 6: 721
+   Thread 7: 753
+   Thread 8: 666
+   Thread 9: 751
+   Thread 10: 750
+   Thread 11: 694
+   Thread 12: 702
+   Thread 13: 750
+   Thread 14: 757
+   Thread 15: 654
+   Thread 16: 750
 
-        Max time (msec): 664
-   Throughput (msg/sec): 15060.240
-  *Throughput (KiB/sec): 150602.409
-  *Throughput (MiB/sec): 147.072
- Latency per put (msec): 0.066
+        Max time (msec): 758
+   Throughput (msg/sec): 13192.612
+  *Throughput (KiB/sec): 131926.121
+  *Throughput (MiB/sec): 128.834
+ Latency per put (msec): 0.076
    **Total Volume (MiB): 100000
    **Total Volume (MiB): 97.656
    **Total Volume (GiB): 0.095
@@ -215,7 +228,7 @@ Time unit: msec
 ** Total Volume do not take the keys into account.
    The actual volume is higher.
 
-Stop Time: Sun Jun 30 15:16:18 EDT 2019
+Stop Time: Tue Jun 21 21:08:31 EDT 2022
 ```
 
 ## Inserting and Updating Database Tables
@@ -233,7 +246,7 @@ Make sure to set the correct database user name and password in the Hibernate co
 
 ```bash
 # Hibernate
-JAVA_OPTS="$JAVA_OPTS -Dhazelcast-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
+JAVA_OPTS="$JAVA_OPTS -Dredisson-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
 ```
 
 Run `test_group -db`.
@@ -244,7 +257,7 @@ Run `test_group -db`.
 
 ## Generating Entity Relationships (ER)
 
-If you want to add entity relationships to your data, then you can implement [`DataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/addon/test/perf/data/DataObjectFactory.java) or extend [`AbstractDataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/AbstractDataObjectFactory.java) and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see [`org.hazelcast.demo.nw.impl.OrderFactoryImpl`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/OrderFactoryImpl.java) for details. You can run the example as follows:
+If you want to add entity relationships to your data, then you can implement [`DataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/redisson-addon-core/src/test/java/org/redisson/addon/test/perf/data/DataObjectFactory.java) or extend [`AbstractDataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/redisson-addon-core/src/test/java/org/redisson/demo/nw/impl/AbstractDataObjectFactory.java) and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see [`org.redisson.demo.nw.impl.OrderFactoryImpl`](https://github.com/padogrid/padogrid/blob/develop/redisson-addon-core/src/test/java/org/redisson/demo/nw/impl/OrderFactoryImpl.java) for details. You can run the example as follows:
 
 ```bash
 ./test_group -run -prop ../etc/group-factory-er.properties
