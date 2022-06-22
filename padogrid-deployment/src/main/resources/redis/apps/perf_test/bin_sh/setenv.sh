@@ -1,5 +1,5 @@
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,8 +35,14 @@
 JAVA_OPTS="-Xms1g -Xmx1g"
 
 # REDISSON_CLIENT_CONFIG_FILE defaults to etc/redission-client.yaml
-JAVA_OPTS="$JAVA_OPTS -Dorg.redisson.addon.config.file=$REDISSON_CLIENT_CONFIG_FILE"
+JAVA_OPTS="$JAVA_OPTS -Dorg.redis.addon.redisson.config.file=$REDISSON_CLIENT_CONFIG_FILE"
+
 # Hibernate
 JAVA_OPTS="$JAVA_OPTS -Dredisson-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
 
-# CLASSPATH="$CLASSPATH"
+# Redisson node addresses. List node addresses separated by comma.
+# The default address is redis://localhost:6379.
+#JAVA_OPTS="$JAVA_OPTS -Dorg.redis.addon.redisson.node.addresses=redis://localhost:6379,redis://localhost:6380,redis://localhost:6381"
+
+# Add your class path
+#CLASSPATH="$CLASSPATH"
