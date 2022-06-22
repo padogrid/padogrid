@@ -162,6 +162,7 @@ fi
 function writeCluster() 
 {
    # Update cluster env file with PRODUCT and CLUSTER_TYPE
+   CLUSTER_TYPE="redis"
    updateClusterEnvFile
 
    # Copy the template-redis.conf file
@@ -444,12 +445,13 @@ if [ "$VM_ENABLED" == "true" ]; then
    echo " Working Dir: $MEMBER_1_DIR"
    echo ""
 elif [ "$POD" == "local" ]; then
-   echo "Two (2) members have been configured (added) to run in this cluster as follows:"
+   MEMBER_COUNT=$(getMemberCount)
+   echo "$MEMBER_COUNT members have been configured (added) to run in this cluster as follows:"
    echo ""
-   echo "      Member: $MEMBER_1"
-   echo " Working Dir: $MEMBER_1_DIR"
-   echo "      Member: $MEMBER_2"
-   echo " Working Dir: $MEMBER_2_DIR"
+   for MEMBER in $(getMemberDirNameList); do
+      echo "      Member: $MEMBER"
+      echo " Working Dir: $RUN_DIR/$MEMBER"
+   done
    echo ""
 else
    echo "$NODE_COUNT members have been configured (added) to run in this cluster as follows:"
