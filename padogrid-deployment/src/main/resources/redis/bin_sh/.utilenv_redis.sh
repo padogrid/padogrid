@@ -156,17 +156,21 @@ function getRedisMemberPid
    let __MEMBER_PORT=__MEMBER_START_PORT+__MEMBER_NUM-1
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
 
-   # TODO: remote call needs to follow the same search as local
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      pid=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
+     __MEMBER_PORT=$__MEMBER_START_PORT
+      pid=$(ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -eo pid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep")
+      pid=$(echo $pid | awk '{print $1}')
    else
+      if [ "$POD" != "local" ]; then
+         __MEMBER_PORT=$__MEMBER_START_PORT
+      fi
       local NODE_LOCAL=`getOsNodeName`
       local TARGET_HOST=$NODE_LOCAL:$__MEMBER_PORT 
       local __MEMBER_DIR="$(redis-cli -h $NODE_LOCAL -p $__MEMBER_PORT --csv config get dir 2> /dev/null | sed -e 's/.*,\"//' -e 's/\"//')"
       if [ "$__MEMBER_DIR" == "$MEMBER_DIR" ]; then
          INFO="$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slot)"
          if [ "$INFO" != "" ]; then
-            pid=$(ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
+            pid=$(ps -eo pid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}')
          fi
       fi
    fi
@@ -174,10 +178,27 @@ function getRedisMemberPid
 }
 
 #
+# Returns the current cluster's member PID if it is running. Empty value otherwise.
+# @required NODE_LOCAL       Node name with the local extension. For remote call only.
+# @optional POD              Pod type. Default: local
+# @optional REMOTE_SPECIFIED true if remote node, false if local node. Default: false
+# @param    memberNumber     Member number. If not specified then the first member, i.e.,
+#                            1, is assigned. Optional.
+# @param    workspaceName    Workspace name. If not specified, then the current workspace
+#                            is assumed. This parameter is currently used for remote calls.
+#                            Optional.
+#
+function getMemberPid
+{
+   getRedisMemberPid "$@"
+}
+
+#
 # Returns the first live Redis node (host:port) in the current cluster.
 #
 # @required CLUSTER
 # @required RUN_DIR
+# @required NODE_LOCAL       Node name with the local extension. For remote call only.
 #
 function getRedisFirstLiveNode
 {
@@ -187,6 +208,7 @@ function getRedisFirstLiveNode
    local MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
    local HOST_NAME=`hostname`
    local BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    pushd ${RUN_DIR} > /dev/null 2>&1
    for i in ${MEMBER_PREFIX}*; do
       if [ -d "$i" ]; then
@@ -194,9 +216,14 @@ function getRedisFirstLiveNode
          local MEMBER_NUM=${i:$MEMBER_PREFIX_LEN}
          local PID=`getRedisMemberPid $MEMBER_NUM`
          if [ "$PID" != "" ]; then
-            local MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
-            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-            NODE=$BIND_ADDRESS:$MEMBER_PORT
+            if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ]; then
+               MEMBER_PORT=$MEMBER_START_PORT
+               NODE=$NODE_LOCAL:$MEMBER_PORT
+            else
+               local MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+               let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+               NODE=$BIND_ADDRESS:$MEMBER_PORT
+            fi
             break; 
          fi
       fi

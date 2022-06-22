@@ -263,23 +263,13 @@ elif [ "$POD" == "local" ]; then
    HOST_NAME=`hostname`
    BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
-   for i in $(seq $MEMBER_START_PORT $MEMBER_END_PORT); do
-      if [ "$MEMBER_TCP_LIST" == "" ]; then
-         MEMBER_TCP_LIST="$BIND_ADDRESS:$i"
-      else
-         MEMBER_TCP_LIST="$MEMBER_TCP_LIST,$BIND_ADDRESS:$i"
-      fi
-   done
 
 else
 
-   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
-   PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
-
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
    BIND_ADDRESS=$NODE_LOCAL
-   HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
-   
+   MEMBER_PORT=$MEMBER_START_PORT
+
 fi
 
 # Set LOG_FILE in the log directory.
@@ -349,7 +339,7 @@ else
          FIRST_NODE=$(getRedisFirstLiveNode)
          if [ "$FIRST_NODE" != "" ]; then
            TARGET_NODE=$BIND_ADDRESS:$MEMBER_PORT
-           INFO="$(redis-cli --cluster info $FIRST_NODE 2> /dev/null | grep slaves | sed -e 's/ .*\|//' -e 's/slaves.*//')"
+           INFO="$(redis-cli --cluster info $FIRST_NODE 2> /dev/null | grep slaves | sed -e 's/ [|]/ /g' -e 's/[(].*keys//' -e 's/slots.*//')"
            INDEX=0
            ADDED_AS_SLAVE="false"
            for ITEM in $INFO; do

@@ -152,6 +152,7 @@ if [ "$(isClusterExist $CLUSTER)" == "false" ]; then
    exit 1
 fi
 
+
 # Determine whether the cluster needs initialization
 REPLICAS=`getClusterProperty "redis.replicas" "$DEFAULT_REPLICAS"`
 MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
@@ -238,8 +239,6 @@ done
 popd > /dev/null 2>&1
 
 # Initialize the cluster
-MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
-MEMBER_TCP_LIST=""
 if [ "$POD" == "local" ]; then
    HOST_NAME=`hostname`
    BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
@@ -270,9 +269,9 @@ if [ "$POD" == "local" ]; then
    if [ "$INIT_REQUIRED" == "true" ]; then
       # Build MEMBER_TCP_LIST for active members only.
       for MEMBER_NUMBER in $(seq 1 $MEMBER_COUNT); do
-         let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
          PID=$(getRedisMemberPid $MEMBER_NUMBER)
          if [ "$PID" != "" ]; then
+            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
             TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
             if [ "$MEMBER_TCP_LIST" == "" ]; then
                MEMBER_TCP_LIST="$TARGET_NODE"
@@ -281,12 +280,63 @@ if [ "$POD" == "local" ]; then
             fi
          fi
       done
-      redis-cli --cluster create $MEMBER_TCP_LIST --cluster-replicas $REPLICAS --cluster-yes
    fi
+else
+   MEMBER_PREFIX=`getMemberPrefix`
+   MEMBER_COUNT=`getMemberCount`
+   NODE_COUNT=`getPodProperty "node.count" "$MEMBER_COUNT"`
+   MEMBER_PORT=$MEMBER_START_PORT
+   for i in $(seq 1 $MEMBER_COUNT); do
+      __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+      NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+      NODE_ADDR="$NODE_LOCAL:$MEMBER_START_PORT"
+      if [ "$(getRedisMemberPid $MEMBER_NUMBER)" != "" ]; then
+         # One member per Vagrant VM -> same port number
+         TARGET_NODE="$NODE_LOCAL:$MEMBER_PORT"
 
-   if [ "$TARGET_NODE" != "" ]; then
-      redis-cli --cluster check "$TARGET_NODE" 2> /dev/null
+         TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+         if [ $REPLICAS -eq 0 ]; then
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -gt 1 ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $NODE_LOCAL -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         fi
+      fi
+   done
+   if [ "$INIT_REQUIRED" == "true" ]; then
+      # Build MEMBER_TCP_LIST for active members only.
+      for i in $(seq 1 $MEMBER_COUNT); do
+         __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+         NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+         # One member per Vagrant VM -> same port number
+         PID=$(getRedisMemberPid $MEMBER_NUMBER)
+         if [ "$PID" != "" ]; then
+            TARGET_NODE="$NODE_LOCAL:$MEMBER_PORT"
+            if [ "$MEMBER_TCP_LIST" == "" ]; then
+               MEMBER_TCP_LIST="$TARGET_NODE"
+            else
+               MEMBER_TCP_LIST="$MEMBER_TCP_LIST $TARGET_NODE"
+            fi
+         fi
+      done
    fi
+fi
+
+if [ "$INIT_REQUIRED" == "true" ]; then
+   redis-cli --cluster create $MEMBER_TCP_LIST --cluster-replicas $REPLICAS --cluster-yes
+fi
+
+if [ "$TARGET_NODE" != "" ]; then
+   redis-cli --cluster check "$TARGET_NODE" 2> /dev/null
 fi
 
 if [ "$MEMBER_NUMBER" == "" ]; then

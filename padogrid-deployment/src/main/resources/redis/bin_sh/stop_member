@@ -187,7 +187,11 @@ if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
 fi
 
 MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
-let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+if [ "$POD" == "local" ]; then
+   let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+else
+   MEMBER_PORT=$MEMBER_START_PORT
+fi
 
 # Local execution
 PID=`getRedisMemberPid $MEMBER_NUMBER`
@@ -206,6 +210,7 @@ if [ -z "${PID}" ]; then
    echo "----------------------------------------------------------------"
    exit 0
 else
+   echo redis-cli -p $MEMBER_PORT shutdown
    redis-cli -p $MEMBER_PORT shutdown
    echo "----------------------------------------------------------------"
    echo "  WORKSPACE: $PADOGRID_WORKSPACE"

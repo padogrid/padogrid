@@ -48,7 +48,7 @@ public class TopicSubscriber {
 		writeLine("   ./" + executableName + " -type rtopic my_reliable_topic");
 		writeLine();
 		writeLine("   # Create my_sharded_topic if it does not exist");
-		writeLine("   ./" + executableName + " -type rtopic my_sharded_topic");
+		writeLine("   ./" + executableName + " -type stopic my_sharded_topic");
 		writeLine();
 	}
 
@@ -115,7 +115,7 @@ public class TopicSubscriber {
 			rtopic.addListener(Object.class, new MessageListener() {
 				@Override
 				public void onMessage(CharSequence channel, Object message) {
-					System.out.println(channel + ": " + message);
+					writeLine(channel + ": " + message);
 				}
 			});
 			break;
@@ -126,7 +126,7 @@ public class TopicSubscriber {
 			stopic.addListener(Object.class, new MessageListener() {
 				@Override
 				public void onMessage(CharSequence channel, Object message) {
-					System.out.println(channel + ": " + message);
+					writeLine(channel + ": " + message);
 				}
 			});
 			break;
@@ -138,7 +138,7 @@ public class TopicSubscriber {
 				topic.addListener(Object.class, new MessageListener() {
 					@Override
 					public void onMessage(CharSequence channel, Object message) {
-						System.out.println(channel + ": " + message);
+						writeLine(channel + ": " + message);
 					}
 				});
 				break;
