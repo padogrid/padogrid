@@ -40,7 +40,7 @@ The following table describes a list of preconfigured properties files in the `e
 | `group-cache.properties` | Defines properties for `MapCache` operations. Unlike other, data structures, `MapCache` requires you to first configure the cluster with the caches that you want to test before running the `test_group` script. |
 | `group-queue.properties` |  Defines properties for `Queue` operations. |
 | `group-rtopic.properties` | Defines properties for `ReliableTopic` operations.|
-| `group-sopic.properties` | Defines properties for `ShardedTopic` operations. |
+| `group-stopic.properties` | Defines properties for `ShardedTopic` operations. |
 | `group-topic.properties` | Defines properties for `Topic` operations. |
 | `group-factory.properties` | Defines properties for ingesting mock data. |
 | `group-factory-er.properties` | Defines properties for ingesting mock data with entity relationships. |
@@ -51,12 +51,12 @@ You can introduce your own test criteria by modifying the properties the above f
 
 The `bin_sh/` directory contains the following scripts. By default, these scripts simply prints the configuration information obtained from the `etc/perf.properties` file. To run the test cases, you must specify the `-run` option.
 
-| Script | Description |
-| ------ | ----------- |
-| `build_app` | Downloads the required libraries by running Maven. **You must first run the `build_app` script before you can run other scripts.** If you are behind a firewall then you can manually download `redisson-<version>.jar` from the following MVNRepository and place it in the workspace lib directory: https://mvnrepository.com/artifact/org.redisson/redisson |
-| `test_ingestion` | Displays or runs data ingestion test cases (`putall` or `put`) specified in the `etc/ingestion.properties` file. It ingests mock data into the `eligibility` and `profile` maps. |
-| `test_tx` | Displays or runs transaction and query test cases specified in the `etc/tx.properties` file. It runs `get`, `getall`, `tx` test cases specified in the `perf.properties` file. |
-| `test_group` | Displays or runs group test cases (`set`, `put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Redisson `IMap` operations. |
+| Script | Default Config | Description |
+| ------ | -------------- | ----------- |
+| `build_app` | pom.xml | Downloads the required libraries by running Maven. **You must first run the `build_app` script before you can run other scripts.** If you are behind a firewall then you can manually download `redisson-<version>.jar` from the following MVNRepository and place it in the workspace lib directory: https://mvnrepository.com/artifact/org.redisson/redisson |
+| `test_ingestion` |  etc/ingestion.properties | Displays or runs data ingestion test cases (`putall` or `put`) specified in the `etc/ingestion.properties` file. It ingests mock data into the `eligibility` and `profile` maps. |
+| `test_tx` | etc/tx.properties | **NOT SUPPORTED DUE TO REDIS LIMITATIONS.** Displays or runs transaction and query test cases specified in the `etc/tx.properties` file. It runs `get`, `getall`, `tx` test cases specified in the `tx.properties` file. |
+| `test_group` | etc/group.properties | Displays or runs group test cases (`set`, `put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Redisson `IMap` operations. |
 
 ## Script Usages
 
@@ -75,36 +75,6 @@ Usage:
    Displays or runs data ingestion test cases specified in the properties file.
    The default properties file is
       ../etc/ingestion.properties
-
-       -run              Run test cases.
-
-       <properties-file> Optional properties file path.
-
-   To run the the test cases, specify the '-run' option. Upon run completion, the results
-   will be outputted in the following directory:
-      /Users/dpark/Padogrid/workspaces/rwe-redis/myws/apps/perf_test_pod/results
-
-Notes:
-   The 'perf_test' app requires you to first run the 'build_app' command to download Redisson.
-   If you are behind a firewall then you can manually download 'redisson-<version>.jar' and
-   place it in the workspace lib directory. Please see 'pom.xml' for Redisson artifact details.
-```
-
-### test_tx
-
-```bash
-./test_tx -?
-```
-
-Output:
-
-```console
-Usage:
-   test_tx [-run] [-failover] [-prop <properties-file>] [-?]
-
-   Displays or runs transaction and query test cases specified in the properties file.
-   The default properties file is
-      ../etc/tx.properties
 
        -run              Run test cases.
 
