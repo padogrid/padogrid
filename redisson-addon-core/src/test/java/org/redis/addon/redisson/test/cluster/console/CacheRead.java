@@ -1,13 +1,15 @@
 package org.redis.addon.redisson.test.cluster.console;
 
 import java.util.Map;
+import java.util.Set;
 
+import org.hibernate.internal.build.AllowSysOut;
 import org.redis.addon.redisson.cluster.ClusterUtil;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 
 /**
- * CacheRead dumps the specified IMap values.
+ * CacheRead dumps the specified RMap values.
  * 
  * @author dpark
  *
@@ -23,25 +25,20 @@ public class CacheRead {
 		writeLine("   " + executableName + " - Dump the values of the specified map");
 		writeLine();
 		writeLine("SYNOPSIS");
-		writeLine("   " + executableName + " [-create-map] map_name [-?]");
+		writeLine("   " + executableName + " [-list] map_name [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
-		writeLine("   Dumps the values of the specified IMap. To create the specified map,");
-		writeLine("   specify the '-create-map' option.");
+		writeLine("   Dumps the values of the specified RMap. To list the existing maps, specify '-list'.");
 		writeLine();
 		writeLine("OPTIONS");
-		writeLine("   -create-map");
-		writeLine("             If specified, then creates the specified map in the cluster. If unspecified");
-		writeLine("             and the map does not exist in the cluster, then it aborts the command.");
+		writeLine("   -list");
+		writeLine("             Lists all RMaps in the cluster.");
 		writeLine();
-		writeLine("   map_name   IMap name.");
+		writeLine("   map_name   RMap name.");
 		writeLine();
 		writeLine("EXAMPLES");
 		writeLine("   # Read my_map if it exists");
 		writeLine("   ./" + executableName + " my_map");
-		writeLine();
-		writeLine("   # Create my_map if it does not exist");
-		writeLine("   ./" + executableName + " -create-map my_map");
 		writeLine();
 	}
 
@@ -54,8 +51,16 @@ public class CacheRead {
 	}
 
 	@SuppressWarnings("rawtypes")
+	private static void listMaps(Map<String, RMap> mapMap) {
+		writeLine("Existing RMaps:");
+		for (String key : mapMap.keySet()) {
+			writeLine("   " + key);
+		}
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static void main(String[] args) {
-		boolean isCreateMap = false;
+		boolean isListMaps = false;
 		String mapName = null;
 		String arg;
 		for (int i = 0; i < args.length; i++) {
@@ -63,34 +68,52 @@ public class CacheRead {
 			if (arg.equalsIgnoreCase("-?")) {
 				usage();
 				System.exit(0);
-			} else if (arg.startsWith("-create-map")) {
-				isCreateMap = true;
+			} else if (arg.startsWith("-list")) {
+				isListMaps = true;
 			} else if (arg.startsWith("-") == false) {
 				mapName = arg;
 			}
 		}
 
-		if (mapName == null) {
-			System.err.println("ERROR: IMap name not specified. Command aborted.");
+		if (isListMaps == false && mapName == null) {
+			System.err.println("ERROR: RMap name not specified. Command aborted.");
 			System.exit(1);
 		}
 
-		if (mapName.equals("-?")) {
+		if (mapName != null && mapName.equals("-?")) {
 			usage();
 			System.exit(0);
 		}
 
 		RedissonClient redisson = ClusterUtil.createRedissonClient();
 		Map<String, RMap> mapMap = ClusterUtil.getAllMaps(redisson);
-		RMap map = mapMap.get(mapName);
-		if (isCreateMap == false && map == null) {
-			System.err.println("ERROR: Map does not exist in the cluster: [" + mapName + "]. To create the map in the cluster,");
-			System.err.println("       specify the '-create-map' option. Command aborted.");
-			redisson.shutdown();
-			System.exit(1);
+
+		writeLine();
+		if (isListMaps) {
+			listMaps(mapMap);
 		}
 
-		redisson.getMap(mapName).values().forEach(c -> System.out.println("\t" + c));
+		if (mapName != null) {
+			RMap map = mapMap.get(mapName);
+			if (map == null) {
+				System.err.println("ERROR: Map does not exist in the cluster: [" + mapName + "]");
+				System.err.println("       If the map name has characters such as '$' then you might need to precede");
+				System.err.println("       them with the escape charater, '\'. Command aborted.");
+				writeLine();
+				if (isListMaps == false) {
+					listMaps(mapMap);
+					writeLine();
+				}
+				redisson.shutdown();
+				System.exit(1);
+			}
+			writeLine("RMap: " + mapName);
+			writeLine("Key: Value, Class");
+			writeLine("---------------------------------------------------------------------------------");
+			((Set<Map.Entry>) map.entrySet()).forEach(e -> writeLine(
+					e.getKey() + ": " + e.getValue() + ", " + e.getValue().getClass().getCanonicalName()));
+		}
+		writeLine();
 		redisson.shutdown();
 	}
 }
