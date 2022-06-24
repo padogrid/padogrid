@@ -162,6 +162,7 @@ public class TransactionTest implements Constants
 		writer.println("Transaction Test");
 		writer.println("******************************************");
 		writer.println();
+		writer.println("                     Product: hazelcast");
 		writer.println("                   Test Case: " + testCaseEnum.name());
 		writer.println("                         Map: " + mapNameEnum.name());
 		if (testCaseEnum == TestCaseEnum.getall) {
@@ -282,7 +283,7 @@ public class TransactionTest implements Constants
 		df.setRoundingMode(RoundingMode.HALF_UP);
 		
 		writer.println();
-		writer.println("                Max time (msec): " + maxTimeMsec);
+		writer.println("                Max Time (msec): " + maxTimeMsec);
 		writer.println("            Throughput (tx/sec): " + df.format(txPerSec));
 		writer.println(" Latency per transaction (msec): " + df.format(latencyPerEntry));
 		writer.println();
@@ -655,6 +656,7 @@ public class TransactionTest implements Constants
 		}
 
 		System.out.println();
+		System.out.println("                          Product: hazelcast");
 		System.out.println("                   Test Run Count: " + TEST_COUNT);
 		System.out.println("         Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 

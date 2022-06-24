@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Consolidate results into CSV files
+
+SYNOPSIS
+   $EXECUTABLE [-?]
+
+DESCRIPTION
+   Consolidates all the result files found in the 'results/' directory into the following
+   CSV files in chronological order. 
+
+   results/results-ingestion.csv
+   results/results-group.csv
+
+EOF
+exit
+fi
+
+# Results directory
+RESULTS_DIR="$APP_DIR/results"
+INGESTION_CSV_FILE=$RESULTS_DIR/results-ingestion.csv
+GROUP_CSV_FILE=$RESULTS_DIR/results-group.csv
+
+pushd $RESULTS_DIR > /dev/null 2>&1
+INGESTION_FILES=$(ls -tr ingestion-* 2> /dev/null)
+GROUP_FILES=$(ls -tr group-* 2> /dev/null)
+popd > /dev/null 2>&1
+if [ "$INGESTION_FILES" == "" ] && [ "$GROUP_FILES" == "" ]; then
+   echo "Result files not found. Result files are generated when you run 'perf_test' scripts."
+   echo "Command aborted."
+   exit
+fi
+
+#
+# Returns the specified label's value
+# @param label
+# @param file
+#
+function getValue
+{
+   local LABEL="$1"
+   local FILE="$2"
+   local VALUE=$(grep "$LABEL" "$FILE" | sed 's/^.*://g')
+   echo $VALUE
+}
+
+function getTimeValue
+{
+   local LABEL="$1"
+   local FILE="$2"
+   local VALUE=$(grep "$LABEL" "$FILE" | sed "s/$LABEL//")
+   echo $VALUE
+}
+
+#
+# Ingestion files
+#
+
+if [ "$INGESTION_FILES" == "" ]; then
+   echo "Ingestion files not found. Skipping..."
+else
+   echo ""
+   echo "Consolidating ingestion results..."
+   
+   echo "File, Product, Test Case, Map, PutAll Batch Size, Test Run Count, Test Run Interval, Total Entry Count Per Run, Thread Count, Payload Size (bytes), Prefix, Entry Count per Thread, Start Time, Stop Time, Actual Total Entry (Put) Count, Max Time (msec), Throughput (msg/sec), Throughput (KiB/sec), Throughput (MiB/sec), Latency per put (msec), Total Volume (KiB), Total Volume (MiB), Total Volume (GiB) " > $INGESTION_CSV_FILE
+   
+   pushd $RESULTS_DIR > /dev/null 2>&1
+   for FILE in $INGESTION_FILES; do
+      PRODUCT=$(getValue "Product:" $FILE)
+      TEST_CASE=$(getValue "Test Case:" $FILE)
+      MAP=$(getValue "Map:" $FILE)
+      PUTALL_BATCH_SIZE=$(getValue "PutAll Batch Size:" $FILE)
+      TEST_RUN_COUNT=$(getValue "Test Run Count:" $FILE)
+      TEST_RUN_INTERVAL=$(getValue "Test Run Interval" $FILE)
+      TOTAL_ENTRY_COUNT_PER_RUN=$(getValue "Total Entry Count Per Run:" $FILE)
+      THREAD_COUNT=$(getValue "Thread Count" $FILE)
+      PAYLOAD_SIZE=$(getValue "Payload Size" $FILE)
+      # There are two payload labels. Remove duplicate.
+      PAYLOAD_SIZE=$(echo "$PAYLOAD_SIZE" | sed "s/ .*//")
+      PREFIX=$(getTimeValue "Prefix:" $FILE)
+      ENTRY_COUNT_PER_THREAD=$(getValue "Entry Count per Thread:" $FILE)
+
+      START_TIME=$(getTimeValue "Start Time:" $FILE)
+      ACTUAL_TOTAL_ENTRY_PUT_COUNT=$(getValue "Actual Total Entry (Put) Count:" $FILE)
+   
+      MAX_TIME=$(getValue "Max Time" $FILE)
+      THROUGHPUT_MSG_SEC=$(getValue "Throughput (msg/sec):" $FILE)
+      THROUGHPUT_KIB_SEC=$(getValue "Throughput (KiB/sec):" $FILE)
+      THROUGHPUT_MIB_SEC=$(getValue "Throughput (MiB/sec):" $FILE)
+      LATENCY_PER_PUT=$(getValue "Latency per put (msec):" $FILE)
+      TOTAL_VOLUME_KIB=$(getValue "Total Volume (KiB):" $FILE)
+      TOTAL_VOLUME_MIB=$(getValue "Total Volume (MiB):" $FILE)
+      TOTAL_VOLUME_GIB=$(getValue "Total Volume (GiB):" $FILE)
+      STOP_TIME=$(getTimeValue "Stop Time:" $FILE)
+   
+      echo "$FILE, $PRODUCT, $TEST_CASE, $MAP, $PUTALL_BATCH_SIZE, $TEST_RUN_COUNT, $TEST_RUN_INTERVAL, $TOTAL_ENTRY_COUNT_PER_RUN, $THREAD_COUNT, $PAYLOAD_SIZE, $PREFIX, $ENTRY_COUNT_PER_THREAD, $START_TIME, $STOP_TIME, $ACTUAL_TOTAL_ENTRY_PUT_COUNT, $MAX_TIME, $THROUGHPUT_MSG_SEC, $THROUGHPUT_KIB_SEC, $THROUGHPUT_MIB_SEC, $LATENCY_PER_PUT, $TOTAL_VOLUME_KIB, $TOTAL_VOLUME_MIB, $TOTAL_VOLUME_GIB" >> $INGESTION_CSV_FILE
+   done
+   popd > /dev/null 2>&1
+fi
+
+if [ "$GROUP_FILES" == "" ]; then
+   echo "Group files not found. Skipping..."
+else
+   echo ""
+   echo "+ results/ingestion-*.txt files are consolidated in the following CSV file:"
+   echo "   $INGESTION_CSV_FILE"
+   echo ""
+   
+   # Group files
+   #
+   echo "Consolidating group results..."
+   
+   echo "File, Product, Group, Concurrent Groups, Operations, Comment, Test Run Count, Test Run Interval, Total Invocation Count Per Run, Thread Count, Invocation Count per Thread, Start Time, Stop Time, Actual Total Number of Invocations, Max Time, Elapsed Time, Total Invocation Count, M Throughput, M Latency, E Throughput, E Latency" > $GROUP_CSV_FILE
+   
+   pushd $RESULTS_DIR > /dev/null 2>&1
+   for FILE in $GROUP_FILES; do
+      PRODUCT=$(getValue "Product" $FILE)
+      GROUP=$(getValue "Group:" $FILE)
+      CONCURRENT_GROUPS=$(getValue "Concurrent Group" $FILE)
+      COMMENT=$(getValue "Comment" $FILE)
+      OPERATIONS=$(getValue "Operations" $FILE)
+      TEST_RUN_COUNT=$(getValue "Test Run Count" $FILE)
+      TEST_RUN_INTERVAL=$(getValue "Test Run Interval" $FILE)
+      TOTAL_INVOCATION_COUNT_PER_RUN=$(getValue "Total Invocation Count per Run" $FILE)
+      THREAD_COUNT=$(getValue "Thread Count" $FILE)
+      INVOCATION_COUNT_PER_THREAD=$(getValue "Invocation Count per Thread" $FILE)
+      START_TIME=$(getTimeValue "Start Time:" $FILE)
+      ACUTAL_TOTAL_NUMBER_OF_INVOCATION=$(getValue "Actual Total Number of Invocations" $FILE)
+   
+      MAX_TIME=$(getValue "Max Time" $FILE)
+      ELAPSED_TIME=$(getValue "Elapsed Time" $FILE)
+      TOTAL_INVOCATION_COUNT=$(getValue "Total Invocation Count:" $FILE)
+      M_THROUGHPUT=$(getValue "M Throughput" $FILE)
+      M_LATENCY=$(getValue "M Latency" $FILE)
+      E_THROUGHPUT=$(getValue "E Throughput" $FILE)
+      E_LATENCY=$(getValue "E Latency" $FILE)
+      STOP_TIME=$(getTimeValue "Stop Time:" $FILE)
+   
+      echo "$FILE, $PRODUCT, $GROUP, $CONCURRENT_GROUPS, $OPERATIONS, $COMMENT, $TEST_RUN_COUNT, $TEST_RUN_INTERVAL, $TOTAL_INVOCATION_COUNT_PER_RUN, $THREAD_COUNT, $INVOCATION_COUNT_PER_THREAD, $START_TIME, $STOP_TIME, $ACUTAL_TOTAL_NUMBER_OF_INVOCATION, $MAX_TIME, $ELAPSED_TIME, $TOTAL_INVOCATION_COUNT, $M_THROUGHPUT, $M_LATENCY, $E_THROUGHPUT, $E_LATENCY" >> $GROUP_CSV_FILE
+   done
+   popd > /dev/null 2>&1
+   
+   echo ""
+   echo "+ results/group-*.txt files are consolidated in the following CSV file:"
+   echo "   $GROUP_CSV_FILE"
+   echo ""
+fi

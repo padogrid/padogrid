@@ -294,6 +294,7 @@ public class GroupTest implements Constants {
 		writer.println("Group Test" + dbHeader);
 		writer.println("******************************************");
 		writer.println();
+		writer.println("                       Product: redis");
 		writer.println("                         Group: " + group.name);
 		writer.println("           Concurrent Group(s): " + concurrentGroupNames);
 		writer.println("                       Comment: " + group.comment);
@@ -373,7 +374,7 @@ public class GroupTest implements Constants {
 		df.setRoundingMode(RoundingMode.HALF_UP);
 
 		writer.println();
-		writer.println("                Max time (msec): " + maxTimeMsec);
+		writer.println("                Max Time (msec): " + maxTimeMsec);
 		writer.println("            Elapsed Time (msec): " + elapsedTimeInMsec);
 		writer.println("         Total Invocation Count: " + totalCount);
 		writer.println(" M Throughput (invocations/sec): " + df.format(txPerSec));

@@ -196,6 +196,7 @@ public class DataIngestionTest implements Constants
 		writer.println("Data Ingestion Test");
 		writer.println("******************************************");
 		writer.println();
+		writer.println("                     Product: hazelcast");
 		writer.println("                   Test Case: " + testCaseEnum.name());
 		writer.println("                         Map: " + mapNameEnum.name());
 		if (testCaseEnum == TestCaseEnum.putall) {
@@ -317,12 +318,12 @@ public class DataIngestionTest implements Constants
 		df.setRoundingMode(RoundingMode.HALF_UP);
 		
 		writer.println();
-		writer.println("        Max time (msec): " + maxTimeMsec);
+		writer.println("        Max Time (msec): " + maxTimeMsec);
 		writer.println("   Throughput (msg/sec): " + df.format(msgPerSec));
 		writer.println("  *Throughput (KiB/sec): " + df.format(kiBytesPerSec));
 		writer.println("  *Throughput (MiB/sec): " + df.format(miBytesPerSec));
 		writer.println(" Latency per put (msec): " + df.format(latencyPerEntry));
-		writer.println("   **Total Volume (MiB): " + df.format(totalVolumeInKiB));
+		writer.println("   **Total Volume (KiB): " + df.format(totalVolumeInKiB));
 		writer.println("   **Total Volume (MiB): " + df.format(totalVolumeInMiB));
 		writer.println("   **Total Volume (GiB): " + df.format(totalVolumeInGiB));
 		writer.println("   Payload Size (bytes): " + payloadSize);
@@ -680,6 +681,7 @@ public class DataIngestionTest implements Constants
 			System.out.println("Configuration File: N/A");
 		}
 		System.out.println();
+		System.out.println("                          Product: hazelcast");
 		System.out.println("                   Test Run Count: " + TEST_COUNT);
 		System.out.println("         Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 		

@@ -156,6 +156,7 @@ public class TransactionTest implements Constants
 		writer.println("Transaction Test");
 		writer.println("******************************************");
 		writer.println();
+		writer.println("                     Product: redis");
 		writer.println("                   Test Case: " + testCaseEnum.name());
 		writer.println("                         Map: " + mapNameEnum.name());
 		if (testCaseEnum == TestCaseEnum.getall) {
@@ -276,7 +277,7 @@ public class TransactionTest implements Constants
 		df.setRoundingMode(RoundingMode.HALF_UP);
 		
 		writer.println();
-		writer.println("                Max time (msec): " + maxTimeMsec);
+		writer.println("                Max Time (msec): " + maxTimeMsec);
 		writer.println("            Throughput (tx/sec): " + df.format(txPerSec));
 		writer.println(" Latency per transaction (msec): " + df.format(latencyPerEntry));
 		writer.println();

@@ -598,6 +598,8 @@ function getAppOptions
       echo "grafana padodesktop perf_test"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "perf_test"
+   elif [ "$__PRODUCT" == "redis" ]; then
+      echo "perf_test"
    else
       echo ""
    fi
