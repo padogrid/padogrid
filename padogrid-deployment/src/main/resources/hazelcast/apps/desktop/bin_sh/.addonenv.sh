@@ -27,6 +27,8 @@ pushd  $BASE_DIR/bin_sh > /dev/null 2>&1
 . $BASE_DIR/bin_sh/.addonenv.sh
 popd > /dev/null 2>&1
 
+APP_NAME="$(basename "$APP_DIR")"
+
 # Need to reset SCRIPT_DIR. It has a different value due to the above calls. 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
