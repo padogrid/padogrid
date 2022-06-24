@@ -86,7 +86,10 @@ import com.hazelcast.topic.ITopic;
  * @author dpark
  *
  */
-public class GroupTest implements Constants {
+public class GroupTest implements Constants 
+{
+	private final static String PRODUCT="hazelcast";
+
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
 	private static int PRINT_STATUS_INTERVAL_IN_SEC;
@@ -147,10 +150,15 @@ public class GroupTest implements Constants {
 		String ref;
 		String dsName;
 		int sleep;
+		@SuppressWarnings("rawtypes")
 		IMap imap;
+		@SuppressWarnings("rawtypes")
 		ICache icache;
+		@SuppressWarnings("rawtypes")
 		ReplicatedMap rmap;
+		@SuppressWarnings("rawtypes")
 		IQueue iqueue;
+		@SuppressWarnings("rawtypes")
 		ITopic itopic;
 		DataStructureEnum ds;
 		TestCaseEnum testCase;
@@ -219,9 +227,6 @@ public class GroupTest implements Constants {
 			// Get data structures
 			for (Operation operation : operationMap.values()) {
 				switch (operation.ds) {
-				case map:
-					operation.imap = hazelcastInstance.getMap(operation.dsName);
-					break;
 				case rmap:
 					operation.rmap = hazelcastInstance.getReplicatedMap(operation.dsName);
 					break;
@@ -236,6 +241,9 @@ public class GroupTest implements Constants {
 					break;
 				case rtopic:
 					operation.itopic = hazelcastInstance.getReliableTopic(operation.dsName);
+				case map:
+				default:
+					operation.imap = hazelcastInstance.getMap(operation.dsName);
 					break;
 				}
 			}
@@ -267,7 +275,7 @@ public class GroupTest implements Constants {
 			resultsDir.mkdirs();
 		}
 		Date startTime = new Date();
-		File file = new File(resultsDir, "group-" + group.name + "-" + format.format(startTime) + ".txt");
+		File file = new File(resultsDir, "group-" + group.name + "-" + PRODUCT + "-" + format.format(startTime) + ".txt");
 
 		writeLine("   " + file.getAbsolutePath());
 
@@ -283,7 +291,7 @@ public class GroupTest implements Constants {
 		writer.println("Group Test" + dbHeader);
 		writer.println("******************************************");
 		writer.println();
-		writer.println("                       Product: hazelcast");
+		writer.println("                       Product: " + PRODUCT);
 		writer.println("                         Group: " + group.name);
 		writer.println("           Concurrent Group(s): " + concurrentGroupNames);
 		writer.println("                       Comment: " + group.comment);
@@ -856,7 +864,7 @@ public class GroupTest implements Constants {
 			super(threadNum, threadStartIndex, invocationCountPerThread, group);
 		}
 
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
 		public void __run() {
 			int threadStopIndex = threadStartIndex + invocationCountPerThread - 1;
@@ -961,7 +969,7 @@ public class GroupTest implements Constants {
 						Iterator<?> iterator = keys.iterator();
 						int size = keys.size();
 						int k = 1;
-						Map<Object, Object> map = new HashMap();
+						Map<Object, Object> map = new HashMap<Object, Object>();
 						while (k <= size) {
 							In<String> inClause = cb.in(root.get(pk));
 							while (iterator.hasNext() && k % operation.batchSize > 0) {
@@ -1149,6 +1157,7 @@ public class GroupTest implements Constants {
 		System.out.println(line);
 	}
 
+	@SuppressWarnings("unused")
 	private static void write(String str) {
 		System.out.print(str);
 	}
@@ -1269,13 +1278,12 @@ public class GroupTest implements Constants {
 		return operation;
 	}
 
-	@SuppressWarnings("unchecked")
 	private static void parseConfig() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		int defaultThreadCount = (int) (Runtime.getRuntime().availableProcessors() * 1.5);
 		int defaultTotalInvocationCount = 10000;
 		String groupNamesStr = System.getProperty("groupNames");
 		String preGroupNames[] = groupNamesStr.split(",");
-		HashSet<String> erOperationNamesSet = new <String>HashSet(10);
+		HashSet<String> erOperationNamesSet = new HashSet<String>(10);
 
 		for (int i = 0; i < preGroupNames.length; i++) {
 			String preGroupName = preGroupNames[i];
@@ -1523,7 +1531,7 @@ public class GroupTest implements Constants {
 
 		if (!delete) {
 			writeLine();
-			writeLine("                    Product: hazelcast");
+			writeLine("                    Product: " + PRODUCT);
 			writeLine("             Test Run Count: " + TEST_COUNT);
 			writeLine("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 

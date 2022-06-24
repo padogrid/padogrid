@@ -72,6 +72,8 @@ import org.apache.geode.cache.execute.ResultCollector;
  */
 public class TransactionTest implements Constants
 {
+	private final static String PRODUCT="geode";
+
 	private static int MEMBER_SET_SIZE;
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
@@ -145,7 +147,7 @@ public class TransactionTest implements Constants
 		if (resultsDir.exists() == false) {
 			resultsDir.mkdirs();
 		}
-		File file = new File(resultsDir, "tx-" + mapNameEnum.name() + "-" + format.format(startTime) + "_" + prefix + ".txt");
+		File file = new File(resultsDir, "tx-" + mapNameEnum.name() + "-" + PRODUCT + "-" + format.format(startTime) + "_" + prefix + ".txt");
 
 		System.out.println("   " + file.getAbsolutePath());
 
@@ -157,7 +159,7 @@ public class TransactionTest implements Constants
 		writer.println("Transaction Test");
 		writer.println("******************************************");
 		writer.println();
-		writer.println("                     Product: geode");
+		writer.println("                     Product: " + PRODUCT);
 		writer.println("                   Test Case: " + testCaseEnum.name());
 		writer.println("                         Map: " + mapNameEnum.name());
 		if (testCaseEnum == TestCaseEnum.getall) {
@@ -339,6 +341,7 @@ public class TransactionTest implements Constants
 			super(threadNum, mapNameEnum, 0, threadStartIndex, entryCountPerThread, prefix);
 		}
 		
+		@SuppressWarnings({ "rawtypes", "unchecked" })
 		@Override
 		public void __run()
 		{
@@ -350,6 +353,7 @@ public class TransactionTest implements Constants
 				ResultCollector rc = FunctionService.onRegion(region)
 						.withFilter(Collections.singleton(groupNumberStr))
 						.execute(EligFunction.ID);
+				@SuppressWarnings("unused")
 				List<GroupSummary> summary = (List<GroupSummary>)rc.getResult();
 				groupNumber++;
 				operationCount++;
@@ -629,7 +633,7 @@ public class TransactionTest implements Constants
 		}
 
 		System.out.println();
-		System.out.println("                          Product: geode");
+		System.out.println("                          Product: " + PRODUCT);
 		System.out.println("                   Test Run Count: " + TEST_COUNT);
 		System.out.println("         Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 

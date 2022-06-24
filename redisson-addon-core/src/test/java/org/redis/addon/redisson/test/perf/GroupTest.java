@@ -88,7 +88,10 @@ import org.redisson.api.RedissonClient;
  * @author dpark
  *
  */
-public class GroupTest implements Constants {
+public class GroupTest implements Constants
+{
+	private final static String PRODUCT="redis";
+
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
 	private static int PRINT_STATUS_INTERVAL_IN_SEC;
@@ -278,7 +281,7 @@ public class GroupTest implements Constants {
 			resultsDir.mkdirs();
 		}
 		Date startTime = new Date();
-		File file = new File(resultsDir, "group-" + group.name + "-" + format.format(startTime) + ".txt");
+		File file = new File(resultsDir, "group-" + group.name + "-" + PRODUCT + "-" + format.format(startTime) + ".txt");
 
 		writeLine("   " + file.getAbsolutePath());
 
@@ -294,7 +297,7 @@ public class GroupTest implements Constants {
 		writer.println("Group Test" + dbHeader);
 		writer.println("******************************************");
 		writer.println();
-		writer.println("                       Product: redis");
+		writer.println("                       Product: " + PRODUCT);
 		writer.println("                         Group: " + group.name);
 		writer.println("           Concurrent Group(s): " + concurrentGroupNames);
 		writer.println("                       Comment: " + group.comment);
@@ -1585,6 +1588,7 @@ public class GroupTest implements Constants {
 
 		if (!delete) {
 			writeLine();
+			writeLine("                    Product: " + PRODUCT);
 			writeLine("             Test Run Count: " + TEST_COUNT);
 			writeLine("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 

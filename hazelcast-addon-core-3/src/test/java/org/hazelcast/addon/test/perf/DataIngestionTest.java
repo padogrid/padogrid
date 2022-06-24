@@ -124,6 +124,8 @@ import com.hazelcast.core.IMap;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class DataIngestionTest implements Constants
 {
+	private final static String PRODUCT="hazelcast";
+
 	private static int MEMBER_SET_SIZE;
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
@@ -184,7 +186,7 @@ public class DataIngestionTest implements Constants
 		if (resultsDir.exists() == false) {
 			resultsDir.mkdirs();
 		}
-		File file = new File(resultsDir, "ingestion-" + mapNameEnum.name() + "-" + format.format(startTime) + "_" + prefix + ".txt");
+		File file = new File(resultsDir, "ingestion-" + mapNameEnum.name() + "-" + PRODUCT + "-" + format.format(startTime) + "_" + prefix + ".txt");
 		
 		System.out.println("   " + file.getAbsolutePath());
 		
@@ -196,7 +198,7 @@ public class DataIngestionTest implements Constants
 		writer.println("Data Ingestion Test");
 		writer.println("******************************************");
 		writer.println();
-		writer.println("                     Product: hazelcast");
+		writer.println("                     Product: " + PRODUCT);
 		writer.println("                   Test Case: " + testCaseEnum.name());
 		writer.println("                         Map: " + mapNameEnum.name());
 		if (testCaseEnum == TestCaseEnum.putall) {
@@ -589,6 +591,7 @@ public class DataIngestionTest implements Constants
 		System.out.println(line);
 	}
 
+	@SuppressWarnings("unused")
 	private static void write(String str)
 	{
 		System.out.print(str);
@@ -681,7 +684,7 @@ public class DataIngestionTest implements Constants
 			System.out.println("Configuration File: N/A");
 		}
 		System.out.println();
-		System.out.println("                          Product: hazelcast");
+		System.out.println("                          Product: " + PRODUCT);
 		System.out.println("                   Test Run Count: " + TEST_COUNT);
 		System.out.println("         Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 		

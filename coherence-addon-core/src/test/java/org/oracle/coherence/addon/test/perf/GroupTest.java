@@ -62,7 +62,10 @@ import com.tangosol.net.Session;
  * @author dpark
  *
  */
-public class GroupTest implements Constants {
+public class GroupTest implements Constants
+{
+	private final static String PRODUCT="coherence";
+
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
 	private static int PRINT_STATUS_INTERVAL_IN_SEC;
@@ -100,6 +103,7 @@ public class GroupTest implements Constants {
 	static class Operation {
 		String ref;
 		String cachePath;
+		@SuppressWarnings("rawtypes")
 		NamedCache cache;
 		TestCaseEnum testCase;
 		int totalEntryCount = -1; // for putall and getall
@@ -160,7 +164,7 @@ public class GroupTest implements Constants {
 			resultsDir.mkdirs();
 		}
 		Date startTime = new Date();
-		File file = new File(resultsDir, "group-" + group.name + "-" + format.format(startTime) + ".txt");
+		File file = new File(resultsDir, "group-" + group.name + "-" + PRODUCT + "-" + format.format(startTime) + ".txt");
 
 		System.out.println("   " + file.getAbsolutePath());
 
@@ -172,7 +176,7 @@ public class GroupTest implements Constants {
 		writer.println("Group Test");
 		writer.println("******************************************");
 		writer.println();
-		writer.println("                       Product: coherence");
+		writer.println("                       Product: " + PRODUCT);
 		writer.println("                         Group: " + group.name);
 		writer.println("           Concurrent Group(s): " + concurrentGroupNames);
 		writer.println("                       Comment: " + group.comment);
@@ -318,7 +322,6 @@ public class GroupTest implements Constants {
 					switch (operation.testCase) {
 					case put: {
 						int idNum = operation.startNum + i - 1;
-						Object value;
 						if (operation.dataObjectFactory == null) {
 							String key = operation.keyPrefix + idNum;
 							Blob blob = new Blob(new byte[operation.payloadSize]);
@@ -428,6 +431,7 @@ public class GroupTest implements Constants {
 		System.out.println(line);
 	}
 
+	@SuppressWarnings("unused")
 	private static void write(String str) {
 		System.out.print(str);
 	}
@@ -696,7 +700,7 @@ public class GroupTest implements Constants {
 		}
 
 		System.out.println();
-		System.out.println("                    Product: coherence");
+		System.out.println("                    Product: " + PRODUCT);
 		System.out.println("             Test Run Count: " + TEST_COUNT);
 		System.out.println("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 
