@@ -166,7 +166,7 @@ public class TransactionTest implements Constants
 		}
 		writer.println("              Test Run Count: " + TEST_COUNT);
 		writer.println("    Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
-		writer.println("   Total Entry Count per Run: " + totalEntryCount);
+		writer.println("   Total Entry Count Per Run: " + totalEntryCount);
 		writer.println("                Thread Count: " + threadCount);
 		writer.println("                      Prefix: " + prefix);
 		writer.println("      Entry Count per Thread: " + countPerThread);

@@ -3,7 +3,7 @@ package org.apache.geode.addon.test.perf.junit;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.geode.addon.test.perf.DataIngestionTest;
+import org.apache.geode.addon.test.perf.PdxDataIngestionTest;
 import org.apache.geode.addon.test.perf.EligFunction;
 import org.apache.geode.addon.test.perf.RegionNameEnum;
 import org.apache.geode.addon.test.perf.data.GroupSummary;
@@ -19,7 +19,7 @@ import org.junit.Test;
 
 /**
  * GroupSummaryTest tests the {@linkplain EligFunction} task executed in the
- * cluster. It requires the user to first run {@linkplain DataIngestionTest} to
+ * cluster. It requires the user to first run {@linkplain PdxDataIngestionTest} to
  * ingest data into the cluster.
  * 
  * @author dpark

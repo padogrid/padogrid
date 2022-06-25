@@ -39,6 +39,7 @@ DESCRIPTION
 
    results/results-ingestion.csv
    results/results-group.csv
+   results/tx-group.csv
 
 EOF
 exit
@@ -47,13 +48,15 @@ fi
 # Results directory
 RESULTS_DIR="$APP_DIR/results"
 INGESTION_CSV_FILE=$RESULTS_DIR/results-ingestion.csv
+TX_CSV_FILE=$RESULTS_DIR/results-tx.csv
 GROUP_CSV_FILE=$RESULTS_DIR/results-group.csv
 
 pushd $RESULTS_DIR > /dev/null 2>&1
 INGESTION_FILES=$(ls -tr ingestion-* 2> /dev/null)
+TX_FILES=$(ls -tr tx-* 2> /dev/null)
 GROUP_FILES=$(ls -tr group-* 2> /dev/null)
 popd > /dev/null 2>&1
-if [ "$INGESTION_FILES" == "" ] && [ "$GROUP_FILES" == "" ]; then
+if [ "$INGESTION_FILES" == "" ] && [ "$TX_FILES" == "" ] && [ "$GROUP_FILES" == "" ]; then
    echo "Result files not found. Result files are generated when you run 'perf_test' scripts."
    echo "Command aborted."
    exit
@@ -104,9 +107,10 @@ for PERF_TEST_APP in $PERF_TEST_APPS; do
    RESULTS_DIR="$APPS_DIR/$PERF_TEST_APP/results"
    pushd $RESULTS_DIR > /dev/null 2>&1
    INGESTION_FILES=$(ls -tr ingestion-* 2> /dev/null)
+   TX_FILES=$(ls -tr tx-* 2> /dev/null)
    GROUP_FILES=$(ls -tr group-* 2> /dev/null)
    popd > /dev/null 2>&1
-   if [ "$INGESTION_FILES" != "" ] || [ "$GROUP_FILES" != "" ]; then
+   if [ "$INGESTION_FILES" != "" ] || [ "$TX_FILES" != "" ] || [ "$GROUP_FILES" != "" ]; then
       PERF_TEST_APPS_WITH_RESULTS="$PERF_TEST_APPS_WITH_RESULTS $PERF_TEST_APP"
    fi
 done
@@ -126,10 +130,12 @@ for PERF_TEST_APP in $PERF_TEST_APPS_WITH_RESULTS; do
    RESULTS_DIR="$APPS_DIR/$PERF_TEST_APP/results"
    
    INGESTION_CSV_FILE=$RESULTS_DIR/results-ingestion.csv
+   TX_CSV_FILE=$RESULTS_DIR/results-tx.csv
    GROUP_CSV_FILE=$RESULTS_DIR/results-group.csv
    
    pushd $RESULTS_DIR > /dev/null 2>&1
    INGESTION_FILES=$(ls -tr ingestion-* 2> /dev/null)
+   TX_FILES=$(ls -tr tx-* 2> /dev/null)
    GROUP_FILES=$(ls -tr group-* 2> /dev/null)
    popd > /dev/null 2>&1
    
@@ -174,11 +180,43 @@ for PERF_TEST_APP in $PERF_TEST_APPS_WITH_RESULTS; do
       done
       popd > /dev/null 2>&1
    fi
+
+   #
+   # Tx files
+   #
+   if [ "$TX_FILES" != "" ]; then
+      echo "perf_test, File, Product, Test Case, Map, Test Run Count, Test Run Interval (msec), Total Entry Count Per Run, Thread Count, Prefix, Entry Count per Thread, Start Time, Stop Time, Actual Total Number of Transactions, Total Number of Transactions on Missing Data, Max Time (msec), Throughput (tx/sec), Latency per transaction (msec)" > $TX_CSV_FILE
+      
+      pushd $RESULTS_DIR > /dev/null 2>&1
+      for FILE in $TX_FILES; do
+         PRODUCT=$(getValue "Product:" $FILE)
+         TEST_CASE=$(getValue "Test Case:" $FILE)
+         MAP=$(getValue "Map:" $FILE)
+         TEST_RUN_COUNT=$(getValue "Test Run Count:" $FILE)
+         TEST_RUN_INTERVAL=$(getValue "Test Run Interval" $FILE)
+         TOTAL_ENTRY_COUNT_PER_RUN=$(getValue "Total Entry Count Per Run:" $FILE)
+         THREAD_COUNT=$(getValue "Thread Count" $FILE)
+         PREFIX=$(getTimeValue "Prefix:" $FILE)
+         ENTRY_COUNT_PER_THREAD=$(getValue "Entry Count per Thread:" $FILE)
    
+         START_TIME=$(getTimeValue "Start Time:" $FILE)
+         ACTUAL_TOTAL_NUMBER_OF_TRANSACTIONS=$(getValue "Actual Total Number of Transactions:" $FILE)
+         TOTAL_NUMBER_OF_TRANSACTIONS_ON_MISSING_DATA=$(getValue "Total Number of Transactions on Missing Data:" $FILE)
+      
+         MAX_TIME=$(getValue "Max Time" $FILE)
+         THROUGHPUT_TX_SEC=$(getValue "Throughput (tx/sec):" $FILE)
+         LATENCY_PER_TRANSACTION=$(getValue "Latency per transaction (msec):" $FILE)
+         STOP_TIME=$(getTimeValue "Stop Time:" $FILE)
+      
+         echo "$PERF_TEST_APP, $FILE, $PRODUCT, $TEST_CASE, $MAP, $TEST_RUN_COUNT, $TEST_RUN_INTERVAL, $TOTAL_ENTRY_COUNT_PER_RUN, $THREAD_COUNT, $PREFIX, $ENTRY_COUNT_PER_THREAD, $START_TIME, $STOP_TIME, $ACTUAL_TOTAL_NUMBER_OF_TRANSACTIONS, $TOTAL_NUMBER_OF_TRANSACTIONS_ON_MISSING_DATA, $MAX_TIME, $THROUGHPUT_TX_SEC, $LATENCY_PER_TRANSACTION" >> $TX_CSV_FILE
+      done
+      popd > /dev/null 2>&1
+   fi
+
+    #
+    # Group files
+    #
    if [ "$GROUP_FILES" != "" ]; then
-      #
-      # Group files
-      #
       echo "perf_test, File, Product, Group, Concurrent Groups, Operations, Comment, Test Run Count, Test Run Interval (msec), Total Invocation Count Per Run, Thread Count, Invocation Count per Thread, Start Time, Stop Time, Actual Total Number of Invocations, Max Time (msec), Elapsed Time (msec), Total Invocation Count, M Throughput invocations/sec), M Latency (msec), E Throughput (invocations/sec), E Latency (msec)" > $GROUP_CSV_FILE
       
       pushd $RESULTS_DIR > /dev/null 2>&1
@@ -208,23 +246,30 @@ for PERF_TEST_APP in $PERF_TEST_APPS_WITH_RESULTS; do
          echo "$PERF_TEST_APP, $FILE, $PRODUCT, $GROUP, $CONCURRENT_GROUPS, $OPERATIONS, $COMMENT, $TEST_RUN_COUNT, $TEST_RUN_INTERVAL, $TOTAL_INVOCATION_COUNT_PER_RUN, $THREAD_COUNT, $INVOCATION_COUNT_PER_THREAD, $START_TIME, $STOP_TIME, $ACUTAL_TOTAL_NUMBER_OF_INVOCATION, $MAX_TIME, $ELAPSED_TIME, $TOTAL_INVOCATION_COUNT, $M_THROUGHPUT, $M_LATENCY, $E_THROUGHPUT, $E_LATENCY" >> $GROUP_CSV_FILE
       done
       popd > /dev/null 2>&1
-      
-      if [ "$INGESTION_FILES" != "" ]; then
-         echo "   + $INGESTION_CSV_FILE"
-      fi
-      if [ "$GROUP_FILES" != "" ]; then
-         echo "   + $GROUP_CSV_FILE"
-      fi
-      echo ""
    fi
+      
+   if [ "$INGESTION_FILES" != "" ]; then
+      echo "   + $INGESTION_CSV_FILE"
+   fi
+   if [ "$TX_FILES" != "" ]; then
+      echo "   + $TX_CSV_FILE"
+   fi
+   if [ "$GROUP_FILES" != "" ]; then
+      echo "   + $GROUP_CSV_FILE"
+   fi
+   echo ""
 done
 
 if [ "$ALL" == "true" ]; then
    echo "[$APP_NAME] Consolidating all perf_test results..."
    INGESTION_ALL_FILE="$APP_DIR/results/results-ingestion-all.csv"
+   TX_ALL_FILE="$APP_DIR/results/results-tx-all.csv"
    GROUP_ALL_FILE="$APP_DIR/results/results-group-all.csv"
    if [ -f "$INGESTION_ALL_FILE" ]; then
       rm "$INGESTION_ALL_FILE" "$GROUP_ALL_FILE"
+   fi
+   if [ -f "$TX_ALL_FILE" ]; then
+      rm "$TX_ALL_FILE"
    fi
    if [ -f "$GROUP_ALL_FILE" ]; then
       rm "$GROUP_ALL_FILE"
@@ -232,6 +277,7 @@ if [ "$ALL" == "true" ]; then
    for PERF_TEST_APP in $PERF_TEST_APPS_WITH_RESULTS; do
       RESULTS_DIR="$APPS_DIR/$PERF_TEST_APP/results"       
       INGESTION_CSV_FILE=$RESULTS_DIR/results-ingestion.csv
+      TX_CSV_FILE=$RESULTS_DIR/results-tx.csv
       GROUP_CSV_FILE=$RESULTS_DIR/results-group.csv
       if [ -f "$INGESTION_CSV_FILE" ]; then
           # Keep only one header row
@@ -239,6 +285,14 @@ if [ "$ALL" == "true" ]; then
              tail -n +2 "$INGESTION_CSV_FILE" >> "$INGESTION_ALL_FILE"
           else
              cat "$INGESTION_CSV_FILE" >> "$INGESTION_ALL_FILE"
+          fi
+      fi
+      if [ -f "$TX_CSV_FILE" ]; then
+          # Keep only one header row
+          if [ -f "$TX_ALL_FILE" ]; then
+             tail -n +2 "$TX_CSV_FILE" >> "$TX_ALL_FILE"
+          else
+             cat "$TX_CSV_FILE" >> "$TX_ALL_FILE"
           fi
       fi
       if [ -f "$GROUP_CSV_FILE" ]; then
@@ -252,5 +306,6 @@ if [ "$ALL" == "true" ]; then
    done
    echo "   + $INGESTION_ALL_FILE"
    echo "   + $GROUP_ALL_FILE"
+   echo "   + $TX_ALL_FILE"
    echo ""
 fi

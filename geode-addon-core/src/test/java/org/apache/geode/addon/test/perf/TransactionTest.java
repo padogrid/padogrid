@@ -28,11 +28,11 @@ import org.apache.geode.cache.execute.ResultCollector;
  * from the {@link RegionNameEnum#eligibility} and {@link RegionNameEnum#profile}
  * maps. It launches multiple threads to concurrently execute transaction and
  * query operations for achieving the highest throughput possible. Before
- * running this test, {@link DataIngestionTest} should be run to populate data
+ * running this test, {@link PdxDataIngestionTest} should be run to populate data
  * in the mentioned maps.
  * 
  * TransactionTest share the same properties described in
- * {@link DataIngestionTest}. The properties described below are TransactionTest
+ * {@link PdxDataIngestionTest}. The properties described below are TransactionTest
  * specific and must begin with the map name followed by '.', e.g.,
  * eligibility.totalEntryCount.
  * <p>
@@ -167,7 +167,7 @@ public class TransactionTest implements Constants
 		}
 		writer.println("              Test Run Count: " + TEST_COUNT);
 		writer.println("    Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
-		writer.println("   Total Entry Count per Run: " + totalEntryCount);
+		writer.println("   Total Entry Count Per Run: " + totalEntryCount);
 		writer.println("                Thread Count: " + threadCount);
 		writer.println("                      Prefix: " + prefix);
 		writer.println("      Entry Count per Thread: " + countPerThread);

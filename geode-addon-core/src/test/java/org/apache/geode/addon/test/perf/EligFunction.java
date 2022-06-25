@@ -60,6 +60,7 @@ public class EligFunction implements Function, Declarable {
 	 * @throws NameResolutionException
 	 * @throws QueryInvocationTargetException
 	 */
+	@SuppressWarnings("unused")
 	private SelectResults getEligibilityByGroupNumberPublicAPI(RegionFunctionContext context, String groupNumber) throws FunctionDomainException,
 			TypeMismatchException, NameResolutionException, QueryInvocationTargetException {
 		QueryService queryService = context.getCache().getQueryService();

@@ -12,9 +12,9 @@ import java.util.HashMap;
 import java.util.Properties;
 
 import org.apache.geode.addon.test.perf.TransactionTest.TestCaseEnum;
-import org.apache.geode.addon.test.perf.data.Blob;
-import org.apache.geode.addon.test.perf.data.ClientProfileKey;
-import org.apache.geode.addon.test.perf.data.EligKey;
+import org.apache.geode.addon.test.perf.data.PdxBlob;
+import org.apache.geode.addon.test.perf.data.PdxClientProfileKey;
+import org.apache.geode.addon.test.perf.data.PdxEligKey;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.cache.client.ClientCacheFactory;
@@ -40,7 +40,7 @@ import org.apache.geode.cache.client.ClientCacheFactory;
  * </thead>
  * <tr>
  * <td>memberSetSize</td>
- * <td>The number of common members for EligKey objects.</td>
+ * <td>The number of common members for PdxEligKey objects.</td>
  * <td>10</td>
  * </tr>
  * <tr>
@@ -121,7 +121,7 @@ import org.apache.geode.cache.client.ClientCacheFactory;
  *
  */
 @SuppressWarnings({ "unchecked", "rawtypes" })
-public class DataIngestionTest implements Constants
+public class PdxDataIngestionTest implements Constants
 {
 	private final static String PRODUCT="geode";
 
@@ -137,7 +137,7 @@ public class DataIngestionTest implements Constants
 
 	private Date baseDate;
 	
-	public DataIngestionTest() throws Exception
+	public PdxDataIngestionTest() throws Exception
 	{
 		init();
 		
@@ -404,10 +404,10 @@ public class DataIngestionTest implements Constants
 			
 				// Create a set of members that belong to the same group number
 				for (int k = 0; k < MEMBER_SET_SIZE; k++) {
-					region.put(new EligKey(key, key, (short) keyIndex, 
+					region.put(new PdxEligKey(key, key, (short) keyIndex, 
 								new Date(effectiveDateTime + k), new Date(termDateTime+k), 
 								keyIndex, (short)keyIndex, keyIndex, keyIndex), 
-							new Blob(data));
+							new PdxBlob(data));
 					putCount++;
 					keyIndex++;
 				}
@@ -455,10 +455,10 @@ public class DataIngestionTest implements Constants
 				
 					// Create a set of members that belong to the same group number
 					for (int k = 0; k < MEMBER_SET_SIZE; k++) {
-						map.put(new EligKey(key, key, (short) keyIndex, 
+						map.put(new PdxEligKey(key, key, (short) keyIndex, 
 									new Date(effectiveDateTime + k), new Date(termDateTime+k), 
 									keyIndex, (short)keyIndex, keyIndex, keyIndex), 
-								new Blob(data));
+								new PdxBlob(data));
 						keyIndex++;
 					}
 					groupNumber++;
@@ -474,7 +474,7 @@ public class DataIngestionTest implements Constants
 				for (int j = 0; j < remainingCount; j+=MEMBER_SET_SIZE) {
 					key = prefix + groupNumber;
 					for (int k = 0; k < MEMBER_SET_SIZE; k++) {
-						map.put(new EligKey(key, key, (short) keyIndex, new Date(effectiveDateTime + k), new Date(termDateTime+k), keyIndex, (short)keyIndex, keyIndex, keyIndex), new Blob(data));
+						map.put(new PdxEligKey(key, key, (short) keyIndex, new Date(effectiveDateTime + k), new Date(termDateTime+k), keyIndex, (short)keyIndex, keyIndex, keyIndex), new PdxBlob(data));
 						keyIndex++;
 					}
 					groupNumber++;
@@ -511,7 +511,7 @@ public class DataIngestionTest implements Constants
 			long startTime = System.currentTimeMillis();
 			for (int i = threadStartIndex; i <= threadStopIndex; i++) {
 				key = prefix + keyIndex;
-				region.put(new ClientProfileKey(key, key, key), new Blob(data));
+				region.put(new PdxClientProfileKey(key, key, key), new PdxBlob(data));
 				putCount++;
 				keyIndex++;
 			}
@@ -546,7 +546,7 @@ public class DataIngestionTest implements Constants
 				map.clear();
 				for (int j = 0; j < batchSize; j++) {
 					key = prefix + keyIndex;
-					map.put(new ClientProfileKey(key, key, key), new Blob(data));
+					map.put(new PdxClientProfileKey(key, key, key), new PdxBlob(data));
 					keyIndex++;
 				}
 				region.putAll(map);
@@ -556,7 +556,7 @@ public class DataIngestionTest implements Constants
 				map.clear();
 				for (int j = 0; j < remainingCount; j++) {
 					key = prefix + keyIndex;
-					map.put(new ClientProfileKey(key, key, key), new Blob(data));
+					map.put(new PdxClientProfileKey(key, key, key), new PdxBlob(data));
 					keyIndex++;
 				}
 				region.putAll(map);
@@ -721,7 +721,7 @@ public class DataIngestionTest implements Constants
 		System.out.println("Please wait until done. This may take some time. Status printed in every " + PRINT_STATUS_INTERVAL_IN_SEC + " sec.");
 		System.out.println("Results:");
 		
-		final DataIngestionTest loader = new DataIngestionTest();
+		final PdxDataIngestionTest loader = new PdxDataIngestionTest();
 
 		threadsComplete = new boolean[mapNameEnums.length];
 		
