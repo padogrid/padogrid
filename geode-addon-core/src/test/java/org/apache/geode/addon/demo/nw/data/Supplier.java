@@ -158,7 +158,7 @@ public class Supplier extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("supplierId", supplierId);
+		writer.writeString("supplierId", supplierId).markIdentityField("supplierId");
 		writer.writeString("companyName", companyName);
 		writer.writeString("contactName", contactName);
 		writer.writeString("contactTitle", contactTitle);

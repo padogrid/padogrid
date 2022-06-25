@@ -84,6 +84,7 @@ public class GroupTest implements Constants {
 	private static int TEST_INTERVAL_IN_MSEC;
 	private static int PRINT_STATUS_INTERVAL_IN_SEC;
 	private static List<Group[]> concurrentGroupList = new ArrayList<Group[]>(4);
+	private static boolean isPrintGetAllError;
 	private static HashMap<String, Operation> operationMap = new HashMap<String, Operation>();
 
 	private ClientCache clientCache;
@@ -410,59 +411,32 @@ public class GroupTest implements Constants {
 								break;
 
 							case getall: {
-								HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
-								if (operation.dataObjectFactory == null) {
-									for (int k = 0; k < operation.batchSize; k++) {
-										int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-										String key = operation.keyPrefix + (operation.startNum + keyIndex);
-										keys.add(key);
-									}
-								} else {
-									for (int k = 0; k < operation.batchSize; k++) {
-										int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-										Object key = operation.dataObjectFactory.getKey(keyIndex);
-										keys.add(key);
-									}
-								}
+								HashSet<Object> keys = createGetAllKeySet(operation);
 								Map<Object, Object> map = operation.region.getAll(keys);
 								if (map == null) {
 									System.out.println(threadNum + ". [" + group.name + "." + operation.dsName + "."
 											+ operation.testCase + "] returned null");
-								} else if (map.size() < keys.size()) {
-									System.out.println(threadNum + ". [" + group.name + "." + operation.dsName + "."
-											+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+								} else if (isPrintGetAllError) {
+									int count = 0;
+									for (Object value : map.values()) {
+										if (value == null) {
+											count++;
+										}
+									}
+									if (count > 0) {
+										System.out.println(threadNum + ". [" + group.name + "." + operation.dsName + "."
+												+ operation.testCase + "] returned " + count + "/" + keys.size());
+									}
 								}
 							}
 								break;
 
 							case putall:
 							default: {
-								int entryCount = operation.totalEntryCount / group.threadCount;
 								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
-								int keyIndex = keyIndexes[j];
-								if (operation.dataObjectFactory == null) {
-									for (int k = 0; k < operation.batchSize; k++) {
-										String key = operation.keyPrefix + (operation.startNum + keyIndex);
-										keyIndex++;
-										map.put(key, new Blob(new byte[operation.payloadSize]));
-										if (keyIndex >= threadNum * entryCount) {
-											keyIndex = (threadNum - 1) * entryCount;
-										}
-									}
-								} else {
-									for (int k = 0; k < operation.batchSize; k++) {
-										int idNum = operation.startNum + keyIndex;
-										DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
-												null);
-										keyIndex++;
-										map.put(entry.key, entry.value);
-										if (keyIndex >= threadNum * entryCount) {
-											keyIndex = (threadNum - 1) * entryCount;
-										}
-									}
-								}
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
 								operation.region.putAll(map);
-								keyIndexes[j] = keyIndex;
 							}
 								break;
 							}
@@ -532,7 +506,6 @@ public class GroupTest implements Constants {
 		}
 	}
 
-	@SuppressWarnings("unused")
 	private int createPutAllMap(HashMap<Object, Object> map, Operation operation, int keyIndex, int threadNum,
 			int threadCount) {
 		int entryCount = operation.totalEntryCount / threadCount;
@@ -560,7 +533,6 @@ public class GroupTest implements Constants {
 		return keyIndex;
 	}
 
-	@SuppressWarnings("unused")
 	private HashSet<Object> createGetAllKeySet(Operation operation) {
 		HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
 		if (operation.dataObjectFactory == null) {
@@ -865,6 +837,10 @@ public class GroupTest implements Constants {
 		writeLine();
 		writeLine("       -run              Run test cases.");
 		writeLine();
+		writeLine("       -getall-error     Prints getall test errors. Region.getAll() returns null for each key");
+		writeLine("                         that does not have a value. If this option is specified, then it");
+		writeLine("                          checks each key and prints error if there are any null values.");
+		writeLine();
 		writeLine("       -list             Lists data structures and their sizes.");
 		writeLine();
 		writeLine("       -db               Runs test cases on database instead of Geode/GemFire. To use this");
@@ -1142,6 +1118,8 @@ public class GroupTest implements Constants {
 				runDb = true;
 			} else if (arg.equals("-clear")) {
 				clear = true;
+			} else if (arg.equals("-getall-error")) {
+				isPrintGetAllError = true;
 			} else if (arg.equals("-prop")) {
 				if (i < args.length - 1) {
 					perfPropertiesFilePath = args[++i].trim();

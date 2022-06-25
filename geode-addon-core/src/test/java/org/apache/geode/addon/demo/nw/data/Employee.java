@@ -226,7 +226,7 @@ public class Employee extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("employeeId", employeeId);
+		writer.writeString("employeeId", employeeId).markIdentityField("employeeId");
 		writer.writeString("lastName", lastName);
 		writer.writeString("firstName", firstName);
 		writer.writeString("title", title);

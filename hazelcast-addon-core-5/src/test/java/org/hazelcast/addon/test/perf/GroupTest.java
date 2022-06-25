@@ -539,6 +539,7 @@ public class GroupTest implements Constants
 								}
 							}
 								break;
+
 							case putall:
 							default: {
 								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);

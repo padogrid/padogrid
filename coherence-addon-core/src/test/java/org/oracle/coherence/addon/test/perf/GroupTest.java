@@ -353,20 +353,7 @@ public class GroupTest implements Constants
 						break;
 
 					case getall: {
-						HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
-						if (operation.dataObjectFactory == null) {
-							for (int k = 0; k < operation.batchSize; k++) {
-								int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-								String key = operation.keyPrefix + (operation.startNum + keyIndex);
-								keys.add(key);
-							}
-						} else {
-							for (int k = 0; k < operation.batchSize; k++) {
-								int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-								Object key = operation.dataObjectFactory.getKey(keyIndex);
-								keys.add(key);
-							}
-						}
+						HashSet<Object> keys = createGetAllKeySet(operation);
 						Map<Object, Object> map = operation.cache.getAll(keys);
 						if (map == null) {
 							System.out.println(threadNum + ". [" + group.name + "." + operation.cachePath + "."
@@ -380,31 +367,10 @@ public class GroupTest implements Constants
 
 					case putall:
 					default: {
-						int entryCount = operation.totalEntryCount / group.threadCount;
 						HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
-						int keyIndex = keyIndexes[j];
-						if (operation.dataObjectFactory == null) {
-							for (int k = 0; k < operation.batchSize; k++) {
-								String key = operation.keyPrefix + (operation.startNum + keyIndex);
-								keyIndex++;
-								map.put(key, new Blob(new byte[operation.payloadSize]));
-								if (keyIndex >= threadNum * entryCount) {
-									keyIndex = (threadNum - 1) * entryCount;
-								}
-							}
-						} else {
-							for (int k = 0; k < operation.batchSize; k++) {
-								int idNum = operation.startNum + keyIndex;
-								DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
-								keyIndex++;
-								map.put(entry.key, entry.value);
-								if (keyIndex >= threadNum * entryCount) {
-									keyIndex = (threadNum - 1) * entryCount;
-								}
-							}
-						}
+						keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+								group.threadCount);
 						operation.cache.putAll(map);
-						keyIndexes[j] = keyIndex;
 					}
 						break;
 					}
@@ -415,6 +381,51 @@ public class GroupTest implements Constants
 
 			elapsedTimeInMsec = stopTime - startTime;
 		}
+	}
+	
+	private int createPutAllMap(HashMap<Object, Object> map, Operation operation, int keyIndex, int threadNum,
+			int threadCount) {
+		int entryCount = operation.totalEntryCount / threadCount;
+		if (operation.dataObjectFactory == null) {
+			for (int k = 0; k < operation.batchSize; k++) {
+				String key = operation.keyPrefix + (operation.startNum + keyIndex);
+				keyIndex++;
+				map.put(key, new Blob(new byte[operation.payloadSize]));
+				if (keyIndex >= threadNum * entryCount) {
+					keyIndex = (threadNum - 1) * entryCount;
+				}
+			}
+		} else {
+			for (int k = 0; k < operation.batchSize; k++) {
+				int idNum = operation.startNum + keyIndex;
+				DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum);
+				keyIndex++;
+				map.put(entry.key, entry.value);
+				if (keyIndex >= threadNum * entryCount) {
+					keyIndex = (threadNum - 1) * entryCount;
+				}
+			}
+		}
+
+		return keyIndex;
+	}
+
+	private HashSet<Object> createGetAllKeySet(Operation operation) {
+		HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
+		if (operation.dataObjectFactory == null) {
+			for (int k = 0; k < operation.batchSize; k++) {
+				int keyIndex = operation.random.nextInt(operation.totalEntryCount);
+				String key = operation.keyPrefix + (operation.startNum + keyIndex);
+				keys.add(key);
+			}
+		} else {
+			for (int k = 0; k < operation.batchSize; k++) {
+				int keyIndex = operation.random.nextInt(operation.totalEntryCount);
+				Object key = operation.dataObjectFactory.getKey(keyIndex);
+				keys.add(key);
+			}
+		}
+		return keys;
 	}
 
 	public void close() throws Exception {

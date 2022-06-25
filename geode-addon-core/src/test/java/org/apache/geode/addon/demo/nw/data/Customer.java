@@ -150,7 +150,7 @@ public class Customer extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("customerId", customerId);
+		writer.writeString("customerId", customerId).markIdentityField("customerId");
 		writer.writeString("companyName", companyName);
 		writer.writeString("contactName", contactName);
 		writer.writeString("contactTitle", contactTitle);

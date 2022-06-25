@@ -81,7 +81,7 @@ public class OrderDetail extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("orderId", orderId);
+		writer.writeString("orderId", orderId).markIdentityField("orderId");
 		writer.writeString("productId", productId);
 		writer.writeDouble("unitPrice", unitPrice);
 		writer.writeInt("quantity", quantity);
