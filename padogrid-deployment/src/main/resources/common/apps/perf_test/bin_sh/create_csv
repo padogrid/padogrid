@@ -45,44 +45,6 @@ EOF
 exit
 fi
 
-# Results directory
-RESULTS_DIR="$APP_DIR/results"
-INGESTION_CSV_FILE=$RESULTS_DIR/results-ingestion.csv
-TX_CSV_FILE=$RESULTS_DIR/results-tx.csv
-GROUP_CSV_FILE=$RESULTS_DIR/results-group.csv
-
-pushd $RESULTS_DIR > /dev/null 2>&1
-INGESTION_FILES=$(ls -tr ingestion-* 2> /dev/null)
-TX_FILES=$(ls -tr tx-* 2> /dev/null)
-GROUP_FILES=$(ls -tr group-* 2> /dev/null)
-popd > /dev/null 2>&1
-if [ "$INGESTION_FILES" == "" ] && [ "$TX_FILES" == "" ] && [ "$GROUP_FILES" == "" ]; then
-   echo "Result files not found. Result files are generated when you run 'perf_test' scripts."
-   echo "Command aborted."
-   exit
-fi
-
-#
-# Returns the specified label's value
-# @param label
-# @param file
-#
-function getValue
-{
-   local LABEL="$1"
-   local FILE="$2"
-   local VALUE=$(grep "$LABEL" "$FILE" | sed 's/^.*://g')
-   echo $VALUE
-}
-
-function getTimeValue
-{
-   local LABEL="$1"
-   local FILE="$2"
-   local VALUE=$(grep "$LABEL" "$FILE" | sed "s/$LABEL//")
-   echo $VALUE
-}
-
 PERF_TEST_APPS=""
 if [ "$ALL" == "true" ]; then
    ALL_APPS=$(list_apps)
@@ -120,6 +82,33 @@ if [ "$PERF_TEST_APPS_WITH_RESULTS" == "" ]; then
    echo "Command aborted."
    exit
 fi
+
+## Create results directory if not found. This is required for '-all'.
+RESULTS_DIR="$APP_DIR/results"
+if [ ! -d "$RESULTS_DIR" ]; then
+   mkdir "$RESULTS_DIR"
+fi
+
+#
+# Returns the specified label's value
+# @param label
+# @param file
+#
+function getValue
+{
+   local LABEL="$1"
+   local FILE="$2"
+   local VALUE=$(grep "$LABEL" "$FILE" | sed 's/^.*://g')
+   echo $VALUE
+}
+
+function getTimeValue
+{
+   local LABEL="$1"
+   local FILE="$2"
+   local VALUE=$(grep "$LABEL" "$FILE" | sed "s/$LABEL//")
+   echo $VALUE
+}
 
 #
 # Generate CSV files
@@ -284,7 +273,7 @@ if [ "$ALL" == "true" ]; then
           if [ -f "$INGESTION_ALL_FILE" ]; then
              tail -n +2 "$INGESTION_CSV_FILE" >> "$INGESTION_ALL_FILE"
           else
-             cat "$INGESTION_CSV_FILE" >> "$INGESTION_ALL_FILE"
+             cat "$INGESTION_CSV_FILE" > "$INGESTION_ALL_FILE"
           fi
       fi
       if [ -f "$TX_CSV_FILE" ]; then
@@ -292,7 +281,7 @@ if [ "$ALL" == "true" ]; then
           if [ -f "$TX_ALL_FILE" ]; then
              tail -n +2 "$TX_CSV_FILE" >> "$TX_ALL_FILE"
           else
-             cat "$TX_CSV_FILE" >> "$TX_ALL_FILE"
+             cat "$TX_CSV_FILE" > "$TX_ALL_FILE"
           fi
       fi
       if [ -f "$GROUP_CSV_FILE" ]; then
@@ -300,12 +289,18 @@ if [ "$ALL" == "true" ]; then
           if [ -f "$GROUP_ALL_FILE" ]; then
              tail -n +2 "$GROUP_CSV_FILE" >> "$GROUP_ALL_FILE"
           else
-             cat "$GROUP_CSV_FILE" >> "$GROUP_ALL_FILE"
+             cat "$GROUP_CSV_FILE" > "$GROUP_ALL_FILE"
           fi
       fi
    done
-   echo "   + $INGESTION_ALL_FILE"
-   echo "   + $GROUP_ALL_FILE"
-   echo "   + $TX_ALL_FILE"
+   if [ -f "$INGESTION_ALL_FILE" ]; then
+      echo "   + $INGESTION_ALL_FILE"
+   fi
+   if [ -f "$GROUP_ALL_FILE" ]; then
+      echo "   + $GROUP_ALL_FILE"
+   fi
+   if [ -f "$TX_ALL_FILE" ]; then
+      echo "   + $TX_ALL_FILE"
+   fi
    echo ""
 fi

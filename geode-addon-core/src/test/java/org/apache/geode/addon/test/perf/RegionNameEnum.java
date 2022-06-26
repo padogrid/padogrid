@@ -10,7 +10,7 @@ import java.util.HashSet;
 public enum RegionNameEnum {
 eligibility, profile, summary;
 	
-	static RegionNameEnum getMapNameEnum(String mapName) {
+	public static RegionNameEnum getMapNameEnum(String mapName) {
 		if (eligibility.name().equalsIgnoreCase(mapName)) {
 			return eligibility;
 		} else if (profile.name().equalsIgnoreCase(mapName)) {
@@ -22,7 +22,7 @@ eligibility, profile, summary;
 		}
 	}
 	
-	static RegionNameEnum[] getMapNameEnums(String mapNames) {
+	public static RegionNameEnum[] getMapNameEnums(String mapNames) {
 		if (mapNames == null) {
 			return new RegionNameEnum[0];
 		}

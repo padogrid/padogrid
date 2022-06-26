@@ -3,10 +3,8 @@ package org.apache.geode.addon.test.perf.junit;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.geode.addon.test.perf.PdxDataIngestionTest;
 import org.apache.geode.addon.test.perf.EligFunction;
 import org.apache.geode.addon.test.perf.RegionNameEnum;
-import org.apache.geode.addon.test.perf.data.GroupSummary;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.cache.client.ClientCacheFactory;
@@ -19,7 +17,7 @@ import org.junit.Test;
 
 /**
  * GroupSummaryTest tests the {@linkplain EligFunction} task executed in the
- * cluster. It requires the user to first run {@linkplain PdxDataIngestionTest} to
+ * cluster. It requires the user to first run {@linkplain DataIngestionTest} to
  * ingest data into the cluster.
  * 
  * @author dpark
@@ -43,10 +41,11 @@ public class GroupSummaryTest {
 	}
 
 	/**
-	 * Tests the group number "x1".
+	 * Tests the group number "x1" on {@link PdxEligFunction}.
 	 * @throws InterruptedException
 	 * @throws ExecutionException
 	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
 	public void testGroupNumberX1() throws InterruptedException, ExecutionException {
 		Region region = clientCache.getRegion(RegionNameEnum.eligibility.name());
