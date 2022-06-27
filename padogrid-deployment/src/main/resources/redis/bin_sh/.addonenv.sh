@@ -347,7 +347,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet redis snappydata coherence spark kafka hadoop"
+BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka none redis snappydata spark"
 
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
@@ -536,7 +536,10 @@ JAVA_MAJOR_VERSION_NUMBER=`expr "$JAVA_VERSION" : '\([0-9]*\)'`
 #
 REDIS_VERSION=""
 IS_REDIS_ENTERPRISE=false
-REDIS_VERSION=$(redis-server -v | sed -e 's/^.*v=//' -e 's/ .*//')
+# Redis may be unavailable during build. If so, ignore.
+if [ "$(which redis-server 2> /dev/null)" != "" ]; then
+   REDIS_VERSION=$(redis-server -v | sed -e 's/^.*v=//' -e 's/ .*//')
+fi
 REDIS_MAJOR_VERSION_NUMBER=`expr "$REDIS_VERSION" : '\([0-9]*\)'`
 PRODUCT_VERSION=$REDIS_VERSION
 PRODUCT_MAJOR_VERSION=$REDIS_MAJOR_VERSION_NUMBER

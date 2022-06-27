@@ -33,6 +33,7 @@ if [ "$INPUT" != "continue" ]; then
 fi
 
 POM_FILES=`find . -name pom.xml`
+POM_FILES="$POM_FILES $(find . -name pom-geode.xml)"
 for i in $POM_FILES; do
   echo sed -i '' "s/$FROM_VERSION/$TO_VERSION/" $i
   sed -i '' "s/$FROM_VERSION/$TO_VERSION/" $i
