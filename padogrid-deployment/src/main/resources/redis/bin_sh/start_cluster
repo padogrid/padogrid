@@ -1,0 +1,351 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -fg -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Start all inactive members in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name]
+
+DESCRIPTION
+   Starts all inactive (or stopped) members in the specified cluster.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -fg
+             Run each member in the foreground serially until each member is fully initialized
+             started. If this options is not specified, then by default, it starts the members
+             in the background.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+POD=`getClusterProperty "pod.name" "local"`
+
+#
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_HOSTS=$(getClusterProperty "vm.hosts")
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+         . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   MEMBER_NUM=1
+   for VM_HOST in $__VM_HOSTS; do
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+      fi
+      if [ "$POD" != "local" ]; then
+         let MEMBER_NUM=MEMBER_NUM+1
+      fi
+   done
+   exit
+fi
+
+#
+# Local cluster
+#
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+
+NODE_COUNT=`getPodProperty "node.count" 0`
+MEMBER_COUNT=`getMemberCount`
+
+# Show warning message if the member count is greater than the pod size.
+if [ "$POD" != "local" ]; then
+   if [ "$MEMBER_COUNT" -gt "$NODE_COUNT" ]; then
+       echo "WARNING: The cluster member count ($MEMBER_COUNT) exceeds the data node count ($NODE_COUNT) in the pod."
+       echo "         Only $NODE_COUNT members will be started."
+   fi
+fi
+
+if [ "$(isClusterExist $CLUSTER)" == "false" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "    ERROR: This cluster has not been created. Please run the create_cluster command"
+   echo "           to create the cluster before running this command. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+
+# Determine whether the cluster needs initialization
+REPLICAS=`getClusterProperty "redis.replicas" "$DEFAULT_REPLICAS"`
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+MEMBER_TCP_LIST=""
+INIT_REQUIRED="true"
+if [ "$POD" == "local" ]; then
+   HOST_NAME=`hostname`
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+   TARGET_NODE=""
+   for MEMBER_NUMBER in $(seq 1 $MEMBER_COUNT); do
+      if [ "$(getRedisMemberPid $MEMBER_NUMBER)" != "" ]; then
+         let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
+         TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+         if [ $REPLICAS -eq 0 ]; then         
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -gt 1 ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         fi
+      fi
+   done
+fi
+if [ "$INIT_REQUIRED" == "true" ]; then
+   # The cluster will be initialized here. Do not add node by members.
+   ARG_ARG="no-add-node"
+else
+   # The cluster has already been intialized. Let the members decide how to new add nodes.
+   ARG_ARG="add-node"
+fi
+
+# TODO: The following assumes that the member numbers exist consecutively.
+#       Need a way to pass the node number to start_member.
+# Start members
+HOST_NAME=`hostname`
+BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+pushd $RUN_DIR > /dev/null 2>&1
+COUNT=0
+for i in ${MEMBER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      let COUNT=COUNT+1
+      pushd $i > /dev/null 2>&1
+      MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+      MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUMBER))
+      ARG_ARG="no-add-node"
+      if [ "$(getRedisMemberPid $MEMBER_NUM_NO_LEADING_ZERO)" != "" ]; then
+         let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+         TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+         if [ $REPLICAS -eq 0 ]; then         
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -le 1 ]; then
+               ARG_ARG="add-node"
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               ARG_ARG="add-node"
+            fi
+         fi
+      else
+          ARG_ARG="add-node"
+      fi
+
+      start_member -cluster $CLUSTER -num $MEMBER_NUM_NO_LEADING_ZERO -arg $ARG_ARG $*
+      popd > /dev/null 2>&1
+   fi
+   if [ "$POD" != "local" ]; then
+      if [ "$COUNT" -ge "$NODE_COUNT" ]; then
+         break;
+       fi
+   fi
+done
+popd > /dev/null 2>&1
+
+# Initialize the cluster
+if [ "$POD" == "local" ]; then
+   HOST_NAME=`hostname`
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+   INIT_REQUIRED="true"
+   TARGET_NODE=""
+   for MEMBER_NUMBER in $(seq 1 $MEMBER_COUNT); do
+      if [ "$(getRedisMemberPid $MEMBER_NUMBER)" != "" ]; then
+         let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
+         TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+         if [ $REPLICAS -eq 0 ]; then
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -gt 1 ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $BIND_ADDRESS -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         fi
+      fi
+   done
+   if [ "$INIT_REQUIRED" == "true" ]; then
+      # Build MEMBER_TCP_LIST for active members only.
+      for MEMBER_NUMBER in $(seq 1 $MEMBER_COUNT); do
+         PID=$(getRedisMemberPid $MEMBER_NUMBER)
+         if [ "$PID" != "" ]; then
+            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
+            TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+            if [ "$MEMBER_TCP_LIST" == "" ]; then
+               MEMBER_TCP_LIST="$TARGET_NODE"
+            else
+               MEMBER_TCP_LIST="$MEMBER_TCP_LIST $TARGET_NODE"
+            fi
+         fi
+      done
+   fi
+else
+   MEMBER_PREFIX=`getMemberPrefix`
+   MEMBER_COUNT=`getMemberCount`
+   NODE_COUNT=`getPodProperty "node.count" "$MEMBER_COUNT"`
+   MEMBER_PORT=$MEMBER_START_PORT
+   for i in $(seq 1 $MEMBER_COUNT); do
+      __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+      NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+      NODE_ADDR="$NODE_LOCAL:$MEMBER_START_PORT"
+      if [ "$(getRedisMemberPid $MEMBER_NUMBER)" != "" ]; then
+         # One member per Vagrant VM -> same port number
+         TARGET_NODE="$NODE_LOCAL:$MEMBER_PORT"
+
+         TARGET_NODE="$BIND_ADDRESS:$MEMBER_PORT"
+         if [ $REPLICAS -eq 0 ]; then
+            # For no replicas, initialize if the master count is greater than 1
+            MASTER_COUNT="$(redis-cli --cluster check $TARGET_NODE 2> /dev/null | grep "M:" | wc -l)"
+            if [ $MASTER_COUNT -gt 1 ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         else
+            # For replicas, initialize if there are no slaves 
+            INFO="$(redis-cli -h $NODE_LOCAL -p $MEMBER_PORT cluster nodes 2> /dev/null | grep slave)"
+            if [ "$INFO" != "" ]; then
+               INIT_REQUIRED="false"
+               break;
+            fi
+         fi
+      fi
+   done
+   if [ "$INIT_REQUIRED" == "true" ]; then
+      # Build MEMBER_TCP_LIST for active members only.
+      for i in $(seq 1 $MEMBER_COUNT); do
+         __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
+         NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
+         # One member per Vagrant VM -> same port number
+         PID=$(getRedisMemberPid $MEMBER_NUMBER)
+         if [ "$PID" != "" ]; then
+            TARGET_NODE="$NODE_LOCAL:$MEMBER_PORT"
+            if [ "$MEMBER_TCP_LIST" == "" ]; then
+               MEMBER_TCP_LIST="$TARGET_NODE"
+            else
+               MEMBER_TCP_LIST="$MEMBER_TCP_LIST $TARGET_NODE"
+            fi
+         fi
+      done
+   fi
+fi
+
+if [ "$INIT_REQUIRED" == "true" ]; then
+   # Version 6 does not support localhost. Must use the IP address. 
+   if [ $REDIS_MAJOR_VERSION_NUMBER -lt 7 ]; then
+      MEMBER_TCP_LIST=$(echo "$MEMBER_TCP_LIST" | sed 's/localhost/127.0.0.1/g')
+   fi
+   redis-cli --cluster create $MEMBER_TCP_LIST --cluster-replicas $REPLICAS --cluster-yes
+fi
+
+if [ "$TARGET_NODE" != "" ]; then
+   redis-cli --cluster check "$TARGET_NODE" 2> /dev/null
+fi
+
+if [ "$MEMBER_NUMBER" == "" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "     INFO: Cluster has no members defined: [$CLUSTER]. Please add members by executing the 'add_member' command."
+   echo "----------------------------------------------------------------"
+fi

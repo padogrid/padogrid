@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -num -all -?"
+   echo "-cluster -num -all -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -63,6 +63,9 @@ OPTIONS
    -num member_number
              Member number starting from 1.
 
+   -count member_count
+             Number of new menbers to add. If not specified, it adds one (1) member.
+
    -all      
              This option applies to VM clusters only. If specified, it adds a member
              to all VMs in the cluster. member_number is ignored.
@@ -90,6 +93,24 @@ SEE ALSO
 EOF
    printSeeAlsoList "*member*" $EXECUTABLE
    exit
+fi
+
+#
+# If '-count' specified then recursively execute this command
+#
+if [ "$COUNT" != "" ]; then
+   if [ "$(isNumber $COUNT)" == "false" ]; then
+      echo -e "${CLightRed}ERROR:${CNone} Invalid number [$COUNT]. Command aborted."
+      exit 1
+   fi
+   if [ $COUNT -eq 0 ]; then
+     exit
+   elif [ $COUNT -gt 1 ]; then
+      for i in $(seq $COUNT); do
+         $EXECUTABLE
+      done
+      exit
+   fi
 fi
 
 #

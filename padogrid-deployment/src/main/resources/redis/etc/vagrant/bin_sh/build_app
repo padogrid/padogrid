@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh 
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-?]"
+   echo ""
+   echo "   Builds a Vagrant pod environment."
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+
+# Assume the pod type is vagrant for now unitl other types are supported.
+POD_TYPE=`getPodProperty "pod.type"`
+POD_BOX_IMAGE=`getPodProperty "pod.box.image"`
+POD_AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" $HOST_PRODUCTS_DIR`
+
+HOST_NAME=`hostname`
+
+#
+# Get vagrant properties from the cluster.properties file
+#
+NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
+NODE_COUNT=`getPodProperty "node.count" $NODE_COUNT`
+NODE_PRIMARY_MEMORY_SIZE=`getPodProperty "node.memory.data" $NODE_PRIMARY_MEMORY_SIZE`
+NODE_MEMORY_SIZE=`getPodProperty "node.memory.primary" $NODE_MEMORY_SIZE`
+HOST_PRODUCTS_DIR=`getPodProperty "host.productsDir" $HOST_PRODUCTS_DIR`
+
+# Host private IP address. This address must be accessible from VitualBox
+if [ "$HOST_PRIVATE_IP" == "" ]; then
+   AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
+   if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
+      echo >&2 "ERROR: Private IP address not specified and unable to determine. Please add"
+      echo >&2 "       a host-only ethernet adapter to VirtualBox. Command aborted."
+      exit 1
+   fi
+   # Pick the first one in the list
+   for i in $AVAILABLE_IP_ADDRESSES; do
+      HOST_PRIVATE_IP=$i
+      break;
+   done
+fi
+
+TEMPLATE_FILE="$ETC_DIR/template-Vagrantfile-private-ip-seq"
+
+NODEENV_FILE=$POD_DIR/.nodeenv.sh
+BOOTSTRAP_FILE=$POD_DIR/bootstrap.sh
+
+if [ -z $PADOGRID_WORKSPACE ]; then
+   PADOGRID_WORKSPACE=$PADOGRID_HOME
+fi
+GUEST_HOME_DIR="/home/vagrant"
+PADOGRID_WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+PADOGRID_WORKSPACES_HOME_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+GUEST_PADOGRID_WORKSPACES_HOME="$GUEST_HOME_DIR/$PADOGRID_WORKSPACES_HOME_NAME"
+GUEST_PADOGRID_WORKSPACE="$GUEST_PADOGRID_WORKSPACES_HOME/$PADOGRID_WORKSPACE_NAME"
+PADOGRID_DIR_NAME=$(basename "$PADOGRID_HOME")
+VAGRANT_PADOGRID_HOME="$GUEST_HOME_DIR/$PADOGRID_DIR_NAME"
+PODS_DIR=$GUEST_PADOGRID_WORKSPACE/pods
+
+# Find all installed products in the host product dir and
+# set the guest environment variables with them.
+REDIS_HOME=""
+JET_HOME=""
+JAVA_HOME=""
+VM_JAVA_HOME=""
+PROMETHEUS_HOME=""
+GRAFANA_HOME=""
+JQ_HOME=""
+
+# Set guest product home paths.
+pushd $HOST_PRODUCTS_DIR > /dev/null 2>&1
+for i in *; do
+   if [[ $i == redis* ]]; then
+      REDIS_HOME="$GUEST_HOME_DIR/products/$i"  
+   elif [[ $i == *java* ]] || [[ $i == *jdk* ]] || [[ $i == *openjdk* ]]; then
+      JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
+      VM_JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
+   elif [[ $i == prometheus* ]]; then
+      PROMETHEUS_HOME="$GUEST_HOME_DIR/products/$i"  
+   elif [[ $i == grafana* ]]; then
+      GRAFANA_HOME="$GUEST_HOME_DIR/products/$i"
+   elif [[ $i == jq* ]]; then
+      JQ_HOME="$GUEST_HOME_DIR/products/$i"
+   fi
+done
+popd > /dev/null 2>&1
+
+# Create the .nodeenv.sh file which is sourced in during login by boostrap.sh
+# and during remote execution by .addonenv.sh
+echo "#!/bin/bash" > $NODEENV_FILE
+echo "" >> $NODEENV_FILE
+echo "export PRODUCT=$PRODUCT" >> $NODEENV_FILE
+echo "export HOST_OS_HOSTNAME=`hostname`" >> $NODEENV_FILE
+echo "export REDIS_HOME=$REDIS_HOME" >> $NODEENV_FILE
+echo "export PADOGRID_HOME=$VAGRANT_PADOGRID_HOME" >> $NODEENV_FILE
+echo "export VM_PADOGRID_HOME=$VAGRANT_PADOGRID_HOME" >> $NODEENV_FILE
+echo "export PADOGRID_WORKSPACES_HOME=$GUEST_PADOGRID_WORKSPACES_HOME" >> $NODEENV_FILE
+echo "export PADOGRID_WORKSPACE=$GUEST_PADOGRID_WORKSPACE" >> $NODEENV_FILE
+echo "export PODS_DIR=$PODS_DIR" >> $NODEENV_FILE
+echo "export IN_POD=\"true\"" >> $NODEENV_FILE
+echo "export POD=$POD" >> $NODEENV_FILE
+echo "export OS_POD=$POD" >> $NODEENV_FILE
+echo "export JAVA_HOME=$JAVA_HOME" >> $NODEENV_FILE
+echo "export VM_JAVA_HOME=$JAVA_HOME" >> $NODEENV_FILE
+echo "export PROMETHEUS_HOME=$PROMETHEUS_HOME" >> $NODEENV_FILE
+echo "export GRAFANA_HOME=$GRAFANA_HOME" >> $NODEENV_FILE
+echo "export JQ_HOME=$JQ_HOME" >> $NODEENV_FILE
+echo "export PATH=\$JAVA_HOME/bin:\$REDIS_HOME/bin:\$REDIS_HOME/src:\$PADOGRID_HOME/\$PRODUCT/bin_sh:\$PADOGRID_HOME/bin_sh\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
+
+# Create the bootstrap file. This file is executed when the user
+# logs in.
+echo "#!/bin/bash" > $BOOTSTRAP_FILE
+echo "" >> $BOOTSTRAP_FILE
+echo ". /vagrant/.nodeenv.sh" >> $BOOTSTRAP_FILE
+echo "" >> $BOOTSTRAP_FILE
+echo "pushd $VAGRANT_PADOGRID_HOME/$PRODUCT/bin_sh > /dev/null 2>&1" >> $BOOTSTRAP_FILE
+echo ". $VAGRANT_PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash" >> $BOOTSTRAP_FILE
+echo "popd > /dev/null 2>&1" >> $BOOTSTRAP_FILE
+echo "set -o vi" >> $BOOTSTRAP_FILE
+
+if [[ $OS_NAME == CYGWIN* ]]; then
+   # Convert to the proper path form for Ruby.
+   HOST_PRODUCTS_DIR="$(cygpath -w $HOST_PRODUCTS_DIR)"
+   HOST_PRODUCTS_DIR="${HOST_PRODUCTS_DIR//\\/\\\\\\\\}"
+   PADOGRID_WORKSPACES_HOME="$(cygpath -w $PADOGRID_WORKSPACES_HOME)"
+   PADOGRID_WORKSPACES_HOME="${PADOGRID_WORKSPACES_HOME//\\/\\\\\\\\}"
+   VAGRANT_PADOGRID_HOME="$(cygpath -w $VAGRANT_PADOGRID_HOME)"
+   VAGRANT_PADOGRID_HOME="${VAGRANT_PADOGRID_HOME//\\/\\\\\\\\}"
+   PADOGRID_HOME="$(cygpath -w $PADOGRID_HOME)"
+   PADOGRID_HOME="${PADOGRID_HOME//\\/\\\\\\\\}"
+
+   # Replace '/' to avoid expansion for the subsequent use.
+   POD_BOX_IMAGE=$(echo $POD_BOX_IMAGE | sed 's/\//\\\//g')
+else
+   # Replace '/' to avoid expansion for the subsequent use.
+   HOST_PRODUCTS_DIR=$(echo $HOST_PRODUCTS_DIR | sed 's/\//\\\//g')
+   PADOGRID_WORKSPACES_HOME=$(echo $PADOGRID_WORKSPACES_HOME | sed 's/\//\\\//g')
+   VAGRANT_PADOGRID_HOME=$(echo $VAGRANT_PADOGRID_HOME | sed 's/\//\\\//g')
+   PADOGRID_HOME=$(echo $PADOGRID_HOME | sed 's/\//\\\//g')
+   POD_BOX_IMAGE=$(echo $POD_BOX_IMAGE | sed 's/\//\\\//g')
+fi
+
+# Extract the first three octets from the primary IP.
+BASE_PRIVATE_IP_FIRST_THREE_OCTETS=${HOST_PRIVATE_IP%.*}
+BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
+BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
+
+# Substitute the variables in the template file with the actual values.
+sed -e 's/\${POD}/'${POD}'/g' \
+    -e 's/\${POD_BOX_IMAGE}/'${POD_BOX_IMAGE}'/g' \
+    -e 's/\${POD_AVAHI_ENABLED}/'${POD_AVAHI_ENABLED}'/g' \
+    -e 's/\${NODE_NAME_PRIMARY}/'${NODE_NAME_PRIMARY}'/g' \
+    -e 's/\${NODE_COUNT}/'${NODE_COUNT}'/g' \
+    -e 's/\${BASE_PRIVATE_IP}/'${BASE_PRIVATE_IP}'/g' \
+    -e 's/\${NODE_NAME_PREFIX}/'${NODE_NAME_PREFIX}'/g' \
+    -e 's/\${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}/'${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}'/g' \
+    -e 's/\${BASE_PRIVATE_IP_LAST_OCTET}/'${BASE_PRIVATE_IP_LAST_OCTET}'/g' \
+    -e 's/\${PADOGRID_WORKSPACES_HOME}/'${PADOGRID_WORKSPACES_HOME}'/g' \
+    -e 's/\${PADOGRID_WORKSPACES_HOME_NAME}/'${PADOGRID_WORKSPACES_HOME_NAME}'/g' \
+    -e 's/\${PADOGRID_HOME}/'${PADOGRID_HOME}'/g' \
+    -e 's/\${PADOGRID_DIR_NAME}/'${PADOGRID_DIR_NAME}'/g' \
+    -e 's/\${HOST_PRODUCTS_DIR}/'${HOST_PRODUCTS_DIR}'/g' \
+    -e 's/\${HOST_NAME}/'${HOST_NAME}'/g' \
+    -e 's/\${NODE_PRIMARY_MEMORY_SIZE}/'${NODE_PRIMARY_MEMORY_SIZE}'/g' \
+    -e 's/\${NODE_MEMORY_SIZE}/'${NODE_MEMORY_SIZE}'/g' \
+    $TEMPLATE_FILE > $POD_DIR/Vagrantfile

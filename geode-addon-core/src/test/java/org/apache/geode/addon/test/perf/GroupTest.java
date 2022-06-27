@@ -78,10 +78,13 @@ import org.hibernate.query.Query;
  *
  */
 public class GroupTest implements Constants {
+	private final static String PRODUCT="geode";
+
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
 	private static int PRINT_STATUS_INTERVAL_IN_SEC;
 	private static List<Group[]> concurrentGroupList = new ArrayList<Group[]>(4);
+	private static boolean isPrintGetAllError;
 	private static HashMap<String, Operation> operationMap = new HashMap<String, Operation>();
 
 	private ClientCache clientCache;
@@ -122,6 +125,7 @@ public class GroupTest implements Constants {
 		String ref;
 		String dsName;
 		int sleep;
+		@SuppressWarnings("rawtypes")
 		Region region;
 		DataStructureEnum ds = DataStructureEnum.map;
 		TestCaseEnum testCase;
@@ -199,7 +203,7 @@ public class GroupTest implements Constants {
 			resultsDir.mkdirs();
 		}
 		Date startTime = new Date();
-		File file = new File(resultsDir, "group-" + group.name + "-" + format.format(startTime) + ".txt");
+		File file = new File(resultsDir, "group-" + group.name + "-" + PRODUCT + "-" + format.format(startTime) + ".txt");
 
 		writeLine("   " + file.getAbsolutePath());
 
@@ -215,6 +219,7 @@ public class GroupTest implements Constants {
 		writer.println("Group Test" + dbHeader);
 		writer.println("******************************************");
 		writer.println();
+		writer.println("                       Product: " + PRODUCT);
 		writer.println("                         Group: " + group.name);
 		writer.println("           Concurrent Group(s): " + concurrentGroupNames);
 		writer.println("                       Comment: " + group.comment);
@@ -294,7 +299,7 @@ public class GroupTest implements Constants {
 		df.setRoundingMode(RoundingMode.HALF_UP);
 
 		writer.println();
-		writer.println("                Max time (msec): " + maxTimeMsec);
+		writer.println("                Max Time (msec): " + maxTimeMsec);
 		writer.println("            Elapsed Time (msec): " + elapsedTimeInMsec);
 		writer.println("         Total Invocation Count: " + totalCount);
 		writer.println(" M Throughput (invocations/sec): " + df.format(txPerSec));
@@ -373,7 +378,6 @@ public class GroupTest implements Constants {
 							switch (operation.testCase) {
 							case put: {
 								int idNum = operation.startNum + i - 1;
-								Object value;
 								if (operation.dataObjectFactory == null) {
 									String key = operation.keyPrefix + idNum;
 									Blob blob = new Blob(new byte[operation.payloadSize]);
@@ -407,59 +411,32 @@ public class GroupTest implements Constants {
 								break;
 
 							case getall: {
-								HashSet<Object> keys = new HashSet<Object>(operation.batchSize, 1f);
-								if (operation.dataObjectFactory == null) {
-									for (int k = 0; k < operation.batchSize; k++) {
-										int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-										String key = operation.keyPrefix + (operation.startNum + keyIndex);
-										keys.add(key);
-									}
-								} else {
-									for (int k = 0; k < operation.batchSize; k++) {
-										int keyIndex = operation.random.nextInt(operation.totalEntryCount);
-										Object key = operation.dataObjectFactory.getKey(keyIndex);
-										keys.add(key);
-									}
-								}
+								HashSet<Object> keys = createGetAllKeySet(operation);
 								Map<Object, Object> map = operation.region.getAll(keys);
 								if (map == null) {
 									System.out.println(threadNum + ". [" + group.name + "." + operation.dsName + "."
 											+ operation.testCase + "] returned null");
-								} else if (map.size() < keys.size()) {
-									System.out.println(threadNum + ". [" + group.name + "." + operation.dsName + "."
-											+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
+								} else if (isPrintGetAllError) {
+									int count = 0;
+									for (Object value : map.values()) {
+										if (value == null) {
+											count++;
+										}
+									}
+									if (count > 0) {
+										System.out.println(threadNum + ". [" + group.name + "." + operation.dsName + "."
+												+ operation.testCase + "] returned " + count + "/" + keys.size());
+									}
 								}
 							}
 								break;
 
 							case putall:
 							default: {
-								int entryCount = operation.totalEntryCount / group.threadCount;
 								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
-								int keyIndex = keyIndexes[j];
-								if (operation.dataObjectFactory == null) {
-									for (int k = 0; k < operation.batchSize; k++) {
-										String key = operation.keyPrefix + (operation.startNum + keyIndex);
-										keyIndex++;
-										map.put(key, new Blob(new byte[operation.payloadSize]));
-										if (keyIndex >= threadNum * entryCount) {
-											keyIndex = (threadNum - 1) * entryCount;
-										}
-									}
-								} else {
-									for (int k = 0; k < operation.batchSize; k++) {
-										int idNum = operation.startNum + keyIndex;
-										DataObjectFactory.Entry entry = operation.dataObjectFactory.createEntry(idNum,
-												null);
-										keyIndex++;
-										map.put(entry.key, entry.value);
-										if (keyIndex >= threadNum * entryCount) {
-											keyIndex = (threadNum - 1) * entryCount;
-										}
-									}
-								}
+								keyIndexes[j] = createPutAllMap(map, operation, keyIndexes[j], threadNum,
+										group.threadCount);
 								operation.region.putAll(map);
-								keyIndexes[j] = keyIndex;
 							}
 								break;
 							}
@@ -585,7 +562,7 @@ public class GroupTest implements Constants {
 			super(threadNum, threadStartIndex, invocationCountPerThread, group);
 		}
 
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
 		public void __run() {
 			int threadStopIndex = threadStartIndex + invocationCountPerThread - 1;
@@ -689,7 +666,7 @@ public class GroupTest implements Constants {
 						Iterator<?> iterator = keys.iterator();
 						int size = keys.size();
 						int k = 1;
-						Map<Object, Object> map = new HashMap();
+						Map<Object, Object> map = new HashMap<Object, Object>();
 						while (k <= size) {
 							In<String> inClause = cb.in(root.get(pk));
 							while (iterator.hasNext() && k % operation.batchSize > 0) {
@@ -713,7 +690,7 @@ public class GroupTest implements Constants {
 								}
 							} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 								throw new RuntimeException(
-										"Getter method invokation failed. GroupDbTestThread Aborted.", e);
+										"Getter method invocation failed. GroupDbTestThread Aborted.", e);
 							}
 						}
 						if (map.size() < keys.size()) {
@@ -839,6 +816,7 @@ public class GroupTest implements Constants {
 		System.out.println(line);
 	}
 
+	@SuppressWarnings("unused")
 	private static void write(String str) {
 		System.out.print(str);
 	}
@@ -858,6 +836,10 @@ public class GroupTest implements Constants {
 		writeLine("      " + DEFAULT_groupPropertiesFile);
 		writeLine();
 		writeLine("       -run              Run test cases.");
+		writeLine();
+		writeLine("       -getall-error     Prints getall test errors. Region.getAll() returns null for each key");
+		writeLine("                         that does not have a value. If this option is specified, then it");
+		writeLine("                          checks each key and prints error if there are any null values.");
 		writeLine();
 		writeLine("       -list             Lists data structures and their sizes.");
 		writeLine();
@@ -960,13 +942,12 @@ public class GroupTest implements Constants {
 		return operation;
 	}
 
-	@SuppressWarnings("unchecked")
 	private static void parseConfig() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		int defaultThreadCount = (int) (Runtime.getRuntime().availableProcessors() * 1.5);
 		int defaultTotalInvocationCount = 10000;
 		String groupNamesStr = System.getProperty("groupNames");
 		String preGroupNames[] = groupNamesStr.split(",");
-		HashSet<String> erOperationNamesSet = new <String>HashSet(10);
+		HashSet<String> erOperationNamesSet = new HashSet<String>(10);
 
 		for (int i = 0; i < preGroupNames.length; i++) {
 			String preGroupName = preGroupNames[i];
@@ -1137,6 +1118,8 @@ public class GroupTest implements Constants {
 				runDb = true;
 			} else if (arg.equals("-clear")) {
 				clear = true;
+			} else if (arg.equals("-getall-error")) {
+				isPrintGetAllError = true;
 			} else if (arg.equals("-prop")) {
 				if (i < args.length - 1) {
 					perfPropertiesFilePath = args[++i].trim();
@@ -1212,6 +1195,7 @@ public class GroupTest implements Constants {
 
 		if (!clear) {
 			writeLine();
+			writeLine("                    Product: " + PRODUCT);
 			writeLine("             Test Run Count: " + TEST_COUNT);
 			writeLine("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 

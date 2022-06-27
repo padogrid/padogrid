@@ -48,7 +48,7 @@ public class Region extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("regionId", regionId);
+		writer.writeString("regionId", regionId).markIdentityField("regionId");
 		writer.writeString("regionDescription", regionDescription);
 	}
 

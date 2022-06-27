@@ -8,6 +8,8 @@ pushd  $BASE_DIR/bin_sh > /dev/null 2>&1
 . $BASE_DIR/bin_sh/.addonenv.sh
 popd > /dev/null 2>&1
 
+APP_NAME="$(basename "$APP_DIR")"
+
 APP_ETC_DIR=$APP_DIR/etc
 
 # Source in app specifics

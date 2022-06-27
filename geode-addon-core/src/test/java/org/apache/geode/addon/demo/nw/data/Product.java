@@ -136,7 +136,7 @@ public class Product extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("productId", productId);
+		writer.writeString("productId", productId).markIdentityField("productId");
 		writer.writeString("productName", productName);
 		writer.writeString("supplierId", supplierId);
 		writer.writeString("categoryId", categoryId);

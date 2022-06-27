@@ -3,6 +3,20 @@
 ©2020-2022 Netcrest Technologies, LLC. All rights reserved.
 https://github.com/padogrid
 
+## Version 0.9.18
+
+### Release Date: 06/27/22
+
+- Added initial support for Redis. Redis joins the growing list of data grid products supported by PadoGrid. Redis OSS is installable with [`install_padogrid`](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid). Note that Redis OSS comes in the form of source code only. You must manually build upon installation by running the **`make`** command. The `install_padogrid` command provides details.
+- PadoGrid automates boostrapping of Redis replicas with fully integrate support for distributed workspaces.
+- Added Redisson addon for creating Java apps for Redis. Ported `perf_test` using Redisson.
+- Added Vagrant VM support for Redis.
+- `perf_test` now includes the `create_csv` script for consolidating test results into CSV files.
+- `perf_test` now includes the `clean_results` script for removing results files.
+- Along with the release, [`bundle-none-imdg-benchmark-tests`](https://github.com/padogrid/bundle-none-imdg-benchmark-tests) is made available for conducting benchmark tests on IMDG products.
+
+---
+
 ## Version 0.9.17
 
 ### Release Date: 06/15/22

@@ -60,6 +60,7 @@ public class EligFunction implements Function, Declarable {
 	 * @throws NameResolutionException
 	 * @throws QueryInvocationTargetException
 	 */
+	@SuppressWarnings("unused")
 	private SelectResults getEligibilityByGroupNumberPublicAPI(RegionFunctionContext context, String groupNumber) throws FunctionDomainException,
 			TypeMismatchException, NameResolutionException, QueryInvocationTargetException {
 		QueryService queryService = context.getCache().getQueryService();
@@ -140,7 +141,6 @@ public class EligFunction implements Function, Declarable {
 			long totalBlobSize = 0;
 			for (Iterator iter = sr.iterator(); iter.hasNext();) {
 				Struct struct = (Struct) iter.next();
-				Object key = struct.get("key");
 				Blob blob = (Blob) struct.get("value");
 				totalBlobSize += blob.getBlob().length;
 			}

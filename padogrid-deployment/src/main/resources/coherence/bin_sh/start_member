@@ -357,15 +357,10 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
 else
    __LOG_DIR=$LOG_DIR
 fi
-GEMFIRE_PROPERTY_FILE="$ETC_DIR/gemfire.properties"
-STATS_FILE_NAME=${MEMBER}.gfs
-STATS_FILE=$STATS_DIR/${STATS_FILE_NAME}
 export LOG_FILE_NAME=${MEMBER}.log
 export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
 if [[ ${OS_NAME} == CYGWIN* ]]; then
-   GEMFIRE_PROPERTY_FILE="$(cygpath -wp "$GEMFIRE_PROPERTY_FILE")"
    export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
-   STATS_FILE="$(cygpath -wp "$STATS_FILE")"
    CONFIG_FILE="$(cygpath -wp "$CONFIG_FILE")"
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
    MEMBER_DIR="$(cygpath -wp "$MEMBER_DIR")"
@@ -440,10 +435,6 @@ JAVA_OPTS="$JAVA_OPTS \
 
 #      -Dcoherence.pof.enabled=true \
 #      -Dcoherence.pof.config=$ETC_DIR/pof-config.xml \
-
-if [ "$REDUNDANCY_ZONE" != "" ]; then
-   JAVA_OPTS="$JAVA_OPTS -Dgemfire.redundancy-zone=$REDUNDANCY_ZONE"
-fi
 
 # Start the member
 if [[ ${OS_NAME} == CYGWIN* ]]; then
@@ -829,10 +820,6 @@ function writeBottomBody()
    for token in $JAVA_OPTS; do
       if [[ $token == -Dlog4j.configurationFile=* ]]; then
          echo "-Dlog4j.configurationFile=\$ETC_DIR/log4j2.properties \\" >> $__SCRIPT_FILE
-      elif [[ $token == -DgemfirePropertyFile=* ]]; then
-         echo "-DgemfirePropertyFile=$ETC_DIR/gemfire.properties \\" >> $__SCRIPT_FILE
-      elif [[ $token == -Dgemfire.log-file=* ]]; then
-         echo "-Dgemfire.log-file=\$LOG_DIR/\$INSTANCE_NAME.log \\" >> $__SCRIPT_FILE
       elif [[ $token == *prometheus* ]]; then
          PROMETHEUS_JAR="jmx_prometheus_javaagent${PROMETHEUS_JAR_PATH##*jmx_prometheus_javaagent}"
          echo "-javaagent:\$LIB_DIR/$PROMETHEUS_JAR=\$PROMETHEUS_PORT:\$ETC_DIR/prometheus.yml \\" >> $__SCRIPT_FILE
@@ -1016,7 +1003,6 @@ function writeStartScript
    cp -r $PADOGRID_WORKSPACE/lib/* $__LIB_DIR/ > /dev/null 2>&1
    cp -r $PADOGRID_WORKSPACE/plugins/* $__LIB_DIR/ > /dev/null 2>&1
    cp -r $CLUSTER_DIR/etc/cache.xml $__ETC_DIR/ > /dev/null 2>&1
-   cp -r $CLUSTER_DIR/etc/gemfire.properties $__ETC_DIR/ > /dev/null 2>&1
    cp -r $CLUSTER_DIR/etc/log4j2.properties $__ETC_DIR/ > /dev/null 2>&1
    cp -r $CLUSTER_DIR/etc/prometheus.yml $__ETC_DIR/ > /dev/null 2>&1
 
@@ -1058,7 +1044,6 @@ function writeStartScript
    echo "    │   └── start_member.sh" >> $README_FILE
    echo "    ├── etc" >> $README_FILE
    echo "    │   ├── cache.xml" >> $README_FILE
-   echo "    │   ├── gemfire.properties" >> $README_FILE
    echo "    │   ├── log4j2.properties" >> $README_FILE
    echo "    │   └── prometheus.yml" >> $README_FILE
    echo "    ├── lib" >> $README_FILE
@@ -1106,7 +1091,7 @@ function writeStartScript
    echo "1. Inflate '${CLUSTER}.tar.gz' inside the Coherence installation directory." >> $README_FILE
    echo "" >> $README_FILE
    echo "2. Edit '$CLUSTER/bin/setenv.sh' set the following variables." >> $README_FILE
-   echo "      COHERENCE_HOME - Coherence/GemFire root directory path" >> $README_FILE
+   echo "      COHERENCE_HOME - Coherence root directory path" >> $README_FILE
    echo "" >> $README_FILE
    echo "3. Edit '$CLUSTER/bin/setenv_local.sh' and/or '$CLUSTER/bin/setenv_vm.sh' and set the" >> $README_FILE
    echo "   following variables (and others as necessary):" >> $README_FILE
@@ -1116,7 +1101,7 @@ function writeStartScript
    echo "      JAVA_OPTS" >> $README_FILE
    echo "" >> $README_FILE
    echo "4. The changes you made in the above steps apply to all locators and members. If you are" >> $README_FILE
-   echo "   running Coherence/GemFire on multiple machines then you can deploy the same changes to" >> $README_FILE
+   echo "   running Coherence on multiple machines then you can deploy the same changes to" >> $README_FILE
    echo "   other machines." >> $README_FILE
    echo "" >> $README_FILE
    echo "5. Start a member by running '${CLUSTER}/bin/start_member.sh'" >> $README_FILE
@@ -1154,10 +1139,10 @@ function writeStartScript
    echo "#" >> $__SETENV_SH_FILE
    echo "" >> $__SETENV_SH_FILE
    echo "#" >> $__SETENV_SH_FILE
-   echo "# Set COHERENCE_HOME to the Coherence or GemFire installation directory path." >> $__SETENV_SH_FILE
+   echo "# Set COHERENCE_HOME to the Coherence installation directory path." >> $__SETENV_SH_FILE
    echo "# This is a required environment variable." >> $__SETENV_SH_FILE
    echo "#" >> $__SETENV_SH_FILE
-   echo "export COHERENCE_HOME=$GEODE_HOME" >> $__SETENV_SH_FILE
+   echo "export COHERENCE_HOME=$COHERENCE_HOME" >> $__SETENV_SH_FILE
 
    pushd ${CLUSTER_DIR}/generated/tmp > /dev/null 2>&1
    tar -czvf ${CLUSTER_DIR}/generated/$CLUSTER.tar.gz $CLUSTER

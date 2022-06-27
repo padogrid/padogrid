@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -num -all -?"
+   echo "-cluster -num -count -all -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Remove the specified member from the specified cluster in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-all] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-count member_count] [-all] [-?]
 
 DESCRIPTION
    Removes the specified member. If the member number is not specified then it
@@ -58,6 +58,9 @@ OPTIONS
 
    -num member_number
              Member number 1-$LAST_MEMBER_NUM
+
+   -count member_count
+             Number of members to remove.
 
    -all
              This option applies to VM clusters only. If specified,
@@ -81,6 +84,24 @@ SEE ALSO
 EOF
    printSeeAlsoList "*member* *worker*" $EXECUTABLE
    exit
+fi
+
+#
+# If '-count' specified then recursively execute this command
+#
+if [ "$COUNT" != "" ]; then
+   if [ "$(isNumber $COUNT)" == "false" ]; then
+      echo -e "${CLightRed}ERROR:${CNone} Invalid number [$COUNT]. Command aborted."
+      exit 1
+   fi
+   if [ $COUNT -eq 0 ]; then
+     exit
+   elif [ $COUNT -gt 1 ]; then
+      for i in $(seq $COUNT); do
+         $EXECUTABLE
+      done
+      exit
+   fi
 fi
 
 #
@@ -192,7 +213,7 @@ fi
 NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
 MEMBER=${MEMBER_PREFIX}${MEMBER_NUMBER}
 MEMBER_DIR=$RUN_DIR/$MEMBER
-PID=`getMemberPid $MEMBER $WORKSPACE`
+PID=`getRedisMemberPid $MEMBER_NUMBER $WORKSPACE`
 
 if [ -n "$PID" ]; then
    echo "----------------------------------------------------------------"

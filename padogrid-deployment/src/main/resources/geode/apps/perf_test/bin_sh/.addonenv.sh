@@ -24,6 +24,8 @@ pushd  $BASE_DIR/bin_sh > /dev/null 2>&1
 . $BASE_DIR/bin_sh/.addonenv.sh
 popd > /dev/null 2>&1
 
+APP_NAME="$(basename "$APP_DIR")"
+
 APP_ETC_DIR=$APP_DIR/etc
 APP_LOG_DIR=$APP_DIR/log
 if [ ! -d "$APP_LOG_DIR" ]; then

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss snappydata spark kafka hadoop"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka hadoop"
 
 EXECUTABLE="`basename $0`"
 
@@ -81,6 +81,7 @@ HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/get-started/down
 HAZELCAST_DESKTOP_DOWNLOAD_URL="https://github.com/netcrest/hazelcast-desktop/releases"
 JET_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 JET_OSS_DOWNLOAD_URL="https://github.com/hazelcast/hazelcast-jet/releases"
+REDIS_DOWNLOAD_URL="https://github.com/redis/redis/releases"
 SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
 SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
 KAFKA_DOWNLOAD_URL="https://archive.apache.org/dist/kafka/"
@@ -128,11 +129,8 @@ cat <<EOF
    -quiet
              If specified, then it runs in the non-internactive mode. By default, it installs all of
              the latest products if not installed and creates an RWE if it does not exist. Note that
-             installing all the products may take over an hour to complete due to the slow download 
-             of Hadoop.
-
-NOTES
-   Hadoop download may take over 50 minutes to complete.
+             installing all the products may take up to a few minutes to complete depending on your
+             network speed.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -185,6 +183,7 @@ echo -e "      - Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER
 echo -e "      - HazelcastDesktop            ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
 echo -e "      - Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
 echo -e "      - Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
+echo -e "      - Redis OSS                   ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
 echo -e "      - TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
@@ -200,6 +199,7 @@ echo -e "      - Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLO
 echo -e "      - HazelcastDesktop            $HAZELCAST_DESKTOP_DOWNLOAD_URL"
 echo -e "      - Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
 echo -e "      - Jet OSS                     $JET_OSS_DOWNLOAD_URL"
+echo -e "      - Redis OSS                   $REDIS_DOWNLOAD_URL"
 echo -e "      - TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
 echo -e "      - Apache Spark                $SPARK_DOWNLOAD_URL"
 echo -e "      - Apache Kafka                $KAFKA_DOWNLOAD_URL"
@@ -217,12 +217,16 @@ if [ "$MAN_SPECIFIED" == "false" ]; then
 
 echo -e "      - Oracle Coherence     ${CUrl}https://www.oracle.com/middleware/technologies/coherence-downloads.html${CNone}"
 echo -e "      - TIBCO ComputeDB      ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
+echo -e "      - Redis Enterprise     ${CUrl}https://redis.com/redis-enterprise-software/download-center/software/${CNone}"
+echo -e "      - Redis Stack          ${CUrl}https://redis.io/download/${CNone}"
 echo -e "      - VMware Tanzu GemFire ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
 
 else
 
 echo -e "      - Oracle Coherence     https://www.oracle.com/middleware/technologies/coherence-downloads.html"
 echo -e "      - TIBCO ComputeDB      https://edelivery.tibco.com/storefront/index.ep"
+echo -e "      - Redis Enterprise     https://redis.com/redis-enterprise-software/download-center/software/"
+echo -e "      - Redis Stack          https://redis.io/download/"
 echo -e "      - VMware Tanzu GemFire https://network.pivotal.io/products/pivotal-gemfire"
 
 fi
@@ -313,10 +317,11 @@ echo -e "[4]  Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DO
 echo -e "[5]  HazelcastDesktop            ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
 echo -e "[6]  Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
 echo -e "[7]  Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
-echo -e "[8]  TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
-echo -e "[9]  Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
-echo -e "[10] Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
-echo -e "[11] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
+echo -e "[8]  REDIS OSS                   ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
+echo -e "[9]  TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+echo -e "[10] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+echo -e "[11] Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
+echo -e "[12] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
 
 else
 
@@ -328,10 +333,11 @@ echo -e "[4]  Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_
 echo -e "[5]  HazelcastDesktop            $HAZELCAST_DESKTOP_DOWNLOAD_URL"
 echo -e "[6]  Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
 echo -e "[7]  Jet OSS                     $JET_OSS_DOWNLOAD_URL"
-echo -e "[8]  TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
-echo -e "[9]  Apache Spark                $SPARK_DOWNLOAD_URL"
-echo -e "[10] Apache Kafka                $KAFKA_DOWNLOAD_URL"
-echo -e "[11] Apache Hadoop               $HADOOP_DOWNLOAD_URL"
+echo -e "[8]  Redis OSS                   $REDIS_DOWNLOAD_URL"
+echo -e "[9]  TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
+echo -e "[10] Apache Spark                $SPARK_DOWNLOAD_URL"
+echo -e "[11] Apache Kafka                $KAFKA_DOWNLOAD_URL"
+echo -e "[12] Apache Hadoop               $HADOOP_DOWNLOAD_URL"
 
 fi
 
@@ -346,14 +352,18 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 
 echo -e "[0] Oracle Coherence     ${CUrl}https://www.oracle.com/middleware/technologies/coherence-downloads.html${CNone}"
-echo -e "[1] TIBCO ComputeDB      ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
-echo -e "[2] VMware Tanzu GemFire ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
+echo -e "[1] Redis Enterprise     ${CUrl}https://redis.com/redis-enterprise-software/download-center/software/${CNone}"
+echo -e "[2] Redis Stack          ${CUrl}https://redis.io/download/${CNone}"
+echo -e "[3] TIBCO ComputeDB      ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
+echo -e "[4] VMware Tanzu GemFire ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
 
 else
 
 echo -e "[0] Oracle Coherence     https://www.oracle.com/middleware/technologies/coherence-downloads.html"
-echo -e "[1] TIBCO ComputeDB      https://edelivery.tibco.com/storefront/index.ep"
-echo -e "[2] VMware Tanzu GemFire https://network.pivotal.io/products/pivotal-gemfire"
+echo -e "[1] Redis Enterprise     https://redis.com/redis-enterprise-software/download-center/software/"
+echo -e "[2] Redis Stack          https://redis.io/download/"
+echo -e "[3] TIBCO ComputeDB      https://edelivery.tibco.com/storefront/index.ep"
+echo -e "[4] VMware Tanzu GemFire https://network.pivotal.io/products/pivotal-gemfire"
 
 fi
 cat <<EOF
@@ -366,15 +376,17 @@ EOF
 
 if [ "$MAN_SPECIFIED" == "false" ]; then
 
-echo -e "[0] Oracle JDK      ${CUrl}https://www.oracle.com/java/technologies/javase-downloads.html${CNone}"
-echo -e "[1] Oracle Open JDK ${CUrl}https://jdk.java.net/${CNone}"
-echo -e "[2] Azule Open JDK  ${CUrl}https://www.azul.com/downloads/${CNone}"
+echo -e "[0] Oracle JDK       ${CUrl}https://www.oracle.com/java/technologies/javase-downloads.html${CNone}"
+echo -e "[1] Oracle OpenJDK   ${CUrl}https://jdk.java.net/${CNone}"
+echo -e "[2] Azule OpenJDK    ${CUrl}https://www.azul.com/downloads/${CNone}"
+echo -e "[3] Adoptium OpenJDK ${CUrl}https://adoptium.net/${CNone}"
 
 else
 
-echo -e "[0] Oracle JDK      https://www.oracle.com/java/technologies/javase-downloads.html"
-echo -e "[1] Oracle Open JDK https://jdk.java.net/"
-echo -e "[2] Azule Open JDK  https://www.azul.com/downloads/"
+echo -e "[0] Oracle JDK       https://www.oracle.com/java/technologies/javase-downloads.html"
+echo -e "[1] Oracle OpenJDK   https://jdk.java.net/"
+echo -e "[2] Azule OpenJDK    https://www.azul.com/downloads/"
+echo -e "[3] Adoptium OpenJDK https://adoptium.net/"
 
 fi
 
@@ -484,21 +496,18 @@ function getDownloadablePadogridVersions
 
 function getDownloadablePadoVersions
 {
-  #local ALL_PADO_VERSIONS=$(curl -s $PADO_DOWNLOAD_URL |grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*pado_//' -e 's/\.tar\.gz.*//')
   local ALL_PADO_VERSIONS=$(curl -s $PADO_DOWNLOAD_URL |grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado_.*" | sed -e 's/\.tar\.gz.*//')
   unique_words "$ALL_PADO_VERSIONS"
 }
 
 function getDownloadablePadowebVersions
 {
-  #local ALL_PADOWEB_VERSIONS=$(curl -s $PADOWEB_DOWNLOAD_URL |grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padoweb_//' -e 's/\.tar\.gz.*//')
   local ALL_PADOWEB_VERSIONS=$(curl -s $PADOWEB_DOWNLOAD_URL |grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
   unique_words "$ALL_PADOWEB_VERSIONS"
 }
 
 function getDownloadablePadodesktopVersions
 {
-  #local ALL_PADODESKTOP_VERSIONS=$(curl -s $PADODESKTOP_DOWNLOAD_URL |grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*pad-desktop_//' -e 's/\.tar\.gz.*//')
   local ALL_PADODESKTOP_VERSIONS=$(curl -s $PADODESKTOP_DOWNLOAD_URL |grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
   unique_words "$ALL_PADODESKTOP_VERSIONS"
 }
@@ -550,6 +559,12 @@ function getDownloadableJetOssVersions
 {
    local ALL_JET_OSS_VERSIONS=$(curl -sL $JET_OSS_DOWNLOAD_URL |grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
    unique_words "$ALL_JET_OSS_VERSIONS"
+}
+
+function getDownloadableRedisVersions
+{
+  local ALL_REDIS_VERSIONS=$(curl -sL $REDIS_DOWNLOAD_URL |  grep '\.tar\.gz' | sed -e 's/\.tar.*$//' -e 's/.*\///')
+   unique_words "$ALL_REDIS_VERSIONS"
 }
 
 function getDownloadableSnappyDataVersions
@@ -633,6 +648,7 @@ function sortVersionList
 #    HAZELCAST_DESKTOP_VERSIONS
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
+#    REDIS_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
 #    KAFKA_VERSIONS
@@ -649,11 +665,12 @@ function determineInstalledProductVersions
    GEMFIRE_VERSIONS=""
    GEODE_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
+   HAZELCAST_OSS_VERSIONS=""
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
    HAZELCAST_DESKTOP_CENTER_VERSIONS=""
    JET_ENTERPRISE_VERSIONS=""
    JET_OSS_VERSIONS=""
-   HAZELCAST_OSS_VERSIONS=""
+   REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
    KAFKA_VERSIONS=""
@@ -746,6 +763,14 @@ function determineInstalledProductVersions
       JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
       JET_OSS_VERSIONS=$(sortVersionList "$jossv")
       HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
+
+      # Redis
+      __versions=""
+      for i in redis-*; do
+         __version=${i#redis-}
+         __versions="$__versions $__version "
+      done
+      REDIS_VERSIONS=$(sortVersionList "$__versions")
 
       # SnappyData
       __versions=""
@@ -940,6 +965,9 @@ fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
    JET_OSS_DOWNLOAD_VERSIONS=($(getDownloadableJetOssVersions))
 fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
+   REDIS_DOWNLOAD_VERSIONS=($(getDownloadableRedisVersions))
+fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
    SNAPPYDATA_DOWNLOAD_VERSIONS=($(getDownloadableSnappyDataVersions))
 fi
@@ -968,6 +996,7 @@ HAZELCAST_MANAGEMENT_CENTER_VERSION=""
 HAZELCAST_DESKTOP_VERSION=""
 JET_ENTERPRISE_VERSION=""
 JET_OSS_VERSION=""
+REDIS_VERSION=""
 SNAPPYDATA_VERSION=""
 SPARK_VERSION=""
 KAFKA_VERSION=""
@@ -986,6 +1015,7 @@ if [ "$QUIET" == "true" ]; then
    HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[0]}
    JET_ENTERPRISE_VERSION=${JET_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    JET_OSS_VERSION=${JET_OSS_DOWNLOAD_VERSIONS[0]}
+   REDIS_VERSION=${REDIS_DOWNLOAD_VERSIONS[0]}
    SNAPPYDATA_VERSION=${SNAPPYDATA_DOWNLOAD_VERSIONS[0]}
    SPARK_VERSION=${SPARK_DOWNLOAD_VERSIONS[0]}
    SPARK_DIST_VERSION=${SPARK_VERSION}
@@ -1008,6 +1038,7 @@ if [ "$QUIET" == "true" ]; then
    echo "HazelcastDesktop     $HAZELCAST_DESKTOP_VERSION"
    echo "Jet Enterprise       $JET_ENTERPRISE_VERSION"
    echo "Jet OSS              $JET_OSS_VERSION"
+   echo "Redis OSS            $REDIS_VERSION"
    echo "SnappyData           $SNAPPYDATA_VERSION"
    echo "Spark                $SPARK_VERSION"
    echo "Kafka                $KAFKA_VERSION"
@@ -1210,6 +1241,20 @@ while [ "$REDO" == "true" ]; do
       JET_OSS_VERSION=$INSTALL_VERSION
       echo ""
    fi
+
+   # Redis
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
+      PRODUCT_NAME="Redis"
+      PRODUCT_DOWNLOAD_VERSIONS=("${REDIS_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$REDIS_VERSIONS
+      echo -e "Redis ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      REDIS_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
    
    # SnappyData
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
@@ -1402,6 +1447,9 @@ while [ "$REDO" == "true" ]; do
    if [ "$JET_OSS_VERSION" != "" ]; then
       echo -e "Jet OSS: ${CLightGreen}$JET_OSS_VERSION${CNone}"
    fi
+   if [ "$REDIS_VERSION" != "" ]; then
+      echo -e "Redis: ${CLightGreen}$REDIS_VERSION${CNone}"
+   fi
    if [ "$SNAPPYDATA_VERSION" != "" ]; then
       echo -e "SnappyData: ${CLightGreen}$SNAPPYDATA_VERSION${CNone}"
    fi
@@ -1473,6 +1521,9 @@ fi
 #
 # @required JET_MC_RELEASE
 # @required JET_MC_TARBALL
+#
+# @required REDIS_RELEASE
+# @required REDIS_TARBALL
 #
 # @required SNAPPYDATA_RELEASE
 # @required SNAPPYDATA_TARBALL
@@ -1771,6 +1822,31 @@ function installProduct
       fi
       fi
 
+   elif [ "$__PRODUCT" == "redis-oss" ]; then 
+      
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$REDIS_RELEASE" ]; then
+         echo "Already installed - $REDIS_RELEASE"
+      else
+      # --------------
+      # Download Redis
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL..."
+      SNAPPY_VDIR="v${REDIS_VERSION%-bin}"
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL" "https://github.com/redis/redis/archive/refs/tags/$REDIS_VERSION.tar.gz"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL" "https://github.com/redis/redis/archive/refs/tags/$REDIS_VERSION.tar.gz"
+      fi
+      
+      # Install Redis
+      echo "  Installing SnappyData $REDIS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL"
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL"
+         echo "  Installed - $REDIS_TARBALL"
+      fi
+      fi
+
    elif [ "$__PRODUCT" == "snappydata" ]; then 
       
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$SNAPPYDATA_RELEASE" ]; then
@@ -1852,7 +1928,7 @@ function installProduct
          # --------------
          # Download Hadoop
          echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$HADOOP_TARBALL..."
-         echo "  Hadoop is known to take a long time (~50 minutes) to download."
+         echo "  Hadoop is known to take a long time to download."
          if [ "$__SIMULATE" == "true" ]; then
             echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$HADOOP_TARBALL" "https://archive.apache.org/dist/hadoop/common/$HADOOP_RELEASE/$HADOOP_TARBALL"
          else
@@ -1976,6 +2052,11 @@ if [ "$JET_OSS_VERSION" != "" ]; then
    JET_OSS_TARBALL="$JET_OSS_RELEASE.tar.gz"
    installProduct "jet-oss" "$SIMULATE"
 fi
+if [ "$REDIS_VERSION" != "" ]; then
+   REDIS_RELEASE="redis-$REDIS_VERSION"
+   REDIS_TARBALL="$REDIS_RELEASE.tar.gz"
+   installProduct "redis-oss" "$SIMULATE"
+fi
 if [ "$SNAPPYDATA_VERSION" != "" ]; then
    SNAPPYDATA_RELEASE="snappydata-$SNAPPYDATA_VERSION"
    SNAPPYDATA_TARBALL="$SNAPPYDATA_RELEASE.tar.gz"
@@ -1996,8 +2077,17 @@ if [ "$HADOOP_VERSION" != "" ]; then
    HADOOP_TARBALL="hadoop-$HADOOP_VERSION.tar.gz"
    installProduct "hadoop" "$SIMULATE"
 fi
-echo ""
 
+# Redis distribution contains source code only. Tell the user how to build.
+if [ "$REDIS_VERSION" != "" ]; then
+   echo ""
+   echo "Redis OSS downloads do not include binaries. You can build binaries by"
+   echo -e "running ${CLightGreen}make${CNone} as follows."
+   echo ""
+   echo -e "   ${CLightGreen}pushd $PADOGRID_PRODUCTS_PATH/$REDIS_RELEASE/ && make && popd ${CNone}"
+fi
+
+echo ""
 echo "PadoGrid Installation complete."
 echo ""
 
@@ -2027,6 +2117,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
    JET_MC_HOME=""
    JET_HOME=""
    HAZELCAST_HOME=""
+   REDIS_HOME=""
    SNAPPYDATA_HOME=""
    SPARK_HOME=""
    KAFKA_HOME=""
@@ -2066,6 +2157,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
      elif [[ "$i" == **"hazelcast"** ]]; then
        HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/$i"
        HAZELCAST_OSS_HOME="$HAZELCAST_HOME"
+     elif [[ "$i" == **"redis"** ]]; then
+       REDIS_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"snappydata"** ]]; then
        SNAPPYDATA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"spark"** ]]; then
@@ -2108,6 +2201,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
         PRODUCT_HOME="$GEODE_HOME"
          elif [ "$JET_HOME" != "" ]; then
         PRODUCT_HOME="$JET_HOME"
+      elif [ "$REDIS_HOME" != "" ]; then
+        PRODUCT_HOME="$REDIS_HOME"
       elif [ "$SNAPPYDATA_HOME" != "" ]; then
         PRODUCT_HOME="$SNAPPYDATA_HOME"
       elif [ "$SPARK_HOME" != "" ]; then
@@ -2129,6 +2224,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "HAZELCAST_DESKTOP_HOME=\"$HAZELCAST_DESKTOP_HOME\"" >> $TMP_ENV_FILE
       echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
       echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
+      echo "REDIS_HOME=\"$REDIS_HOME\"" >> $TMP_ENV_FILE
       echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
       echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
       echo "KAFKA_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE

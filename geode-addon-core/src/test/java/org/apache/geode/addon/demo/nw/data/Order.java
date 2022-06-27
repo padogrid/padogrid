@@ -234,7 +234,7 @@ public class Order extends BaseEntity implements PdxSerializable, Comparable<Ord
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("orderId", orderId);
+		writer.writeString("orderId", orderId).markIdentityField("orderId");
 		writer.writeString("customerId", customerId);
 		writer.writeString("employeeId", employeeId);
 		

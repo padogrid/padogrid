@@ -90,15 +90,29 @@ function displayPodShort()
    NODE_COUNT=`getPodProperty "node.count"`
    POD_RUNNING=`isPodRunning $POD`
 
-   echo "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "      POD: $POD"
-   echo " POD_TYPE: $POD_TYPE"
+   echo ""
+   echo "   WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "         POD: $POD"
+   echo "    POD_TYPE: $POD_TYPE"
+   if [ "$POD" != "local" ]; then
+      POD_CLUSTERS=""
+      for CLUSTER in $(list_clusters); do
+         CLUSTER_DIR="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+         CLUSTER_POD_NAME=$(getClusterProperty "pod.name")
+         #CLUSTER_POD_TYPE=$(getClusterProperty "pod.type")
+         if [ "$CLUSTER_POD_NAME" == "$POD" ]; then
+            POD_CLUSTERS="$CLUSTER $POD_CLUSTERS"
+         fi
+      done
+      POD_CLUSTERS="$(echo "$POD_CLUSTERS" | sort -u)"
+      echo "POD_CLUSTERS: $POD_CLUSTERS "
+   fi
    if [[ $OS_ENV == *g ]] && [ "$POD" != "local" ]; then
       echo "POD State: Unknown"
    elif [ "$POD_RUNNING" == "true" ]; then
-      echo -e "POD State: ${CLightGreen}Running${CNone}"
+      echo -e "   POD State: ${CLightGreen}Running${CNone}"
    else
-      echo -e "POD State: ${CLightRed}Down${CNone}"
+      echo -e "   POD State: ${CLightRed}Down${CNone}"
    fi
    echo ""
 }
@@ -114,9 +128,23 @@ function displayPodLong()
    NODE_COUNT=`getPodProperty "node.count"`
    POD_RUNNING=`isPodRunning $POD`
 
+   echo ""
    echo "         WORKSPACE: $PADOGRID_WORKSPACE"
    echo "               POD: $POD"
    echo "          POD_TYPE: $POD_TYPE"
+   if [ "$POD" != "local" ]; then
+      POD_CLUSTERS=""
+      for CLUSTER in $(list_clusters); do
+         CLUSTER_DIR="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+         CLUSTER_POD_NAME=$(getClusterProperty "pod.name")
+         #CLUSTER_POD_TYPE=$(getClusterProperty "pod.type")
+         if [ "$CLUSTER_POD_NAME" == "$POD" ]; then
+            POD_CLUSTERS="$CLUSTER $POD_CLUSTERS"
+         fi
+      done
+      POD_CLUSTERS="$(echo "$POD_CLUSTERS" | sort -u)"
+      echo "      POD_CLUSTERS: $POD_CLUSTERS"
+   fi
    if [[ $OS_ENV == *g ]] && [ "$POD" != "local" ]; then
       echo "         POD State: Unknown"
    elif [ "$POD_RUNNING" == "true" ]; then

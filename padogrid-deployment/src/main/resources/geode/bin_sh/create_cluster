@@ -278,9 +278,18 @@ function writeCluster()
    echo "fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# Set Java options, i.e., -Dproperty=xyz" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Set Java options, i.e., --J=-Dproperty=xyz" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#JAVA_OPTS=" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Some useful Geode/GemFire system properties:"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Always keep values serialized. By default, once deserialized it remains deserialized. Default: false "  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\$JAVA_OPTS --J=-Dgemfire.PREFER_SERIALIZED=true"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# Enable invocation of listeners in both primary and secondary buckets. Default: false"  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\$JAVA_OPTS --J=-Dgemfire.BucketRegion.alwaysFireLocalListeners=true"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# IMPORTANT:"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    If you are running on Windows, then you must convert the file paths from Unix notations"  >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -289,7 +298,7 @@ function writeCluster()
    echo "# if [[ \${OS_NAME} == CYGWIN* ]]; then"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    HIBERNATE_CONFIG_FILE=\"\$(cygpath -wp \"\$HIBERNATE_CONFIG_FILE\")\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# fi"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# JAVA_OPTS=\"$JAVA_OPTS --J=-Dgeode-addon.hibernate.config=$HIBERNATE_CONFIG_FILE\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# JAVA_OPTS=\"\$JAVA_OPTS --J=-Dgeode-addon.hibernate.config=\$HIBERNATE_CONFIG_FILE\""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# To use Hibernate backed CacheWriterLoaderPkDbImpl, set the following property and" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# configure CacheWriterLoaderPkDbImpl in the \$CLUSTER_DIR/etc/cache.xml file." >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -300,8 +309,8 @@ function writeCluster()
    echo "# directory. CLASSPATH includes all the jar files in that directory for" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# the apps and clusters running in this workspace." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dgeode-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "#JAVA_OPTS=\"\$JAVA_OPTS -Dgeode-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\"\$JAVA_OPTS --J=-Dgeode-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "#JAVA_OPTS=\"\$JAVA_OPTS --J=-Dgeode-addon.hibernate.config=\$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml\"" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo ""  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Set RUN_SCRIPT. Absolute path required." >> $CLUSTER_DIR/bin_sh/setenv.sh

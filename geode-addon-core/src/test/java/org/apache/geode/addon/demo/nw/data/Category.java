@@ -81,7 +81,7 @@ public class Category extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("catetoryId", categoryId);
+		writer.writeString("catetoryId", categoryId).markIdentityField("categoryId");
 		writer.writeString("categoryName", categoryName);
 		writer.writeString("description", description);
 		writer.writeString("tag", tag);

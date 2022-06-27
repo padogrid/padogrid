@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Stop the specified member in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-?]
+
+DESCRIPTION
+   Stops the specified Redis member.
+
+   For VM clusters, the member number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
+   (Run 'show_cluster -long' to see the VM member numbers that map to hosts.)
+
+   -cluster cluster_name
+             Cluster name.
+
+   -num member_number
+             Member number 1-99.
+
+NOTES
+   'stop_member' gracefully terminates the member. However, you must wait
+   till the cluster is safe or migration operations to complete before
+   stopping another member.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MEMBER_NUM
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*member*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+POD=`getClusterProperty "pod.name" "local"`
+
+#
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$VM_HOSTS" == "" ]; then
+         echo "ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+         echo "       $ETC_DIR/cluster.properties"
+         echo "       Command aborted."
+         exit 1
+      fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+
+      # Determine the host
+      __MEMBER_NUMBER=0
+      __FOUND="false"
+      
+      for VM_HOST in $__VM_HOSTS; do
+         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+            __FOUND="true"
+            if [ "$POD" == "local" ]; then
+               NUM=1
+            else
+               let NUM=__MEMBER_NUMBER
+            fi
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            break;
+         fi
+      done
+      FIRST_NUMBER=1
+      LAST_NUMBER=$__MEMBER_NUMBER
+      if [ "$__FOUND" == "false" ]; then
+         echo "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_NUMBER=$MEMBER_NUM
+if [ "$VM_ENABLED" == "true" ]; then
+   MEMBER=`getVmMemberName`
+else
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+fi
+MEMBER_DIR=$RUN_DIR/$MEMBER
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "Cluster: $CLUSTER"
+   echo " Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "         to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
+   echo "ERROR: Member number not specified. Run 'stop_member -?' to see usage. Command aborted."
+   exit 1
+fi
+
+# If the command is executed in the pod then execute a remote command and exit.
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "cd $REMOTE_BASE_DIR/$PRODUCT/bin_sh; $COMMAND_PREFIX ./stop_member -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*;"
+   exit
+fi
+
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+if [ "$POD" == "local" ]; then
+   let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+else
+   MEMBER_PORT=$MEMBER_START_PORT
+fi
+
+# Local execution
+PID=`getRedisMemberPid $MEMBER_NUMBER`
+
+if [ -z "${PID}" ]; then
+   echo "----------------------------------------------------------------"
+   echo " WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "   Cluster: $CLUSTER"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "Deployment: VM"
+   else
+   echo "       Pod: $POD"
+   fi
+   echo "    Member: $MEMBER"
+   echo "    Status: Member is already stopped [Member: $MEMBER]. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 0
+else
+   echo redis-cli -p $MEMBER_PORT shutdown
+   redis-cli -p $MEMBER_PORT shutdown
+   echo "----------------------------------------------------------------"
+   echo "  WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    Cluster: $CLUSTER"
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo " Deployment: VM"
+   else
+   echo "        Pod: $POD"
+   fi
+   echo "        Pod: $POD"
+   echo "     Member: $MEMBER"
+   echo "        PID: $PID"
+   echo "     Status: Stopped"
+   echo "Working Dir: $MEMBER_DIR"
+   echo "----------------------------------------------------------------"
+fi

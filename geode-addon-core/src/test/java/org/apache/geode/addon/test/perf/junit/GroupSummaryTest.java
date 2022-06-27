@@ -3,10 +3,8 @@ package org.apache.geode.addon.test.perf.junit;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.geode.addon.test.perf.DataIngestionTest;
 import org.apache.geode.addon.test.perf.EligFunction;
 import org.apache.geode.addon.test.perf.RegionNameEnum;
-import org.apache.geode.addon.test.perf.data.GroupSummary;
 import org.apache.geode.cache.Region;
 import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.cache.client.ClientCacheFactory;
@@ -43,10 +41,11 @@ public class GroupSummaryTest {
 	}
 
 	/**
-	 * Tests the group number "x1".
+	 * Tests the group number "x1" on {@link PdxEligFunction}.
 	 * @throws InterruptedException
 	 * @throws ExecutionException
 	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
 	public void testGroupNumberX1() throws InterruptedException, ExecutionException {
 		Region region = clientCache.getRegion(RegionNameEnum.eligibility.name());

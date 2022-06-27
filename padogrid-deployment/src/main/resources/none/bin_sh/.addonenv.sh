@@ -89,6 +89,7 @@ DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_GEMFIRE_CLUSTER="mygemfire"
+DEFAULT_REDIS_CLUSTER="myredis"
 DEFAULT_SNAPPYDATA_CLUSTER="mysnappy"
 DEFAULT_COHERENCE_CLUSTER="mycoherence"
 DEFAULT_SPARK_CLUSTER="myspark"
@@ -326,6 +327,7 @@ if [ "$IN_POD" != "true" ]; then
    export HAZELCAST_MC_HOME=""
    export JET_HOME=""
    export JET_MC_HOME=""
+   export REDIS_HOME=""
    export SNAPPYDATA_HOME=""
    export SPARK_HOME=""
    export KAFKA_HOME=""
@@ -380,7 +382,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet snappydata coherence spark kafka hadoop"
+BUNDLE_PRODUCT_LIST="gemfire geode hazelcast jet redis snappydata coherence spark kafka hadoop"
 
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
@@ -389,7 +391,7 @@ DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 K8S_PRODUCT_LIST="geode hazelcast jet"
 
 # Supported App Products
-APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet"
+APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet redis"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then
@@ -519,6 +521,8 @@ for i in "${PATH_ARRAY[@]}"; do
    elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
       continue;
    elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
+      continue;
+   elif [ "$REDIS_HOME" != "" ] && [[ "$i" == "$REDIS_HOME"** ]]; then
       continue;
    elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
       continue;

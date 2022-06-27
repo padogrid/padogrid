@@ -107,7 +107,7 @@ fi
 
 # Find all build_app scripts and build them
 
-PRODUCTS="geode hazelcast"
+PRODUCTS="geode hazelcast redis"
 for PRODUCT in $PRODUCTS; do
    pushd build/padogrid_${VERSION}/$PRODUCT > /dev/null 2>&1
    for APP in apps/*; do 

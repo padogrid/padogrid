@@ -59,7 +59,7 @@ public class Territory extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("territoryId", territoryId);
+		writer.writeString("territoryId", territoryId).markIdentityField("territoryId");
 		writer.writeString("territoryDescription", territoryDescription);
 		writer.writeString("regionId", regionId);
 	}

@@ -1,0 +1,1024 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -fg -simulate -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display member configuration information in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-fg] [-simulate] [-?]
+
+DESCRIPTION
+   Displays Redis member configuration information. The displayed information can be
+   transferred to setup another environment where padogrid is not available.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -num member_number
+             Member number 1-99.
+
+   -fg
+             Run the member in the foreground until it is fully initialized and started. If this
+             option is not specified, then by default, it starts the member in the background.
+
+   -simulate
+             If specified then it only displays the member information
+             and does not run the member.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MEMBER_NUM
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*member*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# Get workspace name
+WORKSPACE=${PADOGRID_WORKSPACE##*/}
+POD=`getClusterProperty "pod.name" "local"`
+
+# Set FG_OPT
+if [ "$SIMULATE" == "true" ]; then
+   FG_OPT="-fg"
+else
+   FG_OPT=""
+fi
+# Set -simulate if specified
+if [ "$SIMULATE" == "true" ]; then
+   SIMULATE_OPT="-simulate"
+else
+   SIMULATE_OPT=""
+fi
+# Set -create_script if specified
+if [ "$CREATE_SCRIPT" == "true" ]; then
+   CREATE_SCRIPT_OPT="-create-script"
+else
+   CREATE_SCRIPT_OPT=""
+fi
+
+#
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
+      VM_HOSTS=$(getClusterProperty "vm.hosts")
+      if [ "$VM_HOSTS" == "" ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo >&2 "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+         echo >&2 "           $ETC_DIR/cluster.properties"
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      DEFAULT_USER=$(whoami)
+      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+      if [ "$VM_KEY" != "" ]; then 
+         VM_KEY="-i $VM_KEY"
+      fi
+
+      # Determine the host
+      __MEMBER_NUMBER=0
+      __FOUND="false"
+      
+      for VM_HOST in $__VM_HOSTS; do
+         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+            __FOUND="true"
+            if [ "$POD" == "local" ]; then
+               NUM=1
+            else
+               let NUM=__MEMBER_NUMBER
+            fi
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            break;
+         fi
+      done
+      FIRST_NUMBER=1
+      LAST_NUMBER=$__MEMBER_NUMBER
+      if [ "$__FOUND" == "false" ]; then
+         echo >&2 "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      fi
+      exit
+   fi
+fi
+
+#
+# Local cluster
+#
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+if [ "$VM_ENABLED" == "true" ]; then
+   MEMBER=`getVmMemberName`
+else
+   MEMBER=`getMemberName $MEMBER_NUMBER`
+fi
+MEMBER_DIR=$RUN_DIR/$MEMBER
+
+if  [ ! -d "$CLUSTER_DIR" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ ! -d "$MEMBER_DIR" ]; then
+   if [ "$REMOTE_SPECIFIED" == "true" ]; then
+      $SCRIPT_DIR/add_member -remote $REMOTE -cluster $CLUSTER -workspace $PADOGRID_WORKSPACE -num $MEMBER_NUMBER
+   else
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Member: $MEMBER"
+      echo "   Status: This member has not been configured. Please run the add_member command to configure"
+      echo "           new members."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# If the member is already running, then exit.
+if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
+   PID=`getRedisServerPortPid $MEMBER_NUM`
+   if [ -n "${PID}" ]; then
+      CLUSTER_PID=`getRedisMemberPid $MEMBER_NUM`
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Member: $MEMBER"
+      if [ "$CLUSTER_PID" == "" ]; then
+         echo -e "   ${CLightRed}ERROR:${CNone} Member conflict. Another cluster has a member running with the same"
+         echo "          configuration [PID=$PID]. Command aborted."
+      else
+         echo "   Status: This member is already running [Member: $MEMBER, PID=$PID]."
+         echo "           Command aborted."
+      fi
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
+# Member port number
+MEMBER_PROPERTIES=""
+MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
+let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
+let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
+MEMBER_TCP_LIST=""
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+BIND_ADDRESS=""
+HOSTNAME_FOR_CLIENTS=""
+REDUNDANCY_ZONE=""
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      echo >&2 "----------------------------------------------------------------"
+      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo >&2 "           $ETC_DIR/cluster.properties"
+      echo >&2 "           Command aborted."
+      echo >&2 "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   VM_HOST=$REMOTE
+   BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients"`
+   REDUNDANCY_ZONE=`getClusterProperty "vm.${VM_HOST}.redundancyZone"`
+
+elif [ "$POD" == "local" ]; then
+
+   HOST_NAME=`hostname`
+   BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
+
+else
+
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   BIND_ADDRESS=$NODE_LOCAL
+   MEMBER_PORT=$MEMBER_START_PORT
+
+fi
+
+# Set LOG_FILE in the log directory.
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   __LOG_DIR="$(cygpath -wp "$LOG_DIR")"
+else
+   __LOG_DIR=$LOG_DIR
+fi
+export LOG_FILE_NAME=${MEMBER}.log
+export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   CONFIG_FILE="$(cygpath -wp "$CONFIG_FILE")"
+   CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
+   MEMBER_DIR="$(cygpath -wp "$MEMBER_DIR")"
+fi
+
+MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
+
+# Start the member
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+export LOG_DIR=$__LOG_DIR
+
+REPLICAS=`getClusterProperty "redis.replicas" "$DEFAULT_REPLICAS"`
+
+POD=`getClusterProperty "pod.name" $POD`
+
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   exit
+elif [ "$SIMULATE" == "true" ]; then
+   PID="Simulated"
+elif [ "$CREATE_SCRIPT" == "true" ]; then
+   PID="Script"
+else
+   # LOG_FILE might not exist if a VM bundle has been deployed.
+   if  [ ! -d "$LOG_DIR" ]; then
+      mkdir -p $LOG_DIR
+   fi
+   if [ "$RUN_SCRIPT" != "" ]; then
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         $RUN_SCRIPT >> $LOG_FILE
+      else
+         nohup $RUN_SCRIPT >> $LOG_FILE &
+      fi
+   else
+      CONFIG_FILE=$MEMBER_DIR/redis.conf
+      if [ ! -f "$CONFIG_FILE" ]; then
+         cp $ETC_DIR/template-redis.conf $CONFIG_FILE
+      fi
+      pushd ${MEMBER_DIR} > /dev/null 2>&1
+      if [ "$FG_SPECIFIED" == "true" ]; then
+         redis-server $CONFIG_FILE --port $MEMBER_PORT
+      else
+         nohup redis-server $CONFIG_FILE --port $MEMBER_PORT >> $LOG_FILE &
+      fi
+      popd > /dev/null 2>&1
+
+      # If "no-add-node" is NOT specified, then add this node as master or slave based
+      # on the number of replicas. For example, 'start_cluster' may issue "no-add-node"
+      # if it were to initialze the cluster.
+      IS_SLAVE="false"
+      if [ "$ARG_ARG" != "no-add-node" ]; then
+         FIRST_NODE=$(getRedisFirstLiveNode)
+         if [ "$FIRST_NODE" != "" ]; then
+           TARGET_NODE=$BIND_ADDRESS:$MEMBER_PORT
+           INFO="$(redis-cli --cluster info $FIRST_NODE 2> /dev/null | grep slaves | sed -e 's/ [|]/ /g' -e 's/[(].*keys//' -e 's/slots.*//')"
+           INDEX=0
+           ADDED_AS_SLAVE="false"
+           for ITEM in $INFO; do
+              case "$INDEX" in
+                0)
+                  MASTER_NODE=$ITEM
+                  MASTER_HOST=${MASTER_NODE%:*}
+                  MASTER_PORT=$(echo $MASTER_NODE | sed 's/.*://')
+                  ;;
+                1)
+                  SLAVE_COUNT=$ITEM
+                  if [ $SLAVE_COUNT -lt $REPLICAS ]; then
+                     IS_SLAVE="true"
+                     NODE_TYPE=slave
+                     break;
+                  fi
+                  ;;
+              esac
+              let INDEX=INDEX+1
+              if [ $INDEX -ge 2 ]; then
+                 INDEX=0
+              fi
+           done
+           # Version 6 does not support localhost. Must use the IP address. 
+           if [ $REDIS_MAJOR_VERSION_NUMBER -lt 7 ]; then
+              TARGET_NODE=$(echo "$TARGET_NODE" | sed 's/localhost/127.0.0.1/g')
+              FIRST_NODE=$(echo "$FIRST_NODE" | sed 's/localhost/127.0.0.1/g')
+              MASTER_NODE=$(echo "$MASTER_NODE" | sed 's/localhost/127.0.0.1/g')
+           fi
+           if [ "$IS_SLAVE" == "true" ]; then
+              # Add this node as a slave to this master node
+               MASTER_ID=$(redis-cli -h $MASTER_HOST -p $MASTER_PORT cluster nodes | grep "$MASTER_NODE" | grep master | sed 's/ .*//')
+               redis-cli --cluster add-node $TARGET_NODE $MASTER_NODE --cluster-slave --cluster-master-id $MASTER_ID
+           else
+              # Add as master
+              redis-cli --cluster add-node $TARGET_NODE $FIRST_NODE
+              NODE_TYPE=master
+           fi
+         fi # if [ "$FIRST_NODE" != "" ]; then
+      fi
+   fi
+   PID=`getRedisMemberPid $MEMBER_NUM`
+fi
+
+echo "----------------------------------------------------------------"
+echo "       WORKSPACE: $PADOGRID_WORKSPACE"
+echo "         Cluster: $CLUSTER"
+if [ "$VM_SPECIFIED" == "true" ] || [ "$VM_ENABLED" == "true" ]; then
+echo "      Deployment: VM"
+else
+echo "             Pod: $POD"
+fi
+echo "          Member: $MEMBER"
+if [ "$FG_SPECIFIED" == "true" ]; then
+echo "             PID: $PID"
+fi
+echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "       NOTE_TYPE: $NODE_TYPE"
+echo "     WORKING_DIR: $MEMBER_DIR"
+echo "      CONFIG_DIR: $ETC_DIR"
+echo "     CONFIG_FILE: $CONFIG_FILE"
+echo "         LOG_DIR: $LOG_DIR"
+echo "        LOG_FILE: $LOG_FILE"
+echo "     MEMBER_PORT: $MEMBER_PORT"
+echo "MEMBER_HTTP_PORT: $MEMBER_HTTP_PORT"
+if [ "$RUN_SCRIPT" != "" ]; then
+echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
+fi
+echo "----------------------------------------------------------------"
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "Environment Variable(s)"
+   echo "-----------------------"
+   echo "LOG_FILE=$LOG_FILE"
+   echo ""
+fi
+
+#
+# Create script
+#
+if [ "$CREATE_SCRIPT" == "true" ]; then
+
+#
+# Creates the header part in the specified file
+#
+# @required CLUSTER      Cluster name
+# @param filePath        File path
+# @param scriptName      Script file name
+# @param deploymentType  'VM' or 'local'
+#
+function writeHeader()
+{
+   __SCRIPT_FILE=$1
+   __SCRIPT_NAME=$2
+   __DEPLOYMENT_TYPE=$3
+   echo "#!/usr/bin/env bash" > $__SCRIPT_FILE
+   echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\$0\")\" && pwd -P)\"" >> $__SCRIPT_FILE
+   echo "BASE_DIR=\"\$(dirname \"\$SCRIPT_DIR\")\"" >> $__SCRIPT_FILE
+   echo ". \$BASE_DIR/setenv.sh" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__SCRIPT_FILE
+   echo "# Deployment: $__DEPLOYMENT_TYPE" >> $__SCRIPT_FILE
+   echo "#       File: $__SCRIPT_NAME" >> $__SCRIPT_FILE
+   echo "#    Cluster: $CLUSTER" >> $__SCRIPT_FILE
+   echo "#  Generated: `date "+%m/%d/%y %H:%M:%S %Z"`" >> $__SCRIPT_FILE
+   echo "#         By: `whoami`" >> $__SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Source in this file to set the environment variables and run 'redis.sh'" >> $__SCRIPT_FILE
+   echo "# or 'redis-server' on local machine." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Determine the Redis version." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "REDIS_VERSION=\$(redis-server -v | sed -e 's/^.*v=//' -e 's/ .*//')" >> $__SCRIPT_FILE
+}
+
+#
+# Appends the VM top body part in the specified file
+#
+# @required JMX_START_PORT   Base JMX port
+# @required DEBUG_START_PORT Base debug port
+# @param filePath            File path
+# @param memberTcpList       TCP interfaces separated by commas
+#
+function writeVmTopBody()
+{
+   __SCRIPT_FILE=$1
+   __MEMBER_TCP_LIST=$2
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# The first argument is -member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "TYPE=\"\$1\"" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Cluster name used in padogrid. This name is used as the prefix" >> $__SCRIPT_FILE
+   echo "# to the Redis instance name." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "CLUSTER=$CLUSTER" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Host name of this machine. The host name is used to build the member" >> $__SCRIPT_FILE
+   echo "# TCP interface list for the cluster." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "HOST_NAME=\`hostname\`" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member TCP port number" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "TCP_PORT=$DEFAULT_MEMBER_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# JMX port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "JMX_PORT=$JMX_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Debug port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "DEBUG_PORT=$DEBUG_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Prometheus port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "PROMETHEUS_PORT=$PROMETHEUS_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member number. If you need to run more than one member on the same" >> $__SCRIPT_FILE
+   echo "# machine then increment the number for the additional members." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_NUMBER=01" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Comma separated member TCP interface list. This list is read by the etc/cache.xml file." >> $__SCRIPT_FILE
+   echo "# Example: MEMBER_TCP_LIST=\"host1:40404,host2:40405,host3:40406\"" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_TCP_LIST=$__MEMBER_TCP_LIST" >> $__SCRIPT_FILE
+}
+
+#
+# Appends the local top body part in the specified file
+#
+# @required JMX_START_PORT        Base JMX port
+# @required DEBUG_START_PORT      Base debug port
+# @required PROMETHEUS_START_PORT Base Prometheus port
+# @param filePath                 File path
+#
+function writeLocalTopBody()
+{
+   __SCRIPT_FILE=$1
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# The first argument is -member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "TYPE=\"\$1\"" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "# The second argument is -local or -vm. Ignore it." >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# The third argument is the member number. Default: 1" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_NUMBER=\"\$3\"" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Cluster name used in padogrid. This name is used as the prefix" >> $__SCRIPT_FILE
+   echo "# to the Redis instance name." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "CLUSTER=$CLUSTER" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member start port number. Member port number is determined by adding"  >> $__SCRIPT_FILE
+   echo "# the specified member number to the start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_START_PORT=$DEFAULT_MEMBER_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member HTTP start port number. Member HTTP port number is determined by adding"  >> $__SCRIPT_FILE
+   echo "# the specified member number to the start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_HTTP_START_PORT=$DEFAULT_MEMBER_HTTP_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Member JMX start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "JMX_START_PORT=$JMX_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Debug start port number." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "DEBUG_START_PORT=$DEBUG_START_PORT" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Host name of this machine. The host name is used to build the member" >> $__SCRIPT_FILE
+   echo "# TCP interface list for the cluster." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "HOST_NAME=\`hostname\`" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Determine member number" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "if [ \"\$MEMBER_NUMBER\" == \"\" ]; then" >> $__SCRIPT_FILE
+   echo "   MEMBER_NUMBER=\"1\"" >> $__SCRIPT_FILE
+   echo "elif [ \"\$MEMBER_NUMBER\" -le 0 ]; then" >> $__SCRIPT_FILE
+   echo "   echo >&2 \"ERROR: Invalid member number. Must be greater than 0. Command aborted.\"" >> $__SCRIPT_FILE
+   echo "fi" >> $__SCRIPT_FILE
+   echo "MEMBER_NUMBER=\$((10#\$MEMBER_NUMBER))" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Set TCP port for this member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let TCP_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Set HTTP port for this member" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# JMX Manager port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let JMX_MANAGER_HTTP_PORT=JMX_MANAGER_HTTP_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "let JMX_MANAGER_PORT=JMX_MANAGER_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# JMX port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let JMX_PORT=JMX_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Prometheus port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let PROMETHEUS_PORT=PROMETHEUS_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Debug port" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "let DEBUG_PORT=DEBUG_START_PORT+MEMBER_NUMBER-1" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Add leading 0 to single digit member number" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "if [ \"\$MEMBER_NUMBER\" -lt 10 ]; then" >> $__SCRIPT_FILE
+   echo "   MEMBER_NUMBER=\"0\${MEMBER_NUMBER}\"" >> $__SCRIPT_FILE
+   echo "fi" >> $__SCRIPT_FILE
+   
+}
+
+#
+# Appends the bottom body part in the specified file
+#
+# @required JAVA_OPTS  Java options
+# @required CLASSPATH  Class path
+# @required OS_NAME    OS name
+# @param    filePath   File path
+#
+function writeBottomBody()
+{
+   __SCRIPT_FILE=$1
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Instance (member) name" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "INSTANCE_NAME=\$CLUSTER\${TYPE}-\$HOST_NAME-\$MEMBER_NUMBER" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Distribution Directories" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "RUN_DIR=\$BASE_DIR/run" >> $__SCRIPT_FILE
+   echo "ETC_DIR=\$BASE_DIR/etc" >> $__SCRIPT_FILE
+   echo "LIB_DIR=\$REDIS_DIR/lib" >> $__SCRIPT_FILE
+   echo "LOG_DIR=\$BASE_DIR/log" >> $__SCRIPT_FILE
+   echo "STATS_DIR=\$BASE_DIR/stats" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Log file path. This environment variable is picked up by log4j2 in" >> $__SCRIPT_FILE
+   echo "# the config file etc/log4j2.properties" >> $__SCRIPT_FILE
+   echo "export LOG_FILE=\$LOG_DIR/\${INSTANCE_NAME}.log" >> $__SCRIPT_FILE
+   echo "" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "# Run script. If specified, then start_member.sh runs this script instead of gfsh." >> $__SCRIPT_FILE
+   echo "# It must be in the same directory as start_member.sh." >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   if [ "$RUN_SCRIPT" == "" ]; then
+   echo "RUN_SCRIPT=\"\"" >> $__SCRIPT_FILE
+   else
+   __RUN_SCRIPT_FILE_NAME="`basename $RUN_SCRIPT`"
+   echo "RUN_SCRIPT=$__RUN_SCRIPT_FILE_NAME" >> $__SCRIPT_FILE
+   fi
+   echo "" >> $__SCRIPT_FILE
+
+   # Members
+   echo "#" >> $__SCRIPT_FILE
+   echo "# MEMBER_JAVA_OPTS" >> $__SCRIPT_FILE
+   echo "#" >> $__SCRIPT_FILE
+   echo "MEMBER_JAVA_OPTS=\"" >> $__SCRIPT_FILE
+   for token in $JAVA_OPTS; do
+      if [[ $token == -Dlog4j.configurationFile=* ]]; then
+         echo "-Dlog4j.configurationFile=\$ETC_DIR/log4j2.properties \\" >> $__SCRIPT_FILE
+      elif [[ $token == -DgemfirePropertyFile=* ]]; then
+         echo "-DgemfirePropertyFile=$ETC_DIR/gemfire.properties \\" >> $__SCRIPT_FILE
+      elif [[ $token == -Dgemfire.log-file=* ]]; then
+         echo "-Dgemfire.log-file=\$LOG_DIR/\$INSTANCE_NAME.log \\" >> $__SCRIPT_FILE
+      elif [[ $token == *prometheus* ]]; then
+         PROMETHEUS_JAR="jmx_prometheus_javaagent${PROMETHEUS_JAR_PATH##*jmx_prometheus_javaagent}"
+         echo "-javaagent:\$LIB_DIR/$PROMETHEUS_JAR=\$PROMETHEUS_PORT:\$ETC_DIR/prometheus.yml \\" >> $__SCRIPT_FILE
+      elif [[ $token == -Xloggc:* ]]; then
+         echo "-Xloggc:\${LOG_DIR}/\${INSTANCE_NAME}-gc.log \\" >> $__SCRIPT_FILE
+      elif [[ $token == *-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=* ]]; then
+         echo "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=\$DEBUG_PORT \\" >> $__SCRIPT_FILE
+      else
+         echo "$token \\" >> $__SCRIPT_FILE
+      fi
+   done
+
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      DELIMITER=";"
+   else
+      DELIMITER=":"
+   fi
+   echo "\""  >> $__SCRIPT_FILE
+}
+
+#
+# Writes start_member.sh
+#
+# @param scriptType member
+#
+function writeStartScript
+{
+   local SCRIPT_TYPE="member"
+   if [ "$SCRIPT_TYPE" == "member" ]; then
+      PEER="server"
+   fi
+   REDIS_COMMAND="redis.sh"
+
+   __START_SCRIPT_FILE=$__BIN_DIR/start_$SCRIPT_TYPE.sh
+   echo "#!/usr/bin/env bash" > $__START_SCRIPT_FILE
+   echo "SCRIPT_DIR=\"\$(cd -P -- \"\$(dirname -- \"\$0\")\" && pwd -P)\"" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__START_SCRIPT_FILE
+   echo "#       File: start_$SCRIPT_TYPE.sh" >> $__START_SCRIPT_FILE
+   echo "#    Cluster: $CLUSTER" >> $__START_SCRIPT_FILE
+   echo "#  Generated: `date "+%m/%d/%y %H:%M:%S %Z"`" >> $__START_SCRIPT_FILE
+   echo "#         By: `whoami`" >> $__START_SCRIPT_FILE
+   echo "# ------------------------------------------------------" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "EXECUTABLE=\"\`basename \$0\`\"" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "if [ \"\$1\" == \"-?\" ]; then" >> $__START_SCRIPT_FILE
+   echo "cat <<EOF" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "NAME" >> $__START_SCRIPT_FILE
+   echo "   \$EXECUTABLE - Execute '$REDIS_COMMAND' with the settings source in from the specified env file" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "SYNOPSIS" >> $__START_SCRIPT_FILE
+   echo "   \$EXECUTABLE -local|-vm [local_${SCRIPT_TYPE}_number]" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "DESCRIPTION" >> $__START_SCRIPT_FILE
+   echo "   Executes the '$REDIS_COMMAND' command with the settings sourced in from the" >> $__START_SCRIPT_FILE
+   echo "   specified env file." >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "OPTIONS" >> $__START_SCRIPT_FILE
+   echo "   -local" >> $__START_SCRIPT_FILE
+   echo "             Source in setenv_local.sh" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "   -vm" >> $__START_SCRIPT_FILE
+   echo "             Source in setenv_vm.sh" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "   local_${SCRIPT_TYPE}_number" >> $__START_SCRIPT_FILE
+   echo "             Member number starting from 1. This value applies to '-local' only." >> $__START_SCRIPT_FILE
+   echo "             For '-vm', it is ignored. Default: 1" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "EOF" >> $__START_SCRIPT_FILE
+   echo "   exit" >> $__START_SCRIPT_FILE
+   echo "fi" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "if [ \"\$1\" == \"\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   >&2 echo \"Error: '-local' or '-vm' argument required. Command aborted.\"" >> $__START_SCRIPT_FILE
+   echo "   exit 1" >> $__START_SCRIPT_FILE
+   echo "elif [ \"\$1\" == \"-local\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   SETENV_FILE=\"setenv_local.sh\"" >> $__START_SCRIPT_FILE
+   echo "elif [ \"\$1\" == \"-vm\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   SETENV_FILE=\"setenv_vm.sh\"" >> $__START_SCRIPT_FILE
+   echo "else" >> $__START_SCRIPT_FILE
+   echo "   >&2 echo \"Error: Invalid argument. Valid arguments are '-local' or '-vm'.\"" >> $__START_SCRIPT_FILE
+   echo "   >&2 echo \"       Command aborted.\"" >> $__START_SCRIPT_FILE
+   echo "   exit 1" >> $__START_SCRIPT_FILE
+   echo "fi" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo ". \$SCRIPT_DIR/\$SETENV_FILE -$SCRIPT_TYPE \$*" >> $__START_SCRIPT_FILE
+   echo "" >> $__START_SCRIPT_FILE
+   echo "#" >> $SCRIPT_FILE >> $__START_SCRIPT_FILE
+   echo "# Launch Redis Member" >> $__START_SCRIPT_FILE
+   echo "#" >> $__START_SCRIPT_FILE
+   echo "if [ \"\$RUN_SCRIPT\" == \"\" ]; then" >> $__START_SCRIPT_FILE
+   echo "   \"\$JAVA\" \$JAVA_OPTS " >> $__START_SCRIPT_FILE
+   echo "else" >> $__START_SCRIPT_FILE
+   echo "   \"\$SCRIPT_DIR/\$RUN_SCRIPT\"" >> $__START_SCRIPT_FILE
+   echo "fi" >> $__START_SCRIPT_FILE
+   chmod 755 "$__START_SCRIPT_FILE"
+}
+
+
+   if [ -d "${CLUSTER_DIR}/generated/tmp" ]; then
+      rm -rf ${CLUSTER_DIR}/generated/tmp
+   fi
+   __BIN_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/bin
+   if [ ! -d "${__BIN_DIR}" ]; then
+      mkdir -p ${__BIN_DIR}
+   fi
+   if [ "$VM_ENABLED" == "true" ]; then
+      DEFAULT_SCRIPT_NAME="setenv_vm.sh"
+      DEPLOYTMENT_TYPE="VM"
+   else
+      DEFAULT_SCRIPT_NAME="setenv_local.sh"
+      DEPLOYTMENT_TYPE="local"
+   fi
+   # DEFAULT_SCRIPT_NAME is also used later when generating start_member.sh
+   SCRIPT_FILE="${__BIN_DIR}/${DEFAULT_SCRIPT_NAME}"
+   writeHeader $SCRIPT_FILE $DEFAULT_SCRIPT_NAME $DEPLOYTMENT_TYPE
+
+   if [ "$VM_ENABLED" == "true" ]; then
+      # For VM, requires host names
+      VM_HOSTS=`getClusterProperty "vm.hosts"`
+      MEMBER_TCP_LIST=""
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         if [ "$MEMBER_TCP_LIST" == "" ]; then
+            MEMBER_TCP_LIST="$VM_HOST:$MEMBER_START_PORT"
+         else
+            MEMBER_TCP_LIST="$MEMBER_TCP_LIST,$VM_HOST:$MEMBER_START_PORT"
+         fi
+      done
+      writeVmTopBody $SCRIPT_FILE $MEMBER_TCP_LIST
+   else
+      # For local, use the local machine's host name
+      writeLocalTopBody $SCRIPT_FILE
+   fi
+   writeBottomBody $SCRIPT_FILE
+
+   #
+   # For local cluster, let's also generate an optional VM script
+   #
+   if [ "$VM_ENABLED" == "true" ]; then
+      SCRIPT_NAME="setenv_local.sh"
+      SCRIPT_FILE="${__BIN_DIR}/${SCRIPT_NAME}"
+      writeHeader $SCRIPT_FILE $SCRIPT_NAME "local"
+      writeLocalTopBody $SCRIPT_FILE
+      writeBottomBody $SCRIPT_FILE
+   else
+      SCRIPT_NAME="setenv_vm.sh"
+      SCRIPT_FILE="${__BIN_DIR}/${SCRIPT_NAME}"
+      writeHeader $SCRIPT_FILE $SCRIPT_NAME "VM"
+      writeVmTopBody $SCRIPT_FILE ""
+      writeBottomBody $SCRIPT_FILE
+   fi
+
+   #
+   # Copy lib and config files
+   #
+   __RUN_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/run
+   __ETC_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/etc
+   __LIB_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/lib
+   __LOG_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/log
+   __STATS_DIR=${CLUSTER_DIR}/generated/tmp/$CLUSTER/etc
+   mkdir -p $__RUN_DIR
+   mkdir -p $__LIB_DIR
+   mkdir -p $__LOG_DIR
+   mkdir -p $__STATS_DIR
+   mkdir -p $__ETC_DIR
+   __VERSION_DIR=v${REDIS_VERSION:0:1}
+   cp $BASE_DIR/lib/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $BASE_DIR/lib/$__VERSION_DIR/* $__LIB_DIR/ > /dev/null 2>&1
+   cp $BASE_DIR/plugins/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $BASE_DIR/plugins/$__VERSION_DIR/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/lib/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/plugins/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $PADOGRID_WORKSPACE/lib/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $PADOGRID_WORKSPACE/plugins/* $__LIB_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/etc/cache.xml $__ETC_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/etc/gemfire.properties $__ETC_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/etc/log4j2.properties $__ETC_DIR/ > /dev/null 2>&1
+   cp -r $CLUSTER_DIR/etc/prometheus.yml $__ETC_DIR/ > /dev/null 2>&1
+
+   #
+   # README.txt
+   #
+   README_FILE="${CLUSTER_DIR}/generated/tmp/$CLUSTER/README.txt"
+   echo "padogrid Script Distribution" > $README_FILE
+   echo "***********************************" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "This distribtuion has been generated by padogrid. It contains all the" >> $README_FILE
+   echo "necessary scripts, binaries, and configuration files to reinstate the same Redis" >> $README_FILE
+   echo "cluster that was previously running in the padogrid workspace environment." >> $README_FILE
+   echo "The scripts provided in this distribution are readily executable in the Redis" >> $README_FILE
+   echo "product distribution environment." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "# ------------------------------------------------------" >> $README_FILE
+   if [ "$VM_ENABLED" == "true" ]; then
+   echo "# Deployment: VM" >> $README_FILE
+   else
+   echo "# Deployment: local" >> $README_FILE
+   fi
+   echo "#       File: README.txt" >> $README_FILE
+   echo "#    Cluster: $CLUSTER" >> $README_FILE
+   echo "#  Generated: `date "+%m/%d/%y %H:%M:%S %Z"`" >> $README_FILE
+   echo "#         By: `whoami`" >> $README_FILE
+   echo "# ------------------------------------------------------" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "Directories" >> $README_FILE
+   echo "-----------" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "." >> $README_FILE
+   echo "└── $CLUSTEA" >> $README_FILE
+   echo "    ├── README.txt" >> $README_FILE
+   echo "    ├── bin" >> $README_FILE
+   echo "    │   ├── setenv.sh" >> $README_FILE
+   echo "    │   ├── setenv_local.sh" >> $README_FILE
+   echo "    │   ├── setenv_vm.sh" >> $README_FILE
+   echo "    │   └── start_member.sh" >> $README_FILE
+   echo "    ├── etc" >> $README_FILE
+   echo "    │   ├── cache.xml" >> $README_FILE
+   echo "    │   ├── gemfire.properties" >> $README_FILE
+   echo "    │   ├── log4j2.properties" >> $README_FILE
+   echo "    │   └── prometheus.yml" >> $README_FILE
+   echo "    ├── lib" >> $README_FILE
+   USER_LIB_FILES=$(ls $__LIB_DIR)
+   USER_LIB_FILES=( $USER_LIB_FILES )
+   let FILE_COUNT=${#USER_LIB_FILES[@]}
+   let LAST_INDEX=FILE_COUNT-1
+   for ((i = 0; i <= $LAST_INDEX; i++)); do
+      if [ $i -lt $LAST_INDEX ]; then
+         echo "    │   ├── ${USER_LIB_FILES[$i]}" >> $README_FILE
+      else
+         echo "    │   └── ${USER_LIB_FILES[$i]}" >> $README_FILE
+      fi
+   done
+   echo "    └── log" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "bin/" >> $README_FILE
+   echo "   setenv.sh" >> $README_FILE
+   echo "             Sets REDIS_HOME, REDISSON_OPTS and other required environment variables." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "   setenv_local.sh" >> $README_FILE
+   echo "             Sets REDISSON_OPTS and JAVA_OPTS required for running reddison nodes" >> $README_FILE
+   echo "             nodes on the same local machine." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "   setenv_vm.sh" >> $README_FILE
+   echo "             Sets REDISSON_OPTS and JAVA_OPTS required for running reddison nodes" >> $README_FILE
+   echo "             nodes on separate  machine." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "   start_member.sh" >> $README_FILE
+   echo "             Runs 'start.sh' with the specified option ('-local' or '-vm')." >> $README_FILE
+   echo "             See the usage by running 'start_member.sh -?'." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "etc/" >> $README_FILE
+   echo "   Contains configuration files." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "log/" >> $README_FILE
+   echo "   All log files are written to this directory." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "lib/" >> $README_FILE
+   echo "   Contains all the binaries used by the workspace cluster." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "Deployment Steps" >> $README_FILE
+   echo "----------------" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "1. Inflate '${CLUSTER}.tar.gz' inside the Redis installation directory." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "2. Edit '$CLUSTER/bin/setenv.sh' set the following variables." >> $README_FILE
+   echo "      REDIS_HOME - Redis root directory path" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "3. Edit '$CLUSTER/bin/setenv_local.sh' and/or '$CLUSTER/bin/setenv_vm.sh' and set the" >> $README_FILE
+   echo "   following variables (and others as necessary):" >> $README_FILE
+   echo "      MEMBER_TCP_LIST (for setenv_vm.sh only)" >> $README_FILE
+   echo "      RUN_SCRIPT" >> $README_FILE
+   echo "      REDIS_OPTS" >> $README_FILE
+   echo "      JAVA_OPTS" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "4. The changes you made in the above steps apply to all members. If you are" >> $README_FILE
+   echo "   running Redis on multiple machines then you can deploy the same changes to" >> $README_FILE
+   echo "   other machines." >> $README_FILE
+   echo "" >> $README_FILE
+   echo "5. Start a member by running '${CLUSTER}/bin/start_member.sh'" >> $README_FILE
+   echo "          Display usage: start_member.sh -?" >> $README_FILE
+   echo "      Run local members: start_member.sh -local <member-number>" >> $README_FILE
+   echo "         Run VM members: start_member.sh -vm" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "6. Stop a member by running 'stop_member -num member_number'" >> $README_FILE
+   echo "" >> $README_FILE
+   echo "7. The member log files are written in the $CLUSTER/log directory." >> $README_FILE
+
+   cp $README_FILE ${CLUSTER_DIR}/generated/
+
+   #
+   # Copy RUN_SCRIPT the bin directory if defined
+   #
+   if [ "$RUN_SCRIPT" != "" ]; then
+      cp $RUN_SCRIPT $__BIN_DIR
+   fi
+
+   #
+   # Write start_member.sh
+   #
+   writeStartScript
+
+   #
+   # Write setenv.sh
+   #
+   __SETENV_SH_FILE=$__BIN_DIR/setenv.sh
+   echo "#" >> $__SETENV_SH_FILE
+   echo "# Set environment variables required by your application in this file." >> $__SETENV_SH_FILE
+   echo "# This file is sourced in by setenv_local.sh and setenv_vm.sh." >> $__SETENV_SH_FILE
+   echo "#" >> $__SETENV_SH_FILE
+   echo "" >> $__SETENV_SH_FILE
+   echo "#" >> $__SETENV_SH_FILE
+   echo "# Set REDIS_HOME to the Redis installation directory path." >> $__SETENV_SH_FILE
+   echo "# This is a required environment variable." >> $__SETENV_SH_FILE
+   echo "#" >> $__SETENV_SH_FILE
+   echo "export REDIS_HOME=$GEODE_HOME" >> $__SETENV_SH_FILE
+
+   pushd ${CLUSTER_DIR}/generated/tmp > /dev/null 2>&1
+   tar -czvf ${CLUSTER_DIR}/generated/$CLUSTER.tar.gz $CLUSTER
+   popd > /dev/null 2>&1
+
+   rm -r ${CLUSTER_DIR}/generated/tmp
+
+   echo ""
+   echo "Script tarball generated:"
+   echo ""
+   echo -e "   ${CLightGreen}${CLUSTER_DIR}/generated/README.txt${CNone}"
+   echo -e "   ${CLightGreen}${CLUSTER_DIR}/generated/$CLUSTER.tar.gz${CNone}"
+   echo ""
+   echo "See 'README.txt' (also included in the tarball) for instructions."
+   echo ""
+fi

@@ -6,20 +6,14 @@ import java.io.PrintWriter;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.geode.cache.client.ClientCacheFactory;
-import org.apache.geode.cache.execute.FunctionService;
-import org.apache.geode.cache.execute.ResultCollector;
 import org.oracle.coherence.addon.test.perf.data.Blob;
 import org.oracle.coherence.addon.test.perf.data.ClientProfileKey;
 import org.oracle.coherence.addon.test.perf.data.EligKey;
-import org.oracle.coherence.addon.test.perf.data.GroupSummary;
 
 import com.tangosol.net.NamedCache;
 import com.tangosol.net.Session;
@@ -73,6 +67,8 @@ import com.tangosol.net.Session;
  */
 public class TransactionTest implements Constants
 {
+	private final static String PRODUCT="coherence";
+
 	private static int MEMBER_SET_SIZE;
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
@@ -146,7 +142,7 @@ public class TransactionTest implements Constants
 		if (resultsDir.exists() == false) {
 			resultsDir.mkdirs();
 		}
-		File file = new File(resultsDir, "tx-" + mapNameEnum.name() + "-" + format.format(startTime) + "_" + prefix + ".txt");
+		File file = new File(resultsDir, "tx-" + mapNameEnum.name() + "-" + PRODUCT + "-" + format.format(startTime) + "_" + prefix + ".txt");
 
 		System.out.println("   " + file.getAbsolutePath());
 
@@ -158,6 +154,7 @@ public class TransactionTest implements Constants
 		writer.println("Transaction Test");
 		writer.println("******************************************");
 		writer.println();
+		writer.println("                     Product: " + PRODUCT);
 		writer.println("                   Test Case: " + testCaseEnum.name());
 		writer.println("                         Map: " + mapNameEnum.name());
 		if (testCaseEnum == TestCaseEnum.getall) {
@@ -165,7 +162,7 @@ public class TransactionTest implements Constants
 		}
 		writer.println("              Test Run Count: " + TEST_COUNT);
 		writer.println("    Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
-		writer.println("   Total Entry Count per Run: " + totalEntryCount);
+		writer.println("   Total Entry Count Per Run: " + totalEntryCount);
 		writer.println("                Thread Count: " + threadCount);
 		writer.println("                      Prefix: " + prefix);
 		writer.println("      Entry Count per Thread: " + countPerThread);
@@ -278,7 +275,7 @@ public class TransactionTest implements Constants
 		df.setRoundingMode(RoundingMode.HALF_UP);
 		
 		writer.println();
-		writer.println("                Max time (msec): " + maxTimeMsec);
+		writer.println("                Max Time (msec): " + maxTimeMsec);
 		writer.println("            Throughput (tx/sec): " + df.format(txPerSec));
 		writer.println(" Latency per transaction (msec): " + df.format(latencyPerEntry));
 		writer.println();
@@ -543,6 +540,7 @@ public class TransactionTest implements Constants
 		System.out.println(line);
 	}
 
+	@SuppressWarnings("unused")
 	private static void write(String str)
 	{
 		System.out.print(str);
@@ -623,6 +621,7 @@ public class TransactionTest implements Constants
 		}
 		System.out.println("***************************************");
 		System.out.println();
+
 		if (file.exists()) {
 			System.out.println("Configuration File: " + file.getAbsolutePath());
 		} else {
@@ -630,6 +629,7 @@ public class TransactionTest implements Constants
 		}
 
 		System.out.println();
+		System.out.println("                          Product:" + PRODUCT);
 		System.out.println("                   Test Run Count: " + TEST_COUNT);
 		System.out.println("         Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 

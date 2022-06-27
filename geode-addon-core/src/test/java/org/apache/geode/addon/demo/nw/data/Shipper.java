@@ -59,7 +59,7 @@ public class Shipper extends BaseEntity implements PdxSerializable
 	@Override
 	public void toData(PdxWriter writer) {
 		super.toData(writer);
-		writer.writeString("shipperId", shipperId);
+		writer.writeString("shipperId", shipperId).markIdentityField("shipperId");
 		writer.writeString("companyName", companyName);
 		writer.writeString("phone", phone);
 	}

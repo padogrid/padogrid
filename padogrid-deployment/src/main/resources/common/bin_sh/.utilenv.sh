@@ -598,6 +598,8 @@ function getAppOptions
       echo "grafana padodesktop perf_test"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "perf_test"
+   elif [ "$__PRODUCT" == "redis" ]; then
+      echo "perf_test"
    else
       echo ""
    fi
@@ -823,7 +825,7 @@ function getMemberPrefix
 #
 function getMemberName
 {
-   __MEMBER_NUM=`trimString "$1"`
+   local __MEMBER_NUM=`trimString "$1"`
    len=${#__MEMBER_NUM}
    if [ $len == 1 ]; then
       __MEMBER_NUM=0$__MEMBER_NUM
@@ -831,6 +833,26 @@ function getMemberName
       __MEMBER_NUM=$__MEMBER_NUM
    fi
    echo "`getMemberPrefix`$__MEMBER_NUM"
+}
+
+#
+# Returns the member number of the specified member name. By convention, member
+# names end with a member number, i.e., "-01". It returns an empty string if
+# the trailing string is not a number.
+#
+# @param memberName
+#
+function getMemberNumber
+{
+   local __MEMBER_NAME="$1"
+   local __MEMBER_NUMBER=${__MEMBER_NAME##*-}
+   if [ "__MEMBER_NUMBER$__MEMBER_NUMBER" != "" ]; then
+      __MEMBER_NUMBER=$(trimLeadingZero $__MEMBER_NUMBER)
+      if [ $(isNumber "$__MEMBER_NUMBER") == "false" ]; then
+         __MEMBER_NUMBER=""
+      fi
+   fi
+   echo $__MEMBER_NUMBER
 }
 
 #
@@ -857,9 +879,11 @@ function getVmMemberName
 
 #
 # Returns the member PID if it is running. Empty value otherwise.
-# @required NODE_LOCAL     Node name with the local extenstion. For remote call only.
-# @param    memberName     Unique member name
-# @param    workspaceName  Workspace name
+# @required NODE_LOCAL       Node name with the local extension. For remote call only.
+# @optional POD              Pod type. Default: local
+# @optional REMOTE_SPECIFIED true if remote node, false if local node. Default: false
+# @param    memberName       Unique member name
+# @param    workspaceName    Workspace name
 #
 function getMemberPid
 {
@@ -873,7 +897,6 @@ function getMemberPid
       local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__MEMBER"
       members=$(eval $__COMMAND)
       members=$(echo $members | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
-      #members=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__MEMBER" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    fi
    spids=""
    for j in $members; do
@@ -1495,6 +1518,9 @@ function retrieveClusterEnvFile
       elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then
          PRODUCT="coherence"
          CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/redis.conf" ]; then
+         PRODUCT="redis"
+         CLUSTER_TYPE=$PRODUCT
       elif [ -f "$CLUSTER_DIR/etc/spark-env.sh" ]; then
          PRODUCT="spark"
          CLUSTER_TYPE="standalone"
@@ -2092,6 +2118,9 @@ function __switch_cluster
       elif [ "$PRODUCT" == "jet" ]; then
          export PRODUCT_HOME=$JET_HOME
          __PRODUCT="hazelcast"
+      elif [ "$PRODUCT" == "redis" ]; then
+         export PRODUCT_HOME=$REDIS_HOME
+         __PRODUCT="snappydata"
       elif [ "$PRODUCT" == "snappydata" ]; then
          export PRODUCT_HOME=$SNAPPYDATA_HOME
          __PRODUCT="snappydata"
@@ -2101,6 +2130,9 @@ function __switch_cluster
       elif [ "$PRODUCT" == "coherence" ]; then
          export PRODUCT_HOME=$COHERENCE_HOME
          __PRODUCT="coherence"
+      elif [ "$PRODUCT" == "redis" ]; then
+         export PRODUCT_HOME=$REDIS_HOME
+         __PRODUCT="redis"
       elif [ "$PRODUCT" == "kafka" ]; then
          export PRODUCT_HOME=$KAFKA_HOME
          __PRODUCT="kafka"
@@ -3335,6 +3367,7 @@ function sortVersionList
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
 #    JET_MANAGEMENT_CENTER_VERSIONS
+#    REDIS_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
 #    KAFKA_VERSIONS
@@ -3357,6 +3390,7 @@ function determineInstalledProductVersions
    JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
    JET_MANAGEMENT_CENTER_VERSIONS=""
+   REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
    KAFKA_VERSIONS=""
@@ -3478,6 +3512,14 @@ function determineInstalledProductVersions
       done
       JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
 
+      # Redis
+      __versions=""
+      for i in redis-*; do
+         __version=${i#redis-}
+         __versions="$__versions $__version "
+      done
+      REDIS_VERSIONS=$(sortVersionList "$__versions")
+
       # SnappyData
       __versions=""
       for i in snappydata-*; do
@@ -3520,7 +3562,7 @@ function determineInstalledProductVersions
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, hadoop, kafka, spark
+#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, redis, hadoop, kafka, spark
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
@@ -3533,6 +3575,7 @@ function determineInstalledProductVersions
 #   GEMFIRE_HOME    Set to PRODUCT_HOME if PRODUCT is geode and CLUSTER_TYPE is gemfire.
 #   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is imdg.
 #   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is jet.
+#   REDIS_HOME      Set to PRODUCT_HOME if PRODUCT is redis.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 #   SPARK_HOME      Set to PRODUCT_HOME if PRODUCT is spark.
 #   KAFKA_HOME      Set to PRODUCT_HOME if PRODUCT is kafka.
@@ -3571,6 +3614,11 @@ function determineProduct
          fi
       fi
       GEODE_HOME="$PRODUCT_HOME"
+   elif [[ "$PRODUCT_HOME" == *"redis"* ]]; then
+      PRODUCT="redis"
+      REDIS_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="redis"
+      CLUSTER=$DEFAULT_REDIS_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"snappydata"* ]]; then
       PRODUCT="snappydata"
       SNAPPYDATA_HOME="$PRODUCT_HOME"
@@ -3605,7 +3653,7 @@ function determineProduct
 #
 # Determines the product by examining cluster files. The following environment variables
 # are set after invoking this function.
-#   PRODUCT         geode, hazelcast, or snappydata, coherence, spark
+#   PRODUCT         geode, hazelcast, snappydata, coherence, redis, spark, hadoop
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   set to standalone if PRODUCT is spark,
 #                   set to PRODUCT for all others.
@@ -3659,6 +3707,9 @@ function getInstalledProducts
   if [ "$JET_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS jet"
   fi
+  if [ "$REDIS_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS redis"
+  fi
   if [ "$SNAPPYDATA_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS snappydata"
   fi
@@ -3667,6 +3718,9 @@ function getInstalledProducts
   fi
   if [ "$COHERENCE_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS coherence"
+  fi
+  if [ "$REDIS_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS redis"
   fi
   if [ "$KAFKA_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS kafka"
@@ -3682,7 +3736,7 @@ function getInstalledProducts
 # .coherenceenv.sh, or .sparkenv.sh in the specified RWE directory if it does not exist.
 #
 # @optional PADOGRID_WORKSPACES_HOME
-# @param productName      Valid value are 'geode', 'hazelcast', 'snappydata', 'coherence', or 'spark'.
+# @param productName      Valid value are 'geode', 'hazelcast', 'snappydata', 'coherence', 'redis', 'spark', 'hadoop'.
 # @param workspacesHome   RWE directory path. If not specified then it creates .geodeenv.sh, 
 #                         .hazelcastenv.sh, .snappydataenv.sh, .coherenceenv.sh, or .sparkenv.sh in
 #                         PADOGRID_WORKSPACES_HOME.
@@ -3734,6 +3788,13 @@ function createProductEnvFile
          echo "# Enter Coherence product specific environment variables and initialization" >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "#" >> $WORKSPACES_HOME/.coherenceenv.sh
+      fi
+   elif [ "$PRODUCT_NAME" == "redis" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.redisenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.redisenv.sh
+         echo "# Enter Redis product specific environment variables and initialization" >> $WORKSPACES_HOME/.redisenv.sh
+         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.redisenv.sh
+         echo "#" >> $WORKSPACES_HOME/.redisenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "spark" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.sparkenv.sh ]; then
@@ -3799,7 +3860,7 @@ function getOptValue
 
 #
 # Returns the default start port number of the specified product.
-# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, spark, kafka.
+# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, redis, spark, kafka.
 #
 function getDefaultStartPortNumber
 {
@@ -3812,6 +3873,8 @@ function getDefaultStartPortNumber
       echo "10334"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "9000"
+   elif [ "$__PRODUCT" == "redis" ]; then
+      echo "6379"
    elif [ "$__PRODUCT" == "spark" ]; then
       echo "7077"
    elif [ "$__PRODUCT" == "kafka" ]; then

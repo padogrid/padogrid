@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.Random;
 
 import org.apache.geode.addon.test.perf.TransactionTest.TestCaseEnum;
 import org.apache.geode.addon.test.perf.data.Blob;
@@ -123,6 +124,8 @@ import org.apache.geode.cache.client.ClientCacheFactory;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class DataIngestionTest implements Constants
 {
+	private final static String PRODUCT="geode";
+
 	private static int MEMBER_SET_SIZE;
 	private static int TEST_COUNT;
 	private static int TEST_INTERVAL_IN_MSEC;
@@ -177,7 +180,7 @@ public class DataIngestionTest implements Constants
 		if (resultsDir.exists() == false) {
 			resultsDir.mkdirs();
 		}
-		File file = new File(resultsDir, "ingestion-" + mapNameEnum.name() + "-" + format.format(startTime) + "_" + prefix + ".txt");
+		File file = new File(resultsDir, "ingestion-" + mapNameEnum.name() + "-" + PRODUCT + "-" + format.format(startTime) + "_" + prefix + ".txt");
 		
 		System.out.println("   " + file.getAbsolutePath());
 		
@@ -189,6 +192,7 @@ public class DataIngestionTest implements Constants
 		writer.println("Data Ingestion Test");
 		writer.println("******************************************");
 		writer.println();
+		writer.println("                     Product: " + PRODUCT);
 		writer.println("                   Test Case: " + testCaseEnum.name());
 		writer.println("                         Map: " + mapNameEnum.name());
 		if (testCaseEnum == TestCaseEnum.putall) {
@@ -232,6 +236,7 @@ public class DataIngestionTest implements Constants
 			break;
 			
 		case profile:
+		default:
 			switch (testCaseEnum) {
 			case put:
 				workerThreads = new ProfilePutThread[threadCount];
@@ -310,12 +315,12 @@ public class DataIngestionTest implements Constants
 		df.setRoundingMode(RoundingMode.HALF_UP);
 		
 		writer.println();
-		writer.println("        Max time (msec): " + maxTimeMsec);
+		writer.println("        Max Time (msec): " + maxTimeMsec);
 		writer.println("   Throughput (msg/sec): " + df.format(msgPerSec));
 		writer.println("  *Throughput (KiB/sec): " + df.format(kiBytesPerSec));
 		writer.println("  *Throughput (MiB/sec): " + df.format(miBytesPerSec));
 		writer.println(" Latency per put (msec): " + df.format(latencyPerEntry));
-		writer.println("   **Total Volume (MiB): " + df.format(totalVolumeInKiB));
+		writer.println("   **Total Volume (KiB): " + df.format(totalVolumeInKiB));
 		writer.println("   **Total Volume (MiB): " + df.format(totalVolumeInMiB));
 		writer.println("   **Total Volume (GiB): " + df.format(totalVolumeInGiB));
 		writer.println("   Payload Size (bytes): " + payloadSize);
@@ -382,7 +387,7 @@ public class DataIngestionTest implements Constants
 		@Override
 		public void __run()
 		{
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int threadStopIndex = threadStartIndex + entryCountPerThread - 1;
 			int keyIndex = threadStartIndex;
 			long effectiveDateTime = baseDate.getTime();
@@ -417,6 +422,16 @@ public class DataIngestionTest implements Constants
 			elapsedTimeInMsec = stopTime - startTime;
 		}
 	}
+	
+	private byte[] createBlobData(int payloadSize) {
+		Random random = new Random();
+		byte data[] = new byte[payloadSize];
+		for (int i = 0; i < payloadSize; i++) {
+			data[i] = (byte)random.nextInt();
+		}
+		return data;
+	}
+	
 	class EligibilityPutAllThread extends AbstractThread
 	{
 		public EligibilityPutAllThread(int threadNum, RegionNameEnum mapNameEnum, int batchSize, int threadStartIndex,
@@ -429,7 +444,7 @@ public class DataIngestionTest implements Constants
 		public void __run()
 		{
 			HashMap map = new HashMap();
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int outerLoopCount = entryCountPerThread / batchSize;
 			int remainingCount = entryCountPerThread % batchSize;
 			int threadStopIndex = threadStartIndex + outerLoopCount - 1;
@@ -498,7 +513,7 @@ public class DataIngestionTest implements Constants
 		@Override
 		public void __run()
 		{
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int threadStopIndex = threadStartIndex + entryCountPerThread - 1;
 			int keyIndex = threadStartIndex;
 			
@@ -529,7 +544,7 @@ public class DataIngestionTest implements Constants
 		public void __run()
 		{
 			HashMap map = new HashMap();
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int outerLoopCount = entryCountPerThread / batchSize;
 			int remainingCount = entryCountPerThread % batchSize;
 			int threadStopIndex = threadStartIndex + outerLoopCount - 1;
@@ -581,6 +596,7 @@ public class DataIngestionTest implements Constants
 		System.out.println(line);
 	}
 
+	@SuppressWarnings("unused")
 	private static void write(String str)
 	{
 		System.out.print(str);
@@ -667,6 +683,7 @@ public class DataIngestionTest implements Constants
 			System.out.println("Configuration File: N/A");
 		}
 		System.out.println();
+		System.out.println("                          Product:" + PRODUCT);
 		System.out.println("                   Test Run Count: " + TEST_COUNT);
 		System.out.println("         Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 		

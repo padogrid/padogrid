@@ -70,6 +70,8 @@ FORCE_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_SPECIFIED=false
 CLUSTER_TYPE_SPECIFIED=false
+REPLICAS=$DEFAULT_REPLICAS
+ARG_ARG=
 FG_SPECIFIED=false
 MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
@@ -205,6 +207,10 @@ do
    elif [ "$PREV" == "-cluster-type" ]; then
       CLUSTER_TYPE=$i
       CLUSTER_TYPE_SPECIFIED="true"
+   elif [ "$PREV" == "-replicas" ]; then
+      REPLICAS=$i
+   elif [ "$PREV" == "-arg" ]; then
+      ARG_ARG=$i
    elif [ "$PREV" == "-num" ]; then
       MEMBER_NUM=$i
    elif [ "$PREV" == "-password" ]; then
@@ -513,7 +519,7 @@ if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
    fi
 fi      
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss snappydata spark kafka hadoop"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka hadoop"
 
 # Bash color code
 CNone='\033[0m' # No Color
