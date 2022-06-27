@@ -318,32 +318,21 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
 else
    # If bundle file specified... 
 
+   if [[ "$BUNDLE_FILE_PATH" != "bundle-"** ]]; then
+      echo >&2 "ERROR: Invalid bundle name. Command aborted."
+      exit 1
+   fi
+
+   __PRODUCT=$(echo $BUNDLE_FILE_PATH | sed -e 's/bundle-//' -e 's/-.*//')
+   BUNDLE_PRODUCT="$__PRODUCT"
+
    # Get bundle type
-   if [[ "$BUNDLE_FILE_PATH" == "bundle-geode-"* ]]; then
+   if [ "$__PRODUCT" == "gemfire" ]; then
       __PRODUCT="geode"
-      BUNDLE_PRODUCT="geode"
-   elif [[ "$BUNDLE_FILE_PATH" == "bundle-gemfire-"* ]]; then
-      __PRODUCT="geode"
-      BUNDLE_PRODUCT="gemfire"
-   elif [[ "$BUNDLE_FILE_PATH" == "bundle-coherence-"* ]]; then
-      __PRODUCT="coherence"
-      BUNDLE_PRODUCT="coherence"
-   elif [[ "$BUNDLE_FILE_PATH" == "bundle-redis-"* ]]; then
-      __PRODUCT="redis"
-      BUNDLE_PRODUCT="redis"
-   elif [[ "$BUNDLE_FILE_PATH" == "bundle-hazelcast-"* ]]; then
+   elif [ "$__PRODUCT" == "jet" ]; then
       __PRODUCT="hazelcast"
-      BUNDLE_PRODUCT="hazelcast"
-   elif [[ "$BUNDLE_FILE_PATH" == "bundle-jet-"* ]]; then
-      __PRODUCT="hazelcast"
-      BUNDLE_PRODUCT="jet"
-   elif [[ "$BUNDLE_FILE_PATH" == "bundle-snappydata-"* ]]; then
-      __PRODUCT="snappydata"
-      BUNDLE_PRODUCT="snappydata"
-   elif [[ "$BUNDLE_FILE_PATH" == "bundle-spark-"* ]]; then
-      __PRODUCT="spark"
-      BUNDLE_PRODUCT="spark"
-   else
+   fi
+   if [[ "$BUNDLE_PRODUCT_LIST" != *"$__PRODUCT"* ]]; then
       echo >&2 "ERROR: Invalid bundle name. Command aborted."
       exit 1
    fi
