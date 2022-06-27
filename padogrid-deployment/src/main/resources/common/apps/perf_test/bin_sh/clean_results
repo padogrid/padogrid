@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Clean the 'results' directory
+
+SYNOPSIS
+   $EXECUTABLE [-all] [-?]
+
+DESCRIPTION
+   Cleans the 'results' directory by removing all files.   
+
+OPTIONS
+   -all
+             Clean the 'results' directory of all apps in the current workspace.
+
+EOF
+exit
+fi
+
+PERF_TEST_APPS=""
+if [ "$ALL" == "true" ]; then
+   ALL_APPS=$(list_apps)
+   for i in $ALL_APPS; do
+      PERF_TEST_APP_DIR="$PADOGRID_WORKSPACE/apps/$i"
+      if [ -d "$PERF_TEST_APP_DIR" ]; then
+         if [ -f "$PERF_TEST_APP_DIR/bin_sh/test_group" ] &&  [ -d "$PERF_TEST_APP_DIR/results" ]; then
+            PERF_TEST_APPS="$PERF_TEST_APPS $i"
+         fi
+      fi
+   done
+else
+   PERF_TEST_APPS=$(basename "$APP_DIR")
+fi
+
+for PERF_TEST_APP in $PERF_TEST_APPS; do
+   # Results directory
+   RESULTS_DIR="$APPS_DIR/$PERF_TEST_APP/results"
+   if [ -d "$RESULTS_DIR" ]; then
+      echo "Cleaning $PERF_TEST_APP/results/..."
+      rm "$RESULTS_DIR/"*  > /dev/null 2>&1
+   fi 
+done
+
+echo "$EXECUTABLE complete."
