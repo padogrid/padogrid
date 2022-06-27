@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.Random;
 
 import org.apache.geode.addon.test.perf.TransactionTest.TestCaseEnum;
 import org.apache.geode.addon.test.perf.data.Blob;
@@ -386,7 +387,7 @@ public class DataIngestionTest implements Constants
 		@Override
 		public void __run()
 		{
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int threadStopIndex = threadStartIndex + entryCountPerThread - 1;
 			int keyIndex = threadStartIndex;
 			long effectiveDateTime = baseDate.getTime();
@@ -421,6 +422,16 @@ public class DataIngestionTest implements Constants
 			elapsedTimeInMsec = stopTime - startTime;
 		}
 	}
+	
+	private byte[] createBlobData(int payloadSize) {
+		Random random = new Random();
+		byte data[] = new byte[payloadSize];
+		for (int i = 0; i < payloadSize; i++) {
+			data[i] = (byte)random.nextInt();
+		}
+		return data;
+	}
+	
 	class EligibilityPutAllThread extends AbstractThread
 	{
 		public EligibilityPutAllThread(int threadNum, RegionNameEnum mapNameEnum, int batchSize, int threadStartIndex,
@@ -433,7 +444,7 @@ public class DataIngestionTest implements Constants
 		public void __run()
 		{
 			HashMap map = new HashMap();
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int outerLoopCount = entryCountPerThread / batchSize;
 			int remainingCount = entryCountPerThread % batchSize;
 			int threadStopIndex = threadStartIndex + outerLoopCount - 1;
@@ -502,7 +513,7 @@ public class DataIngestionTest implements Constants
 		@Override
 		public void __run()
 		{
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int threadStopIndex = threadStartIndex + entryCountPerThread - 1;
 			int keyIndex = threadStartIndex;
 			
@@ -533,7 +544,7 @@ public class DataIngestionTest implements Constants
 		public void __run()
 		{
 			HashMap map = new HashMap();
-			byte data[] = new byte[payloadSize];
+			byte data[] = createBlobData(payloadSize);
 			int outerLoopCount = entryCountPerThread / batchSize;
 			int remainingCount = entryCountPerThread % batchSize;
 			int threadStopIndex = threadStartIndex + outerLoopCount - 1;

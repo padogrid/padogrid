@@ -993,7 +993,7 @@ public class GroupTest implements Constants
 								}
 							} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 								throw new RuntimeException(
-										"Getter method invokation failed. GroupDbTestThread Aborted.", e);
+										"Getter method invocation failed. GroupDbTestThread Aborted.", e);
 							}
 						}
 						if (map.size() < keys.size()) {

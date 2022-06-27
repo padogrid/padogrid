@@ -44,4 +44,4 @@ fi
 . $APP_DIR/bin_sh/setenv.sh
 
 # Log properties for log4j2. The log file name is set in executable scripts.
-JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=$LOG_CONFIG_FILE"
+JAVA_OPTS="$JAVA_OPTS --J=-Dlog4j.configurationFile=$LOG_CONFIG_FILE"

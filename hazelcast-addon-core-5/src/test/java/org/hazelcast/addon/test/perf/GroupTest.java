@@ -975,7 +975,7 @@ public class GroupTest implements Constants
 						Iterator<?> iterator = keys.iterator();
 						int size = keys.size();
 						int k = 1;
-						Map<Object, Object> map = new HashMap();
+						Map<Object, Object> map = new HashMap<Object, Object>();
 						while (k <= size) {
 							In<String> inClause = cb.in(root.get(pk));
 							while (iterator.hasNext() && k % operation.batchSize > 0) {
@@ -999,7 +999,7 @@ public class GroupTest implements Constants
 								}
 							} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 								throw new RuntimeException(
-										"Getter method invokation failed. GroupDbTestThread Aborted.", e);
+										"Getter method invocation failed. GroupDbTestThread Aborted.", e);
 							}
 						}
 						if (map.size() < keys.size()) {
