@@ -591,14 +591,15 @@ fi
 # We need to change that accordingly here.
 # Also, set PRODUCT to "geode" to override "gemfire". This is required due to both products
 # sharing the same resources under the name "geode".
+# 6/29/22 - CLUSTER_TYPE setting done here is removed. This may affect older versions of PadoGrid.
 export PRODUCT="geode"
-if [ "$CLUSTER_TYPE_SPECIFIED" == "false" ]; then
-   if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
-      export CLUSTER_TYPE="gemfire"
-   elif [[ "$PRODUCT_HOME" == *"geode"* ]]; then
-      export CLUSTER_TYPE="geode"
-   fi
-fi
+#if [ "$CLUSTER_TYPE_SPECIFIED" == "false" ]; then
+#   if [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
+#      export CLUSTER_TYPE="gemfire"
+#   elif [[ "$PRODUCT_HOME" == *"geode"* ]]; then
+#      export CLUSTER_TYPE="geode"
+#   fi
+#fi
 if [ "$CLUSTER_TYPE" == "gemfire" ]; then
    IS_GEODE_ENTERPRISE=true
    export PRODUCT_HOME="$GEMFIRE_HOME"
