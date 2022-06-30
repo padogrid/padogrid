@@ -119,6 +119,7 @@ GITHOST=github
 BRANCH=
 CONNECT=https
 LIST=false
+NO_COLOR=false
 HEADER=false
 CATALOG=false
 STANDALONE=false
@@ -316,6 +317,8 @@ do
       CHECKOUT_SPECIFIED=true
    elif [ "$i" == "-list" ]; then
       LIST=true
+   elif [ "$i" == "-no-color" ]; then
+      NO_COLOR=true
    elif [ "$i" == "-header" ]; then
       HEADER=true
    elif [ "$i" == "-catalog" ]; then

@@ -137,6 +137,13 @@ if [ "$1" == "" ]; then
    LIST="true"
 fi
 
+BUNDLE_FILE_PATH=${@: -1}
+
+# A workaround to .argenv.sh parser limiation
+if [ "$BUNDLE_FILE_PATH" == "-all" ]; then
+   ALL="true"
+fi
+
 # Source in user defined repo information
 SETENV_FILE="$HOME/.padogrid/setenv.sh"
 if [ -f "$SETENV_FILE" ]; then
@@ -211,7 +218,6 @@ if [ "$USER" != "" ]; then
    LIST="true"
 fi
 
-BUNDLE_FILE_PATH=${@: -1}
 ARG1=${@: -2}
 if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-product "* ]] || [[ "$ARG1" == "-user "* ]]; then
    # If bundle file not specified... 
@@ -253,7 +259,11 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
             done
             for BUNDLE_NAME in $BUNDLE_LIST; do
                let BUNDLE_INDEX=BUNDLE_INDEX+1
-               echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+               if [ "$NO_COLOR" == "true" ]; then
+                  echo -e "[$BUNDLE_INDEX] ${BUNDLE_NAME}"
+               else
+                  echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+               fi
                echo -e "       (${CUrl}$GITHUB_USER_HOME/$BUNDLE_NAME${CNone})"
                if [ "$HEADER" == "true" ]; then
                   RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README_HEADER.md"
@@ -285,7 +295,11 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
          done
          for BUNDLE_NAME in $BUNDLE_LIST; do
             let BUNDLE_INDEX=BUNDLE_INDEX+1
-            echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+            if [ "$NO_COLOR" == "true" ]; then
+               echo -e "[$BUNDLE_INDEX] ${BUNDLE_NAME}"
+            else
+               echo -e "[$BUNDLE_INDEX] ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+            fi
             echo -e "       (${CUrl}$GITHUB_USER_HOME/$BUNDLE_NAME${CNone})"
             if [ "$HEADER" == "true" ]; then
                HEADER_CONTENT_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_NAME}/contents/README_HEADER.md"

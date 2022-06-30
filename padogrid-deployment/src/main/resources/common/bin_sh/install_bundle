@@ -119,6 +119,11 @@ OPTIONS
              name. The new workspace it creates clones the same configuration as the current workspace. 
              If the '-download' option is also specified, then it checks out the bundle from the repo.
 
+   -all
+             Downloads all bundles as workspace bundles. This option should be used in a new empty RWE
+             to avoid workspace conflicts. It only applies to '-checkout' and '-download -workspace'.
+             'workspace_name' and 'bundle_file_path' are ignored. See examples below.
+
    -quiet
              Quiet mode. Supresses the interactive prompt.
 
@@ -142,8 +147,14 @@ EXAMPLES
    To install a remote bundle as a workspace:
       $EXECUTABLE -download -workspace bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
 
+   To install remote bundles as workspaces:
+      $EXECUTABLE -all -download -workspace
+
    To check out a remote bundle as a workspace:
       $EXECUTABLE -checkout bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
+
+   To check out all bundles as workspaces:
+      $EXECUTABLE -all -checkout
 
    To install a downloaded zip file.
       $EXECUTABLE bundle-hazelcast-4n5-cluster-session-master.zip
@@ -175,6 +186,44 @@ if [ "$LIST" == "true" ]; then
 fi
 
 BUNDLE_FILE_PATH=${@: -1}
+
+# A workaround to .argenv.sh parser limiation
+if [ "$BUNDLE_FILE_PATH" == "-all" ]; then
+   ALL="true"
+fi
+
+OPTIONS="$@" 
+if [ "$ALL" == "true" ]; then
+  if [ "$CHECKOUT_SPECIFIED" == "false" ]; then
+     if [ "$DOWNLOAD" == "false" ] || [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+        echo -e "${CLightRed}ERROR:${CNone} '-all' requires '-checkout' or '-download -workspace'. Command aborted."
+        exit 1
+     fi
+  fi
+  echo ""
+  echo "Installing all bundles..."
+  ALL_BUNDLES="$(show_bundle -no-color $@ | grep "^\[" | sed 's/.*\]//')"
+  OPTIONS="$@"
+  # Remove '-all' from the argument list
+  OPTIONS=$(trimString "$(echo $OPTIONS | sed 's/-all//g')")
+
+  # Recursively execute this command per bundle
+  for BUNDLE_NAME in $ALL_BUNDLES; do
+     echo "--------------------------------------------------------------------------"
+     echo -e install_bundle $OPTIONS "${CBrownOrange}${BUNDLE_NAME}${CNone}"
+     install_bundle "$OPTIONS" "$BUNDLE_NAME"
+     echo "--------------------------------------------------------------------------"
+  done
+  echo ""
+  echo "Please check ERROR messages. Some of the bundles may have not been installed"
+  echo "due to product version discrepencies. To install them, you need to first"
+  echo "install the correct product versions." 
+  echo ""
+  echo "Bundle installations complete."
+  echo ""
+  exit
+fi
+
 DOWNLOADED_BUNDLE_FILE_SPECIFIED=false
 if [[ $BUNDLE_FILE_PATH == *.zip ]]; then
    DOWNLOADED_BUNDLE_FILE_SPECIFIED=true
@@ -428,16 +477,17 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          file_name="`basename $BUNDLE_FILE_PATH $0`"
          keyvalue=$(getProductKeyValue "$file_name")
       
-         if [[ "$keyvalue" != "none"* ]] \
+         if [[ "$keyvalue" != "coherence"* ]] \
+            && [[ "$keyvalue" != "gemfire"* ]] \
+            && [[ "$keyvalue" != "geode"* ]] \
+            && [[ "$keyvalue" != "hadoop"* ]] \
             && [[ "$keyvalue" != "hazelcast"* ]] \
             && [[ "$keyvalue" != "jet"* ]] \
-            && [[ "$keyvalue" != "geode"* ]] \
-            && [[ "$keyvalue" != "gemfire"* ]] \
-            && [[ "$keyvalue" != "snappydata"* ]] \
-            && [[ "$keyvalue" != "spark"* ]] \
             && [[ "$keyvalue" != "kafka"* ]] \
-            && [[ "$keyvalue" != "hadoop"* ]] \
-            && [[ "$keyvalue" != "coherence"* ]]; then
+            && [[ "$keyvalue" != "none"* ]] \
+            && [[ "$keyvalue" != "redis"* ]] \
+            && [[ "$keyvalue" != "snappydata"* ]] \
+            && [[ "$keyvalue" != "spark"* ]]; then
             echo -e >&2 "${CLightRed}ERROR:${CNone} Unsupported bundle product name [$keyvalue]. Command aborted."
             exit 1
          fi
