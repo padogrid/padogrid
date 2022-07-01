@@ -15,9 +15,11 @@ https://github.com/padogrid
   ```bash
   # To download and install all bundles (git disabled)
   install_bundle -all -download -workspace
+  install_bundle -all -download -workspace -force
 
   # To checkout and install all bundles (git enabled)
   install_bundle -all -checkout
+  install_bundle -all -checkout -force
   ```
 
 ---
