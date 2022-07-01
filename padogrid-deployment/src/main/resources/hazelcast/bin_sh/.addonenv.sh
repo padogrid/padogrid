@@ -733,8 +733,8 @@ PRODUCT_MAJOR_VERSION=$HAZELCAST_MAJOR_VERSION_NUMBER
 #
 # PADOGRID_VERSION: Determine the padogrid version
 #
-for file in $BASE_DIR/lib/v4/hazelcast-addon-core-4-*; do
-   file=${file#*hazelcast\-addon\-core\-4\-}
+for file in $BASE_DIR/../lib/padogrid-common-*; do
+   file=${file#*padogrid\-common\-}
    PADOGRID_VERSION=${file%.jar}
 done
 

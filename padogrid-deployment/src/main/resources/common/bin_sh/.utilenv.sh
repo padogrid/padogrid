@@ -2993,10 +2993,11 @@ cat <<EOF
 |   ___/  /  /_\  \   |  |  |  |  |  |  | |  | |_ | |      /     |  | |  |  |  |
 |  |     /  _____  \  |  '--'  |  '--'  | |  |__| | |  |\  \----.|  | |  '--'  |
 | _|    /__/     \__\ |_______/ \______/   \______| | _| '._____||__| |_______/ 
-Copyright 2020-2021 Netcrest Technologies, LLC. All rights reserved.
-v$PADOGRID_VERSION
+Copyright 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 EOF
-echo -e "Manual: ${CUrl}https://github.com/padogrid/padogrid/wiki${CNone}"
+echo -e "Version: v$PADOGRID_VERSION"
+echo -e " Manual: ${CUrl}https://github.com/padogrid/padogrid/wiki${CNone}"
+echo -e "Bundles: ${CUrl}https://github.com/padogrid/catalog-bundles/blob/master/all-catalog.md${CNone}"
 echo ""
 
       RWE_HOME="$(dirname "$PADOGRID_WORKSPACES_HOME")"

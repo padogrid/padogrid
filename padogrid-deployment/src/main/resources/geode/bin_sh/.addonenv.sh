@@ -660,8 +660,8 @@ fi
 #
 # PADOGRID_VERSION: Determine the padogrid version
 #
-for file in $BASE_DIR/lib/geode-addon-core-*; do
-   file=${file#*geode\-addon\-core\-}
+for file in $BASE_DIR/../lib/padogrid-common-*; do
+   file=${file#*padogrid\-common\-}
    PADOGRID_VERSION=${file%.jar}
 done
 
