@@ -137,12 +137,7 @@ if [ "$1" == "" ]; then
    LIST="true"
 fi
 
-BUNDLE_FILE_PATH=${@: -1}
-
-# A workaround to .argenv.sh parser limiation
-if [ "$BUNDLE_FILE_PATH" == "-all" ]; then
-   ALL="true"
-fi
+BUNDLE_FILE_PATH="$LAST_ARG"
 
 # Source in user defined repo information
 SETENV_FILE="$HOME/.padogrid/setenv.sh"
@@ -219,13 +214,14 @@ if [ "$USER" != "" ]; then
 fi
 
 ARG1=${@: -2}
-if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-product "* ]] || [[ "$ARG1" == "-user "* ]]; then
+if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-product "* ]] || [[ "$ARG1" == "-user "* ]] || [[ "$ARG1" == "-githost "* ]] || [[ "$ARG1" == "-connect "* ]]; then
    # If bundle file not specified... 
    echo ""
    echo "Remote Bundle List"
    echo "------------------"
    echo ""
 
+   if [ "$GITHOST" == "github" ]; then
    # GitHub
    for GITHUB_USER in $GITHUB_USERS; do
       GITHUB_USER_HOME="$GITHUB_BASE_URL/$GITHUB_USER"
@@ -276,7 +272,9 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
       echo "---------------------------------------------------------------------------"
       echo ""
    done
+   fi
    
+   if [ "$GITHOST" == "gitea" ]; then
    # Gitea
    USER_REPOS_URL="$GITEA_HTTPS_URL/api/v1/user/repos"
    REPOS_URL="$GITEA_HTTPS_URL/api/v1/repos"
@@ -312,6 +310,7 @@ if [ "$1" == "" ] || [[ "$BUNDLE_FILE_PATH" == "-"* ]] || [[ "$ARG1" == "-produc
       echo "---------------------------------------------------------------------------"
       echo ""
    done
+   fi
 
    if [ "$HEADER" == "false" ]; then
       echo "Bundle Commands"
@@ -333,7 +332,7 @@ else
    # If bundle file specified... 
 
    if [[ "$BUNDLE_FILE_PATH" != "bundle-"** ]]; then
-      echo >&2 "ERROR: Invalid bundle name. Command aborted."
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid bundle name. Command aborted."
       exit 1
    fi
 
@@ -347,7 +346,7 @@ else
       __PRODUCT="hazelcast"
    fi
    if [[ "$BUNDLE_PRODUCT_LIST" != *"$__PRODUCT"* ]]; then
-      echo >&2 "ERROR: Invalid bundle name. Command aborted."
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid bundle name. Command aborted."
       exit 1
    fi
 
@@ -378,7 +377,7 @@ else
       done
    fi
    if [ "$BUNDLE_FOUND" != "true" ]; then
-      echo >&2 "ERROR: Specified bundle does not exist in the repo. Command aborted."
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Specified bundle does not exist in the repo. Command aborted."
       exit 1
    fi
    

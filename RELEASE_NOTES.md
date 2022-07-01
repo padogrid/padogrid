@@ -5,10 +5,19 @@ https://github.com/padogrid
 
 ## Version 0.9.19-SNAPSHOT
 
-### Release Date: 06/29/22
+### Release Date: 07/01/22
 
 - Removed log4j settings from Geode locators as a workaround to Log4J NPE raised by Geode v1.15.0. Without this fix, locators will not start for Geode v1.15.0.
 - Fixed CLUSTER_TYPE incorrectly set for geode and gemfire. This fix effectively drops CLUSTER_TYPE support for older versions of PadoGrid.
+- Added the `-all` option to `install_bundle` for installing all online bundles with a single command.
+
+  ```bash
+  # To download and install all bundles (git disabled)
+  install_bundle -all -download -workspace
+
+  # To checkout and install all bundles (git enabled)
+  install_bundle -all -checkout
+  ```
 
 ---
 

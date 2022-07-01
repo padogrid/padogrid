@@ -35,6 +35,7 @@ OS_NAME=`echo "$OS_NAME"|awk '{print toupper($0)}'`
 #
 # Determine arguments
 #
+LAST_ARG=
 PRODUCT_ARG=
 ENV_ARG=
 RWE_ARG=
@@ -119,6 +120,7 @@ GITHOST=github
 BRANCH=
 CONNECT=https
 LIST=false
+LIST_SPECIFIED=false
 NO_COLOR=false
 HEADER=false
 CATALOG=false
@@ -126,6 +128,7 @@ STANDALONE=false
 TREE=false
 OVERWRITE=false
 ALL=false
+ALL_SPECIFIED=false
 OSS=false
 RHEL=false
 WAN=false
@@ -155,262 +158,275 @@ PREV=
 
 for i in "$@"
 do
-   if [ "$PREV" == "-product" ]; then
-      PRODUCT_ARG=$i
-      PRODUCT_HOME_ARG=$i
-   elif [ "$PREV" == "-product-cluster" ]; then
-      PRODUCT_CLUSTER_ARG=$i
-   elif [ "$PREV" == "-rwe" ]; then
-      RWE_ARG=$i
-   elif [ "$PREV" == "-env" ]; then
-      ENV_ARG=$i
-   elif [ "$PREV" == "-workspace" ]; then
-      WORKSPACE_ARG=$i
-   elif [ "$PREV" == "-checkout" ]; then
-      CHECKOUT_ARG=$i
-   elif [ "$PREV" == "-java" ]; then
-      JAVA_HOME_ARG=$i
-   elif [ "$PREV" == "-path" ]; then
-      PATH_ARG=$i
-   elif [ "$PREV" == "-jar" ]; then
-      JAR_ARG=$i
-   elif [ "$PREV" == "-classpath" ]; then
-      CLASSPATH_ARG=$i
-   elif [ "$PREV" == "-jet" ]; then
-      JET_ARG=$i
-   elif [ "$PREV" == "-name" ]; then
-      NAME_ARG=$i
-   elif [ "$PREV" == "-pod" ]; then
-      POD=$i
-   elif [ "$PREV" == "-port" ]; then
-      PORT_ARG=$i
-   elif [ "$PREV" == "-type" ]; then
-      POD_TYPE=$i
-      TYPE_ARG=$i
-   elif [ "$PREV" == "-refid" ]; then
-      REFID=$i
-   elif [ "$PREV" == "-primary" ]; then
-      PRIMARY=$i
-   elif [ "$PREV" == "-box" ]; then
-      BOX=$i
-   elif [ "$PREV" == "-octet" ]; then
-      OCTET=$i
-   elif [ "$PREV" == "-pm" ]; then
-      PM=$i
-   elif [ "$PREV" == "-nm" ]; then
-      NM=$i
-   elif [ "$PREV" == "-dir" ]; then
-      DIR=$i
-   elif [ "$PREV" == "-count" ]; then
-      COUNT=$i
-   elif [ "$PREV" == "-cluster" ]; then
-      CLUSTER=$i
-   elif [ "$PREV" == "-cluster-type" ]; then
-      CLUSTER_TYPE=$i
-      CLUSTER_TYPE_SPECIFIED="true"
-   elif [ "$PREV" == "-replicas" ]; then
-      REPLICAS=$i
-   elif [ "$PREV" == "-arg" ]; then
-      ARG_ARG=$i
-   elif [ "$PREV" == "-num" ]; then
-      MEMBER_NUM=$i
-   elif [ "$PREV" == "-password" ]; then
-      PASSWORD=$i
-   elif [ "$PREV" == "-k8s" ]; then
-      K8S=$i
-   elif [ "$PREV" == "-docker" ]; then
-      DOCKER=$i
-   elif [ "$PREV" == "-host" ]; then
-      HOST=$i
-   elif [ "$PREV" == "-group" ]; then
-      GROUP=$i
-   elif [ "$PREV" == "-clustergroup" ]; then
-      CLUSTER_GROUP=$i
-   elif [ "$PREV" == "-cpgroup" ]; then
-      CP_GROUP=$i
-   elif [ "$PREV" == "-uuid" ]; then
-      UUID=$i
-   elif [ "$PREV" == "-id" ]; then
-      ID=$i
-   elif [ "$PREV" == "-remote" ]; then
-      REMOTE=$i
-   elif [ "$PREV" == "-user" ]; then
-      USER=$i
-   elif [ "$PREV" == "-githost" ]; then
-      GITHOST=$i
-   elif [ "$PREV" == "-branch" ]; then
-      BRANCH=$i
-   elif [ "$PREV" == "-connect" ]; then
-      CONNECT=$i
-   elif [ "$PREV" == "-wan" ]; then
-      WAN_ARG=$i
-      WAN=true
-   elif [ "$PREV" == "-vm" ]; then
-      if [[ "$i" != "-"* ]]; then
-         VM_HOSTS_ARG=$i
+   if [[ "$i" != "-"* ]]; then
+      
+      # Options with previous value
+      if [ "$PREV" == "-product" ]; then
+         PRODUCT_ARG=$i
+         PRODUCT_HOME_ARG=$i
+      elif [ "$PREV" == "-product-cluster" ]; then
+         PRODUCT_CLUSTER_ARG=$i
+      elif [ "$PREV" == "-rwe" ]; then
+         RWE_ARG=$i
+      elif [ "$PREV" == "-env" ]; then
+         ENV_ARG=$i
+      elif [ "$PREV" == "-workspace" ]; then
+         WORKSPACE_ARG=$i
+         WORKSPACE_SPECIFIED=true
+      elif [ "$PREV" == "-checkout" ]; then
+         CHECKOUT_ARG=$i
+         CHECKOUT_SPECIFIED=true
+      elif [ "$PREV" == "-java" ]; then
+         JAVA_HOME_ARG=$i
+      elif [ "$PREV" == "-path" ]; then
+         PATH_ARG=$i
+      elif [ "$PREV" == "-jar" ]; then
+         JAR_ARG=$i
+      elif [ "$PREV" == "-classpath" ]; then
+         CLASSPATH_ARG=$i
+      elif [ "$PREV" == "-jet" ]; then
+         JET_ARG=$i
+      elif [ "$PREV" == "-name" ]; then
+         NAME_ARG=$i
+      elif [ "$PREV" == "-pod" ]; then
+         POD=$i
+      elif [ "$PREV" == "-port" ]; then
+         PORT_ARG=$i
+      elif [ "$PREV" == "-type" ]; then
+         POD_TYPE=$i
+         TYPE_ARG=$i
+      elif [ "$PREV" == "-refid" ]; then
+         REFID=$i
+      elif [ "$PREV" == "-primary" ]; then
+         PRIMARY=$i
+      elif [ "$PREV" == "-box" ]; then
+         BOX=$i
+      elif [ "$PREV" == "-octet" ]; then
+         OCTET=$i
+      elif [ "$PREV" == "-pm" ]; then
+         PM=$i
+      elif [ "$PREV" == "-nm" ]; then
+         NM=$i
+      elif [ "$PREV" == "-dir" ]; then
+         DIR=$i
+      elif [ "$PREV" == "-count" ]; then
+         COUNT=$i
+      elif [ "$PREV" == "-cluster" ]; then
+         CLUSTER=$i
+      elif [ "$PREV" == "-cluster-type" ]; then
+         CLUSTER_TYPE=$i
+         CLUSTER_TYPE_SPECIFIED="true"
+      elif [ "$PREV" == "-replicas" ]; then
+         REPLICAS=$i
+      elif [ "$PREV" == "-arg" ]; then
+         ARG_ARG=$i
+      elif [ "$PREV" == "-num" ]; then
+         MEMBER_NUM=$i
+      elif [ "$PREV" == "-password" ]; then
+         PASSWORD=$i
+      elif [ "$PREV" == "-k8s" ]; then
+         K8S=$i
+      elif [ "$PREV" == "-docker" ]; then
+         DOCKER=$i
+      elif [ "$PREV" == "-host" ]; then
+         HOST=$i
+      elif [ "$PREV" == "-group" ]; then
+         GROUP=$i
+      elif [ "$PREV" == "-clustergroup" ]; then
+         CLUSTER_GROUP=$i
+      elif [ "$PREV" == "-cpgroup" ]; then
+         CP_GROUP=$i
+      elif [ "$PREV" == "-uuid" ]; then
+         UUID=$i
+      elif [ "$PREV" == "-id" ]; then
+         ID=$i
+      elif [ "$PREV" == "-remote" ]; then
+         REMOTE=$i
+      elif [ "$PREV" == "-user" ]; then
+         USER=$i
+      elif [ "$PREV" == "-githost" ]; then
+         GITHOST=$i
+      elif [ "$PREV" == "-branch" ]; then
+         BRANCH=$i
+      elif [ "$PREV" == "-connect" ]; then
+         CONNECT=$i
+      elif [ "$PREV" == "-wan" ]; then
+         WAN_ARG=$i
+         WAN=true
+      elif [ "$PREV" == "-force" ]; then
+         FORCE_SPECIFIED=true
+      elif [ "$PREV" == "-vm" ]; then
+         if [[ "$i" != "-"* ]]; then
+            VM_HOSTS_ARG=$i
+         fi
+      elif [ "$PREV" == "-vm-java" ]; then
+         VM_JAVA_HOME_ARG=$i
+      elif [ "$PREV" == "-vm-product" ]; then
+         VM_PRODUCT_HOME_ARG=$i
+      elif [ "$PREV" == "-vm-padogrid" ]; then
+         VM_PADOGRID_HOME_ARG=$i
+      elif [ "$PREV" == "-vm-workspaces" ]; then
+         VM_PADOGRID_WORKSPACES_HOME_ARG=$i
+      elif [ "$PREV" == "-vm-user" ]; then
+         VM_USER_ARG=$i
+      elif [ "$PREV" == "-vm-key" ]; then
+         VM_PRIVATE_KEY_FILE_ARG=$i
+      elif [ "$PREV" == "-key" ]; then
+         KEY=$i
+      elif [ "$PREV" == "-app" ]; then
+         APP=$i
+      elif [ "$PREV" == "-grid" ]; then
+         GRID=$i
+      elif [ "$PREV" == "-site" ]; then
+         SITE=$i
+      elif [ "$PREV" == "-locator" ]; then
+         LOCATOR=$i
+      elif [ "$PREV" == "-padoweb" ]; then
+         PADOWEB=$i
+      elif [ "$PREV" == "-mc" ]; then
+         MC=$i
+      elif [ "$PREV" == "-member" ]; then
+         MEMBER=$i
+      elif [ "$PREV" == "-log" ]; then
+         LOG=$i
+      elif [ "$PREV" == "-begin" ]; then
+         BEGIN_NUM=$i
+      elif [ "$PREV" == "-end" ]; then
+         END_NUM=$i
+      elif [ "$PREV" == "-dir" ]; then
+         DIR=$i
+      elif [ "$PREV" == "-prefix" ]; then
+         PREFIX=$i
+      elif [ "$PREV" == "-folder" ]; then
+         FOLDER=$i
+      elif [ "$PREV" == "-datasource" ]; then
+         DATASOURCE=$i
+      elif [ "$PREV" == "-version" ]; then
+         VERSION_ARG=$i
       fi
-   elif [ "$PREV" == "-vm-java" ]; then
-      VM_JAVA_HOME_ARG=$i
-   elif [ "$PREV" == "-vm-product" ]; then
-      VM_PRODUCT_HOME_ARG=$i
-   elif [ "$PREV" == "-vm-padogrid" ]; then
-      VM_PADOGRID_HOME_ARG=$i
-   elif [ "$PREV" == "-vm-workspaces" ]; then
-      VM_PADOGRID_WORKSPACES_HOME_ARG=$i
-   elif [ "$PREV" == "-vm-user" ]; then
-      VM_USER_ARG=$i
-   elif [ "$PREV" == "-vm-key" ]; then
-      VM_PRIVATE_KEY_FILE_ARG=$i
-   elif [ "$PREV" == "-key" ]; then
-      KEY=$i
-   elif [ "$PREV" == "-app" ]; then
-      APP=$i
-   elif [ "$PREV" == "-grid" ]; then
-      GRID=$i
-   elif [ "$PREV" == "-site" ]; then
-      SITE=$i
-   elif [ "$PREV" == "-locator" ]; then
-      LOCATOR=$i
-   elif [ "$PREV" == "-padoweb" ]; then
-      PADOWEB=$i
-   elif [ "$PREV" == "-mc" ]; then
-      MC=$i
-   elif [ "$PREV" == "-member" ]; then
-      MEMBER=$i
-   elif [ "$PREV" == "-log" ]; then
-      LOG=$i
-   elif [ "$PREV" == "-begin" ]; then
-      BEGIN_NUM=$i
-   elif [ "$PREV" == "-end" ]; then
-      END_NUM=$i
-   elif [ "$PREV" == "-dir" ]; then
-      DIR=$i
-   elif [ "$PREV" == "-prefix" ]; then
-      PREFIX=$i
-   elif [ "$PREV" == "-folder" ]; then
-      FOLDER=$i
-   elif [ "$PREV" == "-datasource" ]; then
-      DATASOURCE=$i
-   elif [ "$PREV" == "-version" ]; then
-      VERSION_ARG=$i
 
-# options with no value
-   elif [ "$i" == "-init" ]; then
-      INIT_SPECIFIED=true
-   elif [ "$i" == "-version" ]; then
-      VERSION_SPECIFIED=true
-   elif [ "$i" == "-force" ]; then
-      FORCE_SPECIFIED=true
-   elif [ "$i" == "-man" ]; then
-      MAN_SPECIFIED=true
-   elif [ "$i" == "-fg" ]; then
-      FG_SPECIFIED=true
-   elif [ "$i" == "-simulate" ]; then
-      SIMULATE=true
-   elif [ "$i" == "-preview" ]; then
-      PREVIEW=true
-   elif [ "$i" == "-download" ]; then
-      DOWNLOAD=true
-   elif [ "$i" == "-workspace" ]; then
-      WORKSPACE_SPECIFIED=true
-   elif [ "$i" == "-checkout" ]; then
-      CHECKOUT_SPECIFIED=true
-   elif [ "$i" == "-list" ]; then
-      LIST=true
-   elif [ "$i" == "-no-color" ]; then
-      NO_COLOR=true
-   elif [ "$i" == "-header" ]; then
-      HEADER=true
-   elif [ "$i" == "-catalog" ]; then
-      CATALOG=true
-   elif [ "$i" == "-console" ]; then
-      CONSOLE=true
-   elif [ "$i" == "-create-script" ]; then
-      CREATE_SCRIPT=true
-   elif [ "$i" == "-full" ]; then
-      FULL=true
-   elif [ "$i" == "-start" ]; then
-      START=true
-   elif [ "$i" == "-?" ]; then
-      HELP=true
-   elif [ "$i" == "-options" ]; then
-      OPTIONS=true
-   elif [ "$i" == "-all" ]; then
-      ALL=true
-   elif [ "$i" == "-oss" ]; then
-      OSS=true
-   elif [ "$i" == "-rhel" ]; then
-      RHEL=true
-   elif [ "$i" == "-wan" ]; then
-      WAN=true
-   elif [ "$i" == "-kill" ]; then
-      KILL=true
-   elif [ "$i" == "-debug" ]; then
-      DEBUG=true
-   elif [ "$i" == "-pid" ]; then
-      PID=true
-   elif [ "$i" == "-pidonly" ]; then
-      PIDONLY=true
-   elif [ "$i" == "-clean" ]; then
-      CLEAN=true
-   elif [ "$i" == "-local" ]; then
-      LOCAL=true
-   elif [ "$i" == "-quiet" ]; then
-      QUIET=true
-   elif [ "$i" == "-short" ]; then
-      SHORT=true
-   elif [ "$i" == "-long" ]; then
-      LONG=true
-   elif [ "$i" == "-num" ]; then
-      MEMBER_NUM_SPECIFIED=true
-   elif [ "$i" == "-pod" ]; then
-      POD_SPECIFIED=true
-   elif [ "$i" == "-avahi" ]; then
-      AVAHI_SPECIFIED=true
-   elif [ "$i" == "-cluster" ]; then
-      CLUSTER_SPECIFIED=true
-   elif [ "$i" == "-k8s" ]; then
-      K8S_SPECIFIED=true
-   elif [ "$i" == "-docker" ]; then
-      DOCKER_SPECIFIED=true
-   elif [ "$i" == "-app" ]; then
-      APP_SPECIFIED=true
-   elif [ "$i" == "-host" ]; then
-      HOST_SPECIFIED="true"      
-   elif [ "$i" == "-grid" ]; then
-      GRID_SPECIFIED=true
-   elif [ "$i" == "-site" ]; then
-      SITE_SPECIFIED=true
-   elif [ "$i" == "-padoweb" ]; then
-      PADOWEB_SPECIFIED=true
-   elif [ "$i" == "-mc" ]; then
-      MC_SPECIFIED=true
-   elif [ "$i" == "-member" ]; then
-      MEMBER_SPECIFIED=true
-   elif [ "$i" == "-locator" ]; then
-      LOCATOR_SPECIFIED=true
-   elif [ "$i" == "-vm" ]; then
-      VM_SPECIFIED=true
-   elif [ "$i" == "-rwe" ]; then
-      RWE_SPECIFIED=true
-   elif [ "$i" == "-mirror" ]; then
-      MIRROR_SPECIFIED=true
-   elif [ "$i" == "-remote" ]; then
-      REMOTE_SPECIFIED=true
-   elif [ "$i" == "-product-cluster" ]; then
-      PRODUCT_CLUSTER_SPECIFIED=true
-   elif [ "$i" == "-standalone" ]; then
-      STANDALONE=true
-   elif [ "$i" == "-tree" ]; then
-      TREE=true
-   elif [ "$i" == "-overwrite" ]; then
-      OVERWRITE=true
-   # this must be the last check
-   elif [ "$PREV" == "-gateway" ]; then
-      GATEWAY_XML_FILE=$i
+   else
+
+      # All options
+      if [ "$i" == "-init" ]; then
+         INIT_SPECIFIED=true
+      elif [ "$i" == "-version" ]; then
+         VERSION_SPECIFIED=true
+      elif [ "$i" == "-force" ]; then
+         FORCE_SPECIFIED=true
+      elif [ "$i" == "-man" ]; then
+         MAN_SPECIFIED=true
+      elif [ "$i" == "-fg" ]; then
+         FG_SPECIFIED=true
+      elif [ "$i" == "-simulate" ]; then
+         SIMULATE=true
+      elif [ "$i" == "-preview" ]; then
+         PREVIEW=true
+      elif [ "$i" == "-download" ]; then
+         DOWNLOAD=true
+      elif [ "$i" == "-workspace" ]; then
+         WORKSPACE_SPECIFIED=true
+      elif [ "$i" == "-checkout" ]; then
+         CHECKOUT_SPECIFIED=true
+      elif [ "$i" == "-list" ]; then
+         LIST=true
+         LIST_SPECIFIED=true
+      elif [ "$i" == "-no-color" ]; then
+         NO_COLOR=true
+      elif [ "$i" == "-header" ]; then
+         HEADER=true
+      elif [ "$i" == "-catalog" ]; then
+         CATALOG=true
+      elif [ "$i" == "-console" ]; then
+         CONSOLE=true
+      elif [ "$i" == "-create-script" ]; then
+         CREATE_SCRIPT=true
+      elif [ "$i" == "-full" ]; then
+         FULL=true
+      elif [ "$i" == "-start" ]; then
+         START=true
+      elif [ "$i" == "-?" ]; then
+         HELP=true
+      elif [ "$i" == "-options" ]; then
+         OPTIONS=true
+      elif [ "$i" == "-all" ]; then
+         ALL=true
+         ALL_SPECIFIED=true
+      elif [ "$i" == "-oss" ]; then
+         OSS=true
+      elif [ "$i" == "-rhel" ]; then
+         RHEL=true
+      elif [ "$i" == "-wan" ]; then
+         WAN=true
+      elif [ "$i" == "-kill" ]; then
+         KILL=true
+      elif [ "$i" == "-debug" ]; then
+         DEBUG=true
+      elif [ "$i" == "-pid" ]; then
+         PID=true
+      elif [ "$i" == "-pidonly" ]; then
+         PIDONLY=true
+      elif [ "$i" == "-clean" ]; then
+         CLEAN=true
+      elif [ "$i" == "-local" ]; then
+         LOCAL=true
+      elif [ "$i" == "-quiet" ]; then
+         QUIET=true
+      elif [ "$i" == "-short" ]; then
+         SHORT=true
+      elif [ "$i" == "-long" ]; then
+         LONG=true
+      elif [ "$i" == "-num" ]; then
+         MEMBER_NUM_SPECIFIED=true
+      elif [ "$i" == "-pod" ]; then
+         POD_SPECIFIED=true
+      elif [ "$i" == "-avahi" ]; then
+         AVAHI_SPECIFIED=true
+      elif [ "$i" == "-cluster" ]; then
+         CLUSTER_SPECIFIED=true
+      elif [ "$i" == "-k8s" ]; then
+         K8S_SPECIFIED=true
+      elif [ "$i" == "-docker" ]; then
+         DOCKER_SPECIFIED=true
+      elif [ "$i" == "-app" ]; then
+         APP_SPECIFIED=true
+      elif [ "$i" == "-host" ]; then
+         HOST_SPECIFIED="true"      
+      elif [ "$i" == "-grid" ]; then
+         GRID_SPECIFIED=true
+      elif [ "$i" == "-site" ]; then
+         SITE_SPECIFIED=true
+      elif [ "$i" == "-padoweb" ]; then
+         PADOWEB_SPECIFIED=true
+      elif [ "$i" == "-mc" ]; then
+         MC_SPECIFIED=true
+      elif [ "$i" == "-member" ]; then
+         MEMBER_SPECIFIED=true
+      elif [ "$i" == "-locator" ]; then
+         LOCATOR_SPECIFIED=true
+      elif [ "$i" == "-vm" ]; then
+         VM_SPECIFIED=true
+      elif [ "$i" == "-rwe" ]; then
+         RWE_SPECIFIED=true
+      elif [ "$i" == "-mirror" ]; then
+         MIRROR_SPECIFIED=true
+      elif [ "$i" == "-remote" ]; then
+         REMOTE_SPECIFIED=true
+      elif [ "$i" == "-product-cluster" ]; then
+         PRODUCT_CLUSTER_SPECIFIED=true
+      elif [ "$i" == "-standalone" ]; then
+         STANDALONE=true
+      elif [ "$i" == "-tree" ]; then
+         TREE=true
+      elif [ "$i" == "-overwrite" ]; then
+         OVERWRITE=true
+      fi
    fi
    PREV=$i
+
 done
+
+LAST_ARG=${@: -1}
 
 # Set MEMBER_NUM_NO_LEADING_ZERO
 MEMBER_NUM_NO_LEADING_ZERO=$MEMBER_NUM

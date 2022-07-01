@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -connect -preview -download -checkout -workspace -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -checkout -workspace -force -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -53,7 +53,7 @@ SYNOPSIS
                   [-connect https | ssh]
                   [-checkout default | workspace_name]
                   [-workspace default | workspace_name]
-                  [-preview] [-download]
+                  [-preview] [-download] [-force]
                   [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
@@ -120,9 +120,16 @@ OPTIONS
              If the '-download' option is also specified, then it checks out the bundle from the repo.
 
    -all
-             Downloads all bundles as workspace bundles. This option should be used in a new empty RWE
+             Installs all bundles as workspace bundles. This option should be used in a new empty RWE
              to avoid workspace conflicts. It only applies to '-checkout' and '-download -workspace'.
              'workspace_name' and 'bundle_file_path' are ignored. See examples below.
+
+   -force
+             If specified, then it overrides the product version check step and installs the 
+             specified bundle. Normally, '$EXECUTABLE' aborts if the current workspace is
+             is not configured with the required product version by the bundle. This option
+             is useful if you are only interested in viewing the bundle contents. A required
+             product version can be installed later as needed to run the bundle.
 
    -quiet
              Quiet mode. Supresses the interactive prompt.
@@ -185,23 +192,48 @@ if [ "$LIST" == "true" ]; then
    exit
 fi
 
-BUNDLE_FILE_PATH=${@: -1}
+BUNDLE_FILE_PATH="$LAST_ARG"
 
 # A workaround to .argenv.sh parser limiation
-if [ "$BUNDLE_FILE_PATH" == "-all" ]; then
-   ALL="true"
-fi
+#if [ "$BUNDLE_FILE_PATH" == "-all" ]; then
+#   ALL_SPECIFIED="true"
+#fi
+#if [ "$BUNDLE_FILE_PATH" == "-checkout" ]; then
+#   CHECKOUT_SPECIFIED="true"
+#fi
+#if [ "$BUNDLE_FILE_PATH" == "-workspace" ]; then
+#   WORKSPACE_SPECIFIED="true"
+#fi
 
+#echo debug: BUNDLE_FILE_PATH=$BUNDLE_FILE_PATH
+#echo dbug: ALL_SPECIFIED=$ALL_SPECIFIED
+#echo dbug: CHECKOUT_SPECIFIED=$CHECKOUT_SPECIFIED
+#echo dbug: DOWNLOAD=$DOWNLOAD
+#echo dbug: WORKSPACE_SPECIFIED=$WORKSPACE_SPECIFIED
+#echo dbug: FORCE_SPECIFIED=$FORCE_SPECIFIED
+
+OPTIONS_BY=""
 OPTIONS="$@" 
-if [ "$ALL" == "true" ]; then
-  if [ "$CHECKOUT_SPECIFIED" == "false" ]; then
-     if [ "$DOWNLOAD" == "false" ] || [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+if [ "$ALL_SPECIFIED" == "true" ]; then
+  if [[ "$BUNDLE_FILE_PATH" != "-"* ]]; then
+     echo -e "${CLightRed}ERROR:${CNone} Invalid options. Bundle name not allowed with '-all'. Command aborted."
+     exit 1
+  fi
+  if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
+     OPTIONS_BY="-checkout"
+  else
+     if [ "$DOWNLOAD" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+        OPTIONS_BY="-download -workspace"
+     else
         echo -e "${CLightRed}ERROR:${CNone} '-all' requires '-checkout' or '-download -workspace'. Command aborted."
         exit 1
      fi
   fi
+  if [ "$FORCE_SPECIFIED" == "true" ]; then
+     OPTIONS_BY="$OPTIONS_BY -force"
+  fi
   echo ""
-  echo "Installing all bundles..."
+  echo "Installing all bundles [$OPTIONS_BY]..."
   ALL_BUNDLES="$(show_bundle -no-color $@ | grep "^\[" | sed 's/.*\]//')"
   OPTIONS="$@"
   # Remove '-all' from the argument list
@@ -210,8 +242,8 @@ if [ "$ALL" == "true" ]; then
   # Recursively execute this command per bundle
   for BUNDLE_NAME in $ALL_BUNDLES; do
      echo "--------------------------------------------------------------------------"
-     echo -e install_bundle $OPTIONS "${CBrownOrange}${BUNDLE_NAME}${CNone}"
-     install_bundle "$OPTIONS" "$BUNDLE_NAME"
+     echo -e "install_bundle $OPTIONS ${CBrownOrange}${BUNDLE_NAME}${CNone}"
+     install_bundle $OPTIONS $BUNDLE_NAME
      echo "--------------------------------------------------------------------------"
   done
   echo ""
@@ -238,7 +270,7 @@ fi
 # Returns "true" if one of the specfied product versions match the configured product version.
 #
 # @param product        Product name in lowercase. Valid values are hazelcast, hazecast-enterprise,
-#                       jet, jet-enterprise, geode, gemfire, snappydata, spark, coherence, pado.
+#                       jet, jet-enterprise, geode, gemfire, snappydata, spark, coherence, pado, redis.
 # @param productHome    Product home path, e.g. $HAZELCAST_HOME.
 # @param productVersion Product versions, e.g., "3,4"
 #
@@ -541,6 +573,9 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             elif [ "$PRODUCT" == "spark" ]; then
                found=$(isProductExist "$PRODUCT" "$SPARK_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="standalone"
+            elif [ "$PRODUCT" == "redis" ]; then
+               found=$(isProductExist "$PRODUCT" "$REDIS_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="redis"
             elif [ "$PRODUCT" == "coherence" ]; then
                found=$(isProductExist "$PRODUCT" "$COHERENCE_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="coherence"
@@ -557,7 +592,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       fi
 
       # Exit if there are unfound versions. none overrides all.
-      if [ "$NONE_FOUND" == "false" ]; then
+      if [ "$FORCE_SPECIFIED" == "false" ] && [ "$NONE_FOUND" == "false" ]; then
          let unfound_len=${#unfoundProducts[@]}
          if [ $unfound_len -gt 0 ]; then
             let last_index=len-1
