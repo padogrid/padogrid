@@ -28,10 +28,11 @@ function getMcPid
    __MC=$1
    __WORKSPACE=$2
    # Use eval to handle commands with spaces
-   local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep hazelcast.mc.name=$__MC"
-   mcs=$(eval $__COMMAND)
-   mcs=$(echo $mcs | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
-   #mcs=`jps -v | grep "hazelcast.mc.name=$__MC" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+      local mcs="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep hazelcast.mc.name=$__MC | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+   else
+      local mcs="$(ps -eo pid,comm=java,args | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+   fi
    spids=""
    for j in $mcs; do
       spids="$j $spids"
@@ -55,7 +56,7 @@ function getVmMcPid
    __HOST=$1
    __MEMBER=$2
    __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $members; do
       spids="$j $spids"

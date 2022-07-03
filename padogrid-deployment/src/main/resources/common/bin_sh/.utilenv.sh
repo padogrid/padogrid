@@ -891,12 +891,13 @@ function getMemberPid
    __WORKSPACE=$2
    __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
-      # Use eval to handle commands with spaces
-      local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__MEMBER"
-      members=$(eval $__COMMAND)
-      members=$(echo $members | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         local members="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MEMBER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+      else
+         local members="$(ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+      fi
    fi
    spids=""
    for j in $members; do
@@ -921,7 +922,7 @@ function getVmMemberPid
    __HOST=$1
    __MEMBER=$2
    __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $members; do
       spids="$j $spids"

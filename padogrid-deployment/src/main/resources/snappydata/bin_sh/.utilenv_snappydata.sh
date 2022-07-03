@@ -45,13 +45,13 @@ function getLocatorPid
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    local locators
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$JAVA_HOME/bin/jps -v | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
-      # Use eval to handle commands with spaces
-      local __COMMAND="\"$JAVA_HOME/bin/jps\" -v | grep pado.vm.id=$__LOCATOR"
-      locators=$(eval $__COMMAND)
-      locators=$(echo $locators | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}')
-      #locators=`"$JAVA_HOME/bin/jps" -v | grep "pado.vm.id=$__LOCATOR" | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         local locators="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__LOCATOR | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+      else
+         local locators="$(ps -eo pid,comm=java,args | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+      fi
    fi
    spids=""
    for j in $locators; do
@@ -87,7 +87,7 @@ function getVmLocatorPid
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $locators; do
       spids="$j $spids"
@@ -111,7 +111,7 @@ function getVmLeaderPid
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "$VM_JAVA_HOME/bin/jps -v | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $locators; do
       spids="$j $spids"
