@@ -47,6 +47,17 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # DEFAULT_MAX_HEAP_SIZE  Maximum heap size. Used initially when the cluster is created.  
 # ----------------------------------------------------------------------------------------------------
 
+#
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      export PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      export PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi
+
 # 
 # Unset variables
 # 
@@ -311,6 +322,9 @@ fi
 # guest OS.
 #
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
+
+# Downloadable products
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka hadoop"
 
 # Supported Bundle Products
 BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka none redis snappydata spark"

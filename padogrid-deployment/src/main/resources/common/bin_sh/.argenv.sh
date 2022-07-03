@@ -426,6 +426,33 @@ do
 
 done
 
+# Bash color code
+CNone='\033[0m' # No Color
+CBlack='\033[0;30m'
+CDarkGray='\033[1;30m'
+CRed='\033[0;31m'
+CLightRed='\033[1;31m'
+CGreen='\033[0;32m'
+CLightGreen='\033[1;32m'
+CBrownOrange='\033[0;33m'
+CYellow='\033[1;33m'
+CBlue='\033[0;34m'
+CLightBlue='\033[1;34m'
+CPurple='\033[0;35m'
+CLightPurple='\033[1;35m'
+CCyan='\033[0;36m'
+CLightCyan='\033[1;36m'
+CLightGray='\033[0;37m'
+CWhite='\033[1;37m'
+CUnderline='\033[4m'
+CUrl=$CBlue$CUnderline
+CHighlight=$CBrownOrange
+CError=$CLightRed
+CWarning=$CYellow
+CGo=$CLightGreen
+CCaution=$CBrownOrange
+CStop=$CLightRed
+
 LAST_ARG=${@: -1}
 
 # Set MEMBER_NUM_NO_LEADING_ZERO
@@ -446,16 +473,16 @@ let LAST_MEMBER_NUM=MAX_MEMBER_COUNT-1
 # Determine the member number
 re='^[0-9]+$'
 if ! [[ $MEMBER_NUM =~ $re ]] ; then
-   echo "ERROR: Member number must be a positive number the range [1, 99]: $MEMBER_NUM. Command aborted." >&2; exit 1
+   echo -e "${CError}ERROR:${CNone} Member number must be a positive number in the range [1, 99]: $MEMBER_NUM. Command aborted." >&2; exit 1
 fi
 if [ $MEMBER_NUM -lt 1 ]; then
-   echo "ERROR: Member number must be greater than 0: $MEMBER_NUM. Command aborated." >&2; exit 1
+   echo -e "${CError}ERROR:${CNone} Member number must be greater than 0: $MEMBER_NUM. Command aborted." >&2; exit 1
 fi
 if [ $MEMBER_NUM -gt 99 ]; then
-   echo "ERROR: Member number must be less than 99: $MEMBER_NUM. Command aborated." >&2; exit 1
+   echo -e "${CError}ERROR:${CNone} Member number must be less than 99: $MEMBER_NUM. Command aborted." >&2; exit 1
 fi
 if [ $CONNECT != "https" ] && [ "$CONNECT" != "ssh" ]; then
-   echo "ERROR: Invalid -connect type: [$CONNECT]. Valid values are https or ssh. Command aborted." >&2; exit 1
+   echo -e "${CError}ERROR:${CNone} Invalid -connect type: [$CONNECT]. Valid values are https or ssh. Command aborted." >&2; exit 1
 fi
 if [ $MEMBER_NUM -lt 10 ]; then
    MEMBER_NUM=0$MEMBER_NUM
@@ -526,37 +553,3 @@ fi
 if [ "$ENV_ARG" != "" ]; then
    . $ENV_ARG
 fi
-
-# 
-# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
-#
-if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
-   if [ "$PADOGRID_HOME" == "" ]; then
-      export PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
-   else
-      export PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
-   fi
-fi      
-
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka hadoop"
-
-# Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'
-CUnderline='\033[4m'
-CUrl=$CBlue$CUnderline
