@@ -1,0 +1,256 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Clean (remove) log files of all stopped members in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster <cluster-name] [-?]
+
+DESCRIPTION
+   Cleans the cluster environment by removing the log files of all the stopped members.
+   This command has no effect for the running members.
+
+   -cluster cluster_name
+             Cluster name.
+
+   -all
+             If specified, then removes all the generated files including metadata and
+             persistent stores. The end result is a fresh cluster at the initial state.
+             
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $DEFAULT_CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   DEFAULT_USER=$(whoami)
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
+   fi
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   __MEMBER_NUMBER=0
+   for VM_HOST in $__VM_HOSTS; do
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/clean_cluster -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $@"
+   done
+   exit
+fi
+
+# Get workspace name
+if [ "$WORKSPACE" == "" ]; then
+   WORKSPACE=${PADOGRID_WORKSPACE##*/}
+fi
+
+POD=`getClusterProperty "pod.name" $POD`
+NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+USER_NAME=$(whoami)
+
+NAMENODE_PREFIX=`getNameNodePrefix`
+NAMENODE_PREFIX_LEN=${#NAMENODE_PREFIX}
+# MEMBER -> DATANODE
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+MEMBER_NUMBER=1 
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+nodes="secondarynamenode nodemanager resourcemanager historyserver"
+
+pushd $RUN_DIR > /dev/null 2>&1 
+
+# NameNode
+for i in ${NAMENODE_PREFIX}*; do
+   if [ -d "$i" ]; then
+      MEMBER=$i
+      MEMBER_NUMBER=${MEMBER:$NAMENODE_PREFIX_LEN}
+      MEMBER_NUM_NO_LEADING_ZERO=$MEMBER_NUMBER
+      while [[ $MEMBER_NUM_NO_LEADING_ZERO == 0* ]]; do
+         MEMBER_NUM_NO_LEADING_ZERO=${MEMBER_NUM_NO_LEADING_ZERO:1};
+      done
+
+      NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
+      MEMBER_DIR=$RUN_DIR/$MEMBER
+      PID=`getNameNodePid $MEMBER $WORKSPACE`
+      if [ -z "$PID" ]; then
+         MEMBER_LOG="hadoop-$USER_NAME-namenode-`hostname`.log"
+         MEMBER_OUT="hadoop-$USER_NAME-namenode-`hostname`.out"
+         MEMBER_LOG_FILE=$LOG_DIR/$MEMBER/${MEMBER_LOG}
+         MEMBER_OUT_FILE=$LOG_DIR/$MEMBER/${MEMBER_OUT}
+         GC_LOG=$LOG_DIR/${MEMBER}-gc.log
+         rm -f ${MEMBER_LOG_FILE}* > /dev/null 2>&1
+         rm -f ${MEMBER_OUT_FILE}* > /dev/null 2>&1
+         rm -f ${GC_LOG}* > /dev/null 2>&1
+         if [ "$ALL" == "true" ]; then
+            rm -rf ${MEMBER_DIR}/* > /dev/null 2>&1
+         fi
+         echo "----------------------------------------------------------------"
+         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "     NameNode: $MEMBER"
+         echo -e "          PID: ${CLightRed}Down${CNone}"
+         echo "  Working Dir: $MEMBER_DIR"
+         echo "      Log Dir: $LOG_DIR"
+         echo "      Run Dir: $RUN_DIR"
+         echo "  Log Removed: $MEMBER_LOG"
+         if [ "$ALL" == "true" ]; then
+            echo "  Run Removed: $RUN_DIR/${MEMBER}/*"
+         fi
+         for node in $nodes; do
+            prefix="$(getHadoopPrefix $node)01"
+            PID=`getNameNodePid $prefix $WORKSPACE`
+            if [ -z "$PID" ]; then
+               NODE_LOG="hadoop-$USER_NAME-$node-`hostname`.log"
+               NODE_OUT="hadoop-$USER_NAME-$node-`hostname`.out"
+               NODE_LOG_FILE=$LOG_DIR/$MEMBER/${NODE_LOG}
+               NODE_OUT_FILE=$LOG_DIR/$MEMBER/${NODE_OUT}
+               rm -f ${NODE_LOG_FILE}* > /dev/null 2>&1
+               rm -f ${NODE_OUT_FILE}* > /dev/null 2>&1
+               echo "  Log Removed: $NODE_LOG_FILE"
+            else
+               echo "       Status: $node is running. Unable to remove the generated files. Command aborted."
+            fi
+         done
+         echo "----------------------------------------------------------------"
+      else
+         echo "----------------------------------------------------------------"
+         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "     NameNode: $MEMBER"
+         echo -e "          PID: ${CLightGreen}$PID${CNone}"
+         echo "  Working Dir: $MEMBER_DIR"
+         echo "      Log Dir: $LOG_DIR"
+         echo "      Run Dir: $RUN_DIR"
+         echo "       Status: This master is running. Unable to remove the generated files. Command aborted."
+         echo "----------------------------------------------------------------"
+      fi
+   fi
+done
+
+# DataNode
+for i in ${MEMBER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      MEMBER=$i
+      MEMBER_NUMBER=${MEMBER:$MEMBER_PREFIX_LEN}
+      MEMBER_NUM_NO_LEADING_ZERO=$MEMBER_NUMBER
+      while [[ $MEMBER_NUM_NO_LEADING_ZERO == 0* ]]; do
+         MEMBER_NUM_NO_LEADING_ZERO=${MEMBER_NUM_NO_LEADING_ZERO:1};
+      done
+
+      NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
+      MEMBER_DIR=$RUN_DIR/$MEMBER
+      PID=`getMemberPid $MEMBER $WORKSPACE`
+      if [ -z "$PID" ]; then
+         MEMBER_LOG="hadoop-$USER_NAME-datanode-`hostname`.log"
+         MEMBER_OUT="hadoop-$USER_NAME-datanode-`hostname`.out"
+         MEMBER_LOG_FILE=$LOG_DIR/$MEMBER/${MEMBER_LOG}
+         MEMBER_OUT_FILE=$LOG_DIR/$MEMBER/${MEMBER_OUT}
+         GC_LOG=$LOG_DIR/${MEMBER}-gc.log
+         rm -f ${MEMBER_LOG_FILE}* > /dev/null 2>&1
+         rm -f ${MEMBER_OUT_FILE}* > /dev/null 2>&1
+         rm -f ${GC_LOG}* > /dev/null 2>&1
+         if [ "$ALL" == "true" ]; then
+            rm -rf ${MEMBER_DIR}/* > /dev/null 2>&1
+         fi
+         echo "----------------------------------------------------------------"
+         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "       Member: $MEMBER"
+         echo -e "          PID: ${CLightRed}Down${CNone}"
+         echo "  Working Dir: $MEMBER_DIR"
+         echo "      Log Dir: $LOG_DIR"
+         echo "      Run Dir: $RUN_DIR"
+         echo "  Log Removed: $MEMBER_LOG_FILE"
+         if [ "$ALL" == "true" ]; then
+            echo "  Run Removed: $RUN_DIR/${MEMBER}/*"
+         fi
+         echo "----------------------------------------------------------------"
+      else
+         echo "----------------------------------------------------------------"
+         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "       Member: $MEMBER"
+         echo -e "          PID: ${CLightGreen}$PID${CNone}"
+         echo "  Working Dir: $MEMBER_DIR"
+         echo "      Log Dir: $LOG_DIR"
+         echo "      Run Dir: $RUN_DIR"
+         echo "       Status: This member is running. Unable to remove the generated files. Command aborted."
+         echo "----------------------------------------------------------------"
+      fi
+   fi
+done
+
+popd > /dev/null 2>&1
