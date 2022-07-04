@@ -1471,6 +1471,7 @@ function updateClusterEnvFile
    # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
    if [ "$PRODUCT" == "gemfire" ]; then
       echo "PRODUCT=geode" > "$CLUSTERENV_FILE"
+      CLUSTER_TYPE="gemfire"
    elif [ "$PRODUCT" == "jet" ]; then
       echo "PRODUCT=hazelcast" > "$CLUSTERENV_FILE"
    else
