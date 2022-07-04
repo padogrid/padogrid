@@ -127,7 +127,7 @@ function getActiveMasterCount
             pid=`getMasterPid $MASTER $WORKSPACE`
             if [ "$pid" != "" ]; then
                let MASTER_RUNNING_COUNT=MASTER_RUNNING_COUNT+1
-	    fi
+      fi
          fi
       done
       popd > /dev/null 2>&1

@@ -23,6 +23,31 @@ else
 fi
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
+# -------------------------------------------------------------------------------
+# Source in .argenv.sh to set all default variables. This call is required.
+# IMPORTANT: Do NOT remove this call.
+# -------------------------------------------------------------------------------
+. $SCRIPT_DIR/.argenv.sh "$@"
+. $SCRIPT_DIR/.utilenv_spark.sh "$@"
+
+#
+# Source in setenv.sh that contains common variables
+#
+if [ -f "$SCRIPT_DIR/setenv.sh" ]; then
+   # CLUSTER and POD options override setenv.sh
+   __CLUSTER=$CLUSTER
+   __POD=$POD
+
+   . $SCRIPT_DIR/setenv.sh
+
+   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+      CLUSTER=$__CLUSTER
+   fi
+   if [ "$POD_SPECIFIED" == "true" ]; then
+      POD=$__POD
+   fi
+fi
+
 # ----------------------------------------------------------------------------------------------------
 # CORE ENVIRONMENT VARIABLES:
 # ----------------------------------------------------------------------------------------------------
@@ -135,35 +160,6 @@ DEFAULT_PROMETHEUS_START_PORT=8691
 #
 MAX_MASTER_COUNT=5
 
-# -------------------------------------------------------------------------------
-# Source in .argenv.sh to set all default variables. This call is required.
-# IMPORTANT: Do NOT remove this call.
-# -------------------------------------------------------------------------------
-. $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_spark.sh "$@"
-
-# -----------------------------------------------------
-# IMPORTANT: Do NOT modify below this line
-# -----------------------------------------------------
-
-#
-# Source in setenv.sh that contains common variables
-#
-if [ -f "$SCRIPT_DIR/setenv.sh" ]; then
-   # CLUSTER and POD options override setenv.sh
-   __CLUSTER=$CLUSTER
-   __POD=$POD
-
-   . $SCRIPT_DIR/setenv.sh
-
-   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
-      CLUSTER=$__CLUSTER
-   fi
-   if [ "$POD_SPECIFIED" == "true" ]; then
-      POD=$__POD
-   fi
-fi
-
 # Spark config file paths
 CONFIG_FILE=$ETC_DIR/conf-env.sh
 
@@ -212,7 +208,7 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-__CLASSPATH="$__CLASSPATH:$SPARK_HOME/lib/*"
+__CLASSPATH="$__CLASSPATH:$SPARK_HOME/jars/*"
 export CLASSPATH="$__CLASSPATH"
 
 #

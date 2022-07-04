@@ -96,3 +96,11 @@
 
 SPARK_WORKER_CORES=2
 SPARK_WORKER_MEMORY=1g
+
+# Include Hadoop. If your Spark distribution is Hadoop free, then you can include your
+# version of Hadoop. Install Hadoop by running 
+#   install_padogrid -product hadoop
+#   update_product -product hadoop
+# and uncomment the following line. Note that you can also include Hadoop in 'bin_sh/setenv.sh'.
+# This overrides 'bin_sh/setenv.sh', however.
+#export SPARK_DIST_CLASSPATH=$CLASSPATH:$($HADOOP_HOME/bin/hadoop classpath)

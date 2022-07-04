@@ -23,6 +23,31 @@ else
 fi
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
+# -------------------------------------------------------------------------------
+# Source in .argenv.sh to set all default variables. This call is required.
+# IMPORTANT: Do NOT remove this call.
+# -------------------------------------------------------------------------------
+. $SCRIPT_DIR/.argenv.sh "$@"
+. $SCRIPT_DIR/.utilenv_hazelcast.sh "$@"
+
+#
+# Source in setenv.sh that contains user configured variables
+#
+if [ -f $SCRIPT_DIR/setenv.sh ]; then
+   # CLUSTER and POD options override setenv.sh
+   __CLUSTER=$CLUSTER
+   __POD=$POD
+
+   . $SCRIPT_DIR/setenv.sh
+
+   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+      CLUSTER=$__CLUSTER
+   fi
+   if [ "$POD_SPECIFIED" == "true" ]; then
+      POD=$__POD
+   fi
+fi
+
 # ----------------------------------------------------------------------------------------------------
 # CORE ENVIRONMENT VARIABLES:
 # ----------------------------------------------------------------------------------------------------
@@ -112,13 +137,6 @@ HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
 -Dhazelcast.health.monitoring.threshold.memory.percentage=70 \
 -Dhazelcast.health.monitoring.threshold.cpu.percentage=70"
 
-# -------------------------------------------------------------------------------
-# Source in .argenv.sh to set all default variables. This call is required.
-# IMPORTANT: Do NOT remove this call.
-# -------------------------------------------------------------------------------
-. $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_hazelcast.sh
-
 # Disagnostics logging
 DEFAULT_DIAGNOSTICS_ENABLED="true"
 DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
@@ -127,28 +145,6 @@ DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructure
 -Dhazelcast.diagnostics.pending.invocations.period.seconds=30 \
 -Dhazelcast.diagnostics.slowoperations.period.seconds=30 \
 -Dhazelcast.diagnostics.storeLatency.period.seconds=60"
-
-# -----------------------------------------------------
-# IMPORTANT: Do NOT modify below this line
-# -----------------------------------------------------
-
-#
-# Source in setenv.sh that contains common variables
-#
-if [ -f "$SCRIPT_DIR/setenv.sh" ]; then
-   # CLUSTER and POD options override setenv.sh
-   __CLUSTER=$CLUSTER
-   __POD=$POD
-
-   . $SCRIPT_DIR/setenv.sh
-
-   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
-      CLUSTER=$__CLUSTER
-   fi
-   if [ "$POD_SPECIFIED" == "true" ]; then
-      POD=$__POD
-   fi
-fi
 
 # Hazelcast config file paths
 #CONFIG_FILE=$ETC_DIR/hazelcast.yaml

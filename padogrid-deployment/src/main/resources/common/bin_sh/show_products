@@ -70,9 +70,14 @@ function getCurrentProductVersions
    __PADOGRID_VERSION=${PADOGRID_HOME#*padogrid_}
    __PADO_VERSION=${PADO_HOME#*pado_}
    __PADODESKTOP_VERSION=${PADODESKTOP_HOME#*pado-desktop_}
-   __PADOWEB_VERSION=${PADO_HOME#*padoweb_}
+   __PADOWEB_VERSION=${PADOWEB_HOME#*padoweb_}
+   if [ -f "$COHERENCE_HOME/product.xml" ]; then
+       __COHERENCE_VERSION=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+   fi
    __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
    __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
+   __HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_HOME##*hazelcast-desktop_}
+   __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
    __HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_HOME#*hazelcast-enterprise-}
    if [[ "$HAZELCAST_MC_HOME" == *"management-center" ]] && [ -d "$HAZELCAST_MC_HOME" ]; then
       for i in $HAZELCAST_MC_HOME/*.jar; do
@@ -85,18 +90,18 @@ function getCurrentProductVersions
    else
       __HAZELCAST_MC_VERSION=${HAZELCAST_MC_HOME#*hazelcast-management-center-}
    fi
+   __HAZELCAST_OSS_VERSION=${HAZELCAST_HOME#*hazelcast-}
    __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
    __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
-   __HAZELCAST_OSS_VERSION=${JET_HOME#*hazelcast-}
    if [[ "$JET_MC_HOME" == *"4.2021"* ]]; then
       __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-management-center-}
    else
       __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-jet-management-center-}
    fi
+   __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
    __REDIS_VERSION=${REDIS_HOME#*redis-}
    __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
    __SPARK_VERSION=${SPARK_HOME#*spark-}
-   __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
 }
 
 function printVersionTree
@@ -150,9 +155,15 @@ printVersionTree "PadoDesktop" "$PADODEKSTOP_VERSIONS" "$__PADODESKTOP_VERSION"
 echo ""
 printVersionTree "PadoWeb" "$PADOWEB_VERSIONS" "$__PADOWEB_VERSION"
 echo ""
+printVersionTree "Coherence" "$COHERENCE_VERSIONS" "$__COHERENCE_VERSION"
+echo ""
 printVersionTree "GemFire" "$GEMFIRE_VERSIONS" "$__GEMFIRE_VERSION"
 echo ""
 printVersionTree "Geode" "$GEODE_VERSIONS" "$__GEODE_VERSION"
+echo ""
+printVersionTree "Hadoop" "$HADOOP_VERSIONS" "$__HADOOP_VERSION"
+echo ""
+printVersionTree "Hazelcast Desktop" "$HAZELCAST_DESKTOP_VERSIONS" "$__HAZELCAST_DESKTOP_VERSION"
 echo ""
 printVersionTree "Hazelcast Enterprise" "$HAZELCAST_ENTERPRISE_VERSIONS" "$__HAZELCAST_ENTERPRISE_VERSION"
 echo ""
@@ -160,21 +171,19 @@ printVersionTree "Hazelcast OSS" "$HAZELCAST_OSS_VERSIONS" "$__HAZELCAST_OSS_VER
 echo ""
 printVersionTree "Hazelcast Management Center" "$HAZELCAST_MANAGEMENT_CENTER_VERSIONS" "$__HAZELCAST_MC_VERSION"
 echo ""
-printVersionTree "Hazelcast Desktop" "$HAZELCAST_DESKTOP_VERSIONS" "$__HAZELCAST_DESKTOP_VERSION"
-echo ""
 printVersionTree "Jet Enterprise" "$JET_ENTERPRISE_VERSIONS" "$__JET_ENTERPRISE_VERSION"
 echo ""
 printVersionTree "Jet OSS" "$JET_OSS_VERSIONS" "$__JET_OSS_VERSION"
 echo ""
 printVersionTree "Jet Management Center" "$JET_MANAGEMENT_CENTER_VERSIONS" "$__JET_MC_VERSION"
 echo ""
+printVersionTree "Kafka" "$KAFKA_VERSIONS" "$__KAFKA_VERSION"
+echo ""
 printVersionTree "Redis" "$REDIS_VERSIONS" "$__REDIS_VERSION"
 echo ""
 printVersionTree "SnappyData" "$SNAPPYDATA_VERSIONS" "$__SNAPPYDATA_VERSION"
 echo ""
 printVersionTree "Spark" "$SPARK_VERSIONS" "$__SPARK_VERSION"
-echo ""
-printVersionTree "Hadoop" "$HADOOP_VERSIONS" "$__HADOOP_VERSION"
 echo ""
 echo -e "The ${CLightGreen}highlighted${CNone} ones are configured for the current workspace."
 echo ""

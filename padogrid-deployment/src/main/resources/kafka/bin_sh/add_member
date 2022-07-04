@@ -244,7 +244,7 @@ if [ -d $NEW_MEMBER_DIR ]; then
 else
    mkdir -p $NEW_MEMBER_DIR
 
-   __NEW_MEMBER_DIR="${NEW_MEMBER_DIR//\//\/}"
+   __NEW_MEMBER_DIR=$(echo $NEW_MEMBER_DIR | sed 's/\//\\\//g')
    __NEW_MEMBER_NUMBER=`getMemberNumWithLeadingZero $NEW_MEMBER_NUMBER`
    BROKER_PORT=$(($MEMBER_START_PORT+($NEW_MEMBER_NUMBER-1)*100))
    let CONTROLLER_PORT=BROKER_PORT+1
@@ -271,12 +271,12 @@ else
 fi
 
 echo "----------------------------------------------------------------"
-echo "    WORKSPACE: $PADOGRID_WORKSPACE"
-echo "      Cluster: $CLUSTER"
+echo "   WORKSPACE: $PADOGRID_WORKSPACE"
+echo "     Cluster: $CLUSTER"
 if [ "$MEMBER_EXISTS" == "true" ]; then
-echo " Exists: $NEW_MEMBER"
+echo "      Exists: $NEW_MEMBER"
 else
-echo "  Added: $NEW_MEMBER"
+echo "       Added: $NEW_MEMBER"
 fi
-echo "  Working Dir: $NEW_MEMBER_DIR"
+echo " Working Dir: $NEW_MEMBER_DIR"
 echo "----------------------------------------------------------------"

@@ -3360,20 +3360,21 @@ function sortVersionList
 # This function sets the following arrays.
 #    PADOGRID_VERSIONS
 #    PADO_VERSIONS
+#    COHERENCE_VERSIONS
 #    GEMFIRE_VERSIONS
 #    GEODE_VERSIONS
+#    HADOOP_VERSIONS
+#    HAZELCAST_DESKTOP_VERSIONS
 #    HAZELCAST_ENTERPRISE_VERSIONS
 #    HAZELCAST_OSS_VERSIONS
 #    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
-#    HAZELCAST_DESKTOP_VERSIONS
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
 #    JET_MANAGEMENT_CENTER_VERSIONS
+#    KAFKA_VERSIONS
 #    REDIS_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
-#    KAFKA_VERSIONS
-#    HADOOP_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
 #
@@ -3383,8 +3384,10 @@ function determineInstalledProductVersions
    PADO_VERSIONS=""
    PADODEKSTOP_VERSIONS=""
    PADOWEB_VERSIONS=""
+   COHERENCE_VERSIONS=""
    GEMFIRE_VERSIONS=""
    GEODE_VERSIONS=""
+   HADOOP_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
    HAZELCAST_DESKTOP_VERSIONS=""
@@ -3392,11 +3395,10 @@ function determineInstalledProductVersions
    JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
    JET_MANAGEMENT_CENTER_VERSIONS=""
+   KAFKA_VERSIONS=""
    REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
-   KAFKA_VERSIONS=""
-   HADOOP_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
@@ -3439,6 +3441,11 @@ function determineInstalledProductVersions
       done
       PADOWEB_VERSIONS=$(sortVersionList "$__versions")
 
+      # Coherence - Set the current version. Determining Coherence versions requires setting up a custom environment.
+      if [ -f "$COHERENCE_HOME/product.xml" ]; then
+         COHERENCE_VERSIONS=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+      fi
+
       # GemFire
       __versions=""
       for i in pivotal-gemfire-*; do
@@ -3454,6 +3461,14 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       GEODE_VERSIONS=$(sortVersionList "$__versions")
+
+      # Hadoop
+      __versions=""
+      for i in hadoop-*; do
+         __version=${i#hadoop-}
+         __versions="$__versions $__version "
+      done
+      HADOOP_VERSIONS=$(sortVersionList "$__versions")
 
       # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
       local hossv henterv hmanv jossv jenterv jmanv
@@ -3514,6 +3529,14 @@ function determineInstalledProductVersions
       done
       JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
 
+      # Kafka
+      __versions=""
+      for i in kafka_*; do
+         __version=${i#kafka_}
+         __versions="$__versions $__version "
+      done
+      KAFKA_VERSIONS=$(sortVersionList "$__versions")
+
       # Redis
       __versions=""
       for i in redis-*; do
@@ -3539,22 +3562,6 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       SPARK_VERSIONS=$(sortVersionList "$__versions")
-
-      # Kafka
-      __versions=""
-      for i in kafka_*; do
-         __version=${i#kafka_}
-         __versions="$__versions $__version "
-      done
-      KAFKA_VERSIONS=$(sortVersionList "$__versions")
-
-      # Hadoop
-      __versions=""
-      for i in hadoop-*; do
-         __version=${i#hadoop-}
-         __versions="$__versions $__version "
-      done
-      HADOOP_VERSIONS=$(sortVersionList "$__versions")
 
       popd > /dev/null 2>&1
             

@@ -188,9 +188,9 @@ function writeCluster()
 
    # Due to the lack of --override option provided by kafka-storage.sh, we need to 
    # create server.properties for each member.
-   __MEMBER_1_DIR="${MEMBER_1_DIR//\//\/}"
-   __MEMBER_2_DIR="${MEMBER_2_DIR//\//\/}"
-   __MEMBER_3_DIR="${MEMBER_3_DIR//\//\/}"
+   __MEMBER_1_DIR=$(echo $MEMBER_1_DIR | sed 's/\//\\\//g')
+   __MEMBER_2_DIR=$(echo $MEMBER_2_DIR | sed 's/\//\\\//g')
+   __MEMBER_3_DIR=$(echo $MEMBER_3_DIR | sed 's/\//\\\//g')
 
    let MEMBER_1_CONTROLLER_PORT=NEW_MEMBER_START_PORT+1
    let MEMBER_2_CONTROLLER_PORT=MEMBER_1_CONTROLLER_PORT+100
@@ -209,7 +209,6 @@ function writeCluster()
    let CONTROLLER_PORT=BROKER_PORT+1
    LISTENERS_3="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
    ADVERTISED_LISTENERS_3="PLAINTEXT:\/\/localhost:$BROKER_PORT"
-
    sed -e 's/\${node.id}/1/' \
        -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
        -e 's/\${log.dirs}/'${__MEMBER_1_DIR}'/' \

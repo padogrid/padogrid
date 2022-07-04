@@ -23,6 +23,31 @@ else
 fi
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
+# -------------------------------------------------------------------------------
+# Source in .argenv.sh to set all default variables. This call is required.
+# IMPORTANT: Do NOT remove this call.
+# -------------------------------------------------------------------------------
+. $SCRIPT_DIR/.argenv.sh "$@"
+. $SCRIPT_DIR/.utilenv_hadoop.sh "$@"
+
+#
+# Source in setenv.sh that contains user configured variables
+#
+if [ -f $SCRIPT_DIR/setenv.sh ]; then
+   # CLUSTER and POD options override setenv.sh
+   __CLUSTER=$CLUSTER
+   __POD=$POD
+
+   . $SCRIPT_DIR/setenv.sh
+
+   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
+      CLUSTER=$__CLUSTER
+   fi
+   if [ "$POD_SPECIFIED" == "true" ]; then
+      POD=$__POD
+   fi
+fi
+
 # ----------------------------------------------------------------------------------------------------
 # CORE ENVIRONMENT VARIABLES:
 # ----------------------------------------------------------------------------------------------------
@@ -167,35 +192,6 @@ DEFAULT_PROMETHEUS_START_PORT=8891
 # DEFAULT_NAMENODE_START_PORT+MAX_NAMENODE_COUNT-1.
 #
 MAX_NAMENODE_COUNT=5
-
-# -------------------------------------------------------------------------------
-# Source in .argenv.sh to set all default variables. This call is required.
-# IMPORTANT: Do NOT remove this call.
-# -------------------------------------------------------------------------------
-. $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_hadoop.sh "$@"
-
-# -----------------------------------------------------
-# IMPORTANT: Do NOT modify below this line
-# -----------------------------------------------------
-
-#
-# Source in setenv.sh that contains common variables
-#
-if [ -f "$SCRIPT_DIR/setenv.sh" ]; then
-   # CLUSTER and POD options override setenv.sh
-   __CLUSTER=$CLUSTER
-   __POD=$POD
-
-   . $SCRIPT_DIR/setenv.sh
-
-   if [ "$CLUSTER_SPECIFIED" == "true" ]; then
-      CLUSTER=$__CLUSTER
-   fi
-   if [ "$POD_SPECIFIED" == "true" ]; then
-      POD=$__POD
-   fi
-fi
 
 #
 # log4j logging
