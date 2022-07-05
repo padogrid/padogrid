@@ -31,7 +31,7 @@ function getRedisVmMemberPid
 {
    local __HOST=$1
    local __MEMBER_PORT="$2"
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -opid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
    echo $pid
 }
 
@@ -122,7 +122,7 @@ function getRedisServerPortPid
    local MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    local MEMBER_PORT
    let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-   local pid=$(ps -opid,command |grep redis-server |grep $MEMBER_PORT | grep -v grep | awk '{print $1}')
+   local pid=$(ps -eo pid,comm,args | grep redis-server | grep $MEMBER_PORT | grep -v grep | awk '{print $1}')
    echo $pid
 }
 
@@ -158,7 +158,7 @@ function getRedisMemberPid
 
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
      __MEMBER_PORT=$__MEMBER_START_PORT
-      pid=$(ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,command |grep redis-server |grep $__MEMBER_PORT | grep -v grep")
+      pid=$(ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep redis-server |grep $__MEMBER_PORT | grep -v grep")
       pid=$(echo $pid | awk '{print $1}')
    else
       if [ "$POD" != "local" ]; then
@@ -170,7 +170,7 @@ function getRedisMemberPid
       if [ "$__MEMBER_DIR" == "$MEMBER_DIR" ]; then
          INFO="$(redis-cli --cluster info $TARGET_HOST 2> /dev/null | grep slot)"
          if [ "$INFO" != "" ]; then
-            pid=$(ps -eo pid,command | grep redis-server | grep :$__MEMBER_PORT | grep -v grep | awk '{print $1}')
+            pid=$(ps -eo pid,comm,args | grep redis-server | grep :$__MEMBER_PORT | grep -v grep | awk '{print $1}')
          fi
       fi
    fi

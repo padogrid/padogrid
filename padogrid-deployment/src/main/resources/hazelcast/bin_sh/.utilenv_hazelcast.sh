@@ -31,7 +31,7 @@ function getMcPid
    if [[ "$OS_NAME" == "CYGWIN"* ]]; then
       local mcs="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep hazelcast.mc.name=$__MC | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
    else
-      local mcs="$(ps -eo pid,comm=java,args | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+      local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
    fi
    spids=""
    for j in $mcs; do
@@ -56,7 +56,7 @@ function getVmMcPid
    __HOST=$1
    __MEMBER=$2
    __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $members; do
       spids="$j $spids"
