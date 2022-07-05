@@ -84,7 +84,9 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+POD=`getClusterProperty "pod.name" "local"`
+POD_DIR=$PODS_DIR/$POD
 
 # 
 # VM cluster
@@ -140,10 +142,33 @@ if [ "$VM_ENABLED" == "true" ]; then
    exit
 fi
 
+if [ "$POD" != "local" ]; then
+   #
+   # Pod cluster
+   #
+   pushd $POD_DIR > /dev/null 2>&1
+   RUNNING_NODES=$(vagrant status --machine-readable | grep "state,")
+   echo "----------------------------------------------------------------"
+   echo " WORKSPACE: $WORKSPACE"
+   echo "   Cluster: $CLUSTER"
+   echo "       Pod: $POD"
+   if [ "$RUNNING_NODES" == "" ]; then
+      echo "    Status: The $POD pod is already stopped. Command aborted."
+   else
+      echo "    Status: Unknown. The $POD pod has the following VM statuses. This command will not attempt to stop VMs."
+      for i in $RUNNING_NODES; do
+         VM_STATUS=$(echo $i | awk -F, '{print $2 " " $4}')
+         echo "        VM: $VM_STATUS (virtualbox)"
+      done
+   fi
+   echo "----------------------------------------------------------------"
+   popd > /dev/null 2>&1
+   exit
+fi
+
 #
 # Local cluster
 #
-POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 # For pod clusters. If non-pod, the following variables are ignored.
@@ -184,25 +209,25 @@ if [ "$ALL" == "true" ]; then
 
    # Other servers
    SECONDARYNAMENODE="$(getHadoopPrefix secondarynamenode)01"
-   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE_NAME`
+   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE`
    if [ "$PID" != "" ]; then
       echo "Killing secondarynamenode..."
       kill -9 $PID
    fi
    NODEMANAGER="$(getHadoopPrefix nodemanager)01"
-   PID=`getNameNodePid $NODEMANAGER $WORKSPACE_NAME`
+   PID=`getNameNodePid $NODEMANAGER $WORKSPACE`
    if [ "$PID" != "" ]; then
       echo "Killing nodemanager..."
       kill -9 $PID
    fi
    RESOURCEMANAGER="$(getHadoopPrefix resourcemanager)01"
-   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE_NAME`
+   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE`
    if [ "$PID" != "" ]; then
       echo "Killing resourcemanager..."
       kill -9 $PID
    fi
    HISTORYSERVER="$(getHadoopPrefix historyserver)01"
-   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE_NAME`
+   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE`
    if [ "$PID" != "" ]; then
       echo "Killing historyserver..."
       kill -9 $PID

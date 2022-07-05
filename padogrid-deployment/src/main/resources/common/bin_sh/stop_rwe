@@ -106,21 +106,7 @@ __WORKSPACES=( $__WORKSPACES )
 let NUM_WORKSPACES=${#__WORKSPACES[@]};
 for ((__i = 0; __i < $NUM_WORKSPACES; __i++)); do
    __WORKSPACE="${__WORKSPACES[$__i]}"
-   if [ $NUM_WORKSPACES -eq 1 ]; then
-      if [ "$__WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
-         switch_workspace $__WORKSPACE
-      fi
-   else
-      switch_workspace $__WORKSPACE
-   fi
-   echo ""
-   echo -e "${CLightRed}Stopping workspace${CNone} $__WORKSPACE..."
-   for j in $PADOGRID_WORKSPACES_HOME/$__WORKSPACE/clusters/*; do
-      CLUSTER="`basename $j`"
-      echo ""
-      echo -e "${CLightRed}Stopping cluster${CNone} $CLUSTER..."
-      stop_cluster -cluster $CLUSTER "$@"
-   done
+   stop_workspace -workspace $__WORKSPACE "$@"
 done
 if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
    switch_workspace $CURRENT_WORKSPACE

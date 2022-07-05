@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.19-SNAPSHOT
 
-### Release Date: 07/04/22
+### Release Date: 07/05/22
 
 - Removed log4j settings from Geode locators as a workaround to Log4J NPE raised by Geode v1.15.0. Without this fix, locators will not start for Geode v1.15.0.
 - Fixed `CLUSTER_TYPE` incorrectly set for geode and gemfire. This fix effectively drops `CLUSTER_TYPE` support for older versions of PadoGrid.
@@ -28,6 +28,8 @@ https://github.com/padogrid
 - Fixed `show_products` which failed to show some active products. It now supports all products including Coherence.
 - Added `SPARK_DIST_CLASSPATH` support for Hadoop-free Spark versions. With this support, you can now include your own versions of Hadoop in PadoGrid Spark clusters.
 - Added `hazelcast.yaml` config files for all versions of Hazelcast.
+- Updated `kill_cluster` and `stop_cluster` to bypass pod clusters.
+- Fixed empty workspace status display issues when running `kill_workspace` and `stop_workspace`.
 
 ---
 

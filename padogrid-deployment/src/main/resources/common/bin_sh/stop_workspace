@@ -89,14 +89,19 @@ if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
 fi
 echo ""
 echo -e "${CLightRed}Stopping workspace${CNone} $WORKSPACE..."
-for j in $PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/*; do
-   CLUSTER="`basename $j`"
-   echo ""
-   echo -e "${CLightRed}Stopping cluster${CNone} $CLUSTER..."
-   stop_cluster -cluster $CLUSTER "$@"
-done
+if [ "$(ls $PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/)" == "" ]; then
+   echo "   No clusters found."
+else
+   for j in $PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/*; do
+      CLUSTER="`basename $j`"
+      echo ""
+      echo -e "${CLightRed}Stopping cluster${CNone} $CLUSTER..."
+      stop_cluster -cluster $CLUSTER "$@"
+   done
+fi
 if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
    switch_workspace $CURRENT_WORKSPACE
    switch_cluster $CLUSTER
    cd $CURRENT_DIR
 fi
+echo ""
