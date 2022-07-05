@@ -115,7 +115,11 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      if [ "$MEMBER" == "" ]; then
+         pid=""
+      else
+         pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      fi
       if [ "$pid" != "" ]; then
           let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
       fi
@@ -205,11 +209,11 @@ function displayVmClusterLong()
 
    echo "----------------------------------------------------------------"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
-      echo "        CLUSTER: $CLUSTER (default)"
+      echo "         CLUSTER: $CLUSTER (default)"
    else
-      echo "        CLUSTER: $CLUSTER"
+      echo "         CLUSTER: $CLUSTER"
    fi
-   echo "    CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "      Deployment: VM"
    echo ""
@@ -219,6 +223,11 @@ function displayVmClusterLong()
    DOWN_MEMBER_COUNT=0
    for VM_HOST in ${VM_HOSTS}; do
       MEMBER=`getVmMemberName $VM_HOST`
+      if [ "$MEMBER" == "" ]; then
+         MEMBER_FOUND="false"
+      else
+         MEMBER_FOUND="true"
+      fi
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER_DIR=$RUN_DIR/$MEMBER
 
@@ -242,9 +251,13 @@ function displayVmClusterLong()
       else
          NUM=$MEMBER_COUNT
       fi
+      if [ "$MEMBER_FOUND" == "false" ]; then
+         pid=""
+         MEMBER="$VM_HOST (VM_HOST)"
+      else
+         pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      fi
       echo "$NUM        Member: $MEMBER"
-
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
       if [ -z $pid ]; then
          let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
          echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -273,7 +286,12 @@ function displayVmClusterLong()
    else
       MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
    fi
-   MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE`
+
+   if [ "$MEMBER_FOUND" == "true" ]; then
+      MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE`
+   else
+      MC_PID=""
+   fi
  
    show_mc -long
 

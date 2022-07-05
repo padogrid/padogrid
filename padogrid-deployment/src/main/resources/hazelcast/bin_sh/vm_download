@@ -163,7 +163,7 @@ for VM_HOST in $__VM_HOSTS; do
    if [ "$VM_HOST" == "$THIS_VM_HOSTNAME" ]; then
       continue
    fi
-   HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+   HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$HOSTNAME" == "" ]; then
       echo "Invalid host [$VM_HOST]"
       continue
@@ -172,7 +172,7 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 
    echo "   Downloading $VM_HOST..."
-   scp -q -r -o stricthostkeychecking=no $VM_KEY $VM_USER@$VM_HOST:$FROM_LOG_DIR/*.log $LOG_DIR/ 
+   scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$FROM_LOG_DIR/*.log $LOG_DIR/ 
 
 done
 

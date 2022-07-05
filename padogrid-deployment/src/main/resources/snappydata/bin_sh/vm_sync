@@ -178,7 +178,7 @@ fi
 
 # Fail fast: Exit if any of the hosts is not reachable
 for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
    EXIT_CODE=$?
    if [ "$EXIT_CODE" != "0" ]; then
       echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
@@ -194,7 +194,7 @@ SNAPPYDATA_COMMAND="if [ -d "$VM_SNAPPYDATA_HOME" ]; then echo true; else echo f
 INSTALL_ADDON_HOST_LIST=""
 for VM_HOST in $__VM_HOSTS; do
    # padogrid
-   ADDON_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$ADDON_COMMAND")
+   ADDON_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$ADDON_COMMAND")
    if [[ "$ADDON_EXISTS" == *"false" ]]; then
       INSTALL_ADDON_HOST_LIST="$INSTALL_ADDON_HOST_LIST $VM_HOST"
    fi
@@ -211,13 +211,13 @@ if [ "$INSTALL_ADDON_HOST_LIST" != "" ]; then
    for VM_HOST in $INSTALL_ADDON_HOST_LIST; do
       echo "Deploying $ROOT_DIR_NAME to $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         echo scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         scp -q -o stricthostkeychecking=no $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
       fi
    done
 fi
@@ -263,7 +263,7 @@ pushd $ABS_PATH > /dev/null 2>&1
 tar czf /tmp/vm_sync.tar.gz .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
 popd > /dev/null 2>&1
 for VM_HOST in $__VM_HOSTS; do
-   HOSTNAME=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname")
+   HOSTNAME=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname")
    if [ "$HOSTNAME" == "" ]; then
       echo "Invalid host [$VM_HOST]"
       continue
@@ -273,47 +273,47 @@ for VM_HOST in $__VM_HOSTS; do
 
    echo "   Synchronizing $VM_HOST..."
    if [ "$SIMULATE" == "true" ]; then
-      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_WORKSPACE"
-      echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/vm_sync.tar.gz $VM_USER@$VM_HOST:/tmp/
-      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_WORKSPACE -xzf /tmp/vm_sync.tar.gz; rm /tmp/vm_sync.tar.gz"
-      echo scp -q -o stricthostkeychecking=no $VM_KEY /tmp/setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/
+      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE"
+      echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/vm_sync.tar.gz $VM_USER@$VM_HOST:/tmp/
+      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE -xzf /tmp/vm_sync.tar.gz; rm /tmp/vm_sync.tar.gz"
+      echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/
    else
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "mkdir -p $VM_PADOGRID_WORKSPACE"
-      scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/vm_sync.tar.gz $VM_USER@$VM_HOST:/tmp/
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $VM_PADOGRID_WORKSPACE -xzf /tmp/vm_sync.tar.gz && rm /tmp/vm_sync.tar.gz"
-      scp -q -o stricthostkeychecking=no $VM_KEY /tmp/setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE"
+      scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/vm_sync.tar.gz $VM_USER@$VM_HOST:/tmp/
+      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE -xzf /tmp/vm_sync.tar.gz && rm /tmp/vm_sync.tar.gz"
+      scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/
    fi
 
    # Configure the workspaces directory if not configured already
-   INITENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$INITENV_COMMAND")
-   ADDONENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$ADDONENV_COMMAND")
-   SETENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$SETENV_COMMAND")
-   SNAPPYDATAENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$SNAPPYDATAENV_COMMAND")
+   INITENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$INITENV_COMMAND")
+   ADDONENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$ADDONENV_COMMAND")
+   SETENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$SETENV_COMMAND")
+   SNAPPYDATAENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$SNAPPYDATAENV_COMMAND")
 
    if [[ "$INITENV_EXISTS" == *"false" ]]; then
-      scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+      scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
    fi
    if [[ "$ADDONENV_EXISTS" == *"false" ]]; then
       sed -e 's|export PADOGRID_WORKSPACES_HOME=.*$|export PADOGRID_WORKSPACES_HOME='\"$VM_PADOGRID_WORKSPACES_HOME\"'|' \
           $PADOGRID_WORKSPACES_HOME/.addonenv.sh > /tmp/.addonenv.sh
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
       else
-         scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/.addonenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
       fi
    fi
    if [ "$RWE_SPECIFIED" == "true" ] || [[ "$SETENV_EXISTS" == "false" ]]; then
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
+         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       else
-         scp -q -r -o stricthostkeychecking=no $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
+         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY /tmp/workspaces_setenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       fi
    fi
    if [ "$RWE_SPECIFIED" == "true" ] || [ "$SNAPPYDATAENV_EXISTS" != "true" ] && [ -f "$PADOGRID_WORKSPACES_HOME/.snappydataenv.sh" ]; then
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/.snappydataenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.snappydataenv.sh
+         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/.snappydataenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.snappydataenv.sh
       else
-         scp -q -r -o stricthostkeychecking=no $VM_KEY $PADOGRID_WORKSPACES_HOME/.snappydataenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.snappydataenv.sh
+         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/.snappydataenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.snappydataenv.sh
       fi
    fi
 done
@@ -330,8 +330,8 @@ SNAPPYDATA_HOME_COMMAND="if [ -d "$VM_SNAPPYDATA_HOME" ]; then echo true; else e
 JAVA_HOME_NOT_FOUND_LIST=""
 SNAPPYDATA_HOME_NOT_FOUND_LIST=""
 for VM_HOST in $__VM_HOSTS; do
-   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$JAVA_HOME_COMMAND")
-   SNAPPYDATA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$SNAPPYDATA_HOME_COMMAND")
+   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$JAVA_HOME_COMMAND")
+   SNAPPYDATA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$SNAPPYDATA_HOME_COMMAND")
    if [[ "$JAVA_HOME_EXISTS" == *"false" ]]; then
       JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
    fi

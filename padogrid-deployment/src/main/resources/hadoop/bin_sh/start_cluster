@@ -136,9 +136,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    for VM_HOST in $__NAMENODE_HOSTS; do
       let COUNT=COUNT+1
       if [ $COUNT -lt $NAMENODE_COUNT ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
       fi
       if [ "$POD" != "local" ]; then
          let MEMBER_NUM=MEMBER_NUM+1
@@ -150,9 +150,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
       if [ "$FG_SPECIFIED" == "true" ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
       fi
       if [ "$POD" != "local" ]; then
          let MEMBER_NUM=MEMBER_NUM+1

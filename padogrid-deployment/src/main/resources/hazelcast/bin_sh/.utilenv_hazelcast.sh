@@ -56,7 +56,7 @@ function getVmMcPid
    __HOST=$1
    __MEMBER=$2
    __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $members; do
       spids="$j $spids"

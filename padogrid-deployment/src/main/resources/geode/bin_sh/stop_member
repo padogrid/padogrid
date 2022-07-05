@@ -138,7 +138,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
             else
                let NUM=__MEMBER_NUMBER
             fi
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
             break;
          fi
       done
@@ -184,7 +184,7 @@ fi
 # If the command is executed in the pod then execute a remote command and exit.
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
-   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "cd $REMOTE_BASE_DIR/$PRODUCT/bin_sh; $COMMAND_PREFIX ./stop_member -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*;"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "cd $REMOTE_BASE_DIR/$PRODUCT/bin_sh; $COMMAND_PREFIX ./stop_member -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*;"
    exit
 fi
 

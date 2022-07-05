@@ -45,7 +45,7 @@ function getMasterPid
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    local masters
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
       # Use eval to handle commands with spaces
       if [[ "$OS_NAME" == "CYGWIN"* ]]; then
@@ -77,7 +77,7 @@ function getVmMasterPid
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $masters; do
       spids="$j $spids"
@@ -237,8 +237,12 @@ function getMasterName
 function getVmMasterName
 {
    local __HOST=$1
-   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-master-${__HOSTNAME}-01"
+   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   if [ "$__HOSTNAME" == "" ]; then
+      echo ""
+   else
+      echo "${CLUSTER}-master-${__HOSTNAME}-01"
+   fi
 }
 
 #

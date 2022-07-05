@@ -130,7 +130,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
       if [ "$ALL" == "true" ]; then
          for VM_HOST in $__VM_HOSTS; do
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $SCRIPT_DIR/remove_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
          done
       else
          # Determine the host
@@ -141,7 +141,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
             let __LOCATOR_NUMBER=__LOCATOR_NUMBER+1
             if [ $__LOCATOR_NUMBER -eq $LOCATOR_NUM_NO_LEADING_ZERO ]; then
                __FOUND="true"
-               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $SCRIPT_DIR/remove_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $SCRIPT_DIR/remove_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE"
                break;
             fi
          done

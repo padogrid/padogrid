@@ -186,16 +186,16 @@ else
 fi
 THIS_VM_HOSTNAME=`hostname`
 for VM_HOST in $__VM_HOSTS; do
-     HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+     HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
      if [ "$ALL" != "true" ] && [ "$HOST_NAME" == "$THIS_VM_HOSTNAME" ]; then
         continue
      fi
 
      echo "---------- $VM_HOST ----------"
      if [ "$SIMULATE" == "true" ]; then
-         echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no $COMMAND"
+         echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND"
      else
-        ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no $COMMAND
+        ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND
      fi
      echo ""
 done

@@ -45,7 +45,7 @@ function getNameNodePid
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    local namenodes
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
       # Use eval to handle commands with spaces
       if [[ "$OS_NAME" == "CYGWIN"* ]]; then
@@ -77,7 +77,7 @@ function getVmNameNodePid
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $namenodes; do
       spids="$j $spids"
@@ -249,8 +249,12 @@ function getNameNodeName
 function getVmNameNodeName
 {
    local __HOST=$1
-   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-namenode-${__HOSTNAME}-01"
+   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   if [ "$__HOSTNAME" == "" ]; then
+      echo ""
+   else
+      echo "${CLUSTER}-namenode-${__HOSTNAME}-01"
+   fi
 }
 
 #

@@ -237,6 +237,11 @@ DEFAULT_PROMETHEUS_ENABLED=true
 DEFAULT_PROMETHEUS_START_PORT=8291
 
 #
+# SSH connect timeout in seconds.
+#
+SSH_CONNECT_TIMEOUT=2
+
+#
 # The max number of members per cluster. The port number ranges are determined by this value.
 # All port numbers begin from DEFAULT_*_START_PORT and end at DEFAULT_*_START_PORT+MAX_MEMBER_COUNT-1.
 #

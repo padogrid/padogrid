@@ -149,7 +149,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
             else
                let NUM=__MEMBER_NUMBER
             fi
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_leader $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_leader $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
             break;
          fi
       done
@@ -471,7 +471,7 @@ export JAVA
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
-   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
    exit
 elif [ "$SIMULATE" == "true" ]; then
    PID="Simulated"

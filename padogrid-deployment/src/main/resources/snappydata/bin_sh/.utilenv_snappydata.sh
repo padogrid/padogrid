@@ -45,7 +45,7 @@ function getLocatorPid
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    local locators
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
       if [[ "$OS_NAME" == "CYGWIN"* ]]; then
          local locators="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__LOCATOR | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
@@ -87,7 +87,7 @@ function getVmLocatorPid
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $locators; do
       spids="$j $spids"
@@ -111,7 +111,7 @@ function getVmLeaderPid
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $locators; do
       spids="$j $spids"
@@ -352,8 +352,12 @@ function getLeaderName
 function getVmLocatorName
 {
    local __HOST=$1
-   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-locator-${__HOSTNAME}-01"
+   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   if [ "$__HOSTNAME" == "" ]; then
+      echo ""
+   else
+      echo "${CLUSTER}-locator-${__HOSTNAME}-01"
+   fi
 }
 
 #
@@ -365,8 +369,12 @@ function getVmLocatorName
 function getVmLeaderName
 {
    __HOST=$1
-   __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
-   echo "${CLUSTER}-leader-${__HOSTNAME}-01"
+   __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   if [ "$__HOSTNAME" == "" ]; then
+      echo ""
+   else
+      echo "${CLUSTER}-leader-${__HOSTNAME}-01"
+   fi
 }
 
 #

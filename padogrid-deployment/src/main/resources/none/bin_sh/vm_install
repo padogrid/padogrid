@@ -176,7 +176,7 @@ fi
 
 # Fail fast: Exit if any of the hosts is not reachable
 for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
    EXIT_CODE=$?
    if [ "$EXIT_CODE" != "0" ]; then
       echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
@@ -191,8 +191,8 @@ GEODE_HOME_COMMAND="if [ -d "$VM_GEODE_HOME" ]; then echo true; else echo false;
 JAVA_HOME_NOT_FOUND_LIST=""
 GEODE_HOME_NOT_FOUND_LIST=""
 for VM_HOST in $__VM_HOSTS; do
-   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$JAVA_HOME_COMMAND")
-   GEODE_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$GEODE_HOME_COMMAND")
+   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$JAVA_HOME_COMMAND")
+   GEODE_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$GEODE_HOME_COMMAND")
    if [[ "$JAVA_HOME_EXISTS" == *"false" ]]; then
       JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
@@ -240,7 +240,7 @@ function installProduct
       # Determine the first VM that has product distribution file
       BASE_VM=""
       for VM_HOST in $__VM_HOSTS; do
-         __PRODUCT_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$__PRODUCT_COMMAND")
+         __PRODUCT_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$__PRODUCT_COMMAND")
          if [ "$__PRODUCT_EXISTS" == "true" ]; then
             BASE_VM=$VM_HOST
 	    break
@@ -255,9 +255,9 @@ function installProduct
          done
 	 # Upload to the base VM
          if [ "$SIMULATE" == "true" ]; then
-            echo scp -q -r -o stricthostkeychecking=no $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
+            echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
          else
-            scp -q -r -o stricthostkeychecking=no $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
+            scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
 	 fi
       fi
 
@@ -266,22 +266,22 @@ function installProduct
          if [ "$VM_HOST" != "$BASE_VM" ]; then
             # Copy from the base VM
             if [ "$SIMULATE" == "true" ]; then
-               echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
+               echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
             else
-               ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no "scp -o stricthostkeychecking=no $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
+               ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
 	    fi
          fi
 	 # Install
          if [ "$SIMULATE" == "true" ]; then
-            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
-            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
+            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
+            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
          else
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
 	 fi
 
 	 # Remove
-         #ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "rm /tmp/$__PRODUCT_DIST_FILE_NAME"
+         #ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm /tmp/$__PRODUCT_DIST_FILE_NAME"
       done
 
       echo "$PRODUCT installation complete."

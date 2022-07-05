@@ -30,6 +30,7 @@ https://github.com/padogrid
 - Added `hazelcast.yaml` config files for all versions of Hazelcast.
 - Updated `kill_cluster` and `stop_cluster` to bypass pod clusters.
 - Fixed empty workspace status display issues when running `kill_workspace` and `stop_workspace`.
+- Added `SSH_CONNECT_TIME` to timeout ssh commands. The default timeout is 2 seconds.
 
 ---
 

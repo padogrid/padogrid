@@ -868,9 +868,12 @@ function getVmMemberName
    if [ "$__HOST" == "" ]; then
       __HOSTNAME=`hostname`
    else
-      __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "hostname"`
+      __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+      __HOSTNAME=$__HOSTNAME
    fi
-   if [ "$POD" != "local" ]; then
+   if [ "$__HOSTNAME" == "" ]; then
+      echo ""
+   elif [ "$POD" != "local" ]; then
       echo "${CLUSTER}-${__HOSTNAME}"
    else
       echo "${CLUSTER}-${__HOSTNAME}-01"
@@ -891,7 +894,7 @@ function getMemberPid
    __WORKSPACE=$2
    __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    else
       if [[ "$OS_NAME" == "CYGWIN"* ]]; then
          local members="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MEMBER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
@@ -922,7 +925,7 @@ function getVmMemberPid
    __HOST=$1
    __MEMBER=$2
    __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm=java,args | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
    spids=""
    for j in $members; do
       spids="$j $spids"

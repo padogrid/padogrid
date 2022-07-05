@@ -179,7 +179,7 @@ fi
 
 # Fail fast: Exit if any of the hosts is not reachable
 for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
    EXIT_CODE=$?
    if [ "$EXIT_CODE" != "0" ]; then
       echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
@@ -217,7 +217,7 @@ NETWORK_ISSUES_VM_HOSTS=""
 echo "------------------------------------------------------------------------------------------"
 echo "Network Test:"
 for VM_HOST in $__VM_HOSTS; do
-  REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o PasswordAuthentication=no "echo hello" 2>&1)
+  REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
   EXIT_CODE=$?
   if [ "$EXIT_CODE" != "0" ]; then
      echo -e "   $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
@@ -238,9 +238,9 @@ ADDON_NOT_FOUND_LIST=""
 JAVA_HOME_NOT_FOUND_LIST=""
 COHERENCE_HOME_NOT_FOUND_LIST=""
 for VM_HOST in $__VM_HOSTS; do
-   ADDON_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$ADDON_COMMAND")
-   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$JAVA_HOME_COMMAND")
-   COHERENCE_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$COHERENCE_HOME_COMMAND")
+   ADDON_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$ADDON_COMMAND")
+   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$JAVA_HOME_COMMAND")
+   COHERENCE_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COHERENCE_HOME_COMMAND")
    if [[ "$ADDON_EXISTS" == *"false" ]]; then
       ADDON_NOT_FOUND_LIST="$ADDON_NOT_FOUND_LIST $VM_HOST"
    fi
@@ -353,7 +353,7 @@ __VM_HOSTS=$(echo "$__VM_HOSTS_CLUSTER" | sed "s/,/ /g")
 if [ "$NETWORK_ISSUES_VM_HOSTS" == "" ]; then
    CLUSTER_COMMAND="if [ -d "$VM_PADOGRID_WORKSPACE/clusters/$CLUSTER" ]; then echo true; else echo false; fi"
    for VM_HOST in $__VM_HOSTS; do
-      CLUSTER_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "$CLUSTER_COMMAND")
+      CLUSTER_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$CLUSTER_COMMAND")
       if [[ "$CLUSTER_EXISTS" == *"false" ]]; then
 	 CLUSTER_NOT_FOUND_LIST="$CLUSTER_NOT_FOUND_LIST $VM_HOST"
 	 CLUSTER_ISSUES_FOUND=true

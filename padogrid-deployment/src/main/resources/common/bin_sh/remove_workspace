@@ -282,7 +282,7 @@ if [ "$VM_ENABLED" == "true" ] && [ "$LOCAL" != "true" ]; then
    # Replace , with space
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    for VM_HOST in $__VM_HOSTS; do
-      HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "hostname"`
+      HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
       if [ "$HOSTNAME" == "" ]; then
          echo "Invalid host [$VM_HOST]"
          continue
@@ -291,9 +291,9 @@ if [ "$VM_ENABLED" == "true" ] && [ "$LOCAL" != "true" ]; then
       fi
       echo "   Removing $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "rm -rf $VM_WORKSPACE_DIR"
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm -rf $VM_WORKSPACE_DIR"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no "rm -rf $VM_WORKSPACE_DIR"
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm -rf $VM_WORKSPACE_DIR"
       fi
    done
 fi
