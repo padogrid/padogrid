@@ -94,7 +94,7 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -cluster $CLUSTER -pod $POD -port $DEFAULT_NAMENODE_START_PORT
+   $EXECUTABLE -cluster $DEFAULT_CLUSTER -pod $POD -port $DEFAULT_NAMENODE_START_PORT
 
 FILES
    $PADOGRID_WORKSPACE/setenv.sh
@@ -109,12 +109,9 @@ EOF
    exit
 fi
 
-if [ -z $CLUSTER ]; then
-   echo >&2 "----------------------------------------------------------------"
-   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "    ERROR: Cluster name is not specified. Command aborted." 
-   echo >&2 "----------------------------------------------------------------"
-   exit 1
+# Set the default cluster name if not specified
+if [ "$CLUSTER_ARG" == "" ]; then
+   CLUSTER=$DEFAULT_CLUSTER
 fi
 
 # Abort if the cluster exists

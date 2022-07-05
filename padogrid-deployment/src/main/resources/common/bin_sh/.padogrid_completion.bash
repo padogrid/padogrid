@@ -209,7 +209,7 @@ __padogrid_complete()
          case "$PRODUCT" in
          geode)
             type_list="default pado padolite";;
-         hazelcast|snappydata|spark|coherence)
+         *)
             type_list="default";;
          esac
       elif [ "$command" == "make_cluster" ] || [ "$command" == "create_group" ]; then
@@ -222,7 +222,7 @@ __padogrid_complete()
             fi
          done
          if  [ "$product" == "geode" ] || [ "$product" == "gemfire" ]; then
-            type_list="$type_list pado"
+            type_list="$type_list pado padolite"
          fi
       fi
       ;;
@@ -918,7 +918,7 @@ __command_complete()
          case "$PRODUCT" in
          geode)
             type_list="default pado padolite";;
-         hazelcast|snappydata|spark|coherence)
+         *)
             type_list="default";;
          esac
       elif [ "$command" == "make_cluster" ] || [ "$command" == "create_group" ]; then
@@ -931,7 +931,7 @@ __command_complete()
             fi
          done
          if  [ "$product" == "geode" ] || [ "$product" == "gemfire" ]; then
-            type_list="$type_list pado"
+            type_list="$type_list pado padolite"
          fi
       fi
       ;;

@@ -69,6 +69,7 @@ VERSION_SPECIFIED=false
 VERSION_ARG=
 FORCE_SPECIFIED=false
 MAN_SPECIFIED=false
+CLUSTER_ARG=
 CLUSTER_SPECIFIED=false
 CLUSTER_TYPE_SPECIFIED=false
 REPLICAS=$DEFAULT_REPLICAS
@@ -213,6 +214,7 @@ do
          COUNT=$i
       elif [ "$PREV" == "-cluster" ]; then
          CLUSTER=$i
+         CLUSTER_ARG=$i
       elif [ "$PREV" == "-cluster-type" ]; then
          CLUSTER_TYPE=$i
          CLUSTER_TYPE_SPECIFIED="true"
