@@ -512,6 +512,15 @@ done
 #
 . $SCRIPT_DIR/.padoenv.sh
 
+if [ "$PADO_ENABLED" == "false" ] && [ "$PADO_HOME" != "" ]; then
+   # Pado version
+   PADO_VERSION="${PADO_HOME#*pado_}"
+   PADOLITE_ENABLED=$(getClusterProperty "padolite.enabled" "false")
+   if [ "$PADOLITE_ENABLED" == "true" ]; then
+      JAVA_OPTS="$JAVA_OPTS --J='-javaagent:$PADO_HOME/lib/pado-core-$PADO_VERSION.jar'"
+   fi
+fi 
+
 if [ "$PADO_ENABLED" ] && [ "$PADO_JAVA_OPTS" != "" ]; then
   JAVA_OPTS="$JAVA_OPTS $PADO_JAVA_OPTS"
 fi

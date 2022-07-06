@@ -42,6 +42,9 @@ function parseFileName
    done
 }
 
+# Pado version
+PADO_VERSION="${PADO_HOME#*pado_}"
+
 #
 # plugins jars
 #
@@ -67,10 +70,6 @@ if [ "$CLUSTER_TYPE" == "geode" ]; then
 else
    export CLASSPATH=$CLASSPATH:$PLUGIN_JARS:$PADO_HOME/lib/*:$GEMFIRE_HOME/lib/antlr-2.7.7.jar:$GEMFIRE_HOME/lib/gfsh-dependencies.jar
 fi
-
-
-GFSH_OPTS2="--cache-xml-file=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/etc/cache.xml --dir=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/run/mygrid-member-padomac.local-01 --initial-heap=1g --max-heap=1g --disable-default-server=true --name=mygrid-member-padomac.local-01 --locators=localhost[10334] --statistic-archive-file=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/stats/mygrid-member-padomac.local-01.gfs --bind-address=localhost --hostname-for-clients=localhost --start-rest-api=true --http-service-port=7080 --http-service-bind-address=localhost"
-JAVA_OPTS2="--J=-Dpado.vm.id=mygrid-member-padomac.local-01 --J=-Dpadogrid.workspace=ws-pado --J=-Dlog4j.configurationFile=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/etc/log4j2.properties --J=-Dcom.sun.management.jmxremote.port=12001 --J=-Dcom.sun.management.jmxremote.ssl=false --J=-Dcom.sun.management.jmxremote.authenticate=false --J=-Dgeode.jmx=true --J=-Xdebug --J='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9101' --J=-javaagent:/Users/dpark/Padogrid/snapshots/padogrid_0.9.4-SNAPSHOT/lib/jmx_prometheus_javaagent-0.11.0.jar=8091:/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/etc/prometheus.yml --J=-Xloggc:/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/log/mygrid-member-padomac.local-01-gc.log --J=-XX:+PrintGCDetails --J=-XX:+PrintGCDateStamps --J=-XX:+UseParNewGC --J=-XX:+UseConcMarkSweepGC --J=-XX:CMSInitiatingOccupancyFraction=75 --J=-Djava.awt.headless=true --J=-Djava.net.preferIPv4Stack=true --J=-DgemfirePropertyFile=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/etc/gemfire.properties --J=-Dgemfire.log-file=/Users/dpark/Padogrid/workspaces/rwe-pado/ws-pado/clusters/mygrid/log/mygrid-member-padomac.local-01.log --J=-DDISK_STORE_DIR= --J=-DREMOTE_SYSTEM_ID_1= --J=-DREMOTE_SYSTEM_ID_2= --J=-Dgemfire.PREFER_SERIALIZED=true --J=-Dgemfire.BucketRegion.alwaysFireLocalListeners=false --J=-Dgeode-addon.server.port=40404"
 
 SYSTEM_ID=1
 SITE=us
@@ -112,6 +111,7 @@ MEMBER=`getMemberName $MEMBER_NUMBER`
 MEMBER_DIR=$RUN_DIR/$MEMBER
 
 PADO_JAVA_OPTS=" \
+--J="-javaagent:$PADO_HOME/lib/pado-core-$PADO_VERSION.jar" \
 --J=-Dgemfire.distributed-system-id=$SYSTEM_ID \
 --J=-Dpado.home.dir=$CLUSTER_DIR \
 --J=-Djava.awt.headless=true \
@@ -120,24 +120,24 @@ PADO_JAVA_OPTS=" \
 --J=-Dgfinit.cacheserver.1.notify-by-subscription=true \
 --J=-Dgfinit.cacheserver.1.socket-buffer-size=131072 \
 --J=-DSITE=$SITE \
---J=-DDISK_STORE_DIR=$MEMBER_DIR/store \
+--J=-DDISK_STORE_DIR="$MEMBER_DIR/store" \
 --J=-DREMOTE_SYSTEM_ID_1= \
 --J=-DREMOTE_SYSTEM_ID_2= \
 --J=-Dpado.grid.id=$GRID_ID \
 --J=-Dpado.grid.name=$GRID_NAME \
 --J=-Dpado.site.id=$SITE_ID \
 --J=-Dpado.site.name=$SITE_NAME \
---J=-Dpado.plugins.dir=$PADO_PLUGINS_DIR \
---J=-Dpado.etc.dir=$CLUSTER_DIR/etc  \
---J=-Dpado.etc.grid.dir=$ETC_DIR/grid \
---J=-Dpado.db.dir=$CLUSTER_DIR/db \
---J=-Dpado.properties=$ETC_DIR/grid/pado.properties \
---J=-Dpado.appConfigDir=$ETC_DIR/grid/app \
+--J=-Dpado.plugins.dir="$PADO_PLUGINS_DIR" \
+--J=-Dpado.etc.dir="$CLUSTER_DIR/etc"  \
+--J=-Dpado.etc.grid.dir="$ETC_DIR/grid" \
+--J=-Dpado.db.dir="$CLUSTER_DIR/db" \
+--J=-Dpado.properties="$ETC_DIR/grid/pado.properties" \
+--J=-Dpado.appConfigDir="$ETC_DIR/grid/app" \
 --J=-Dpado.server=true \
---J=-Dpado.config-file=$ETC_DIR/grid/pado.xml \
+--J=-Dpado.config-file="$ETC_DIR/grid/pado.xml" \
 --J=-Dpado.log.gridInfo=false \
 --J=-Djavax.xml.accessExternalDTD=all \
---J=-Djavax.net.ssl.trustStore=$CLUSTER_DIR/security/pado.keystore"
+--J=-Djavax.net.ssl.trustStore="$CLUSTER_DIR/security/pado.keystore""
 
 #echo "*****************************************"
 #echo PADO_JAVA_OPTS=$PADO_JAVA_OPTS
