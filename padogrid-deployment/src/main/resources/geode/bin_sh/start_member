@@ -518,6 +518,13 @@ if [ "$PADO_ENABLED" == "false" ] && [ "$PADO_HOME" != "" ]; then
    PADOLITE_ENABLED=$(getClusterProperty "padolite.enabled" "false")
    if [ "$PADOLITE_ENABLED" == "true" ]; then
       JAVA_OPTS="$JAVA_OPTS --J='-javaagent:$PADO_HOME/lib/pado-core-$PADO_VERSION.jar'"
+
+      # Copy pado dtd file into the run directory
+      if [ "$(ls $RUN_DIR/pado*.dtd 2> /dev/null)" == "" ]; then
+         if [ -d "$CLUSTER_DIR/pado" ]; then
+            cp "$CLUSTER_DIR/pado/"pado*.dtd "$RUN_DIR"/
+         fi
+      fi
    fi
 fi 
 
