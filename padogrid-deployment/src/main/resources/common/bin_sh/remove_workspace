@@ -186,7 +186,7 @@ if [ "$CLUSTERS" != "" ]; then
       . $PADOGRID_HOME/$PRODUCT/bin_sh/.utilenv_$PRODUCT.sh
       TOTAL_RUNNING_COUNT=0
       if [ "$PRODUCT" == "geode" ]; then
-         LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$WORKSPACE_ARG" "$CLUSTER")
+         LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$CLUSTER" "$WORKSPACE_ARG" "$RWE")
          let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+LOCATORS_RUNNING_COUNT
          echo "   Locators running: $LOCATORS_RUNNING_COUNT"
       elif [ "$PRODUCT" == "hazelcast" ]; then
@@ -198,7 +198,7 @@ if [ "$CLUSTERS" != "" ]; then
          else
             MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
          fi
-         PID=`getMcPid $MC_NAME $WORKSPACE`
+         PID=`getMcPid $MC_NAME $WORKSPACE $RWE`
          if [ "$PID" != "" ]; then
             MC_RUNNING_COUNT=1
          else
@@ -208,18 +208,18 @@ if [ "$CLUSTERS" != "" ]; then
          let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+LOCATORS_RUNNING_COUNT
          echo "  ManCenter running: $MC_RUNNING_COUNT"
       elif [ "$PRODUCT" == "snappydata" ]; then
-         LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$WORKSPACE_ARG" "$CLUSTER")
-         LEADERS_RUNNING_COUNT=$(getActiveLeaderCount "$WORKSPACE_ARG" "$CLUSTER")
+         LOCATORS_RUNNING_COUNT=$(getActiveLocatorCount "$CLUSTER" "$WORKSPACE_ARG" "$RWE")
+         LEADERS_RUNNING_COUNT=$(getActiveLeaderCount "$CLUSTER" "$WORKSPACE_ARG" "$RWE")
          let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+LOCATORS_RUNNING_COUNT
          echo "   Locators running: $LOCATORS_RUNNING_COUNT"
          echo "    Leaders running: $LEADERS_RUNNING_COUNT"
       elif [ "$PRODUCT" == "spark" ]; then
-         MASTER_RUNNING_COUNT=$(getActiveMasterCount "$WORKSPACE_ARG" "$CLUSTER")
+         MASTER_RUNNING_COUNT=$(getActiveMasterCount "$CLUSTER" "$WORKSPACE_ARG" "$RWE")
          let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+MASTER_RUNNING_COUNT+LEADERS_RUNNING_COUNT
          echo "    Masters running: $MASTER_RUNNING_COUNT"
       fi
       # There are only members for coherence, redis
-      MEMBER_RUNNING_COUNT=$(getActiveMemberCount "$WORKSPACE_ARG" "$CLUSTER")
+      MEMBER_RUNNING_COUNT=$(getActiveMemberCount "$CLUSTER" "$WORKSPACE_ARG" "$RWE")
       let TOTAL_RUNNING_COUNT=TOTAL_RUNNING_COUNT+MEMBER_RUNNING_COUNT
       echo "    Members running: $MEMBER_RUNNING_COUNT"
       if [ $TOTAL_RUNNING_COUNT -gt 0 ]; then
@@ -305,7 +305,6 @@ else
    CURRENT_DIR=`pwd`
    pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
    rm -rf $WORKSPACE_DIR
-   WORKSPACE="$(basename "$PADOGRID_WORKSPACE")"
    # If the current workspace is removed, then pick the first workspace in the RWE dir.
    if [ "$WORKSPACE" == "$WORKSPACE_ARG" ]; then
       __WORKSPACES=$(list_workspaces)

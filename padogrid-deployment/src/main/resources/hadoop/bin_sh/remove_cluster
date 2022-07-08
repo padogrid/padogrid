@@ -123,7 +123,7 @@ function getActiveVmLocatorCount()
    for VM_LOCATOR_HOST in ${__VM_LOCATOR_HOSTS}; do
       let MEMBER_COUNT=LOCATOR_COUNT+1
       LOCATOR=`getVmLocatorName $VM_LOCATOR_HOST`
-      pid=`getVmLocatorPid $VM_LOCATOR_HOST $LOCATOR $WORKSPACE`
+      pid=`getVmLocatorPid $VM_LOCATOR_HOST $LOCATOR $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let LOCATOR_RUNNING_COUNT=LOCATOR_RUNNING_COUNT+1
       fi
@@ -143,16 +143,13 @@ function getActiveVmMemberCount()
    for VM_HOST in ${__VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
       fi
   done
   echo $MEMBER_RUNNING_COUNT
 }
-
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
 # See if any members in the custer are still running. If so, abort.
 LOCATOR_RUNNING_COUNT=0
@@ -186,7 +183,7 @@ else
          echo "----------------------------------------------------------------"
          echo "  WORKSPACE: $PADOGRID_WORKSPACE"
          echo "    Locator: $LOCATOR"
-         pid=`getLocatorPid $LOCATOR $WORKSPACE`
+         pid=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
          if [ -z $pid ]; then
             echo "       *PID: N/A (Down)"
          else
@@ -212,7 +209,7 @@ else
          echo "----------------------------------------------------------------"
          echo "  WORKSPACE: $PADOGRID_WORKSPACE"
          echo "     Member: $MEMBER"
-         pid=`getMemberPid $MEMBER $WORKSPACE`
+         pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
          if [ -z $pid ]; then
             echo "       *PID: N/A (Down)"
          else

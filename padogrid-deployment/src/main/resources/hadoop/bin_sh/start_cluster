@@ -76,9 +76,6 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
-WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
-
 POD=`getClusterProperty "pod.name" "local"`
 
 #
@@ -242,10 +239,10 @@ IS_HISTORYSERVER_ENABLED=$(getClusterProperty historyserver.enabled "false")
 
 if [ "$IS_SECONDARYNAMENODE_ENABLED" = "true" ]; then
    SECONDARYNAMENODE="$(getHadoopPrefix secondarynamenode)01"
-   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE_NAME`
+   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE $RWE`
    if [ "$PID" == "" ]; then
       echo "Starting secondarynamenode..."
-      HDFS_SECONDARYNAMENODE_OPTS="-Dpado.vm.id=$SECONDARYNAMENODE -Dpadogrid.workspace=$WORKSPACE_NAME"
+      HDFS_SECONDARYNAMENODE_OPTS="-Dpado.vm.id=$SECONDARYNAMENODE -Dpadogrid.workspace=$WORKSPACE"
       HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
       HADOOP_PID_DIR=$HADOOP_PID_DIR \
       HADOOP_LOG_DIR=$HADOOP_LOG_DIR \
@@ -257,10 +254,10 @@ if [ "$IS_SECONDARYNAMENODE_ENABLED" = "true" ]; then
 fi
 if [ "$IS_NODEMANAGER_ENABLED" = "true" ]; then
    NODEMANAGER="$(getHadoopPrefix nodemanager)01"
-   PID=`getNameNodePid $NODEMANAGER $WORKSPACE_NAME`
+   PID=`getNameNodePid $NODEMANAGER $WORKSPACE $RWE`
    if [ "$PID" == "" ]; then
       echo "Starting nodemanager..."
-      YARN_NODEMANAGER_OPTS="-Dpado.vm.id=$NODEMANAGER -Dpadogrid.workspace=$WORKSPACE_NAME"
+      YARN_NODEMANAGER_OPTS="-Dpado.vm.id=$NODEMANAGER -Dpadogrid.workspace=$WORKSPACE"
       HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
       HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS \
       HDFS_DATANODE_OPTS=$HDFS_DATANODE_OPTS \
@@ -274,10 +271,10 @@ if [ "$IS_NODEMANAGER_ENABLED" = "true" ]; then
 fi
 if [ "$IS_RESOURCEMANAGER_ENABLED" = "true" ]; then
    RESOURCEMANAGER="$(getHadoopPrefix resourcemanager)01"
-   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE_NAME`
+   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE $RWE`
    if [ "$PID" == "" ]; then
       echo "Starting resourcemanager..."
-      YARN_RESOURCEMANAGER_OPTS="-Dpado.vm.id=$RESOURCEMANAGER -Dpadogrid.workspace=$WORKSPACE_NAME"
+      YARN_RESOURCEMANAGER_OPTS="-Dpado.vm.id=$RESOURCEMANAGER -Dpadogrid.workspace=$WORKSPACE"
       HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
       HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS \
       HDFS_DATANODE_OPTS=$HDFS_DATANODE_OPTS \
@@ -291,10 +288,10 @@ if [ "$IS_RESOURCEMANAGER_ENABLED" = "true" ]; then
 fi
 if [ "$IS_HISTORYSERVER_ENABLED" = "true" ]; then
    HISTORYSERVER="$(getHadoopPrefix historyserver)01"
-   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE_NAME`
+   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE $RWE`
    if [ "$PID" == "" ]; then
       echo "Starting historyserver..."
-      MAPRED_HISTORYSERVER_OPTS="-Dpado.vm.id=$HISTORYSERVER -Dpadogrid.workspace=$WORKSPACE_NAME"
+      MAPRED_HISTORYSERVER_OPTS="-Dpado.vm.id=$HISTORYSERVER -Dpadogrid.workspace=$WORKSPACE"
       HADOOP_CONF_DIR=$HADOOP_CONF_DIR \
       HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS \
       HDFS_DATANODE_OPTS=$HDFS_DATANODE_OPTS \

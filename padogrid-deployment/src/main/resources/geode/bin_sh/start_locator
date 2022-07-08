@@ -72,9 +72,6 @@ EOF
    exit
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
-
 POD=`getClusterProperty "pod.name" "local"`
 
 # Set -simulate if specified
@@ -164,7 +161,6 @@ LOCATOR_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
 LOCATOR=`getLocatorName $LOCATOR_NUMBER`
 LOCATOR_DIR=$RUN_DIR/$LOCATOR
 
-
 if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -192,7 +188,7 @@ fi
 
 # If the locator is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getLocatorPid $LOCATOR $WORKSPACE`
+   PID=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -409,6 +405,7 @@ PULSE_PROPERTIES="--J=-Dpulse.Log-File-Name=pulse --J=-Dpulse.Log-File-Location=
 JAVA_OPTS="$JAVA_OPTS $PULSE_PROPERTIES"
 JAVA_OPTS="--J=-Dpado.vm.id=${LOCATOR} \
    --J=-Dpadogrid.workspace=$WORKSPACE \
+   --J=-Dpadogrid.rwe=$RWE \
    --J=-Dgemfire.statistic-archive-file=$STATS_FILE \
    --J=-Dgemfire.log-file=$LOG_FILE $JAVA_OPTS"
 GFSH_OPTS="--name=${LOCATOR} \
@@ -453,7 +450,7 @@ else
       fi
       echo $GFSH start locator $GFSH_OPTS $JAVA_OPTS
       $GFSH start locator $GFSH_OPTS $JAVA_OPTS
-      PID=`getLocatorPid $LOCATOR $WORKSPACE`
+      PID=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
    fi
 fi
 

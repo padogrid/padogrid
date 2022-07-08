@@ -123,16 +123,13 @@ function getActiveVmMemberCount()
    for VM_HOST in ${__VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
       fi
   done
   echo $MEMBER_RUNNING_COUNT
 }
-
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
 # POD needed to get the correct node name
 POD=`getClusterProperty "pod.name" "local"`
@@ -165,7 +162,7 @@ else
          echo "----------------------------------------------------------------"
          echo "  WORKSPACE: $PADOGRID_WORKSPACE"
          echo "     Member: $MEMBER"
-         pid=`getMemberPid $MEMBER $WORKSPACE`
+         pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
          if [ -z $pid ]; then
             echo "       *PID: N/A (Down)"
          else

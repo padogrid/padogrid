@@ -259,6 +259,10 @@ if [ "$REMOTE_SPECIFIED" == "true" ] && [ "$WORKSPACE_ARG" != "" ]; then
    export PADOGRID_WORKSPACE=$WORKSPACE_ARG
 fi
 
+# Current RWE and WORKSPACE
+RWE=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+
 #
 # Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)
 #

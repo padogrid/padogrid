@@ -76,8 +76,6 @@ EOF
    exit
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 POD=`getClusterProperty "pod.name" "local"`
 
 # Set FG_OPT
@@ -200,7 +198,7 @@ fi
 
 # If the leader is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getLeaderPid $MEMBER $WORKSPACE`
+   PID=`getLeaderPid $MEMBER $WORKSPACE $RWE`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -499,7 +497,7 @@ else
          snappy leader start $SNAPPY_OPTS $JAVA_OPTS -classpath=$CLASSPATH >> $LOG_FILE &
       fi
    fi
-   PID=`getLeaderPid $MEMBER $WORKSPACE`
+   PID=`getLeaderPid $MEMBER $WORKSPACE $RWE`
 fi
 
 # JMX_URL

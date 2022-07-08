@@ -22,16 +22,28 @@
 # Returns the management center PID if it is running.
 # @param mcName         Unique management center name
 # @param workspaceName  Workspace name
+# @param rweName        RWE name
 #
 function getMcPid
 {
    __MC=$1
    __WORKSPACE=$2
-   # Use eval to handle commands with spaces
-   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-      local mcs="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep hazelcast.mc.name=$__MC | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+   __RWE=$3
+
+   if [ "$__RWE" == "" ]; then
+      # Use eval to handle commands with spaces
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep hazelcast.mc.name=$__MC | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+      else
+         local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+      fi
    else
-      local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+      # Use eval to handle commands with spaces
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $(NF-1)}')"
+      else
+         local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+      fi
    fi
    spids=""
    for j in $mcs; do
@@ -50,13 +62,20 @@ function getMcPid
 # @param    host           VM host name or address
 # @param    mcName         Unique management center name
 # @param    workspaceName  Workspace name
+# @param    rweName        RWE name
 #
 function getVmMcPid
 {
    __HOST=$1
    __MEMBER=$2
    __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   __RWE=$4
+
+   if [ "$__RWE" == "" ]; then
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   else
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+   if
    spids=""
    for j in $members; do
       spids="$j $spids"
@@ -69,14 +88,17 @@ function getVmMcPid
 # Returns the number of active (or running) management centers in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # This function works for both VM and non-VM workspaces.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name
 #
 function getActiveMcCount
 {
    # MC
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
    if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
       echo 0
    fi
@@ -84,12 +106,12 @@ function getActiveMcCount
    local let MC_COUNT=0
    local let MC_RUNNING_COUNT=0
    local VM_ENABLED=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.enabled")
-   if [ "$VM_ENABLED" == "truen" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
       local VM_HOSTS=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.locator.hosts")
       for VM_HOST in ${VM_HOSTS}; do
          let MC_COUNT=MC_COUNT+1
          MC=$(getMcName)
-         pid=`getVmMcPid $VM_HOST $MC $__WORKSPACE`
+         pid=`getVmMcPid $VM_HOST $MC $__WORKSPACE $__RWE`
          if [ "$pid" != "" ]; then
              let MC_RUNNING_COUNT=MC_RUNNING_COUNT+1
          fi
@@ -103,7 +125,7 @@ function getActiveMcCount
             MC=$i
             MC_NUM=${MC##$MC_NAME}
             let MC_COUNT=MC_COUNT+1
-            pid=`getMcPid $MC $WORKSPACE`
+            pid=`getMcPid $MC $WORKSPACE $__RWE`
             if [ "$pid" != "" ]; then
                let MC_RUNNING_COUNT=MC_RUNNING_COUNT+1
 	    fi

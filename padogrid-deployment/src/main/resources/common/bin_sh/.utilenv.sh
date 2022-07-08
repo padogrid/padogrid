@@ -740,15 +740,18 @@ function isPodRunning
 # Returns the number of active (or running) members in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # This function works for both VM and non-VM workspaces.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       Optional RWE name.
 #
 function getActiveMemberCount
 {
    # Members
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
-   if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
+   if [ "$__CLUSTER" == "" ] || [ "$__WORKSPACE" == "" ] || [ "$RWE" == "" ]; then
       echo 0
    fi
    local MEMBER
@@ -760,7 +763,7 @@ function getActiveMemberCount
       for VM_HOST in ${VM_HOSTS}; do
          let MEMBER_COUNT=MEMBER_COUNT+1
          MEMBER=`getVmMemberName $VM_HOST`
-         pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE`
+         pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE $__RWE`
          if [ "$pid" != "" ]; then
              let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
          fi
@@ -774,7 +777,7 @@ function getActiveMemberCount
             MEMBER=$i
             MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
             let MEMBER_COUNT=MEMBER_COUNT+1
-            pid=`getMemberPid $MEMBER $WORKSPACE`
+            pid=`getMemberPid $MEMBER $WORKSPACE $__RWE`
             if [ "$pid" != "" ]; then
                let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
        fi
@@ -887,19 +890,36 @@ function getVmMemberName
 # @optional REMOTE_SPECIFIED true if remote node, false if local node. Default: false
 # @param    memberName       Unique member name
 # @param    workspaceName    Workspace name
+# @param    rweName          Optional RWE name. This parameter is optional in order to make
+#                            it version backward compatible (v0.9.19). It will be mandatory
+#                            in the future.
 #
 function getMemberPid
 {
-   __MEMBER=$1
-   __WORKSPACE=$2
+   local __MEMBER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
    __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+     if [ "$ __RWE" == "" ]; then
+        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+     else
+        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+     fi
    else
-      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-         local members="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MEMBER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+      if [ "$ __RWE" == "" ]; then
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local members="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep pado.vm.id=$__MEMBER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+         else
+            local members="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         fi
       else
-         local members="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local members="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $(NF-1)}')"
+         else
+            local members="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+         fi
       fi
    fi
    spids=""
@@ -919,13 +939,22 @@ function getMemberPid
 # @param    host           VM host name or address
 # @param    memberName     Unique member name
 # @param    workspaceName  Workspace name
+# @param    rweName        Optional RWE name. This parameter is optional in order to make
+#                          it version backward compatible (v0.9.19). It will be mandatory
+#                          in the future.
 #
 function getVmMemberPid
 {
-   __HOST=$1
-   __MEMBER=$2
-   __WORKSPACE=$3
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local __HOST=$1
+   local __MEMBER=$2
+   local __WORKSPACE=$3
+   local __RWE=$4
+
+   if [ "$ __RWE" == "" ]; then
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   else
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+   fi
    spids=""
    for j in $members; do
       spids="$j $spids"

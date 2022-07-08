@@ -105,11 +105,6 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    exit
 fi
 
-# Get workspace name
-if [ "$WORKSPACE" == "" ]; then
-   WORKSPACE=${PADOGRID_WORKSPACE##*/}
-fi
-
 POD=`getClusterProperty "pod.name" $POD`
 NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
@@ -148,7 +143,7 @@ for i in ${NAMENODE_PREFIX}*; do
 
       NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
       MEMBER_DIR=$RUN_DIR/$MEMBER
-      PID=`getNameNodePid $MEMBER $WORKSPACE`
+      PID=`getNameNodePid $MEMBER $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
          MEMBER_LOG="hadoop-$USER_NAME-namenode-`hostname`.log"
          MEMBER_OUT="hadoop-$USER_NAME-namenode-`hostname`.out"
@@ -174,7 +169,7 @@ for i in ${NAMENODE_PREFIX}*; do
          fi
          for node in $nodes; do
             prefix="$(getHadoopPrefix $node)01"
-            PID=`getNameNodePid $prefix $WORKSPACE`
+            PID=`getNameNodePid $prefix $WORKSPACE $RWE`
             if [ -z "$PID" ]; then
                NODE_LOG="hadoop-$USER_NAME-$node-`hostname`.log"
                NODE_OUT="hadoop-$USER_NAME-$node-`hostname`.out"
@@ -214,7 +209,7 @@ for i in ${MEMBER_PREFIX}*; do
 
       NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
       MEMBER_DIR=$RUN_DIR/$MEMBER
-      PID=`getMemberPid $MEMBER $WORKSPACE`
+      PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
          MEMBER_LOG="hadoop-$USER_NAME-datanode-`hostname`.log"
          MEMBER_OUT="hadoop-$USER_NAME-datanode-`hostname`.out"

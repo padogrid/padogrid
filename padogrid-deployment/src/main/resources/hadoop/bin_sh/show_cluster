@@ -90,9 +90,7 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
-WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
-SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE; switch_cluster $CLUSTER"
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE $WORKSPACE; switch_cluster $CLUSTER"
 
 # Displays short status of a VM cluster.
 # @required VM_NAMENODE_HOSTS A space separated list of VM namenode hosts (addresses)
@@ -116,7 +114,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_NAMENODE_HOSTS}; do
       let NAMENODE_COUNT=NAMENODE_COUNT+1
       NAMENODE=`getVmNameNodeName $VM_HOST`
-      pid=`getVmNameNodePid $VM_HOST $NAMENODE $WORKSPACE`
+      pid=`getVmNameNodePid $VM_HOST $NAMENODE $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_NAMENODE_COUNT=RUNNING_NAMENODE_COUNT+1
       fi
@@ -128,7 +126,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_HOSTS}; do
       let DATANODE_COUNT=DATANODE_COUNT+1
       DATANODE=`getVmDataNodeName $VM_HOST`
-      pid=`getVmDataNodePid $VM_HOST $DATANODE $WORKSPACE`
+      pid=`getVmDataNodePid $VM_HOST $DATANODE $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_DATANODE_COUNT=RUNNING_DATANODE_COUNT+1
       fi
@@ -246,7 +244,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM        NameNode: $NAMENODE"
 
-      pid=`getVmNameNodePid $VM_HOST $NAMENODE $WORKSPACE`
+      pid=`getVmNameNodePid $VM_HOST $NAMENODE $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_NAMENODE_COUNT=DOWN_NAMENODE_COUNT+1
          echo -e "            STATE: ${CLightRed}Down${CNone}"
@@ -302,7 +300,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM         DataNode: $DATANODE"
 
-      pid=`getVmDataNodePid $VM_HOST $DATANODE $WORKSPACE`
+      pid=`getVmDataNodePid $VM_HOST $DATANODE $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_DATANODE_COUNT=DOWN_DATANODE_COUNT+1
          echo -e "             STATE: ${CLightRed}Down${CNone}"
@@ -380,7 +378,7 @@ function displayClusterShort()
                NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
                NODE_LOCAL="${NODE_NAME_PRIMARY}.local"
             fi
-            pid=`getNameNodePid $NAMENODE $WORKSPACE`
+            pid=`getNameNodePid $NAMENODE $WORKSPACE $RWE`
             if [ "$pid" != "" ]; then
                 let RUNNING_NAMENODE_COUNT=RUNNING_NAMENODE_COUNT+1
             fi
@@ -397,7 +395,7 @@ function displayClusterShort()
                NODE=${NODE_NAME_PREFIX}-$DATANODE_NUM
                NODE_LOCAL=`getOsNodeName $NODE`
             fi
-            pid=`getMemberPid $DATANODE $WORKSPACE`
+            pid=`getMemberPid $DATANODE $WORKSPACE $RWE`
             if [ "$pid" != "" ]; then
                 let RUNNING_DATANODE_COUNT=RUNNING_DATANODE_COUNT+1
             fi
@@ -611,7 +609,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getNameNodePid $NAMENODE $WORKSPACE`
+            pid=`getNameNodePid $NAMENODE $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_NAMENODE_COUNT=DOWN_NAMENODE_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -711,7 +709,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getMemberPid $DATANODE $WORKSPACE`
+            pid=`getMemberPid $DATANODE $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_DATANODE_COUNT=DOWN_DATANODE_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -810,7 +808,7 @@ function determineComponentStatus
 
    # SecondaryNameNode
    SECONDARYNAMENODE="$(getHadoopPrefix secondarynamenode)01"
-   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE`
+   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       IS_SECONDARYNAMENODE_RUNNING="true"
     else
@@ -818,7 +816,7 @@ function determineComponentStatus
    fi
    # NodeManager
    NODEMANAGER="$(getHadoopPrefix nodemanager)01"
-   PID=`getNameNodePid $NODEMANAGER $WORKSPACE`
+   PID=`getNameNodePid $NODEMANAGER $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       IS_NODEMANAGER_RUNNING="true"
     else
@@ -826,7 +824,7 @@ function determineComponentStatus
    fi
    # ResourceManager
    RESOURCEMANAGER="$(getHadoopPrefix resourcemanager)01"
-   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE`
+   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       IS_RESOURCEMANAGER_RUNNING="true"
     else
@@ -834,7 +832,7 @@ function determineComponentStatus
    fi
    # HistoryServer
    HISTORYSERVER="$(getHadoopPrefix historyserver)01"
-   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE`
+   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       IS_HISTORYSERVER_RUNNING="true"
     else

@@ -115,7 +115,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_MASTER_HOSTS}; do
       let MASTER_COUNT=MASTER_COUNT+1
       MASTER=`getVmMasterName $VM_HOST`
-      pid=`getVmMasterPid $VM_HOST $MASTER $WORKSPACE`
+      pid=`getVmMasterPid $VM_HOST $MASTER $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_MASTER_COUNT=RUNNING_MASTER_COUNT+1
       fi
@@ -127,7 +127,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_HOSTS}; do
       let WORKER_COUNT=WORKER_COUNT+1
       WORKER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $WORKER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $WORKER $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_WORKER_COUNT=RUNNING_WORKER_COUNT+1
       fi
@@ -245,7 +245,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM        Master: $MASTER"
 
-      pid=`getVmMasterPid $VM_HOST $MASTER $WORKSPACE`
+      pid=`getVmMasterPid $VM_HOST $MASTER $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_MASTER_COUNT=DOWN_MASTER_COUNT+1
          echo -e "          STATE: ${CLightRed}Down${CNone}"
@@ -301,7 +301,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM        Worker: $WORKER"
 
-      pid=`getVmMemberPid $VM_HOST $WORKER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $WORKER $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_WORKER_COUNT=DOWN_WORKER_COUNT+1
          echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -379,7 +379,7 @@ function displayClusterShort()
                NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
                NODE_LOCAL="${NODE_NAME_PRIMARY}.local"
             fi
-            pid=`getMasterPid $MASTER $WORKSPACE`
+            pid=`getMasterPid $MASTER $WORKSPACE $RWE`
             if [ "$pid" != "" ]; then
                 let RUNNING_MASTER_COUNT=RUNNING_MASTER_COUNT+1
             fi
@@ -396,7 +396,7 @@ function displayClusterShort()
                NODE=${NODE_NAME_PREFIX}-$WORKER_NUM
                NODE_LOCAL=`getOsNodeName $NODE`
             fi
-            pid=`getMemberPid $WORKER $WORKSPACE`
+            pid=`getMemberPid $WORKER $WORKSPACE $RWE`
             if [ "$pid" != "" ]; then
                 let RUNNING_WORKER_COUNT=RUNNING_WORKER_COUNT+1
             fi
@@ -568,7 +568,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getMasterPid $MASTER $WORKSPACE`
+            pid=`getMasterPid $MASTER $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_MASTER_COUNT=DOWN_MASTER_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -665,7 +665,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getMemberPid $WORKER $WORKSPACE`
+            pid=`getMemberPid $WORKER $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_WORKER_COUNT=DOWN_WORKER_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -715,9 +715,6 @@ function displayClusterLong()
    echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
-
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
 # 
 # VM cluster

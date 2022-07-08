@@ -122,9 +122,6 @@ if [ "$RUN_TYPE" != "pado" ]; then
    exit 1
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
-
 # Determine the node host name for URL
 POD=`getClusterProperty "pod.name" $POD`
 NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
@@ -160,7 +157,7 @@ else
    PADOWEB_NAME=${CLUSTER}-padoweb-${PADOWEB_HTTP_PORT}
 fi
 
-PID=$(getPadowebPid "$PADOWEB_NAME" "$WORKSPACE")
+PID=$(getPadowebPid "$PADOWEB_NAME" "$WORKSPACE" "$RWE")
 
 if [ "$PID" != "" ]; then
    echo -e >&2 "${CLightRed}ERROR:${CNone} PadoWeb already running [PID=$PID]. Command aborted."

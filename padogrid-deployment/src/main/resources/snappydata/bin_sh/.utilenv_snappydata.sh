@@ -37,20 +37,35 @@ function getLocatorNumWithLeadingZero
 # @required REMOTE_SPECIFIED false to invoke remotely, true to invoke locally.
 # @param    locatorName      Unique locator name
 # @param    workspaceName    Workspace name
+# @param    rweName          RWE name
 #
 function getLocatorPid
 {
    local __LOCATOR=$1
    local __WORKSPACE=$2
+   local __RWE=$3
+
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    local locators
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   else
-      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-         local locators="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__LOCATOR | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+      if [ "$__RWE" == "" ]; then
+         locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
       else
-         local locators="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+      fi
+   else
+      if [ "$__RWE" == "" ]; then
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local locators="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__LOCATOR | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+         else
+            local locators="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         fi
+      else
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local locators="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $(NF-1)}')"
+         else
+            local locators="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+         fi
       fi
    fi
    spids=""
@@ -81,13 +96,20 @@ function getLeaderPid
 # @param    host           VM host name or address
 # @param    locatorName    Unique locator name
 # @param    workspaceName  Workspace name
+# @param    rweName        RWE name
 #
 function getVmLocatorPid
 {
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local __RWE=$4
+
+   if [ "$__RWE" == "" ]; then
+      local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   else
+      local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+   fi
    spids=""
    for j in $locators; do
       spids="$j $spids"
@@ -105,13 +127,20 @@ function getVmLocatorPid
 # @param    host           VM host name or address
 # @param    leaderName     Unique leader name
 # @param    workspaceName  Workspace name
+# @param    rweName        RWE name
 #
 function getVmLeaderPid
 {
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local __RWE=$4
+
+   if [ "$__RWE" == "" ]; then
+      local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   else
+      local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+   fi
    spids=""
    for j in $locators; do
       spids="$j $spids"
@@ -124,14 +153,16 @@ function getVmLeaderPid
 # Returns the number of active (or running) locators in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # This function works for both VM and non-VM workspaces.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name
 #
 function getActiveLocatorCount
 {
    # Locators
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
    if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
       echo 0
    fi
@@ -139,12 +170,12 @@ function getActiveLocatorCount
    local let LOCATOR_COUNT=0
    local let LOCATOR_RUNNING_COUNT=0
    local VM_ENABLED=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.enabled")
-   if [ "$VM_ENABLED" == "truen" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
       local VM_HOSTS=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.locator.hosts")
       for VM_HOST in ${VM_HOSTS}; do
          let LOCATOR_COUNT=LOCATOR_COUNT+1
          LOCATOR=`getVmLocatorName $VM_HOST`
-         pid=`getVmLocatorPid $VM_HOST $LOCATOR $__WORKSPACE`
+         pid=`getVmLocatorPid $VM_HOST $LOCATOR $__WORKSPACE $__RWE`
          if [ "$pid" != "" ]; then
              let LOCATOR_RUNNING_COUNT=LOCATOR_RUNNING_COUNT+1
          fi
@@ -158,7 +189,7 @@ function getActiveLocatorCount
             LOCATOR=$i
             LOCATOR_NUM=${LOCATOR##$LOCATOR_PREFIX}
             let LOCATOR_COUNT=LOCATOR_COUNT+1
-            pid=`getLocatorPid $LOCATOR $WORKSPACE`
+            pid=`getLocatorPid $LOCATOR $WORKSPACE $__RWE`
             if [ "$pid" != "" ]; then
                let LOCATOR_RUNNING_COUNT=LOCATOR_RUNNING_COUNT+1
 	    fi
@@ -173,14 +204,17 @@ function getActiveLocatorCount
 # Returns the number of active (or running) leaders in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # This function works for both VM and non-VM workspaces.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name.
 #
 function getActiveLeaderCount
 {
    # Locators
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
    if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
       echo 0
    fi
@@ -188,12 +222,12 @@ function getActiveLeaderCount
    local let LEADER_COUNT=0
    local let LEADER_RUNNING_COUNT=0
    local VM_ENABLED=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.enabled")
-   if [ "$VM_ENABLED" == "truen" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
       local VM_HOSTS=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.locator.hosts")
       for VM_HOST in ${VM_HOSTS}; do
          let LEADER_COUNT=LEADER_COUNT+1
          LEADER=`getVmLeaderName $VM_HOST`
-         pid=`getVmLeaderPid $VM_HOST $LEADER $__WORKSPACE`
+         pid=`getVmLeaderPid $VM_HOST $LEADER $__WORKSPACE $__RWE`
          if [ "$pid" != "" ]; then
              let LEADER_RUNNING_COUNT=LEADER_RUNNING_COUNT+1
          fi
@@ -207,7 +241,7 @@ function getActiveLeaderCount
             LEADER=$i
             LEADER_NUM=${LEADER##$LEADER_PREFIX}
             let LEADER_COUNT=LEADER_COUNT+1
-            pid=`getLeaderPid $LEADER $WORKSPACE`
+            pid=`getLeaderPid $LEADER $WORKSPACE $__RWE`
             if [ "$pid" != "" ]; then
                let LEADER_RUNNING_COUNT=LEADER_RUNNING_COUNT+1
 	    fi
@@ -221,15 +255,18 @@ function getActiveLeaderCount
 #
 # Returns the number of active (or running) locators in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name
 #
 function getVmActiveLocatorCount
 {
    # Locators
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
-   if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
+   if [ "$__CLUSTER" == "" ] || [ "$__WORKSPACE" == "" ] || [ "$__RWE" == "" ]; then
       return 0
    fi
    local LOCATOR
@@ -239,7 +276,7 @@ function getVmActiveLocatorCount
    for VM_HOST in ${VM_HOSTS}; do
       let LOCATOR_COUNT=LOCATOR_COUNT+1
       LOCATOR=`getVmLocatorName $VM_HOST`
-      pid=`getVmLocatorPid $VM_HOST $LOCATOR $__WORKSPACE`
+      pid=`getVmLocatorPid $VM_HOST $LOCATOR $__WORKSPACE $__RWE`
       if [ "$pid" != "" ]; then
           let LOCATOR_RUNNING_COUNT=LOCATOR_RUNNING_COUNT+1
       fi
@@ -268,7 +305,7 @@ function getVmActiveMemberCount
    for VM_HOST in ${VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE $__RWE`
       if [ "$pid" != "" ]; then
           let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
       fi

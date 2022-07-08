@@ -41,7 +41,7 @@ function getRedisVmMemberPid
 # This function works for both VM and non-VM workspaces.
 # @required POD
 # @required REMOTE_SPECIFIED
-# @required NODE_LOCAL     Node name with the local extenstion. For remote call only.
+# @required NODE_LOCAL Node name with the local extenstion. For remote call only.
 # @param workspaceName Workspace name. Optional.
 # @param clusterName   Cluster name. Optional.
 #

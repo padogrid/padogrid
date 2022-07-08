@@ -72,8 +72,6 @@ EOF
    exit
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 POD=`getClusterProperty "pod.name" "local"`
 
 # Set -simulate if specified
@@ -190,7 +188,7 @@ fi
 
 # If the namenode is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getNameNodePid $NAMENODE $WORKSPACE`
+   PID=`getNameNodePid $NAMENODE $WORKSPACE $RWE`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -431,7 +429,7 @@ NAMENODE_URL=file://$NAMENODE_DIR
       HDFS_NAMENODE_OPTS=$HDFS_NAMENODE_OPTS \
       hdfs --daemon start namenode
 
-      PID=`getNameNodePid $NAMENODE $WORKSPACE`
+      PID=`getNameNodePid $NAMENODE $WORKSPACE $RWE`
 
    fi
 fi

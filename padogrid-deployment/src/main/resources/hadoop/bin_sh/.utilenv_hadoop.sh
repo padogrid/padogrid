@@ -37,21 +37,37 @@ function getNameNodeNumWithLeadingZero
 # @required REMOTE_SPECIFIED false to invoke remotely, true to invoke locally.
 # @param    namenodeName   Unique namenode name
 # @param    workspaceName  Workspace name
+# @param    rweName        RWE name
 #
 function getNameNodePid
 {
    local __NAMENODE=$1
    local __WORKSPACE=$2
+   local __RWE=$3
+
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    local namenodes
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   else
-      # Use eval to handle commands with spaces
-      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-         local namenodes="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__NAMENODE | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+      if [ "$__RWE" == "" ]; then
+         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
       else
-         local namenodes="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+      fi
+   else
+      if [ "$__RWE" == "" ]; then
+         # Use eval to handle commands with spaces
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local namenodes="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__NAMENODE | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+         else
+            local namenodes="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         fi
+      else
+         # Use eval to handle commands with spaces
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local namenodes="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep pado.vm.id=$__NAMENODE | grep "padogrid.workspace=$__WORKSPACE" | grep "padogrid.rwe=$__RWE" | awk '{print $(NF-1)}')"
+         else
+            local namenodes="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+         fi
       fi
    fi
    spids=""
@@ -71,13 +87,20 @@ function getNameNodePid
 # @param    host           VM host name or address
 # @param    namenodeName   Unique namenode name
 # @param    workspaceName  Workspace name
+# @param    rweName        RWE name
 #
 function getVmNameNodePid
 {
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local __RWE=$4
+
+   if [ "$__RWE" == "" ]; then
+      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   else
+      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+   fi
    spids=""
    for j in $namenodes; do
       spids="$j $spids"
@@ -90,27 +113,30 @@ function getVmNameNodePid
 # Returns the number of active (or running) namenodes in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # This function works for both VM and non-VM workspaces.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name.
 #
 function getActiveNameNodeCount
 {
    # NameNodes
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
    if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
       echo 0
    fi
    local NAMENODE
    local let NAMENODE_COUNT=0
    local let NAMENODE_RUNNING_COUNT=0
-   local VM_ENABLED=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.enabled")
-   if [ "$VM_ENABLED" == "truen" ]; then
-      local VM_HOSTS=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.namenode.hosts")
+   local VM_ENABLED=$(getWorkspaceClusterProperty $__CLUSTER $__WORKSPACE $__RWE "vm.enabled")
+   if [ "$VM_ENABLED" == "true" ]; then
+      local VM_HOSTS=$(getWorkspaceClusterProperty $__CLUSTER $__WORKSPACE $__RWE "vm.namenode.hosts")
       for VM_HOST in ${VM_HOSTS}; do
          let NAMENODE_COUNT=NAMENODE_COUNT+1
          NAMENODE=`getVmNameNodeName $VM_HOST`
-         pid=`getVmNameNodePid $VM_HOST $NAMENODE $__WORKSPACE`
+         pid=`getVmNameNodePid $VM_HOST $NAMENODE $__WORKSPACE $__RWE`
          if [ "$pid" != "" ]; then
              let NAMENODE_RUNNING_COUNT=NAMENODE_RUNNING_COUNT+1
          fi
@@ -124,7 +150,7 @@ function getActiveNameNodeCount
             NAMENODE=$i
             NAMENODE_NUM=${NAMENODE##$NAMENODE_PREFIX}
             let NAMENODE_COUNT=NAMENODE_COUNT+1
-            pid=`getNameNodePid $NAMENODE $WORKSPACE`
+            pid=`getNameNodePid $NAMENODE $WORKSPACE $__RWE`
             if [ "$pid" != "" ]; then
                let NAMENODE_RUNNING_COUNT=NAMENODE_RUNNING_COUNT+1
 	    fi
@@ -140,12 +166,15 @@ function getActiveNameNodeCount
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param rweName       RWE name.
 #
 function getVmActiveNameNodeCount
 {
    # NameNodes
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
    if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
       return 0
    fi
@@ -156,7 +185,7 @@ function getVmActiveNameNodeCount
    for VM_HOST in ${VM_HOSTS}; do
       let NAMENODE_COUNT=NAMENODE_COUNT+1
       NAMENODE=`getVmNameNodeName $VM_HOST`
-      pid=`getVmNameNodePid $VM_HOST $NAMENODE $__WORKSPACE`
+      pid=`getVmNameNodePid $VM_HOST $NAMENODE $__WORKSPACE $__RWE`
       if [ "$pid" != "" ]; then
           let NAMENODE_RUNNING_COUNT=NAMENODE_RUNNING_COUNT+1
       fi
@@ -185,7 +214,7 @@ function getVmActiveMemberCount
    for VM_HOST in ${VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE $__RWE`
       if [ "$pid" != "" ]; then
           let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
       fi

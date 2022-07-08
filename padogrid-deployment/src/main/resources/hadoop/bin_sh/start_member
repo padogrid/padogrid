@@ -87,7 +87,6 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
 fi
 
 # Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 POD=`getClusterProperty "pod.name" "local"`
 
 # Set FG_OPT
@@ -230,7 +229,7 @@ fi
 
 # If the member is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getMemberPid $MEMBER $WORKSPACE`
+   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -494,7 +493,7 @@ else
        MEMBER_PREFIX=`getMemberPrefix` 
        MEMBER_COUNT=`getMemberCount`
 
-       RUNNING_MEMBER_COUNT=$(getActiveMemberCount $WORKSPACE $CLUSTER)
+       RUNNING_MEMBER_COUNT=$(getActiveMemberCount $CLUSTER $WORKSPACE $RWE)
        if [ $RUNNING_MEMBER_COUNT -lt $MEMBER_COUNT ]; then
 
           HADOOP_CONF_DIR=$ETC_DIR/$MEMBER
@@ -514,7 +513,7 @@ else
           hdfs --config $HADOOP_CONF_DIR --daemon start datanode  
        fi
    fi
-   PID=`getMemberPid $MEMBER $WORKSPACE`
+   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
 fi
 
 # JMX_URL

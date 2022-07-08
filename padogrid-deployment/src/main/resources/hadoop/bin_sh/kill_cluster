@@ -84,7 +84,6 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
 POD=`getClusterProperty "pod.name" "local"`
 POD_DIR=$PODS_DIR/$POD
 
@@ -209,25 +208,25 @@ if [ "$ALL" == "true" ]; then
 
    # Other servers
    SECONDARYNAMENODE="$(getHadoopPrefix secondarynamenode)01"
-   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE`
+   PID=`getNameNodePid $SECONDARYNAMENODE $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       echo "Killing secondarynamenode..."
       kill -9 $PID
    fi
    NODEMANAGER="$(getHadoopPrefix nodemanager)01"
-   PID=`getNameNodePid $NODEMANAGER $WORKSPACE`
+   PID=`getNameNodePid $NODEMANAGER $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       echo "Killing nodemanager..."
       kill -9 $PID
    fi
    RESOURCEMANAGER="$(getHadoopPrefix resourcemanager)01"
-   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE`
+   PID=`getNameNodePid $RESOURCEMANAGER $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       echo "Killing resourcemanager..."
       kill -9 $PID
    fi
    HISTORYSERVER="$(getHadoopPrefix historyserver)01"
-   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE`
+   PID=`getNameNodePid $HISTORYSERVER $WORKSPACE $RWE`
    if [ "$PID" != "" ]; then
       echo "Killing historyserver..."
       kill -9 $PID

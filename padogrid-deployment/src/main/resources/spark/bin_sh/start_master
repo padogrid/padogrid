@@ -72,8 +72,6 @@ EOF
    exit
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 POD=`getClusterProperty "pod.name" "local"`
 
 # Set -simulate if specified
@@ -190,7 +188,7 @@ fi
 
 # If the master is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getMasterPid $MASTER $WORKSPACE`
+   PID=`getMasterPid $MASTER $WORKSPACE $RWE`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -434,7 +432,7 @@ else
       SPARK_DIST_CLASSPATH=$CLASSPATH \
       start-master.sh
 
-      PID=`getMasterPid $MASTER $WORKSPACE`
+      PID=`getMasterPid $MASTER $WORKSPACE $RWE`
    fi
 fi
 

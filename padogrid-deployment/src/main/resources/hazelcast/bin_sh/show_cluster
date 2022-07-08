@@ -118,7 +118,7 @@ function displayVmClusterShort()
       if [ "$MEMBER" == "" ]; then
          pid=""
       else
-         pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+         pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       fi
       if [ "$pid" != "" ]; then
           let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
@@ -133,7 +133,7 @@ function displayVmClusterShort()
       MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
    fi
    MC_HOST=`getClusterProperty "mc.host"`
-   MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE`
+   MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE $RWE`
 
    echo "         CLUSTER: $CLUSTER"
    if [ "$SHORT" == "false" ]; then
@@ -255,7 +255,7 @@ function displayVmClusterLong()
          pid=""
          MEMBER="$VM_HOST (VM_HOST)"
       else
-         pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+         pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       fi
       echo "$NUM        Member: $MEMBER"
       if [ -z $pid ]; then
@@ -288,7 +288,7 @@ function displayVmClusterLong()
    fi
 
    if [ "$MEMBER_FOUND" == "true" ]; then
-      MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE`
+      MC_PID=`getVmMcPid $MC_HOST $MC_NAME $WORKSPACE $RWE`
    else
       MC_PID=""
    fi
@@ -345,7 +345,7 @@ function displayClusterShort()
                NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
                NODE_LOCAL=`getOsNodeName $NODE`
             fi
-            pid=`getMemberPid $MEMBER $WORKSPACE`
+            pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
             if [ "$pid" != "" ]; then
                 let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
             fi
@@ -361,7 +361,7 @@ function displayClusterShort()
    else
       MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
    fi
-   MC_PID=`getMcPid  $MC_NAME $WORKSPACE`
+   MC_PID=`getMcPid  $MC_NAME $WORKSPACE $RWE`
 
    echo "         CLUSTER: $CLUSTER"
    if [ "$SHORT" == "false" ]; then
@@ -500,7 +500,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getMemberPid $MEMBER $WORKSPACE`
+            pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -535,7 +535,7 @@ function displayClusterLong()
    else
       MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
    fi
-   MC_PID=`getMcPid $MC_NAME $WORKSPACE`
+   MC_PID=`getMcPid $MC_NAME $WORKSPACE $RWE`
 
    show_mc -long
    echo "         CLUSTER: $CLUSTER"
@@ -556,9 +556,6 @@ function displayClusterLong()
    echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
-
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
 # 
 # VM cluster

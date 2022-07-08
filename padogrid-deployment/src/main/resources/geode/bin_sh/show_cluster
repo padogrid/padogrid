@@ -91,9 +91,7 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
-WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
-SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE $WORKSPACE; switch_cluster $CLUSTER"
 
 # Displays short status of a VM cluster.
 # @required VM_LOCATOR_HOSTS A space separated list of VM locator hosts (addresses)
@@ -117,7 +115,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_LOCATOR_HOSTS}; do
       let LOCATOR_COUNT=LOCATOR_COUNT+1
       LOCATOR=`getVmLocatorName $VM_HOST`
-      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE`
+      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
       fi
@@ -129,7 +127,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
       fi
@@ -254,7 +252,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM       Locator: $LOCATOR"
 
-      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE`
+      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
          echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -312,7 +310,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM        Member: $MEMBER"
 
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
          echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -391,7 +389,7 @@ function displayClusterShort()
                NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
                NODE_LOCAL="${NODE_NAME_PRIMARY}.local"
             fi
-            pid=`getLocatorPid $LOCATOR $WORKSPACE`
+            pid=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
             if [ "$pid" != "" ]; then
                 let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
             fi
@@ -592,7 +590,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getLocatorPid $LOCATOR $WORKSPACE`
+            pid=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -693,7 +691,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getMemberPid $MEMBER $WORKSPACE`
+            pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"

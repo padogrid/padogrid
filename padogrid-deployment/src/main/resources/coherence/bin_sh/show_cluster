@@ -115,7 +115,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
       fi
@@ -223,7 +223,7 @@ function displayVmClusterLong()
       fi
       echo "$NUM        Member: $MEMBER"
 
-      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
          echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -293,7 +293,7 @@ function displayClusterShort()
                NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
                NODE_LOCAL=`getOsNodeName $NODE`
             fi
-            pid=`getMemberPid $MEMBER $WORKSPACE`
+            pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
             if [ "$pid" != "" ]; then
                 let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
             fi
@@ -438,7 +438,7 @@ function displayClusterLong()
             else
                REMOTE_SPECIFIED=true
             fi
-            pid=`getMemberPid $MEMBER $WORKSPACE`
+            pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
                echo -e "           STATE: ${CLightRed}Down${CNone}"
@@ -480,9 +480,6 @@ function displayClusterLong()
    echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
-
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 
 # 
 # VM cluster

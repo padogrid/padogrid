@@ -103,11 +103,6 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    exit
 fi
 
-# Get workspace name
-if [ "$WORKSPACE" == "" ]; then
-   WORKSPACE=${PADOGRID_WORKSPACE##*/}
-fi
-
 POD=`getClusterProperty "pod.name" $POD`
 NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
@@ -135,7 +130,7 @@ for i in ${LOCATOR_PREFIX}*; do
 
       NODE_LOCAL=${NODE_NAME_PREFIX}-${LOCATOR_NUMBER}.local
       LOCATOR_DIR=$RUN_DIR/$LOCATOR
-      PID=`getLocatorPid $LOCATOR $WORKSPACE`
+      PID=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
          rm -f $LOG_DIR/${LOCATOR}*.log > /dev/null 2>&1
          rm -f $STATS_DIR/${LOCATOR}*.gfs > /dev/null 2>&1
@@ -175,7 +170,7 @@ for i in ${MEMBER_PREFIX}*; do
 
       NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
       MEMBER_DIR=$RUN_DIR/$MEMBER
-      PID=`getMemberPid $MEMBER $WORKSPACE`
+      PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
          rm -f $LOG_DIR/${MEMBER}*.log > /dev/null 2>&1
          rm -f $STATS_DIR/${MEMBER}*.gfs > /dev/null 2>&1

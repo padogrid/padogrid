@@ -85,9 +85,6 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
-
 LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
 LOCATOR_TCP_LIST=""
 
@@ -116,7 +113,7 @@ if [ "$VM_ENABLED" == "true" ]; then
    # Find an active locator
    for VM_HOST in ${VM_LOCATOR_HOSTS}; do
       LOCATOR=`getVmLocatorName $VM_HOST`
-      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE`
+      pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
          BIND_ADDRESS=`getClusterProperty "vm.${VM_HOST}.bindAddress" "$VM_HOST"`
          LOCATOR_TCP_LIST="$BIND_ADDRESS[$LOCATOR_START_PORT]"
@@ -132,7 +129,7 @@ elif [ "$POD" == "local" ]; then
    for i in ${LOCATOR_PREFIX}*; do
    if [ -d "$i" ]; then
     __LOCATOR=$i
-    pid=`getLocatorPid $__LOCATOR $WORKSPACE`
+    pid=`getLocatorPid $__LOCATOR $WORKSPACE $RWE`
     if [ "$pid" != "" ]; then
        __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
        __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
@@ -163,7 +160,7 @@ else
             NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
             NODE_LOCAL="${NODE_NAME_PRIMARY}.local"
          fi
-         pid=`getLocatorPid $__LOCATOR $WORKSPACE`
+         pid=`getLocatorPid $__LOCATOR $WORKSPACE $RWE`
          if [ "$pid" != "" ]; then
              __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
              __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)

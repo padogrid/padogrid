@@ -35,23 +35,39 @@ function getMasterNumWithLeadingZero
 # Returns the master PID if it is running. Empty value otherwise.
 # @required NODE_LOCAL       Node name with the local extenstion. For remote call only.
 # @required REMOTE_SPECIFIED false to invoke remotely, true to invoke locally.
-# @param    masterName      Unique master name
+# @param    masterName       Unique master name
 # @param    workspaceName    Workspace name
+# @param    rweName          RWE name
 #
 function getMasterPid
 {
    local __MASTER=$1
    local __WORKSPACE=$2
+   local __RWE=$3
+
    local __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    local masters
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-      masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
-   else
-      # Use eval to handle commands with spaces
-      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-         local masters="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MASTER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+      if [ "$__RWE" == "" ]; then
+         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
       else
-         local masters="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+      fi
+   else
+      if [ "$__RWE" == "" ]; then
+         # Use eval to handle commands with spaces
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local masters="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MASTER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+         else
+            local masters="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+         fi
+      else
+         # Use eval to handle commands with spaces
+         if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+            local masters="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE  | grep padogrid.rwe=$__RWE | awk '{print $(NF-1)}')"
+         else
+            local masters="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE  | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+         fi
       fi
    fi
    spids=""
@@ -69,15 +85,22 @@ function getMasterPid
 # @required VM_USER        VM ssh user name
 # @optional VM_KEY         VM private key file path with -i prefix, e.g., "-i file.pem"
 # @param    host           VM host name or address
-# @param    masterName    Unique master name
+# @param    masterName     Unique master name
 # @param    workspaceName  Workspace name
+# @param    rweName        RWE name
 #
 function getVmMasterPid
 {
    local __HOST=$1
    local __MEMBER=$2
    local __WORKSPACE=$3
-   local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   local __RWE=$4
+
+   if [ "$__RWE" == "" ]; then
+      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+   else
+      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+   fi
    spids=""
    for j in $masters; do
       spids="$j $spids"
@@ -90,14 +113,17 @@ function getVmMasterPid
 # Returns the number of active (or running) masters in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
 # This function works for both VM and non-VM workspaces.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name
 #
 function getActiveMasterCount
 {
    # Masters
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
    if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
       echo 0
    fi
@@ -105,12 +131,12 @@ function getActiveMasterCount
    local let MASTER_COUNT=0
    local let MASTER_RUNNING_COUNT=0
    local VM_ENABLED=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.enabled")
-   if [ "$VM_ENABLED" == "truen" ]; then
+   if [ "$VM_ENABLED" == "true" ]; then
       local VM_HOSTS=$(getWorkspaceClusterProperty $__WORKSPACE $__CLUSTER "vm.master.hosts")
       for VM_HOST in ${VM_HOSTS}; do
          let MASTER_COUNT=MASTER_COUNT+1
          MASTER=`getVmMasterName $VM_HOST`
-         pid=`getVmMasterPid $VM_HOST $MASTER $__WORKSPACE`
+         pid=`getVmMasterPid $VM_HOST $MASTER $__WORKSPACE $__RWE`
          if [ "$pid" != "" ]; then
              let MASTER_RUNNING_COUNT=MASTER_RUNNING_COUNT+1
          fi
@@ -124,7 +150,7 @@ function getActiveMasterCount
             MASTER=$i
             MASTER_NUM=${MASTER##$MASTER_PREFIX}
             let MASTER_COUNT=MASTER_COUNT+1
-            pid=`getMasterPid $MASTER $WORKSPACE`
+            pid=`getMasterPid $MASTER $__WORKSPACE $__RWE`
             if [ "$pid" != "" ]; then
                let MASTER_RUNNING_COUNT=MASTER_RUNNING_COUNT+1
       fi
@@ -138,15 +164,18 @@ function getActiveMasterCount
 #
 # Returns the number of active (or running) masters in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name
 #
 function getVmActiveMasterCount
 {
    # Masters
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
-   if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
+   if [ "$__CLUSTER" == "" ] || [ "$__WORKSPACE" == "" ] || [ "$__RWE" == "" ]; then
       return 0
    fi
    local MASTER
@@ -156,7 +185,7 @@ function getVmActiveMasterCount
    for VM_HOST in ${VM_HOSTS}; do
       let MASTER_COUNT=MASTER_COUNT+1
       MASTER=`getVmMasterName $VM_HOST`
-      pid=`getVmMasterPid $VM_HOST $MASTER $__WORKSPACE`
+      pid=`getVmMasterPid $VM_HOST $MASTER $__WORKSPACE $__RWE`
       if [ "$pid" != "" ]; then
           let MASTER_RUNNING_COUNT=MASTER_RUNNING_COUNT+1
       fi
@@ -167,15 +196,18 @@ function getVmActiveMasterCount
 #
 # Returns the number of active (or running) members in the specified cluster.
 # Returns 0 if the workspace name or cluster name is unspecified or invalid.
-# @param workspaceName Workspace name.
 # @param clusterName   Cluster name.
+# @param workspaceName Workspace name.
+# @param rweName       RWE name
 #
 function getVmActiveMemberCount
 {
    # Members
-   local __WORKSPACE=$1
-   local __CLUSTER=$2
-   if [ "$__WORKSPACE" == "" ] || [ "$__CLUSTER" == "" ]; then
+   local __CLUSTER=$1
+   local __WORKSPACE=$2
+   local __RWE=$3
+
+   if [ "$__CLUSTER" == "" ] || [ "$__WORKSPACE" == "" ] || [ "$__RWE" == "" ]; then
       return 0
    fi
    local MEMBER
@@ -185,7 +217,7 @@ function getVmActiveMemberCount
    for VM_HOST in ${VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
-      pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE`
+      pid=`getVmMemberPid $VM_HOST $MEMBER $__WORKSPACE $__RWE`
       if [ "$pid" != "" ]; then
           let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
       fi

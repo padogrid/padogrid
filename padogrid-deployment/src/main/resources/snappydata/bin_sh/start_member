@@ -86,8 +86,6 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 POD=`getClusterProperty "pod.name" "local"`
 
 # Set FG_OPT
@@ -230,7 +228,7 @@ fi
 
 # If the member is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getMemberPid $MEMBER $WORKSPACE`
+   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -523,7 +521,7 @@ else
          nohup snappy server start $SNAPPY_OPTS $JAVA_OPTS -classpath=$CLASSPATH >> $LOG_FILE &
       fi
    fi
-   PID=`getMemberPid $MEMBER $WORKSPACE`
+   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
 fi
 
 # JMX_URL
