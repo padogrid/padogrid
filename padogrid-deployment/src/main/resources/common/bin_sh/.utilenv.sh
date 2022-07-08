@@ -585,7 +585,7 @@ function getApps {
 
 #
 # Returns a space-sparated list of supported '-app' options for the 'create_app' command.
-# @param product  Product name. Supported are hazelcast, jet, geode
+# @param product  Product name. Supported are hazelcast, jet, geode, gemfire, redis
 #
 function getAppOptions 
 {
@@ -603,6 +603,37 @@ function getAppOptions
    else
       echo ""
    fi
+}
+
+#
+# Returns the default port number of the specified product.
+# @param product  Product name.
+#
+function getClusterPortOptions 
+{
+   local __PRODUCT="$1"
+   local __DEFAULT_PORT
+
+   case "$__PRODUCT" in
+   coherence)
+      __DEFAULT_PORT="$DEFAULT_COHERENCE_START_PORT";;
+   gemfire|geode|snappydata)
+      __DEFAULT_PORT="$DEFAULT_GEODE_START_PORT";;
+   hadoop)
+      __DEFAULT_PORT="$DEFAULT_HADOOP_START_PORT";;
+   hazelcast|jet)
+      __DEFAULT_PORT="$DEFAULT_HAZELCAST_START_PORT";;
+   kafka)
+      __DEFAULT_PORT="$DEFAULT_KAFKA_START_PORT";;
+   redis)
+      __DEFAULT_PORT="$DEFAULT_REDIS_START_PORT";;
+   spark)
+      __DEFAULT_PORT="$DEFAULT_SPARK_START_PORT";;
+    *)
+      __DEFAULT_PORT=""
+   esac
+
+   echo "$__DEFAULT_PORT"
 }
 
 # 
@@ -3627,21 +3658,11 @@ function determineInstalledProductVersions
 #
 function determineProduct
 {
-   if [[ "$PRODUCT_HOME" == *"hazelcast"* ]]; then
-      PRODUCT="hazelcast"
-      if [[ "$PRODUCT_HOME" == *"hazelcast-jet"* ]]; then
-         CLUSTER_TYPE="jet"
-         if [ "$CLUSTER" == "" ]; then
-            CLUSTER=$DEFAULT_JET_CLUSTER
-         fi
-         JET_HOME="$PRODUCT_HOME"
-      else
-         CLUSTER_TYPE="imdg"
-         if [ "$CLUSTER" == "" ]; then
-            CLUSTER=$DEFAULT_HAZELCAST_CLUSTER
-         fi
-         HAZELCAST_HOME="$PRODUCT_HOME"
-      fi
+   if [[ "$PRODUCT_HOME" == *"coherence"* ]]; then
+      PRODUCT="coherence"
+      COHERENCE_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="coherence"
+      CLUSTER=$DEFAULT_COHERENCE_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"geode"* ]] ||  [[ "$PRODUCT_HOME" == *"gemfire"* ]]; then
       PRODUCT="geode"
       if [[ "$PRODUCT_HOME" == *"geode"* ]]; then
@@ -3656,6 +3677,31 @@ function determineProduct
          fi
       fi
       GEODE_HOME="$PRODUCT_HOME"
+   elif [[ "$PRODUCT_HOME" == *"hadoop"* ]]; then
+      PRODUCT="hadoop"
+      PRODUCT_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="pseudo"
+      CLUSTER=$DEFAULT_HADOOP_CLUSTER
+   elif [[ "$PRODUCT_HOME" == *"hazelcast"* ]]; then
+      PRODUCT="hazelcast"
+      if [[ "$PRODUCT_HOME" == *"hazelcast-jet"* ]]; then
+         CLUSTER_TYPE="jet"
+         if [ "$CLUSTER" == "" ]; then
+            CLUSTER=$DEFAULT_JET_CLUSTER
+         fi
+         JET_HOME="$PRODUCT_HOME"
+      else
+         CLUSTER_TYPE="imdg"
+         if [ "$CLUSTER" == "" ]; then
+            CLUSTER=$DEFAULT_HAZELCAST_CLUSTER
+         fi
+         HAZELCAST_HOME="$PRODUCT_HOME"
+      fi
+   elif [[ "$PRODUCT_HOME" == *"kafka"* ]]; then
+      PRODUCT="kafka"
+      PRODUCT_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="kraft"
+      CLUSTER=$DEFAULT_KAFKA_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"redis"* ]]; then
       PRODUCT="redis"
       REDIS_HOME="$PRODUCT_HOME"
@@ -3666,26 +3712,11 @@ function determineProduct
       SNAPPYDATA_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="snappydata"
       CLUSTER=$DEFAULT_SNAPPYDATA_CLUSTER
-   elif [[ "$PRODUCT_HOME" == *"coherence"* ]]; then
-      PRODUCT="coherence"
-      COHERENCE_HOME="$PRODUCT_HOME"
-      CLUSTER_TYPE="coherence"
-      CLUSTER=$DEFAULT_COHERENCE_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"spark"* ]]; then
       PRODUCT="spark"
       PRODUCT_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="standalone"
       CLUSTER=$DEFAULT_SPARK_CLUSTER
-   elif [[ "$PRODUCT_HOME" == *"kafka"* ]]; then
-      PRODUCT="kafka"
-      PRODUCT_HOME="$PRODUCT_HOME"
-      CLUSTER_TYPE="kraft"
-      CLUSTER=$DEFAULT_KAFKA_CLUSTER
-   elif [[ "$PRODUCT_HOME" == *"hadoop"* ]]; then
-      PRODUCT="hadoop"
-      PRODUCT_HOME="$PRODUCT_HOME"
-      CLUSTER_TYPE="pseudo"
-      CLUSTER=$DEFAULT_HADOOP_CLUSTER
    else
       PRODUCT="none"
       CLUSTER_TYPE="none"

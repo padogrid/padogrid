@@ -141,6 +141,7 @@ for i in ${MASTER_PREFIX}*; do
 
       NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
       MEMBER_DIR=$RUN_DIR/$MEMBER
+      PIDS_DIR="$RUN_DIR/pids"
       PID=`getMasterPid $MEMBER $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
          MEMBER_LOG="$LOG_DIR/spark--org.apache.spark.deploy.master.Master-$MEMBER_NUM_NO_LEADING_ZERO-`hostname`.out"
@@ -149,6 +150,7 @@ for i in ${MASTER_PREFIX}*; do
          rm -f ${GC_LOG}* > /dev/null 2>&1
          if [ "$ALL" == "true" ]; then
             rm -rf ${MEMBER_DIR}/* > /dev/null 2>&1
+            rm -rf ${PIDS_DIR}/spark--org.apache.spark.deploy.master.Master-${MEMBER_NUM_NO_LEADING_ZERO}.pid > /dev/null 2>&1
          fi
          echo "----------------------------------------------------------------"
          echo "    WORKSPACE: $PADOGRID_WORKSPACE"
@@ -186,6 +188,7 @@ for i in ${MEMBER_PREFIX}*; do
 
       NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
       MEMBER_DIR=$RUN_DIR/$MEMBER
+      PIDS_DIR="$RUN_DIR/pids"
       PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
          MEMBER_LOG="$LOG_DIR/spark--org.apache.spark.deploy.worker.Worker-$MEMBER_NUM_NO_LEADING_ZERO-`hostname`.out"
@@ -194,6 +197,7 @@ for i in ${MEMBER_PREFIX}*; do
          rm -f ${GC_LOG}* > /dev/null 2>&1
          if [ "$ALL" == "true" ]; then
             rm -rf ${MEMBER_DIR}/* > /dev/null 2>&1
+            rm ${PIDS_DIR}/spark--org.apache.spark.deploy.worker.Worker-${MEMBER_NUM_NO_LEADING_ZERO}.pid > /dev/null 2>&1
          fi
          echo "----------------------------------------------------------------"
          echo "    WORKSPACE: $PADOGRID_WORKSPACE"

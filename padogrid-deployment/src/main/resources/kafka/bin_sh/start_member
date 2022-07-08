@@ -329,7 +329,7 @@ MAX_HEAP_SIZE=`getClusterProperty "heap.max" $DEFAULT_MAX_HEAP_SIZE`
 
 # Set JAVA_OPTS.
 JAVA_OPTS="$JAVA_OPTS $LOG_PROPERTIES $JMX_PARAMETERS"
-JAVA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE $JAVA_OPTS"
+JAVA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE $JAVA_OPTS"
 JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
 
 # Set PROMETHEUS paths
@@ -446,7 +446,7 @@ else
 
        RUNNING_MEMBER_COUNT=$(getActiveMemberCount $CLUSTER $WORKSPACE $RWE)
        if [ $RUNNING_MEMBER_COUNT -lt $MEMBER_COUNT ]; then
-          #echo KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE" \
+          #echo KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE" \
           echo KAFKA_OPTS="$JAVA_OPTS"
           echo KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$LOG4J_FILE"
           echo KAFKA_HEAP_OPTS="-Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}"
@@ -454,7 +454,7 @@ else
           --override node.id=$MEMBER_NUM_NO_LEADING_ZERO \
           --override log.dirs="$MEMBER_DIR"
 
-          #KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE" \
+          #KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE" \
           KAFKA_OPTS="$JAVA_OPTS" \
           KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$LOG4J_FILE" \
           KAFKA_HEAP_OPTS="-Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}" \

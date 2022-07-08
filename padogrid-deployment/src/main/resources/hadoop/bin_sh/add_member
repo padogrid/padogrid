@@ -262,7 +262,7 @@ ADDRESS="0.0.0.0"
 NAMENODE_START_PORT=$(getClusterProperty "namenode.tcp.startPort" $DEFAULT_NAMENODE_START_PORT)
 HDFS_PORT=$NAMENODE_START_PORT
 HDFS_URL="hdfs://localhost:$HDFS_PORT"
-HDFS_URL="${HDFS_URL//\//\\\/}"
+HDFS_URL="$(echo $HDFS_URL | sed 's/\//\\\//g')"
 sed -e 's/\${fs.default.name}/'${HDFS_URL}'/' \
     "$BASE_DIR/etc/$CLUSTER_TYPE/template-core-site.xml" > "$ETC_DIR/$NEW_MEMBER/core-site.xml"
 
@@ -270,10 +270,10 @@ sed -e 's/\${fs.default.name}/'${HDFS_URL}'/' \
 REPLICATION=1
 NAMENODE_DIR=$RUN_DIR/hdfs/namenode
 NAMENODE_URL="file://${NAMENODE_DIR}"
-NAMENODE_URL="${NAMENODE_URL//\//\\\/}"
+NAMENODE_URL="$(echo $NAMENODE_URL | sed 's/\//\\\//g')"
 DATANODE_DIR=$RUN_DIR/hdfs/data/$NEW_MEMBER
 DATANODE_URL="file://${DATANODE_DIR}"
-DATANODE_URL="${DATANODE_URL//\//\\\/}"
+DATANODE_URL="$(echo $DATANODE_URL | sed 's/\//\\\//g')"
 if [ ! -d "$ETC_DIR/$NEW_MEMBER" ]; then
   mkdir -p "$ETC_DIR/$NEW_MEMBER"
 fi
@@ -316,7 +316,7 @@ sed -e 's/\${dfs.replication}/'${REPLICATION}'/' \
 
 # mapred-site.xml
 MAPRED_CLASSPATH="$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*:$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*"
-MAPRED_CLASSPATH="${MAPRED_CLASSPATH//\//\\\/}"
+MAPRED_CLASSPATH="$(echo $MAPRED_CLASSPATH | sed 's/\//\\\//g')"
 sed -e 's/\${mapreduce.application.classpath}/'${MAPRED_CLASSPATH}'/' \
     "$BASE_DIR/etc/$CLUSTER_TYPE/template-mapred-site.xml" > "$ETC_DIR/$NEW_MEMBER/mapred-site.xml"
 

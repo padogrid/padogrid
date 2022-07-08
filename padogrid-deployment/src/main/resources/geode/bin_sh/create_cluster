@@ -135,12 +135,20 @@ EOF
    exit
 fi
 
+# If -product (hidden option) is specified then make it default. This effectively
+# provides a way to create any product clusters in the same workspace.
+if [ "$PRODUCT_ARG" != "" ]; then
+   PRODUCT=$PRODUCT_ARG
+fi
+
 # Set the default cluster name if not specified
 if [ "$CLUSTER_ARG" == "" ]; then
    if [ "$TYPE_ARG" == "pado" ]; then
       CLUSTER=$DEFAULT_PADO_CLUSTER
    elif [ "$TYPE_ARG" == "padolite" ]; then
       CLUSTER=$DEFAULT_PADOLITE_CLUSTER
+   elif [ "$PRODUCT" == "gemfire" ]; then
+      CLUSTER=$DEFAULT_GEMFIRE_CLUSTER
    else
       CLUSTER=$DEFAULT_CLUSTER
    fi
@@ -197,12 +205,6 @@ if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "padolite" ]; then
    echo >&2 "       Command aborted."
    exit 1
   fi
-fi
-
-# If -product (hidden option) is specified then make it default. This effectively
-# provides a way to create any product clusters in the same workspace.
-if [ "$PRODUCT_ARG" != "" ]; then
-   PRODUCT=$PRODUCT_ARG
 fi
 
 function writeCluster() 
@@ -778,6 +780,13 @@ if [ "$POD" != "local" ]; then
       fi
    fi
 
+fi
+
+# Default cluster type
+if [ "$PRODUCT" == "gemfire" ]; then
+  CLUSTER_TYPE="gemfire"
+else
+   CLUSTER_TYPE="geode"
 fi
 
 # Write cluster files

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+
 
 # ========================================================================
 # Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
@@ -109,9 +109,22 @@ EOF
    exit
 fi
 
+# If -product (hidden option) is specified then make it default. This effectively
+# provides a way to create any product clusters in the same workspace.
+if [ "$PRODUCT_ARG" != "" ]; then
+   PRODUCT=$PRODUCT_ARG
+   if [ "$PRODUCT_ARG" == "jet" ]; then
+      CLUSTER_TYPE="jet"
+   fi
+fi
+
 # Set the default cluster name if not specified
 if [ "$CLUSTER_ARG" == "" ]; then
-   CLUSTER=$DEFAULT_CLUSTER
+   if [ "$PRODUCT" == "jet" ]; then
+      CLUSTER=$DEFAULT_JET_CLUSTER
+   else
+      CLUSTER=$DEFAULT_CLUSTER
+   fi
 fi
 
 if [ -z $CLUSTER ]; then
@@ -145,15 +158,6 @@ if [ "`isPodExist $POD`" == "false" ]; then
    echo >&2 "    ERROR: This pod does not exist [$POD]. Command aborted."
    echo >&2 "----------------------------------------------------------------"
    exit 1
-fi
-
-# If -product (hidden option) is specified then make it default. This effectively
-# provides a way to create any product clusters in the same workspace.
-if [ "$PRODUCT_ARG" != "" ]; then
-   PRODUCT=$PRODUCT_ARG
-   if [ "$PRODUCT_ARG" == "jet" ]; then
-      CLUSTER_TYPE="jet"
-   fi
 fi
 
 #
@@ -192,7 +196,7 @@ function writeCluster()
          sed 's/\${JET_ENABLED}/false/g' $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast.xml
       fi
 
-      # Change cluster type to hazelcast. "jet" and "imdg" are for keep the cluster creating
+      # Change cluster type to hazelcast. "jet" and "imdg" are for keeping the cluster creation
       # steps consistent and for setting the initial config file only.
       CLUSTER_TYPE="hazelcast"
       # Update cluster env file with PRODUCT and CLUSTER_TYPE
@@ -446,8 +450,8 @@ if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "
    NEW_MC_JMX_PORT=$DEFAULT_MC_JMX_PORT
    NEW_MC_JMX_RMI_PORT=$DEFAULT_MC_JMX_RMI_PORT
 else
-   let PORT_DIFF=PORT_ARG-DEFAULT_MEMBER_START_PORT
    NEW_MEMBER_START_PORT=$PORT_ARG
+   let PORT_DIFF=NEW_MEMBER_START_PORT-DEFAULT_MEMBER_START_PORT
    let NEW_DEBUG_START_PORT=DEFAULT_DEBUG_START_PORT+PORT_DIFF
    let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
    let NEW_PROMETHEUS_START_PORT=DEFAULT_PROMETHEUS_START_PORT+PORT_DIFF
@@ -715,6 +719,7 @@ if [ "$POD" != "local" ]; then
 
 fi
 
+# Write cluster files
 writeCluster
 
 # Create the cluster on all VMs by copying the cluster dir and adding members.

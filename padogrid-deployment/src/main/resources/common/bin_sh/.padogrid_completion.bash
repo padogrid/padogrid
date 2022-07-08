@@ -157,17 +157,21 @@ __padogrid_complete()
       ;;
 
    -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
-      	case "$PRODUCT" in
-         geode|snappydata)
-            type_list="$DEFAULT_LOCATOR_START_PORT";;
-         hazelcast|coherence|kafka)
-            type_list="$DEFAULT_MEMBER_START_PORT";;
-         spark)
-            type_list="$DEFAULT_MASTER_START_PORT";;
-         hadoop)
-            type_list="$DEFAULT_NAMENODE_START_PORT";;
-         esac
+      if [ "$command" == "make_cluster" ] || [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
+         # If -product specified then get the product's app options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            prodcut_name=$product_name 
+         else
+            prodcut_name=$PRODUCT
+         fi
+         type_list=$(getClusterPortOptions $product_name)
+
       elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list="8888"
       fi
@@ -1079,17 +1083,32 @@ __command_complete()
       type_list="1 2 3 4 5 6 7 8 9"
      ;;
    -port)
-      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
-         case "$PRODUCT" in
-         geode|snappydata)
-            type_list="$DEFAULT_LOCATOR_START_PORT";;
-         hazelcast|coherence|kafka)
-            type_list="$DEFAULT_MEMBER_START_PORT";;
-         spark)
-            type_list="$DEFAULT_MASTER_START_PORT";;
-         hadoop)
-            type_list="$DEFAULT_NAMENODE_START_PORT";;
-         esac
+      if [ "$command" == "make_cluster" ] || [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
+         # If -product specified then get the product's app options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            prodcut_name=$product_name 
+         else
+            prodcut_name=$PRODUCT
+         fi
+         type_list=$(getClusterPortOptions $product_name)
+
+         #case "$PRODUCT" in
+         #geode|snappydata)
+         #   type_list="$DEFAULT_LOCATOR_START_PORT";;
+         #hazelcast|coherence|kafka)
+         #   type_list="$DEFAULT_MEMBER_START_PORT";;
+         #spark)
+         #   type_list="$DEFAULT_MASTER_START_PORT";;
+         #hadoop)
+         #   type_list="$DEFAULT_NAMENODE_START_PORT";;
+         #esac
+
       elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list="8888"
       fi

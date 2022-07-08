@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.19-SNAPSHOT
 
-### Release Date: 07/05/22
+### Release Date: 07/08/22
 
 - Removed log4j settings from Geode locators as a workaround to Log4J NPE raised by Geode v1.15.0. Without this fix, locators will not start for Geode v1.15.0.
 - Fixed `CLUSTER_TYPE` incorrectly set for geode and gemfire. This fix effectively drops `CLUSTER_TYPE` support for older versions of PadoGrid.
@@ -23,7 +23,9 @@ https://github.com/padogrid
   install_bundle -all -checkout
   install_bundle -all -checkout -force
   ```
-- Tidied up scripts by refactoring and added missing scripts.
+- Tidied up scripts by refactoring scripts and added missing scripts.
+- Replaced `jps` with `ps` for searching for running processes. `jps` is no longer used in PadoGrid.
+- Added the `padogrid.rwe` system property to span the active cluster search to RWEs. With this support, all clusters are now uniquely identifiable across RWEs.
 - `clean_cluster` is now available for all products including Hadoop, Spark, and Kafka. 
 - Fixed `show_products` which failed to show some active products. It now supports all products including Coherence.
 - Added `SPARK_DIST_CLASSPATH` support for Hadoop-free Spark versions. With this support, you can now include your own versions of Hadoop in PadoGrid Spark clusters.
