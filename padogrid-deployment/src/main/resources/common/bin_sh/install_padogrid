@@ -1560,23 +1560,28 @@ function installProduct
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$PADOGRID_RELEASE" ]; then
          echo "Already installed - $PADOGRID_RELEASE"
       else
-      # --------------
-      # Download PadoGrid
-      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$PADOGRID_RELEASE/$PADOGRID_TARBALL"
-      fi
+         # --------------
+         # Download PadoGrid
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL..."
+         if [[ "$PADOGRID_RELEASE" == *"SNAPSHOT" ]]; then
+            local VDIR="snapshot"
+         else
+            local VDIR="$PADOGRID_RELEASE"
+         fi
+         if [ "$__SIMULATE" == "true" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$VDIR/$PADOGRID_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL" "https://github.com/padogrid/padogrid/releases/download/$VDIR/$PADOGRID_TARBALL"
+         fi
       
-      # Install PadoGrid
-      echo "  Installing PadoGrid $PADOGRID_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL"
-      else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL"
-         echo "  Installed - $PADOGRID_TARBALL"
-      fi
+         # Install PadoGrid
+         echo "  Installing PadoGrid $PADOGRID_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PADOGRID_TARBALL"
+            echo "  Installed - $PADOGRID_TARBALL"
+         fi
       fi
 
    elif [ "$__PRODUCT" == "pado" ]; then 
