@@ -8,7 +8,7 @@ https://github.com/padogrid
 
 ### Release Date: 07/09/22
 
--
+- Initial snapshot
 
 ---
 
