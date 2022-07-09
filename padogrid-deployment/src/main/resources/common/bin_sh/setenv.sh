@@ -509,7 +509,7 @@ fi
 #
 # Java version
 #
-if [ "$(which $JAVA 2> /dev/null)" == "" ]; then
+if [ "$JAVA_HOME" == "" ] && [ "$(which java 2> /dev/null)" == "" ]; then
    JAVA_VERSION=""
    JAVA_MAJOR_VERSION_NUMBER=""
 else
