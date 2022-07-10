@@ -4,10 +4,13 @@
 
 # PadoGrid
 
-The PadoGrid project aims to deliver a data grid platform with out-of-the-box turnkey solutions to many enterprise architecture use cases. The solutions come in the form of bundles which you simply *install and run*. See the PaodGrid manual and FAQ for details.
+The PadoGrid project aims to deliver a data grid platform with out-of-the-box turnkey solutions to many enterprise architecture use cases. The solutions come in the form of bundles which you simply *install and run*. See the following links for details.
 
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 - [**FAQ**](https://github.com/padogrid/padogrid/wiki/faq)
+- [**Install, run, and learn PadoGrid in less than five (5) minutes**](https://github.com/padogrid/padogrid/wiki/PadoGrid-in-5-Minutes)
+
+---
 
 ## Installation
 
