@@ -4,11 +4,16 @@ The `padodesktop` app provides scripts to run PadoDeskop for monitoring Pado clu
 
 ## Installing PadoDesktop App
 
-PadoDesktop requires a Pado cluster. Pado can be installed by running the `install_padogrid` and `update_products` commands.
+PadoDesktop requires a Pado or PadoLite cluster. Pado and PadoLite can be installed by running the `install_padogrid` and `update_products` commands.
 
 ```bash
+# Pado
 install_padogrid -product pado
 update_padogrid -product pado 
+
+# PadoLite
+install_padogrid -product padolite
+update_padogrid -product padolite
 ```
 
 Similary, PadoDesktop can be installed using the `install_padgrod` and `update_products` commands as follows.
@@ -45,7 +50,7 @@ cd_app padodesktop/bin_sh
 ./destop
 ```
 
-From the login prompt, enter the Pado locator(s) and any user name. Password is not required.
+From the login prompt, enter the Pado locator(s) and any user name. Password is not required. App ID should always be `sys` which allows full access to Pado/PadoLite. 
 
 ![PadoDesktop Login](images/padodesktop-login.png)
 
