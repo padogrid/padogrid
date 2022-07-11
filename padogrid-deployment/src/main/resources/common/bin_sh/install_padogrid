@@ -37,7 +37,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka hadoop"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka hadoop"
 
 EXECUTABLE="`basename $0`"
 
@@ -74,6 +74,7 @@ PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases"
 PADO_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
 PADODESKTOP_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
 PADOWEB_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
+PADOECLIPSE_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
 GEODE_DOWNLOAD_URL="https://archive.apache.org/dist/geode/"
 HAZELCAST_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.org/imdg/download/archives/#hazelcast-imdg"
@@ -86,6 +87,8 @@ SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
 SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
 KAFKA_DOWNLOAD_URL="https://archive.apache.org/dist/kafka/"
 HADOOP_DOWNLOAD_URL="https://archive.apache.org/dist/hadoop/common/"
+
+PADOECLIPSE_MANUAL_URL="https://github.com/padogrid/padogrid/wiki/Eclipse"
 
 __options()
 {
@@ -256,13 +259,28 @@ fi
 cat <<EOF
 
 NOTES
-   Jet Management Center installation is no longer supported. Install Hazelcast Management Center
-   instead. It supports both IMDG and Jet.
+   - Jet Management Center installation is no longer supported. Install Hazelcast Management Center
+     instead. It supports both IMDG and Jet.
 
-   PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0 or
-   a later version.
+   - PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0 or
+     a later version.
+
+   - PadoEclipse is an Eclipse plugin for generating Gedoe/GemFire and Pado data classes. Once it is
+     downloaded, place it in the Eclipse's 'dropins' folder. Please see instructions in the following link.
 
 EOF
+
+if [ "$MAN_SPECIFIED" == "false" ]; then
+
+echo -e "     ${CUrl}$PADOECLIPSE_MANUAL_URL${CNone}"
+
+else
+
+echo -e "     $PADOECLIPSE_MANUAL_URL"
+
+fi
+echo ""
+
 if [ "$IS_STANDALONE_SCRIPT" == "false" ]; then
 echo "SEE ALSO"
    printSeeAlsoList "change_version show_products uninstall_product update_products" $EXECUTABLE
@@ -510,6 +528,12 @@ function getDownloadablePadodesktopVersions
 {
   local ALL_PADODESKTOP_VERSIONS=$(curl -s $PADODESKTOP_DOWNLOAD_URL |grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
   unique_words "$ALL_PADODESKTOP_VERSIONS"
+}
+
+function getDownloadablePadoEclipseVersions
+{
+  local ALL_PADOECLIPSE_VERSIONS=$(curl -s $PADOGRID_DOWNLOAD_URL |grep "com.netcrest.pado.eclipse_" | grep '\.jar' |  sed -e 's/.*padogrid_//' |  grep "\/com.netcrest.pado.eclipse_.*" | sed -e 's/\.jar.*//')
+  unique_words "$ALL_PADOECLIPSE_VERSIONS"
 }
 
 function getDownloadableGeodeVersions
@@ -944,6 +968,9 @@ fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
    PADOWEB_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadowebVersions)"))
 fi
+if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
+   PADOECLIPSE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoEclipseVersions)"))
+fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
    GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
 fi
@@ -989,6 +1016,7 @@ PADOGRID_VERSION=""
 PADO_VERSION=""
 PADODESKTOP_VERSION=""
 PADOWEB_VERSION=""
+PADOECLIPSE_VERSION=""
 GEODE_VERSION=""
 HAZELCAST_ENTERPRISE_VERSION=""
 HAZELCAST_OSS_VERSION=""
@@ -1020,6 +1048,7 @@ if [ "$QUIET" == "true" ]; then
    if [[ "$PADOWEB_VERSION" == *"SNAPSHOT" ]]; then
       PADOWEB_VERSION=${PADOWEB_DOWNLOAD_VERSIONS[1]} 
    fi
+   PADOECLIPSE_VERSION=${PADOECLIPSE_DOWNLOAD_VERSIONS[0]}
    GEODE_VERSION=${GEODE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_OSS_VERSION=${HAZELCAST_OSS_DOWNLOAD_VERSIONS[0]}
@@ -1043,6 +1072,7 @@ if [ "$QUIET" == "true" ]; then
    echo "Pado                 $PADO_VERSION"
    echo "PadoDesktop          $PADODESKTOP_VERSION"
    echo "PadoWeb              $PADOWEB_VERSION"
+   echo "PadoEclipse          $PADOECLIPSE_VERSION"
    echo "Geode                $GEODE_VERSION"
    echo "Hazelcast Enterprise $HAZELCAST_ENTERPRISE_VERSION"
    echo "Hazelcast OSS        $HAZELCAST_OSS_VERSION"
@@ -1152,6 +1182,22 @@ while [ "$REDO" == "true" ]; do
          let INSTALL_COUNT=INSTALL_COUNT+1
       fi
       PADOWEB_VERSION=$INSTALL_VERSION
+      echo ""
+      fi
+   fi
+
+   # PadoEclipse
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
+      PRODUCT_NAME="PadoEclipse"
+      PRODUCT_DOWNLOAD_VERSIONS=("${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}")
+      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+      INSTALLED_VERSIONS=$PADOECLIPSE_VERSIONS
+      echo -e "PadoEclipse ${CUrl}$PADOECLIPSE_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      PADOECLIPSE_VERSION=$INSTALL_VERSION
       echo ""
       fi
    fi
@@ -1438,6 +1484,9 @@ while [ "$REDO" == "true" ]; do
    if [ "$PADOWEB_VERSION" != "" ]; then
       echo -e "PadoWeb: ${CLightGreen}$PADOWEB_VERSION${CNone}"
    fi
+   if [ "$PADOECLIPSE_VERSION" != "" ]; then
+      echo -e "PadoEclipse: ${CLightGreen}$PADOECLIPSE_VERSION${CNone}"
+   fi
    if [ "$GEODE_VERSION" != "" ]; then
       echo -e "Geode: ${CLightGreen}$GEODE_VERSION${CNone}"
    fi
@@ -1514,6 +1563,10 @@ fi
 # @required PADOWEB_DOWNLOAD_URL
 # @required PADOWEB_RELEASE
 # @required PADOWEB_TARBALL
+#
+# @required PADOECLIPSE_DOWNLOAD_URL
+# @required PADOECLIPSE_RELEASE
+# @required PADOECLIPSE_TARBALL
 #
 # @required GEODE_VERSION
 # @required GEODE_TARBALL
@@ -1663,6 +1716,22 @@ function installProduct
             tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME"
             echo "  Installed - $FILE_NAME"
          fi
+      fi
+
+   elif [ "$__PRODUCT" == "padoeclipse" ]; then 
+
+      # --------------
+      # Download PadoEclipse (Download only. Manual installation required)
+      local FILE_NAME=${PADOECLIPSE_JAR#*/}
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$FILE_NAME..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADOECLIPSE_JAR"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$FILE_NAME" "https://github.com/padogrid/padogrid/releases/download/$PADOECLIPSE_JAR"
+         echo "  Downloaded - $FILE_NAME"
+         echo -e "  ${CBrownOrange}To install the downloaded PadoEclipse plugin, place it in the Eclipse's 'dropins' folder.${CNone}"
+         echo -e "  ${CBrownOrange}See the following link for instructions.${CNone}"
+         echo -e "     ${CUrl}$PADOECLIPSE_MANUAL_URL${CNone}"
       fi
       
    elif [ "$__PRODUCT" == "geode" ]; then 
@@ -2035,6 +2104,12 @@ if [ "$PADOWEB_VERSION" != "" ]; then
    PADOWEB_RELEASE="${PADOWEB_VERSION#*/}"
    PADOWEB_TARBALL="padogrid_$PADOWEB_VERSION.tar.gz"
    installProduct "padoweb" "$SIMULATE"
+fi
+if [ "$PADOECLIPSE_VERSION" != "" ]; then
+   #PADOECLIPSE_RELEASE="com.netcrest.pado.eclipse_$PADOECLIPSE_VERSION"
+   PADOECLIPSE_RELEASE="${PADOECLIPSE_VERSION#*/}"
+   PADOECLIPSE_JAR="padogrid_$PADOECLIPSE_VERSION.jar"
+   installProduct "padoeclipse" "$SIMULATE"
 fi
 if [ "$GEODE_VERSION" != "" ]; then
    GEODE_RELEASE="apache-geode-$GEODE_VERSION"
