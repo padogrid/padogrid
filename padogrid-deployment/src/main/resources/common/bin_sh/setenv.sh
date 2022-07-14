@@ -526,3 +526,26 @@ for file in $BASE_DIR/../lib/padogrid-common-*; do
    file=${file#*padogrid\-common\-}
    PADOGRID_VERSION=${file%.jar}
 done
+
+#
+# PadoGrid version number breakdown
+#
+PADOGRID_MAJOR_VERSION_NUMBER=$(echo $PADOGRID_VERSION|awk -F "." '{print $1}')
+PADOGRID_MINOR_VERSION_NUMBER=$(echo $PADOGRID_VERSION|awk -F "." '{print $2}')
+PADOGRID_UPDATE_VERSION_NUMBER=$(echo $PADOGRID_VERSION|awk -F "." '{print $3}')
+PADOGRID_UPDATE_VERSION_NUMBER=${PADOGRID_UPDATE_VERSION_NUMBER%-SNAPSHOT}
+
+#
+# If WORKSPACE_ARG is a path then then extract out the workspace and rwe values from it.
+# For ssh invocations, the '-workspace' option provides the workspace path.
+#
+if [ "$WORKSPACE_ARG" != "" ]; then
+   if [[ "$WORKSPACE_ARG" == "/"* ]]; then
+      WORKSPACE=$(basename $WORKSPACE_ARG)
+      RWE=$(basename $(dirname $WORKSPACE_ARG))
+    else
+       WORKSPACE=$WORKSPACE_ARG
+   fi
+elif [ "$WORKSPACE" == "" ]; then
+   WORKSPACE=$PADOGRID_WORKSPACE
+fi

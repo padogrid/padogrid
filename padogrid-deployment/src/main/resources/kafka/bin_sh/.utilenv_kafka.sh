@@ -49,24 +49,24 @@ function getMasterPid
    local masters
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       if [ "$__RWE" == "" ]; then
-         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
       else
-         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
       fi
    else
       if [ "$__RWE" == "" ]; then
          # Use eval to handle commands with spaces
          if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-            local masters="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MASTER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+            local masters="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MASTER | grep "padogrid.workspace=$__WORKSPACE" | grep -v grep | awk '{print $(NF-1)}')"
          else
-            local masters="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+            local masters="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE  | grep -v grep | awk '{print $1}')"
          fi
       else
          # Use eval to handle commands with spaces
          if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-            local masters="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE  | grep padogrid.rwe=$__RWE | awk '{print $(NF-1)}')"
+            local masters="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE  | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $(NF-1)}')"
          else
-            local masters="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE  | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+            local masters="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE  | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
          fi
       fi
    fi
@@ -97,9 +97,9 @@ function getVmMasterPid
    local __RWE=$4
 
    if [ "$__RWE" == "" ]; then
-      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
    fi
    spids=""
    for j in $masters; do

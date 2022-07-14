@@ -379,8 +379,8 @@ function isValidWorkspace
       if [ "$RWE" == "" ]; then
          local WORKSPACE_LIST=$(getWorkspaces)
       else
-         PADOGRID_ENV_BASE_PATH="$(dirname "$PADOGRID_WORKSPACES_HOME")"
-         RWE_PATH="$PADOGRID_ENV_BASE_PATH/$RWE"
+         local WORKSPACES_TOP_PATH="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+         local RWE_PATH="$WORKSPACES_TOP_PATH/$RWE"
          local WORKSPACE_LIST=$(getWorkspaces "$RWE_PATH")
       fi
       for i in $WORKSPACE_LIST; do
@@ -934,22 +934,22 @@ function getMemberPid
    __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
      if [ "$ __RWE" == "" ]; then
-        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
      else
-        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
      fi
    else
       if [ "$ __RWE" == "" ]; then
          if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-            local members="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep pado.vm.id=$__MEMBER | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+            local members="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep pado.vm.id=$__MEMBER | grep "padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $(NF-1)}')"
          else
-            local members="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | awk '{print $1}')"
+            local members="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep | awk '{print $1}')"
          fi
       else
          if [[ "$OS_NAME" == "CYGWIN"* ]]; then
             local members="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $(NF-1)}')"
          else
-            local members="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+            local members="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
          fi
       fi
    fi
@@ -982,9 +982,9 @@ function getVmMemberPid
    local __RWE=$4
 
    if [ "$ __RWE" == "" ]; then
-      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep " | awk '{print $1}'`
    fi
    spids=""
    for j in $members; do
@@ -1660,7 +1660,7 @@ function switch_rwe
       echo ""
       echo "EXAMPLES"
       echo "   - Switch RWE to 'myrwe', switch workspace to 'myws', switch cluster to 'mycluster', and"
-      echo "     change direoctory to that cluster's 'etc' directory."
+      echo "     change directory to that cluster's 'etc' directory."
       echo ""
       echo "        switch_rwe myrwe/myws/clusters/mycluster/etc/"
       echo ""
@@ -1831,7 +1831,7 @@ function switch_workspace
       echo "   $EXECUTABLE"
       echo ""
       echo "EXAMPLES"
-      echo "   - Switch workspace to 'myws', switch cluster to 'mycluster', and change direoctory"
+      echo "   - Switch workspace to 'myws', switch cluster to 'mycluster', and change directory"
       echo "     to that cluster's 'etc' directory."
       echo ""
       echo "        switch_workspace myws/clusters/mycluster/etc/"
@@ -2257,7 +2257,7 @@ function switch_pod
       echo "   $EXECUTABLE"
       echo ""
       echo "EXAMPLES"
-      echo "   - Switch pod to 'mypod', and change direoctory to that pod's 'etc' directory."
+      echo "   - Switch pod to 'mypod', and change directory to that pod's 'etc' directory."
       echo ""
       echo "        switch mypod/etc/"
       echo ""

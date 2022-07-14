@@ -69,6 +69,8 @@ EOF
    exit
 fi
 
+retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
+
 #
 # Run the target cluster command if the product is different.
 #
@@ -101,9 +103,9 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    exit
 fi
 
-POD=`getClusterProperty "pod.name" $POD`
-NODE_NAME_PREFIX=`getClusterProperty "node.name.prefix" $NODE_NAME_PREFIX`
+POD=`getClusterProperty "pod.name" "local"`
 
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 MEMBER_PREFIX=`getMemberPrefix`
 MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
 MEMBER_NUMBER=1 

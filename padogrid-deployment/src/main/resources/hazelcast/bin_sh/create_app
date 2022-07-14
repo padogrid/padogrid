@@ -115,8 +115,18 @@ if [ "$PRODUCT_ARG" != "" ]; then
       >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
       exit 1
    fi
-   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ] && [ "$PRODUCT_ARG" != "jet" ]; then
-      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
+      __PRODUCT=$PRODUCT_ARG
+      if [ "$PRODUCT_ARG" == "jet" ]; then
+         __PRODUCT="hazelcast"
+      elif [ "$PRODUCT_ARG" == "gemfire" ]; then
+         __PRODUCT="geode"
+      fi
+      args="$@"
+      if [ "$__PRODUCT" != "" ]; then
+         args=$(echo "$args" | sed "s/$PRODUCT_ARG/$__PRODUCT/")
+      fi
+      $PADOGRID_HOME/$__PRODUCT/bin_sh/$EXECUTABLE $args
       exit
    fi
    if [ "$PRODUCT_ARG" == "jet" ]; then

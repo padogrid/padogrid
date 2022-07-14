@@ -166,12 +166,11 @@ fi
 #
 # Local cluster
 #
+
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 if [ "$VM_ENABLED" == "true" ]; then
-   # POD needed to get the correct node name
-   POD=`getClusterProperty "pod.name" "local"`
    MEMBER=`getVmMemberName`
 else
    MEMBER=`getMemberName $MEMBER_NUMBER`
@@ -224,11 +223,11 @@ MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP
 let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
 let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
 let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
-MEMBER_TCP_LIST=""
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 BIND_ADDRESS=""
 HOSTNAME_FOR_CLIENTS=""
 REDUNDANCY_ZONE=""
+MEMBER_TCP_LIST=""
 if [ "$VM_ENABLED" == "true" ]; then
 
    VM_HOSTS=`getClusterProperty "vm.hosts"`
@@ -419,7 +418,6 @@ export JAVA_OPTS
 export CLASSPATH
 export JAVA
 
-POD=`getClusterProperty "pod.name" $POD`
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"

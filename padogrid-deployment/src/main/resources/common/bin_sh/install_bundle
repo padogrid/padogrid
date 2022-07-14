@@ -62,10 +62,10 @@ DESCRIPTION
    conflicting processes before executing this command; otherwise, the running processes
    may result in unpredictable state.
 
-   For online bundles, if the 'init_bundle.sh' script exists in the top directory, then it
-   is executed upon completion of bundle installation. The 'init_bundle.sh' script is the
-   entry point for initializing the bundle in a workspace environment; hence, it is executed
-   only if the following options are specified.
+   For online bundles, if the '.init_workspace.sh' script exists in the top directory, then it
+   is sourced in upon completion of bundle installation. The '.init_workspace.sh' script is the
+   entry point for initializing the bundle in a workspace environment; hence, it is sourced 
+   in only if the following options are specified.
 
       install_bundle -checkout
       install_bundle -workspace -download
@@ -686,10 +686,9 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          CLUSTERS=$(list_clusters -workspace $WORKSPACE_NAME)
          WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
          createClusterEnv
-         if [ -f "$WORKSPACE_PATH/init_bundle.sh" ]; then
-            chmod 755 "$WORKSPACE_PATH/init_bundle.sh"
+         if [ -f "$WORKSPACE_PATH/.init_workspace.sh" ]; then
             pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
-            ./init_bundle.sh "$WORKSPACE_NAME"
+            . .init_workspace.sh "$WORKSPACE_NAME"
             popd > /dev/null 2>&1 
          fi
 

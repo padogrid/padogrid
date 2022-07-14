@@ -9,6 +9,7 @@ import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.ITopic;
+import com.hazelcast.core.ReplicatedMap;
 
 /**
  * ClusterUtil provides cluster/member specific convenience methods.
@@ -71,5 +72,22 @@ public class ClusterUtil {
 			}
 		}
 		return mapOfMaps;
+	}
+	
+	/**
+	 * Returns all ReplicatedMap defined in the cluster.
+	 * 
+	 * @param hz Hazelcast instance
+	 */
+	@SuppressWarnings("rawtypes")
+	public static Map<String, ReplicatedMap> getAllReplicatedMaps(HazelcastInstance hz) {
+		TreeMap<String, ReplicatedMap> mapOfRMaps = new TreeMap<String, ReplicatedMap>();
+		Collection<DistributedObject> col = hz.getDistributedObjects();
+		for (DistributedObject dobj : col) {
+			if (dobj instanceof ReplicatedMap) {
+				mapOfRMaps.put(((ReplicatedMap) dobj).getName(), (ReplicatedMap) dobj);
+			}
+		}
+		return mapOfRMaps;
 	}
 }

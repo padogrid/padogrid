@@ -33,16 +33,16 @@ function getMcPid
    if [ "$__RWE" == "" ]; then
       # Use eval to handle commands with spaces
       if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep hazelcast.mc.name=$__MC | grep "padogrid.workspace=$__WORKSPACE" | awk '{print $(NF-1)}')"
+         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep hazelcast.mc.name=$__MC | grep "padogrid.workspace=$__WORKSPACE " | grep -v grep | awk '{print $(NF-1)}')"
       else
-         local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+         local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
       fi
    else
       # Use eval to handle commands with spaces
       if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $(NF-1)}')"
+         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $(NF-1)}')"
       else
-         local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | awk '{print $1}')"
+         local mcs="$(ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
       fi
    fi
    spids=""
@@ -72,9 +72,9 @@ function getVmMcPid
    local __RWE=$4
 
    if [ "$__RWE" == "" ]; then
-      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE" | awk '{print $1}'`
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE" | awk '{print $1}'`
+      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep hazelcast.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
    fi
    spids=""
    for j in $members; do

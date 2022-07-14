@@ -92,8 +92,6 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
-# Get workspace name
-WORKSPACE=${PADOGRID_WORKSPACE##*/}
 POD=`getClusterProperty "pod.name" "local"`
 
 # Set FG_OPT
@@ -191,12 +189,11 @@ fi
 #
 # Local cluster
 #
+
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 if [ "$VM_ENABLED" == "true" ]; then
-   # POD needed to get the correct node name
-   POD=`getClusterProperty "pod.name" "local"`
    MEMBER=`getVmMemberName`
 else
    MEMBER=`getMemberName $MEMBER_NUMBER`
@@ -230,7 +227,7 @@ fi
 
 # If the member is already running, then exit.
 if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getMemberPid $MEMBER $WORKSPACE`
+   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
    if [ -n "${PID}" ]; then
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -250,7 +247,6 @@ MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP
 let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
 let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
 let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
-
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 BIND_ADDRESS=""
 HOSTNAME_FOR_CLIENTS=""
@@ -408,7 +404,7 @@ GFSH_OPTS="--cache-xml-file=$CONFIG_FILE"
 
 # Set JAVA_OPTS.
 JAVA_OPTS="$JAVA_OPTS $LOG_PROPERTIES $JMX_PARAMETERS"
-JAVA_OPTS="--J=-Dpado.vm.id=$MEMBER --J=-Dpadogrid.workspace=$WORKSPACE $JAVA_OPTS"
+JAVA_OPTS="--J=-Dpado.vm.id=$MEMBER --J=-Dpadogrid.rwe=$RWE --J=-Dpadogrid.workspace=$WORKSPACE $JAVA_OPTS"
 JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
 
 # Set PROMETHEUS paths
@@ -530,7 +526,6 @@ export JAVA_OPTS
 export CLASSPATH
 export JAVA
 
-POD=`getClusterProperty "pod.name" $POD`
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
@@ -574,7 +569,7 @@ else
          nohup $GFSH start server $GFSH_OPTS $JAVA_OPTS --classpath=$CLASSPATH >> $LOG_FILE &
       fi
    fi
-   PID=`getMemberPid $MEMBER $WORKSPACE`
+   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
 fi
 
 # JMX_URL

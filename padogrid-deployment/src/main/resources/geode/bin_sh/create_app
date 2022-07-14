@@ -73,17 +73,7 @@ OPTIONS
              the specified app_name.
 
 DEFAULT
-EOF
-if [ "$PRODUCT_ARG" == "jet" ]; then
-cat <<EOF
-   $EXECUTABLE -app jet_demo -name jet_demo
-EOF
-else
-cat <<EOF
    $EXECUTABLE -app perf_test -name perf_test
-EOF
-fi
-cat <<EOF
 
 FILES
    $PADOGRID_WORKSPACE/apps
@@ -105,10 +95,17 @@ if [ "$PRODUCT_ARG" != "" ]; then
       exit 1
    fi
    if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
+      __PRODUCT=$PRODUCT_ARG
       if [ "$PRODUCT_ARG" == "jet" ]; then
-         PRODUCT_ARG="hazelcast"
+         __PRODUCT="hazelcast"
+      elif [ "$PRODUCT_ARG" == "gemfire" ]; then
+         __PRODUCT="geode"
       fi
-      $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
+      args="$@"
+      if [ "$__PRODUCT" != "" ]; then
+         args=$(echo "$args" | sed "s/$PRODUCT_ARG/$__PRODUCT/")
+      fi
+      $PADOGRID_HOME/$__PRODUCT/bin_sh/$EXECUTABLE $args
       exit
    fi
 fi
@@ -120,9 +117,8 @@ if [ "$NAME_ARG" == "" ]; then
    NAME_ARG=$APP
 fi
 
-echo "debug: $PADOGRID_HOME/$PRODUCT/apps/$APP"
 if [ ! -d "$PADOGRID_HOME/$PRODUCT/apps/$APP" ]; then
-   >&2 echo "ERROR: The specified app name does not exist. Command aborted."
+   >&2 echo "ERROR: The specified app does not exist. Command aborted."
    exit 1
 fi
 if [ "$APP" == "padodesktop" ] && [ ! -d "$PADODESKTOP_HOME" ]; then

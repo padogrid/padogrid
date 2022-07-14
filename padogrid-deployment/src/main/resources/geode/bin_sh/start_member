@@ -113,12 +113,14 @@ else
    CREATE_SCRIPT_OPT=""
 fi
 
-#
-# VM cluster
-#
+# Member can run stanalone without joining a cluster
 if [ "$STANDALONE" != "true" ]; then
    STANDALONE=`getClusterProperty "standalone.enabled" "false"`
 fi
+
+#
+# VM cluster
+#
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
    if [ "$VM_ENABLED" == "true" ]; then
@@ -189,12 +191,11 @@ fi
 #
 # Local cluster
 #
+
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 if [ "$VM_ENABLED" == "true" ]; then
-   # POD needed to get the correct node name
-   POD=`getClusterProperty "pod.name" "local"`
    MEMBER=`getVmMemberName`
 else
    MEMBER=`getMemberName $MEMBER_NUMBER`
@@ -248,7 +249,6 @@ MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP
 let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUMBER-1
 let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
 let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+MEMBER_NUMBER-1
-
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 BIND_ADDRESS=""
 HOSTNAME_FOR_CLIENTS=""
@@ -340,6 +340,13 @@ else
    MEMBER_PORT=$MEMBER_START_PORT
    MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
    
+fi
+
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   exit
 fi
 
 # Debug parameters.
@@ -542,13 +549,7 @@ export JAVA_OPTS
 export CLASSPATH
 export JAVA
 
-POD=`getClusterProperty "pod.name" $POD`
-if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-   NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
-   NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
-   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
-   exit
-elif [ "$SIMULATE" == "true" ]; then
+if [ "$SIMULATE" == "true" ]; then
    PID="Simulated"
 elif [ "$CREATE_SCRIPT" == "true" ]; then
    PID="Script"

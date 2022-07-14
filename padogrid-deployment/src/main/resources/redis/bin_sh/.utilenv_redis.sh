@@ -31,7 +31,7 @@ function getRedisVmMemberPid
 {
    local __HOST=$1
    local __MEMBER_PORT="$2"
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep redis-server |grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
+   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep redis-server | grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
    echo $pid
 }
 

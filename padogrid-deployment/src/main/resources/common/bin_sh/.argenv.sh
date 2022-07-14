@@ -159,8 +159,8 @@ PREV=
 
 for i in "$@"
 do
+
    if [[ "$i" != "-"* ]]; then
-      
       # Options with previous value
       if [ "$PREV" == "-product" ]; then
          PRODUCT_ARG=$i

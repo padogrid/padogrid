@@ -87,11 +87,15 @@ else
    CREATE_SCRIPT_OPT=""
 fi
 
+if [ "$RWE_ARG" != "" ]; then
+   RWE=$RWE_ARG
+fi
+
 #
 # VM cluster
 #
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
-   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
    if [ "$VM_ENABLED" == "true" ]; then
       VM_LOCATOR_HOSTS=`getClusterProperty "vm.locator.hosts"`
       if [ "$VM_LOCATOR_HOSTS" == "" ]; then
@@ -209,6 +213,7 @@ LOCATOR_TCP_LIST=""
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 
 if [ "$VM_ENABLED" == "true" ]; then
+
    HOST_NAME=$REMOTE
    BIND_ADDRESS=`getClusterProperty "vm.${HOST_NAME}.bindAddress"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${HOST_NAME}.hostnameForClients"`
@@ -231,7 +236,9 @@ if [ "$VM_ENABLED" == "true" ]; then
          LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$VM_HOST[$LOCATOR_START_PORT]"
       fi
    done
+
 elif [ "$POD" == "local" ]; then
+
    HOST_NAME=`hostname`
    BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
@@ -241,8 +248,8 @@ elif [ "$POD" == "local" ]; then
       if [ -d "$i" ]; then
          __LOCATOR=$i
          __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
-	 __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
-	 let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
+         __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
+         let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
          if [ "$LOCATOR_TCP_LIST" == "" ]; then
             LOCATOR_TCP_LIST="$BIND_ADDRESS[$__LOCATOR_PORT]"
          else
@@ -251,7 +258,9 @@ elif [ "$POD" == "local" ]; then
       fi
    done
    popd > /dev/null 2>&1
+
 else
+
    BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
@@ -266,6 +275,12 @@ else
       BIND_ADDRESS=$NODE_LOCAL
       HOSTNAME_FOR_CLIENTS=$NODE_LOCAL
    fi
+
+fi
+
+if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   exit
 fi
 
 #LOCATOR_PROPERTIES="-Dpadogrid.group=$CLUSTER \
@@ -420,7 +435,7 @@ fi
 if [ "$HOSTNAME_FOR_CLIENTS" != "" ]; then
    GFSH_OPTS="$GFSH_OPTS --hostname-for-clients=$HOSTNAME_FOR_CLIENTS"
 fi
-POD=`getClusterProperty "pod.name" $POD`
+
 if [ "$SIMULATE" == "true" ]; then
    PID="Simulated"
 elif [ "$CREATE_SCRIPT" == "true" ]; then

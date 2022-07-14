@@ -97,9 +97,6 @@ SWITCH_CLUSTER_COMMAND="switch_rwe $RWE $WORKSPACE; switch_cluster $CLUSTER"
 # @required VM_HOSTS         A space separated list of VM datanode hosts (addresses)
 function displayVmClusterShort()
 {
-   # POD needed to get the correct node name
-   POD=`getClusterProperty "pod.name" "local"`
-
    # If pod cluster, then source in the pod env vars to set the VM specific variables
    OS_ENV=`getOsEnv $NODE`
    if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
@@ -159,8 +156,6 @@ function displayVmClusterShort()
 # Displays long status of a VM cluster.
 function displayVmClusterLong()
 {
-   # POD needed to get the correct node name
-   POD=`getClusterProperty "pod.name" "local"`
    HADOOP_CONFIG_FILE=$ETC_DIR/cache.xml
    NAMENODE_START_PORT=`getClusterProperty "namenode.tcp.startPort" $DEFAULT_NAMENODE_START_PORT`
    DATANODE_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_DATANODE_START_PORT`
@@ -342,7 +337,6 @@ function displayClusterShort()
    __HOSTNAME=`hostname`
    OS_ENV=`getOsEnv $__HOSTNAME`
    NODE=`getOsNodeName`
-   POD=`getClusterProperty "pod.name" "local"`
    POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
    __NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
@@ -478,7 +472,6 @@ function displayClusterLong()
 {
    USER_NAME=$(whoami)
    HADOOP_CONFIG_FILE=$ETC_DIR/cache.xml
-   POD=`getClusterProperty "pod.name" "local"`
    POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
    __NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
@@ -840,6 +833,7 @@ function determineComponentStatus
    fi
 }
 
+POD=`getClusterProperty "pod.name" "local"`
 
 # 
 # VM cluster
