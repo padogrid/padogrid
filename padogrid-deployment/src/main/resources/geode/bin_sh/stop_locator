@@ -161,8 +161,14 @@ if [ "$POD" != "local" ]; then
    REMOTE_SPECIFIED="false"
 fi
 
-LOCATOR_NUMBER=$MEMBER_NUM
-LOCATOR=`getLocatorName $LOCATOR_NUMBER`
+if [ "$VM_ENABLED" == "true" ]; then
+   NODE_LOCAL=`hostname`
+   LOCATOR=$(getVmLocatorName `hostname`)
+else
+   NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   LOCATOR_NUMBER=$MEMBER_NUM
+   LOCATOR=`getLocatorName $LOCATOR_NUMBER`
+fi
 LOCATOR_DIR=$RUN_DIR/$LOCATOR
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    LOCATOR_DIR="$(cygpath -wp "$LOCATOR_DIR")"

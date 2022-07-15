@@ -158,11 +158,21 @@ if [ "$POD" != "local" ]; then
       ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "cd $REMOTE_BASE_DIR/$PRODUCT/bin_sh; $COMMAND_PREFIX ./kill_locator -cluster $CLUSTER -remote $VM_HOST -workspace $PADOGRID_WORKSPACE $*;"
       exit
    fi
+   REMOTE_SPECIFIED="false"
 fi
 
-LOCATOR_NUMBER=$MEMBER_NUM
-LOCATOR=`getLocatorName $LOCATOR_NUMBER`
+if [ "$VM_ENABLED" == "true" ]; then
+   NODE_LOCAL=`hostname`
+   LOCATOR=$(getVmLocatorName `hostname`)
+else
+   NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   LOCATOR_NUMBER=$MEMBER_NUM
+   LOCATOR=`getLocatorName $LOCATOR_NUMBER`
+fi
 LOCATOR_DIR=$RUN_DIR/$LOCATOR
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   LOCATOR_DIR="$(cygpath -wp "$LOCATOR_DIR")"
+fi
 
 PID=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
 if [ -z $PID ]; then

@@ -82,11 +82,13 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
    fi
 fi
 
+POD=`getClusterProperty "pod.name" "local"`
+
 # 
 # VM cluster
 #
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
-if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    DEFAULT_USER=$(whoami)
    VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
    VM_KEY=`getClusterProperty "vm.privateKeyFile"`
@@ -105,7 +107,6 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    exit
 fi
 
-POD=`getClusterProperty "pod.name" "local"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 USER_NAME=$(whoami)

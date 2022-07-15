@@ -87,10 +87,6 @@ else
    CREATE_SCRIPT_OPT=""
 fi
 
-if [ "$RWE_ARG" != "" ]; then
-   RWE=$RWE_ARG
-fi
-
 #
 # VM cluster
 #
@@ -157,12 +153,16 @@ fi
 #
 
 # For pod clusters. If non-pod, the following variables are ignored.
-PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
-NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
-NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+if [ "$VM_ENABLED" == "true" ]; then
+   LOCATOR=$(getVmLocatorName `hostname`)
+else
+   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+   LOCATOR_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
+   LOCATOR=`getLocatorName $LOCATOR_NUMBER`
+fi
 
-LOCATOR_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
-LOCATOR=`getLocatorName $LOCATOR_NUMBER`
 LOCATOR_DIR=$RUN_DIR/$LOCATOR
 
 if  [ ! -d $CLUSTER_DIR ]; then
