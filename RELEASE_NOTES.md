@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.20-SNAPSHOT
 
-### Release Date: 07/09/22
+### Release Date: 07/15/22
 
-- Initial snapshot
+- Added support for the `padogrid.rwe` marker for VMs and Vagrant pods. The previous version (v0.9.19) added this marker to uniquely identify running processes throughout RWEs. With that change, v0.9.19 is broken. It is unable to detect VM and Vagrant pod processes.
 
 ---
 
@@ -41,6 +41,10 @@ https://github.com/padogrid
 - Updated `kill_cluster` and `stop_cluster` to bypass pod clusters.
 - Fixed empty workspace status display issues when running `kill_workspace` and `stop_workspace`.
 - Added `SSH_CONNECT_TIME` to timeout ssh commands. The default timeout is 2 seconds.
+
+### Known Issues
+
+- This version is broken for running clusters on VMs and Vagrant pods. It does not recognize the new marker that uniquely identifies running processes on VMs and Vagrant pods. Please use v0.9.20+ if you are running PadoGrid clusters on VMs or Vagrant pods.
 
 ---
 
