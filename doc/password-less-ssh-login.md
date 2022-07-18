@@ -12,7 +12,7 @@ First, generate `ssh` key from each VM as follows.
 ssh-keygen -t rsa 
 ```
 
-2. Make sure permissions to your `.ssh` directory is set to 700
+2. Make sure permissions to your `.ssh` directory are set to 700
 
 ```
 chmod 700 ~/.ssh
