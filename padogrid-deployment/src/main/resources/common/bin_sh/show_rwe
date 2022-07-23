@@ -131,14 +131,14 @@ function displayTreeNode
       if [ "$ITEMS" != "" ]; then
       let LAST_INDEX=${#ITEMS[@]}-1
       if [ "$IS_LAST_NON_EMPTY_NODE" == "true" ]; then
-         echo "$LEADING_BAR   └── $TOP_NODE"
+         echo "$LEADING_BAR   $TLel $TOP_NODE"
       else
-         echo "$LEADING_BAR   ├── $TOP_NODE"
+         echo "$LEADING_BAR   $TTee $TOP_NODE"
       fi
       if [ "$IS_LAST_NON_EMPTY_NODE" == "true" ]; then
          CHILD_LEADING_BAR="$LEADING_BAR       "
       else
-         CHILD_LEADING_BAR="$LEADING_BAR   │   "
+         CHILD_LEADING_BAR="$LEADING_BAR   $TBar   "
       fi
       local CHilight=""
       for ((i = 0; i < ${#ITEMS[@]}; i++)); do
@@ -148,9 +148,9 @@ function displayTreeNode
             CHilight="${CNone}"
          fi
          if [ $i -lt $LAST_INDEX ]; then
-            echo -e "${CHILD_LEADING_BAR}├── ${CHilight}${ITEMS[$i]}${CNone}"
+            echo -e "${CHILD_LEADING_BAR}$TTee ${CHilight}${ITEMS[$i]}${CNone}"
          else
-            echo -e "${CHILD_LEADING_BAR}└── ${CHilight}${ITEMS[$i]}${CNone}"
+            echo -e "${CHILD_LEADING_BAR}$TLel ${CHilight}${ITEMS[$i]}${CNone}"
          fi
       done
       fi
@@ -171,19 +171,19 @@ for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
    WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$__RWE_PATH")
    if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
       if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ] && [ "$PADOGRID_WORKSPACES_HOME" == "$__RWE_PATH" ]; then
-         echo -e "├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+         echo -e "$TTee ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
 	 IS_CURRENT_WORKSPACE="true"
       else
-         echo "├── $WORKSPACE [$WORKSPACE_INFO]"
+         echo "$TTee $WORKSPACE [$WORKSPACE_INFO]"
 	 IS_CURRENT_WORKSPACE="false"
       fi
-      LEADING_BAR="│"
+      LEADING_BAR="$TBar"
    else
       if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ] && [ "$PADOGRID_WORKSPACES_HOME" == "$__RWE_PATH" ]; then
-         echo -e "└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+         echo -e "$TLel ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
 	 IS_CURRENT_WORKSPACE="true"
       else
-         echo "└── $WORKSPACE [$WORKSPACE_INFO]"
+         echo "$TLel $WORKSPACE [$WORKSPACE_INFO]"
 	 IS_CURRENT_WORKSPACE="false"
       fi
       LEADING_BAR=" "

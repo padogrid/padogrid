@@ -3078,16 +3078,16 @@ echo ""
          RWE=${RWES[$i]}
          if [ $i -lt $RWES_LAST_INDEX ]; then
             if [ "$RWE" == "$CURRENT_RWE" ]; then
-               echo -e "├── ${CLightGreen}$RWE${CNone}"
+               echo -e "$TTee ${CLightGreen}$RWE${CNone}"
             else
-               echo "├── $RWE"
+               echo "$TTee $RWE"
             fi
-            LEADING_BAR="│   "
+            LEADING_BAR="$TBar   "
          else
             if [ "$RWE" == "$CURRENT_RWE" ]; then
-               echo -e "└── ${CLightGreen}$RWE${CNone}"
+               echo -e "$TLel ${CLightGreen}$RWE${CNone}"
             else
-               echo "└── $RWE"
+               echo "$TLel $RWE"
             fi
             LEADING_BAR="    "
          fi
@@ -3106,15 +3106,15 @@ echo ""
             local WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$RWE_HOME/$RWE")
             if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
-                  echo -e "${LEADING_BAR}├── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+                  echo -e "${LEADING_BAR}$TTee ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
-                  echo "${LEADING_BAR}├── $WORKSPACE [$WORKSPACE_INFO]"
+                  echo "${LEADING_BAR}$TTee $WORKSPACE [$WORKSPACE_INFO]"
             fi
             else
                if [ "$RWE" == "$CURRENT_RWE" ] && [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ]; then
-                  echo -e "${LEADING_BAR}└── ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+                  echo -e "${LEADING_BAR}$TLel ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
                else
-                  echo "${LEADING_BAR}└── $WORKSPACE [$WORKSPACE_INFO]"
+                  echo "${LEADING_BAR}$TLel $WORKSPACE [$WORKSPACE_INFO]"
                fi
             fi
          done
@@ -3346,15 +3346,15 @@ function showTree
    for ((i = 0; i < $len; i++)); do
       if [ $i -lt $last_index ]; then
          if [ "${LIST[$i]}" == "$HIGHLIGHT_ITEM" ]; then
-            echo -e "├── ${CLightGreen}${LIST[$i]}${CNone}"
+            echo -e "$TTee ${CLightGreen}${LIST[$i]}${CNone}"
          else
-            echo "├── ${LIST[$i]}"
+            echo "$TTee ${LIST[$i]}"
          fi
       else
          if [ "${LIST[$i]}" == "$HIGHLIGHT_ITEM" ]; then
-            echo -e "└── ${CLightGreen}${LIST[$i]}${CNone}"
+            echo -e "$TLel ${CLightGreen}${LIST[$i]}${CNone}"
          else
-            echo "└── ${LIST[$i]}"
+            echo "$TLel ${LIST[$i]}"
          fi
       fi
    done

@@ -455,6 +455,18 @@ CGo=$CLightGreen
 CCaution=$CBrownOrange
 CStop=$CLightRed
 
+# Tree characters
+if [ "$PADOGRID_CHARSET" == "unicode" ] ;then
+   # Unicode characters
+   TBar='|'
+   TTee='|--'
+   TLel='`--'
+else
+   TBar='│'
+   TTee='├──'
+   TLel='└──'
+fi
+
 LAST_ARG=${@: -1}
 
 # Set MEMBER_NUM_NO_LEADING_ZERO

@@ -105,13 +105,14 @@ if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ] && [ "$REMOTE_SPECIFIED"
    exit
 fi
 
-
 # Locator Prefix
-if [ "$POD" != "local" ]; then
+if [ "$POD" != "local" ] && [ "$VM_ENABLED" == "true" ]; then
+   LOCATOR_PREFIX="${CLUSTER}-locator"
+else
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+   LOCATOR_PREFIX=`getLocatorPrefix`
 fi
-LOCATOR_PREFIX=`getLocatorPrefix`
 LOCATOR_PREFIX_LEN=${#LOCATOR_PREFIX}
 
 # Member Prefix
@@ -134,10 +135,15 @@ pushd $RUN_DIR > /dev/null 2>&1
 for i in ${LOCATOR_PREFIX}*; do
    if [ -d "$i" ]; then
       LOCATOR=$i
-      LOCATOR_NUMBER=${LOCATOR:$LOCATOR_PREFIX_LEN}
-
-      NODE_LOCAL=${NODE_NAME_PREFIX}-${LOCATOR_NUMBER}.local
       LOCATOR_DIR=$RUN_DIR/$LOCATOR
+      if [ "$POD" != "local" ] && [ "$VM_ENABLED" == "true" ]; then
+         NODE_LOCAL=${LOCATOR#$LOCATOR_PREFIX-}
+         NODE_LOCAL=${NODE_LOCAL%-*}.local
+      else
+         LOCATOR_NUMBER=${LOCATOR:$LOCATOR_PREFIX_LEN}
+         NODE_LOCAL=${NODE_NAME_PREFIX}-${LOCATOR_NUMBER}.local
+      fi
+
       PID=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
          rm -f $LOG_DIR/${LOCATOR}*.log > /dev/null 2>&1

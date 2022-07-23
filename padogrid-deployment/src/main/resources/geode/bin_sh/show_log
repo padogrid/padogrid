@@ -188,12 +188,20 @@ retrieveClusterEnvFile $PADOGRID_WORKSPACE/clusters/$CLUSTER
 
 case "$LOG" in 
 locator)
-   # For pod clusters. If non-pod, the following variables are ignored.
-   PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
-   NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
-   LOCATOR_PREFIX=`getLocatorPrefix`
-   MEMBER_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
-   LOCATOR=`getLocatorName $MEMBER_NUMBER`
+   # Locator Prefix
+   if [ "$POD" != "local" ]; then
+      if [ "$VM_ENABLED" == "true" ]; then
+         LOCATOR_PREFIX="${CLUSTER}-locator"
+         LOCATOR=$(getVmLocatorName `hostname`)
+      else
+         PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+         NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+         LOCATOR_PREFIX=`getLocatorPrefix`
+         MEMBER_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
+         LOCATOR=`getLocatorName $MEMBER_NUMBER`
+      fi
+   fi
+   LOCATOR_PREFIX_LEN=${#LOCATOR_PREFIX}
    MEMBER_DIR=$RUN_DIR/$LOCATOR
    ;;
 
