@@ -12,7 +12,7 @@ First, generate `ssh` key from each VM as follows.
 ssh-keygen -t rsa 
 ```
 
-2. Make sure permissions to your `.ssh` directory is set to 700
+2. Make sure permissions to your `.ssh` directory are set to 700
 
 ```
 chmod 700 ~/.ssh
@@ -22,7 +22,7 @@ The generated key must be placed in each VM's `~/.ssh/authorized_keys` file. Thi
 
 ### `ssh-copy-id`
 
-OpenSSH includes the `ssh-copy-id` command which adds your public key to the `~/.ssh/authorized_keys` file of the specified remote host. You can also download `ssh-copy-id` from macOS using Homebrew. If your VM has this command then execute it as follows (See [1] for `ssh-copy-id` details.)
+OpenSSH includes the `ssh-copy-id` command which adds your public key to the `~/.ssh/authorized_keys` file of the specified remote host. You can also download `ssh-copy-id` to macOS using Homebrew. If your VM has this command then execute it as follows (See [1] for `ssh-copy-id` details.)
 
 ```
 ssh-copy-id -i ~/.ssh/id_rsa.pub user@vm_host
