@@ -161,13 +161,22 @@ if [ "$POD" != "local" ]; then
    REMOTE_SPECIFIED="false"
 fi
 
-if [ "$VM_ENABLED" == "true" ]; then
+if [ "$POD" != "local" ] && [ "$VM_ENABLED" == "true" ]; then
    NODE_LOCAL=`hostname`
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=$VM_PRIVATE_KEY_FILE
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
    LOCATOR=$(getVmLocatorName `hostname`)
 else
    NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
    LOCATOR_NUMBER=$MEMBER_NUM
    LOCATOR=`getLocatorName $LOCATOR_NUMBER`
+   # On rhel7, getVmLocatorName returns "". Why?
+   if [ "$LOCATOR" == "" ]; then
+      LOCATOR="${CLUSTER}-locator-`hostname`-01"
+   fi
 fi
 LOCATOR_DIR=$RUN_DIR/$LOCATOR
 if [[ ${OS_NAME} == CYGWIN* ]]; then

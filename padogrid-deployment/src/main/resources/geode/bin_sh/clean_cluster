@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Clean (remove) log files of all stopped members in the specified cluster
 
 SYNOPSIS
-   $EXECUTABLE [-cluster <cluster-name] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-all] [-?]
 
 DESCRIPTION
    Cleans the cluster environment by removing the log files of all the stopped members.
@@ -146,10 +146,13 @@ for i in ${LOCATOR_PREFIX}*; do
 
       PID=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
-         rm -f $LOG_DIR/${LOCATOR}*.log > /dev/null 2>&1
-         rm -f $STATS_DIR/${LOCATOR}*.gfs > /dev/null 2>&1
          if [ "$ALL" == "true" ]; then
             rm -rf $RUN_DIR/${LOCATOR}/* > /dev/null 2>&1
+            rm -f $LOG_DIR/* > /dev/null 2>&1
+            rm -f $STATS_DIR/* > /dev/null 2>&1
+         else
+            rm -f $LOG_DIR/${LOCATOR}*.log > /dev/null 2>&1
+            rm -f $STATS_DIR/${LOCATOR}*.gfs > /dev/null 2>&1
          fi
          echo "----------------------------------------------------------------"
          echo "    WORKSPACE: $PADOGRID_WORKSPACE"
@@ -159,10 +162,13 @@ for i in ${LOCATOR_PREFIX}*; do
          echo "      Log Dir: $LOG_DIR"
          echo "    Stats Dir: $STATS_DIR"
          echo "      Run Dir: $RUN_DIR"
-         echo "  Log Removed: $LOG_DIR/${LOCATOR}*.log"
-         echo "Stats Removed: $STATS_DIR/${LOCATOR}*.gfs"
          if [ "$ALL" == "true" ]; then
             echo "  Run Removed: $RUN_DIR/${LOCATOR}/*"
+            echo "  Log Removed: $LOG_DIR/*"
+            echo "Stats Removed: $STATS_DIR/*"
+         else
+            echo "  Log Removed: $LOG_DIR/${LOCATOR}*.log"
+            echo "Stats Removed: $STATS_DIR/${LOCATOR}*.gfs"
          fi
          echo "----------------------------------------------------------------"
       else
@@ -186,10 +192,13 @@ for i in ${MEMBER_PREFIX}*; do
       MEMBER_DIR=$RUN_DIR/$MEMBER
       PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
       if [ -z "$PID" ]; then
-         rm -f $LOG_DIR/${MEMBER}*.log > /dev/null 2>&1
-         rm -f $STATS_DIR/${MEMBER}*.gfs > /dev/null 2>&1
          if [ "$ALL" == "true" ]; then
             rm -rf $RUN_DIR/${MEMBER}/* > /dev/null 2>&1
+            rm -f $LOG_DIR/* > /dev/null 2>&1
+            rm -f $STATS_DIR/* > /dev/null 2>&1
+         else         
+            rm -f $LOG_DIR/${MEMBER}*.log > /dev/null 2>&1
+            rm -f $STATS_DIR/${MEMBER}*.gfs > /dev/null 2>&1
          fi
          echo "----------------------------------------------------------------"
          echo "    WORKSPACE: $PADOGRID_WORKSPACE"
@@ -202,8 +211,13 @@ for i in ${MEMBER_PREFIX}*; do
          echo "  Log Removed: $LOG_DIR/${MEMBER}*.log"
          echo "Stats Removed: $STATS_DIR/${MEMBER}*.gfs"
          if [ "$ALL" == "true" ]; then
-         echo "  Run Removed: $RUN_DIR/${MEMBER}/*"
-	 fi
+            echo "  Log Removed: $LOG_DIR/*"
+            echo "Stats Removed: $STATS_DIR/*"
+            echo "  Run Removed: $RUN_DIR/${MEMBER}/*"
+         else
+            echo "  Log Removed: $LOG_DIR/${MEMBER}*.log"
+            echo "Stats Removed: $STATS_DIR/${MEMBER}*.gfs"
+         fi
          echo "----------------------------------------------------------------"
       else
          echo "----------------------------------------------------------------"

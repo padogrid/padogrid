@@ -96,8 +96,8 @@ POD=`getClusterProperty "pod.name" "local"`
 #
 # VM cluster
 #
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$REMOTE_SPECIFIED" == "false" ]; then
-   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
    if [ "$VM_ENABLED" == "true" ]; then
       VM_LOCATOR_HOSTS=`getClusterProperty "vm.locator.hosts"`
       if [ "$VM_LOCATOR_HOSTS" == "" ]; then
@@ -161,9 +161,18 @@ if [ "$POD" != "local" ]; then
    REMOTE_SPECIFIED="false"
 fi
 
-if [ "$VM_ENABLED" == "true" ]; then
+if [ "$POD" != "local" ] && [ "$VM_ENABLED" == "true" ]; then
    NODE_LOCAL=`hostname`
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=$VM_PRIVATE_KEY_FILE
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
    LOCATOR=$(getVmLocatorName `hostname`)
+   # On rhel7, getVmLocatorName returns "". Why?
+   if [ "$LOCATOR" == "" ]; then
+      LOCATOR="${CLUSTER}-locator-`hostname`-01"
+   fi
 else
    NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
    LOCATOR_NUMBER=$MEMBER_NUM

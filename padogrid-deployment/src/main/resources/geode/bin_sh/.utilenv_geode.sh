@@ -290,6 +290,8 @@ function getVmLocatorName
    local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$__HOSTNAME" == "" ]; then
       echo ""
+   elif [ "$POD" != "local" ]; then
+      echo "${CLUSTER}-locator-${__HOSTNAME}"
    else
       echo "${CLUSTER}-locator-${__HOSTNAME}-01"
    fi

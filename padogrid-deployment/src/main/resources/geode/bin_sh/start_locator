@@ -155,6 +155,12 @@ fi
 # For pod clusters. If non-pod, the following variables are ignored.
 if [ "$POD" != "local" ] && [ "$VM_ENABLED" == "true" ]; then
    LOCATOR_NUMBER=1
+   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+   VM_KEY=$VM_PRIVATE_KEY_FILE
+   if [ "$VM_KEY" != "" ]; then 
+      VM_KEY="-i $VM_KEY"
+   fi
+   getVmLocatorName `hostname`
    LOCATOR=$(getVmLocatorName `hostname`)
 else
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
@@ -460,7 +466,7 @@ else
          GF_JAVA="$(cygpath -wp "$GF_JAVA")"
          export GF_JAVA
       else
-         GFSH=gfsh
+         GFSH="$PRODUCT_HOME/bin/gfsh"
          GF_JAVA="$JAVA_HOME/bin/java"
          export GF_JAVA
       fi

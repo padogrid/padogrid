@@ -192,6 +192,11 @@ locator)
    if [ "$POD" != "local" ]; then
       if [ "$VM_ENABLED" == "true" ]; then
          LOCATOR_PREFIX="${CLUSTER}-locator"
+         VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+         VM_KEY=$VM_PRIVATE_KEY_FILE
+         if [ "$VM_KEY" != "" ]; then 
+            VM_KEY="-i $VM_KEY"
+         fi
          LOCATOR=$(getVmLocatorName `hostname`)
       else
          PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
@@ -200,6 +205,10 @@ locator)
          MEMBER_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
          LOCATOR=`getLocatorName $MEMBER_NUMBER`
       fi
+   else
+      MEMBER_NUMBER=$LOCATOR_NUM_NO_LEADING_ZERO
+      LOCATOR_PREFIX=`getLocatorPrefix`
+      LOCATOR=`getLocatorName $MEMBER_NUMBER`
    fi
    LOCATOR_PREFIX_LEN=${#LOCATOR_PREFIX}
    MEMBER_DIR=$RUN_DIR/$LOCATOR
