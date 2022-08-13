@@ -237,6 +237,7 @@ function displayVmClusterLong()
       JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
 
       PULSE_URL="http://${LOCATOR_HOSTNAME_FOR_CLIENTS}:$JMX_MANAGER_HTTP_PORT/pulse"
+      MANAGER_URL="http://$LOCATOR_HOSTNAME_FOR_CLIENTS:$JMX_MANAGER_HTTP_PORT/geode-mgmt/v1"
 
       LOG_FILE=$LOG_DIR/${LOCATOR}.log
       
@@ -250,21 +251,23 @@ function displayVmClusterLong()
       pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
-         echo -e "           STATE: ${CLightRed}Down${CNone}"
-         echo "             PID: N/A"
+         echo -e "             STATE: ${CLightRed}Down${CNone}"
+         echo "               PID: N/A"
       else
          let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
-         echo -e "           STATE: ${CLightGreen}Running${CNone}"
-         echo "             PID: $pid"
+         echo -e "             STATE: ${CLightGreen}Running${CNone}"
+         echo "               PID: $pid"
       fi
 
-      echo "    LOCATOR_PORT: $LOCATOR_PORT"
-#      echo "      DEBUG_PORT: $DEBUG_PORT"
-#      echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-      echo -e "       PULSE_URL: $CUrl$PULSE_URL$CNone"
-      echo "         JMX_URL: $JMX_URL"
-      echo "     Working Dir: $LOCATOR_DIR"
-      echo "        LOG_FILE: $LOG_FILE"
+      echo "      LOCATOR_PORT: $LOCATOR_PORT"
+#      echo "        DEBUG_PORT: $DEBUG_PORT"
+#      echo "   PROMETHEUS_PORT: $PROMETHEUS_PORT"
+      echo -e "         PULSE_URL: $CUrl$PULSE_URL$CNone"
+      echo -e "MANAGER_URL (gfsh): $CUrl$MANAGER_URL$CNone"
+      echo "  JMX_MANAGER_PORT: $JMX_MANAGER_PORT"
+      echo "           JMX_URL: $JMX_URL"
+      echo "       Working Dir: $LOCATOR_DIR"
+      echo "          LOG_FILE: $LOG_FILE"
       echo ""
    done
 
@@ -303,42 +306,42 @@ function displayVmClusterLong()
       else
          NUM=$MEMBER_COUNT
       fi
-      echo "$NUM        Member: $MEMBER"
+      echo "$NUM          Member: $MEMBER"
 
       pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ -z $pid ]; then
          let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
-         echo -e "           STATE: ${CLightRed}Down${CNone}"
-         echo "             PID: N/A"
+         echo -e "             STATE: ${CLightRed}Down${CNone}"
+         echo "               PID: N/A"
       else
          let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
-         echo -e "           STATE: ${CLightGreen}Running${CNone}"
-         echo "             PID: $pid"
+         echo -e "             STATE: ${CLightGreen}Running${CNone}"
+         echo "               PID: $pid"
       fi
 
-      echo "     MEMBER_PORT: $MEMBER_PORT"
-      echo " MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
-      echo "      DEBUG_PORT: $DEBUG_PORT"
-      echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-      echo "         JMX_URL: $JMX_URL"
-      echo "     Working Dir: $MEMBER_DIR"
-      echo "        LOG_FILE: $LOG_FILE"
+      echo "       MEMBER_PORT: $MEMBER_PORT"
+      echo "   MEMBER_HTTP_URL: $MEMBER_HTTP_URL"
+      echo "        DEBUG_PORT: $DEBUG_PORT"
+      echo "   PROMETHEUS_PORT: $PROMETHEUS_PORT"
+      echo "           JMX_URL: $JMX_URL"
+      echo "       Working Dir: $MEMBER_DIR"
+      echo "          LOG_FILE: $LOG_FILE"
       echo ""
    done
 
-   echo "         CLUSTER: $CLUSTER"
+   echo "           CLUSTER: $CLUSTER"
    if [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
-   echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   echo -e "  Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
    else
-   echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   echo -e "  Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
    fi
    if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
-   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "   Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
-   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "   Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
-   echo "         Version: $GEODE_VERSION"
-   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   echo "           Version: $GEODE_VERSION"
+   echo "    Switch Cluster: $SWITCH_CLUSTER_COMMAND"
 } # displayVmClusterLong
 
 # Displays short status of a local/pod cluster.
@@ -488,16 +491,16 @@ function displayClusterLong()
 
    echo "----------------------------------------------------------------"
    if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
-      echo "         CLUSTER: $CLUSTER (default)"
+      echo "           CLUSTER: $CLUSTER (default)"
    else
-      echo "         CLUSTER: $CLUSTER"
+      echo "           CLUSTER: $CLUSTER"
    fi
-   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
-   echo "         PRODUCT: $PRODUCT"
-   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
-   echo "        Run Type: $RUN_TYPE"
-   echo "             POD: $POD"
-   echo "        POD_TYPE: $POD_TYPE"
+   echo "       CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "           PRODUCT: $PRODUCT"
+   echo "      CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "          Run Type: $RUN_TYPE"
+   echo "               POD: $POD"
+   echo "          POD_TYPE: $POD_TYPE"
    echo ""
 
    #
@@ -571,6 +574,7 @@ function displayClusterLong()
 #         fi
 
          PULSE_URL="http://$LOCATOR_HOSTNAME_FOR_CLIENTS:$JMX_MANAGER_HTTP_PORT/pulse"
+         MANAGER_URL="http://$LOCATOR_HOSTNAME_FOR_CLIENTS:$JMX_MANAGER_HTTP_PORT/geode-mgmt/v1"
 
          LOG_FILE=$LOG_DIR/${LOCATOR}.log
          echo "$LOCATOR_NUM       Locator: $LOCATOR"
@@ -586,26 +590,28 @@ function displayClusterLong()
             pid=`getLocatorPid $LOCATOR $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_LOCATOR_COUNT=DOWN_LOCATOR_COUNT+1
-               echo -e "           STATE: ${CLightRed}Down${CNone}"
-               echo "             PID: N/A"
+               echo -e "             STATE: ${CLightRed}Down${CNone}"
+               echo "               PID: N/A"
             else
                let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
-               echo -e "           STATE: ${CLightGreen}Running${CNone}"
-               echo "             PID: $pid"
+               echo -e "             STATE: ${CLightGreen}Running${CNone}"
+               echo "               PID: $pid"
             fi
          else
-            echo -e "           STATE: ${CYellow}Unknown${CNone}"
-            echo -e "             PID: ${CYellow}Unknown${CNone}"
+            echo -e "             STATE: ${CYellow}Unknown${CNone}"
+            echo -e "               PID: ${CYellow}Unknown${CNone}"
             RUNNING_LOCATOR_COUNT=-1
             DOWN_LOCATOR_COUNT=-1
          fi
-         echo "    LOCATOR_PORT: $LOCATOR_PORT"
-         echo "      DEBUG_PORT: $DEBUG_PORT"
-         echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-         echo -e "       PULSE_URL: $CUrl$PULSE_URL$CNone"
-         echo "         JMX_URL: $JMX_URL"
-         echo "     Working Dir: $LOCATOR_DIR"
-         echo "        LOG_FILE: $LOG_FILE"
+         echo "      LOCATOR_PORT: $LOCATOR_PORT"
+         echo "        DEBUG_PORT: $DEBUG_PORT"
+         echo "   PROMETHEUS_PORT: $PROMETHEUS_PORT"
+         echo -e "         PULSE_URL: $CUrl$PULSE_URL$CNone"
+         echo -e "MANAGER_URL (gfsh): $CUrl$MANAGER_URL$CNone"
+         echo "  JMX_MANAGER_PORT: $JMX_MANAGER_PORT"
+         echo "           JMX_URL: $JMX_URL"
+         echo "       Working Dir: $LOCATOR_DIR"
+         echo "          LOG_FILE: $LOG_FILE"
          echo ""
          popd > /dev/null 2>&1
       fi
@@ -674,7 +680,7 @@ function displayClusterLong()
 
          fi
          LOG_FILE=$LOG_DIR/${MEMBER}.log
-         echo "$MEMBER_NUM        Member: $MEMBER"
+         echo "$MEMBER_NUM          Member: $MEMBER"
          if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
             ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
             ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
@@ -687,26 +693,26 @@ function displayClusterLong()
             pid=`getMemberPid $MEMBER $WORKSPACE $RWE`
             if [ -z $pid ]; then
                let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
-               echo -e "           STATE: ${CLightRed}Down${CNone}"
-               echo "             PID: N/A"
+               echo -e "             STATE: ${CLightRed}Down${CNone}"
+               echo "               PID: N/A"
             else
                let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
-               echo -e "           STATE: ${CLightGreen}Running${CNone}"
-               echo "             PID: $pid"
+               echo -e "             STATE: ${CLightGreen}Running${CNone}"
+               echo "               PID: $pid"
             fi
          else
-            echo -e "           STATE: ${CYellow}Unknown${CNone}"
-            echo -e "             PID: ${CYellow}Unknown${CNone}"
+            echo -e "             STATE: ${CYellow}Unknown${CNone}"
+            echo -e "               PID: ${CYellow}Unknown${CNone}"
             RUNNING_MEMBER_COUNT=-1
             DOWN_MEMBER_COUNT=-1
          fi
-         echo "     MEMBER_PORT: $MEMBER_PORT"
-         echo -e " MEMBER_HTTP_URL: $CUrl$MEMBER_HTTP_URL$CNone"
-         echo "      DEBUG_PORT: $DEBUG_PORT"
-         echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
-         echo "         JMX_URL: $JMX_URL"
-         echo "     Working Dir: $MEMBER_DIR"
-         echo "        LOG_FILE: $LOG_FILE"
+         echo "       MEMBER_PORT: $MEMBER_PORT"
+         echo -e "   MEMBER_HTTP_URL: $CUrl$MEMBER_HTTP_URL$CNone"
+         echo "        DEBUG_PORT: $DEBUG_PORT"
+         echo "   PROMETHEUS_PORT: $PROMETHEUS_PORT"
+         echo "           JMX_URL: $JMX_URL"
+         echo "       Working Dir: $MEMBER_DIR"
+         echo "          LOG_FILE: $LOG_FILE"
          echo ""
          popd > /dev/null 2>&1
       fi
@@ -714,25 +720,25 @@ function displayClusterLong()
    popd > /dev/null 2>&1
 
    # Summary
-   echo "         CLUSTER: $CLUSTER"
-   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
-   echo "        Run Type: $RUN_TYPE"
+   echo "           CLUSTER: $CLUSTER"
+   echo "      CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "          Run Type: $RUN_TYPE"
    if [ $RUNNING_LOCATOR_COUNT -lt 0 ]; then
-   echo -e "Locators Running: ${CYellow}Unknown${CNone}"
+   echo -e "  Locators Running: ${CYellow}Unknown${CNone}"
    elif [ $RUNNING_LOCATOR_COUNT -eq $LOCATOR_COUNT ]; then
-   echo -e "Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   echo -e "  Locators Running: ${CLightGreen}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
    else
-   echo -e "Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
+   echo -e "  Locators Running: ${CLightRed}$RUNNING_LOCATOR_COUNT/$LOCATOR_COUNT${CNone}"
    fi
    if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
-   echo -e " Members Running: ${CYellow}Unknown${CNone}"
+   echo -e "   Members Running: ${CYellow}Unknown${CNone}"
    elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
-   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "   Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    else
-   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   echo -e "   Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
    fi
-   echo "         Version: $GEODE_VERSION"
-   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   echo "           Version: $GEODE_VERSION"
+   echo "    Switch Cluster: $SWITCH_CLUSTER_COMMAND"
    echo "----------------------------------------------------------------"
 } # displayClusterLong
 

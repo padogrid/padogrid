@@ -6,12 +6,14 @@ https://github.com/padogrid
 
 ## Version 0.9.20-SNAPSHOT
 
-### Release Date: 07/23/22
+### Release Date: 08/13/22
 
 - Added support for the `padogrid.rwe` marker for VMs and Vagrant pods. The previous version (v0.9.19) added this marker to uniquely identify running processes throughout RWEs. With that change, v0.9.19 is broken. It is unable to detect VM and Vagrant pod processes.
 - Fixed Geode/GemFire locator issues in pods. Locators were not properly identified in pod VMs.
 - Added support for `LOCATOR_JAVA_OPTS` and `MEMBER_JAVA_OPTS` for Geode/GemFire clusters. These variables can be set in `bin_sh/setenv.sh`.
 - Added support for `PADOGRID_CHARSET` for displaying nested structures in `unicode`. Set this environment variable to `unicode` for the nested structure displaying commands like `show_rwe` if they display control characters.
+- Added Manager URL in `show_cluster -long` display for Geode/GemFire clusters.
+- Fixed `create_workspace` and `create_cluster` that incorrectly always defaulted to the cluster type `geode` that prevented creating GemFire clusters.
 
 ```bash
 export PADOGRID_CHARSET="unicode"

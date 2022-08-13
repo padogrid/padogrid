@@ -212,8 +212,9 @@ export PRODUCT="geode"
 #      export CLUSTER_TYPE="geode"
 #   fi
 #fi
-if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+if [ "$CLUSTER_TYPE_ARG" == "gemfire" ] || [ "$CLUSTER_TYPE" == "gemfire" ]; then
    IS_GEODE_ENTERPRISE=true
+   export CLUSTER_TYPE="gemfire"
    export PRODUCT_HOME="$GEMFIRE_HOME"
    export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
 else

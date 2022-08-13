@@ -72,6 +72,7 @@ MAN_SPECIFIED=false
 CLUSTER_ARG=
 CLUSTER_SPECIFIED=false
 CLUSTER_TYPE_SPECIFIED=false
+CLUSTER_TYPE_ARG=
 REPLICAS=1
 ARG_ARG=
 FG_SPECIFIED=false
@@ -217,6 +218,7 @@ do
          CLUSTER_ARG=$i
       elif [ "$PREV" == "-cluster-type" ]; then
          CLUSTER_TYPE=$i
+         CLUSTER_TYPE_ARG=$i
          CLUSTER_TYPE_SPECIFIED="true"
       elif [ "$PREV" == "-replicas" ]; then
          REPLICAS=$i
