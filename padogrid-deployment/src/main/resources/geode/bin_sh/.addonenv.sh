@@ -264,7 +264,14 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
    __CLASSPATH="$__CLASSPATH:$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*"
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
-__CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
+
+# Exclude slf4j (included in geode distribution)
+for i in $PADOGRID_HOME/lib/*; do
+  if [[ "$i" != *"slf4j"* ]]; then
+     __CLASSPATH="$__CLASSPATH:$i"
+  fi
+done
+#__CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
 if [ "$CLUSTER_TYPE" == "gemfire" ]; then
    __CLASSPATH="$__CLASSPATH:$GEMFIRE_HOME/lib/geode-dependencies.jar"
 else

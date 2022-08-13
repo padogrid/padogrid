@@ -14,6 +14,7 @@ https://github.com/padogrid
 - Added support for `PADOGRID_CHARSET` for displaying nested structures in `unicode`. Set this environment variable to `unicode` for the nested structure displaying commands like `show_rwe` if they display control characters.
 - Added Manager URL in `show_cluster -long` display for Geode/GemFire clusters.
 - Fixed `create_workspace` and `create_cluster` that incorrectly always defaulted to the cluster type `geode` that prevented creating GemFire clusters.
+- Excluded PadoGrid's slf4j from Geode/GemFire to remove warning messages. PadoGrid now uses slf4j included in Geode/GemFire distributions.
 
 ```bash
 export PADOGRID_CHARSET="unicode"
