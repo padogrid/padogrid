@@ -431,31 +431,33 @@ do
 done
 
 # Bash color code
-CNone='\033[0m' # No Color
-CBlack='\033[0;30m'
-CDarkGray='\033[1;30m'
-CRed='\033[0;31m'
-CLightRed='\033[1;31m'
-CGreen='\033[0;32m'
-CLightGreen='\033[1;32m'
-CBrownOrange='\033[0;33m'
-CYellow='\033[1;33m'
-CBlue='\033[0;34m'
-CLightBlue='\033[1;34m'
-CPurple='\033[0;35m'
-CLightPurple='\033[1;35m'
-CCyan='\033[0;36m'
-CLightCyan='\033[1;36m'
-CLightGray='\033[0;37m'
-CWhite='\033[1;37m'
-CUnderline='\033[4m'
-CUrl=$CBlue$CUnderline
-CHighlight=$CBrownOrange
-CError=$CLightRed
-CWarning=$CYellow
-CGo=$CLightGreen
-CCaution=$CBrownOrange
-CStop=$CLightRed
+if [ "$NO_COLOR" != "true" ]; then
+  CNone='\033[0m' # No Color
+  CBlack='\033[0;30m'
+  CDarkGray='\033[1;30m'
+  CRed='\033[0;31m'
+  CLightRed='\033[1;31m'
+  CGreen='\033[0;32m'
+  CLightGreen='\033[1;32m'
+  CBrownOrange='\033[0;33m'
+  CYellow='\033[1;33m'
+  CBlue='\033[0;34m'
+  CLightBlue='\033[1;34m'
+  CPurple='\033[0;35m'
+  CLightPurple='\033[1;35m'
+  CCyan='\033[0;36m'
+  CLightCyan='\033[1;36m'
+  CLightGray='\033[0;37m'
+  CWhite='\033[1;37m'
+  CUnderline='\033[4m'
+  CUrl=$CBlue$CUnderline
+  CHighlight=$CBrownOrange
+  CError=$CLightRed
+  CWarning=$CYellow
+  CGo=$CLightGreen
+  CCaution=$CBrownOrange
+  CStop=$CLightRed
+fi
 
 # Tree characters
 if [ "$PADOGRID_CHARSET" == "unicode" ] ;then
