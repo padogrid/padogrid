@@ -22,8 +22,8 @@ export PADOGRID_CHARSET="unicode"
 - Excluded PadoGrid's slf4j from Geode/GemFire to remove warning messages. PadoGrid now uses slf4j included in Geode/GemFire distributions.
 - Added experimental Geode/GemFire split-brain diagnostic scripts ported from [bundle-geode-1-app-perf_test_sb-cluster-sb](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb). Please see the link for details. 
 
-| Script                                 | Description                                                                  |
-| -------------------------------------- | ---------------------------------------------------------------------------- |
+| Script                                   | Description                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------- |
 | t_revoke_all_missing_disk_stores         | Iteratively revoke all missing data stores                                   |
 | t_show_all_suspect_node_pairs            | Find the specified suspect node from all log files                           |
 | t_show_all_unexpectedly_left_members     | Display unexpectedly left members in chronological order                     |
