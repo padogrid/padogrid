@@ -6,19 +6,38 @@ https://github.com/padogrid
 
 ## Version 0.9.20-SNAPSHOT
 
-### Release Date: 08/13/22
+### Release Date: 08/29/22
 
 - Added support for the `padogrid.rwe` marker for VMs and Vagrant pods. The previous version (v0.9.19) added this marker to uniquely identify running processes throughout RWEs. With that change, v0.9.19 is broken. It is unable to detect VM and Vagrant pod processes.
 - Fixed Geode/GemFire locator issues in pods. Locators were not properly identified in pod VMs.
 - Added support for `LOCATOR_JAVA_OPTS` and `MEMBER_JAVA_OPTS` for Geode/GemFire clusters. These variables can be set in `bin_sh/setenv.sh`.
 - Added support for `PADOGRID_CHARSET` for displaying nested structures in `unicode`. Set this environment variable to `unicode` for the nested structure displaying commands like `show_rwe` if they display control characters.
-- Added Manager URL in `show_cluster -long` display for Geode/GemFire clusters.
-- Fixed `create_workspace` and `create_cluster` that incorrectly always defaulted to the cluster type `geode` that prevented creating GemFire clusters.
-- Excluded PadoGrid's slf4j from Geode/GemFire to remove warning messages. PadoGrid now uses slf4j included in Geode/GemFire distributions.
 
 ```bash
 export PADOGRID_CHARSET="unicode"
 ```
+
+- Added Manager URL in `show_cluster -long` display for Geode/GemFire clusters.
+- Fixed `create_workspace` and `create_cluster` that incorrectly always defaulted to the cluster type `geode` that prevented creating GemFire clusters.
+- Excluded PadoGrid's slf4j from Geode/GemFire to remove warning messages. PadoGrid now uses slf4j included in Geode/GemFire distributions.
+- Added experimental Geode/GemFire split-brain diagnostic scripts ported from [bundle-geode-1-app-perf_test_sb-cluster-sb](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb). Please see the link for details. 
+
+| Script                                 | Description                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------- |
+| t_revoke_all_missing_disk_stores         | Iteratively revoke all missing data stores                                   |
+| t_show_all_suspect_node_pairs            | Find the specified suspect node from all log files                           |
+| t_show_all_unexpectedly_left_members     | Display unexpectedly left members in chronological order                     |
+| t_show_all_unexpectedly_shutdown_removal | Find the members that unexpectedly shutdown for removal from the cluster     |
+| t_show_cluster_views                     | Display cluster views in chronological order                                 |
+| t_show_member_join_requests              | Display member join requests received by the locators in chronological order |
+| t_show_membership_service_failure        | Display membership service failure and restarted messages from locators      |
+| t_show_missing_disk_stores               | Display missing disk stores                                                  |
+| t_show_offline_members                   | Display offline regions per member                                           |
+| t_show_quorum_check                      | Display quorum check status if any                                           |
+| t_show_recovery_steps                    | Display recovery steps for the specfied type                                 |
+| t_show_stuck_threads                     | Find stuck threads                                                           |
+| t_show_suspect_node_pair                 | Find the specified suspect node pair from the log files                      |
+| t_show_type                              | Determine the network partition type                                         |
 
 ---
 
