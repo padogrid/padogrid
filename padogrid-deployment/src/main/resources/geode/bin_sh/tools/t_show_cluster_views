@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-type -all -locator -member -long -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display cluster views in chronological order
+
+SYNOPSIS
+   ./$EXECUTABLE [-type received | sending ] [-all] [-locator] [-member] [-long] [-?]
+
+DESRIPTION
+   Displays cluster views in chronological order. The cluster views are extracted from the locator logs only.
+
+OPTIONS
+   -type received | sending
+             'received" displays received views, 'sending' displays sending views. Default: received
+
+   -locator
+             If specified, then searches the locator log files. If '-member' is also specified then
+             searches all log files.
+
+   -member
+             If specified, then searches the member log files. If '-locator' is also specified then
+             searches all log files.
+
+   -all
+             If specified, then searches all log files.
+
+   -long
+             If specified, displays unfiltered log messages
+
+   -count view_count
+             Displays the specified number of last views per log file. If unspecified, then displays all views.
+
+DEFAULT:
+   ./$EXECUTABLE -type received -locator
+
+EOF
+exit
+fi
+
+if [ "$LOCATOR_SPECIFIED" == "true" ] && [ "$MEMBER_SPECIFIED" == "true" ]; then
+   LOG_FILES="$ALL_FILES"
+elif [ "$ALL_SPECIFIED" == "true" ]; then
+   LOG_FILES="$ALL_FILES"
+elif [ "$LOCATOR_SPECIFIED" == "true" ]; then
+   LOG_FILES="$LOCATOR_FILES"
+elif [ "$MEMBER_SPECIFIED" == "true" ]; then
+   LOG_FILES="$SERVER_FILES"
+else
+   LOG_FILES="$LOCATOR_FILES"
+fi
+
+if [ "$COUNT" != "" ]; then
+   if [ "$(isNumber $COUNT)" == "false" ]; then
+      echo -e "${CError}ERROR:${CNone} Invalid number [$COUNT]. Command aborted."
+      exit 1
+   fi
+   if [ $COUNT -lt 0 ]; then
+      echo -e "${CError}ERROR:${CNone} Count must be greater than 0 [$COUNT]. Command aborted."
+      exit 1
+   fi
+fi
+
+if [ "$TIMESTAMP" == "" ]; then
+   TIMESTAMP=`date +%y%m%d-%H%M%S`
+fi
+
+# Trap Ctrl-C
+LAST_TIMESTAMP_TRAP=0
+trap 'cleanExit "$EXECUTABLE" "$TIMESTAMP" "false"' INT
+
+if [ "$TYPE_ARG" == "sending" ]; then
+   FILTER="sending new view"
+else
+   FILTER="received new view"
+fi
+FILTER2="these members failed to respond to the view change"
+
+TMP_FILE="/tmp/padogrid-$EXECUTABLE-$TIMESTAMP.log"
+pushd $LOG_DIR > /dev/null 2>&1
+grep -e "$FILTER" -e "$FILTER2" $LOG_FILES > $TMP_FILE
+
+IS_VIEW_COUNT="false"
+declare -A view_count_map
+if [ "$COUNT" != "" ]; then
+   # Determine a list of log files
+   log_files="$(cat $TMP_FILE | grep .log: | sed 's/:.*$//' | uniq)"
+   for log_file in $log_files; do
+      view_count=$(cat $TMP_FILE | grep $log_file | wc -l)
+      view_count_map[$log_file]=$view_count
+   done
+   IS_VIEW_COUNT="true"
+fi
+
+echo ""
+echo "LOG: $LOG_FILES"
+echo ""
+if [ "$TYPE_ARG" == "sending" ]; then
+   echo "Sending Views"
+   echo "-------------"
+else
+   echo "Received Views"
+   echo "--------------"
+fi 
+log_file=""
+prev_log_file=$log_file
+view_count=0
+while IFS= read -r line; do
+   log_file=$(echo $line | sed 's/:.*$//')
+   timestamp=$(echo $line | sed -e "s/$log_file://" -e 's/^.*info //' -e "s/$CLUSTER.*$//"  -e 's/info.*//i')
+   timestamp=$(echo $timestamp | sed -e 's/\[warn //')
+   if [ "$prev_log_file" != "$log_file" ]; then
+      echo ""
+      prev_log_file=$log_file
+      view_count=0
+   fi
+   let view_count=view_count+1
+   if [ "$IS_VIEW_COUNT" == "true" ]; then
+      let views_left=${view_count_map[$log_file]}-view_count
+      if [ $views_left -ge $COUNT ]; then
+         continue;
+      fi
+   fi
+
+   if [[ "$line" == *"$FILTER2"* ]]; then
+      if [ "$LONG" != "true" ]; then
+         echo -e "$log_file: ${CBrownOrange}$timestamp${CNone}"
+      else
+         echo $line | sed "s/$FILTER2.*$//"
+      fi
+      line=$(echo $line | sed -e "s/^.*${FILTER2}: //" -e "s/\[//g" -e "s/\]//g")
+      echo -e "$TTee ${CError}$FILTER2${CNone}"
+      members=$line
+   else
+      if [ "$LONG" != "true" ]; then
+         echo -e "$log_file: ${CBrownOrange}$timestamp${CNone}"
+      else
+        echo $line | sed "s/$FILTER.*$//"
+      fi
+      line=$(echo $line | sed -e "s/^.*${FILTER}: View//" -e "s/\[//g" -e "s/\]//g")
+      line=$(echo $line | sed -e "s/^.*$FILTER View//" -e "s/\[//g" -e "s/\]//g")
+      member=$(echo $line | sed 's/members: .*$//')
+      echo "$TTee coordinator: $member"
+      members=$(echo $line | sed 's/^.*members://')
+   fi
+
+   # Determine active member count
+   active_members=$(echo $members | sed -e 's/crashed:.*$//' -e 's/shutdown:.*$//')
+   count=0
+   for i in $members; do
+      let count=count+1
+   done
+   total=$count
+
+   # Determine crashed  member count
+   crashed_members=$(echo $members | grep 'crashed:' | sed -e 's/^.*crashed://' -e 's/shutdown:.*$//')
+   crashed_count=0
+   for i in $crashed_members; do
+      let crashed_count=crashed_count+1
+   done
+   total_crashed=$crashed_count
+
+   # Determine shutdown member count
+   shutdown_members=$(echo $members | grep 'shutdown' | sed -e 's/^.*shutdown://' -e 's/crashed:.*$//')
+   shutdown_count=0
+   for i in $shutdown_members; do
+      let shutdown_count=shutdown_count+1
+   done
+   total_shutdown=$shutdown_count
+
+   # Print active members
+   count=0
+   weight_sum=0
+   for i in $active_members; do
+      i=$(echo $i | sed 's/,//')
+      let count=count+1
+      addr=$(echo $i | sed 's/^.* //')
+      if [ "$(echo $i | grep locator)" != "" ]; then
+         member_type="locator"
+         let weight_sum=weight_sum+3
+      elif [ "$(echo $i | grep lead)" != "" ]; then
+         member_type="lead"
+         let weight_sum=weight_sum+15
+      else
+         member_type="member"
+         let weight_sum=weight_sum+10
+      fi
+      if [ $count -lt $total ]; then
+         echo "$TBar   $TTee $i"
+      else
+         echo "$TBar   $TLel $i"
+      fi
+   done
+   echo "$TLel weight: $weight_sum"
+
+   # Print crashed members
+   if [ $crashed_count -gt 0 ]; then
+      echo -e "    ${CError}crashed:${CNone} $crashed_count"
+      count=0
+      for i in $crashed_members; do
+         i=$(echo $i | sed 's/,//')
+         let count=count+1
+         if [ $count -lt $total_crashed ]; then
+            echo "    $TTee $i"
+         else
+            echo "    $TLel $i"
+         fi
+      done
+   fi
+
+   # Print shutdown members
+   if [ $shutdown_count -gt 0 ]; then
+      echo -e "    ${CError}shutdown:${CNone} $shutdown_count"
+      count=0
+      for i in $shutdown_members; do
+         i=$(echo $i | sed 's/,//')
+        let count=count+1
+        if [ $count -lt $total_shutdown ]; then
+           echo "    $TTee $i"
+        else
+           echo "    $TLel $i"
+        fi
+      done
+   fi
+
+#   grep "$line" *locator*.log | awk '!a[$0]++'
+done < "$TMP_FILE"
+unset IFS
+popd > /dev/null 2>&1
+
+echo ""
+echo -e "Now: ${CBrownOrange}$(date '+%Y/%m/%d %H:%M:%S %Z')${CNone}"
+echo ""
+
+cleanExit "$EXECUTABLE" "$TIMESTAMP" "true"

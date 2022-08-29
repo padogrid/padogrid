@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-first -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Find the specified suspect node pair from the log files
+
+SYNOPSIS
+   ./$EXECUTABLE [-first] suspect_node for_node [-?]
+
+DESRIPTION
+   Finds the specified suspect node pair from the log files
+
+OPTIONS
+   suspect_node
+             Suspect node.
+
+   for_node
+             Node that is receiving suspect node messages.
+
+   -first
+             If specified, displays the first supspect node pair found in the log file.
+
+EOF
+exit
+fi
+
+if [ "$1" == "-first" ]; then
+   IS_FIRST="true"
+   SUSPECT_NODE="$2"
+   FOR_NODE="$3" 
+else
+   IS_FIRST="false"
+   SUSPECT_NODE="$1"
+   FOR_NODE="$2" 
+fi
+if [ "$SUSPECT_NODE" == "" ] || [ "$FOR_NODE" == "" ]; then
+   echo -e "${CError}ERROR:${CNone} Node names required. See usage. Command aborted."
+   exit 1
+fi
+
+if [ "$TIMESTAMP" == "" ]; then
+   TIMESTAMP=`date +%y%m%d-%H%M%S`
+fi
+
+# Trap Ctrl-C
+LAST_TIMESTAMP_TRAP=0
+trap 'cleanExit "$EXECUTABLE" "$TIMESTAMP" "false"' INT
+
+TMP_FILE="/tmp/padogrid-$EXECUTABLE-1-$TIMESTAMP.log"
+
+#
+# Log files and time stamps excluded
+#
+#pushd LOG_DIR > /dev/null 2>&1
+#grep suspect $ALL_FILES  | grep "received suspect.*${SUSPECT_NODE}.*for " | grep $SUSPECT_NODE | grep "$FOR_NODE" | sed 's/^.*suspect/suspect/' | awk '!a[$0]++' | grep "$FOR_NODE"
+#popd > /dev/null 2>&1
+
+
+#
+# Log files and tiemstamps included
+#
+pushd $LOG_DIR > /dev/null 2>&1
+grep suspect $ALL_FILES  | grep "received suspect.*${SUSPECT_NODE}.*for " | grep $SUSPECT_NODE | grep "$FOR_NODE" | sed 's/^.*suspect/suspect/' | awk '!a[$0]++' | grep "$FOR_NODE" > $TMP_FILE
+if [ "$IS_FIRST" == "true" ]; then
+   while IFS= read -r line; do
+      grep "$line" *.log | head -n 1
+   done < "$TMP_FILE"
+else
+   while IFS= read -r line; do
+      grep "$line" *.log | tail -n 1
+   done < "$TMP_FILE"
+fi
+unset IFS
+popd > /dev/null 2>&1
+
+cleanExit "$EXECUTABLE" "$TIMESTAMP" "true"

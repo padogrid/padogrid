@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display offline regions per member
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESRIPTION
+   Displays offline regions per member
+
+DEFAULT:
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+if [ "$TIMESTAMP" == "" ]; then
+   TIMESTAMP=`date +%y%m%d-%H%M%S`
+fi
+
+# Trap Ctrl-C
+LAST_TIMESTAMP_TRAP=0
+trap 'cleanExit "$EXECUTABLE" "$TIMESTAMP" "false"' INT
+
+FILTER1="The following persistent member has gone offline"
+FILTER2="\]"
+
+TMP_FILE="/tmp/padogrid-$EXECUTABLE-$TIMESTAMP.log"
+pushd $LOG_DIR > /dev/null 2>&1
+grep . $SERVER_FILES | sed -n -e "/$FILTER1/,/$FILTER2/p" >> $TMP_FILE
+
+echo ""
+echo "Offline Members"
+echo "---------------"
+line_count=0
+log_file=""
+timestamp=""
+while IFS= read -r line; do
+   prev_log_file="$log_file"
+   let line_count=line_count+1
+   log_file=$(echo $line | sed 's/:.*$//')
+   if [ "$log_file" != "$prev_log_file" ]; then
+      prev_timestamp=""
+      echo ""
+      echo "$log_file"
+   else
+      prev_timestamp="$timestamp"
+   fi
+   if [[ "$line" == *"$FILTER1"* ]]; then
+      timestamp=$(echo $line | sed -e "s/$log_file://" -e 's/^.*info //' -e "s/$CLUSTER.*$//"  -e 's/info.*//i')
+      region=$(echo $line | sed -e 's/^.*region //' -e 's/:.*$//')
+      #if [ "$log_file" != "$prev_logfile" ] && [ "$timestamp" != "$prev_timestamp" ]; then
+      if [ "$timestamp" != "$prev_timestamp" ]; then
+         echo "$TTee $timestamp"
+      fi
+   else
+      case $line_count in
+      2)
+         diskstore_id=$(echo $line | sed 's/.*DiskStore ID: //')
+         ;;
+      3)
+         name=$(echo $line | sed 's/.*Name: //')
+         ;;
+      4)
+         location=$(echo $line | sed 's/.*Location: //')
+         address=$(echo $location |sed -e 's/:.*$//' -e 's/\///g')
+         #echo "$TBar   $TBar   $TLel $address"
+         ;;
+      5)
+         if [ "$region" != "" ]; then
+            echo -e "$TBar   $TTee region: ${CBrownOrange}$region${CNone}"
+         fi
+         echo -e "$TBar   $TBar   $TTee ${CError}offline${CNone}"
+            echo "$TBar   $TBar   $TBar   $TLel $name $address $diskstore_id"
+         echo -e "$TBar   $TBar   $TLel participants"
+         offline_diskstore_id=""
+         name=""
+         offline_location=""
+         offline_address=""
+         ;;
+      *)
+         if [ $line_count -gt 5 ]; then
+            if [ "$offline_diskstore_id" = "" ]; then
+               offline_diskstore_id=$(echo $line | grep 'DiskStore ID:' | sed 's/.*DiskStore ID: //')
+            fi
+            if [ "$name" = "" ]; then
+               name=$(echo $line | grep 'Name:' | sed 's/.*Name: //')
+            fi
+            if [ "$offline_location" = "" ]; then
+               offline_location=$(echo $line | grep 'Location:' | sed 's/.*Location: //')
+               offline_address=$(echo $offline_location | sed -e 's/:.*$//' -e 's/\///g')
+            fi
+            comma_line=$(echo $line | grep ",")
+            end_line=$(echo $line | grep "$FILTER2")
+            if [ "$end_line" != "" ]; then
+               line_count=0
+            fi
+            if [ "$comma_line" != "" ] || [ "$end_line" != "" ]; then
+               echo "$TBar   $TBar       $TTee $name $address $offline_diskstore_id"
+               offline_diskstore_id=""
+               name=""
+               offline_location=""
+               offline_address=""
+            fi
+         fi
+         ;;
+      esac
+   fi
+done < "$TMP_FILE"
+unset IFS
+popd > /dev/null 2>&1
+
+echo -e "Now: ${CBrownOrange}$(date '+%Y/%m/%d %H:%M:%S %Z')${CNone}"
+echo ""
+
+cleanExit "$EXECUTABLE" "$TIMESTAMP" "true"

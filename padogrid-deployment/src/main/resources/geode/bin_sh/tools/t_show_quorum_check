@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display quorum check status if any
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESRIPTION
+   Displays quorum check status from locator log files
+
+DEFAULT:
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+if [ "$TIMESTAMP" == "" ]; then
+   TIMESTAMP=`date +%y%m%d-%H%M%S`
+fi
+
+# Trap Ctrl-C
+LAST_TIMESTAMP_TRAP=0
+trap 'cleanExit "$EXECUTABLE" "$TIMESTAMP" "false"' INT
+
+TMP_FILE1="/tmp/padogrid-$EXECUTABLE-1-$TIMESTAMP.log"
+
+pushd $LOG_DIR > /dev/null 2>&1
+grep 'quorum check' $LOCATOR_FILES | grep contacted > $TMP_FILE1
+log_files="$(cat $TMP_FILE1 | grep .log: | sed 's/:.*$//' | uniq)"
+
+echo ""
+echo "Quorum Status"
+echo "-------------"
+echo ""
+for log_file in $log_files; do
+   contacted_count=$(cat $TMP_FILE1 | grep $log_file | wc -l)
+   contacted_count=$(trimString $contacted_count)
+   timeout_count=$(grep 'quorum check' $LOCATOR_FILES | grep 'timeout waiting' | grep $log_file | wc -l)
+   timeout_count=$(trimString $timeout_count)
+   line=$(grep $log_file $TMP_FILE1 | tail -n 1)
+   member_count=$(echo $line | sed -e 's/^.*contacted //' -e 's/ processes.*$//')
+   weight_sum=$(echo $line | sed -e 's/^.*with //' -e 's/ member.*$//')
+   threshold_sum=$(echo $line | sed -e 's/^.*Threshold for a quorum is //')
+   diff=""
+   if [ "weight_sum" != "" ]; then
+      let diff=weight_sum-threshold_sum
+   fi
+
+
+   echo "$log_file"
+   echo "$TTee             contact count: $contacted_count"
+   if [ $member_count == "" ]; then
+      echo "$TLel             timeout count: $timeout_count"
+   else
+      echo "$TTee             timeout count: $timeout_count"
+      echo "$TTee members from last contact: $member_count"
+      echo "$TTee     weight sum in cluster: $weight_sum"
+      echo "$TTee      weight sum threshold: $threshold_sum"
+      if [ $diff -lt 0 ]; then
+         echo -e "$TLel           weight sum diff: ${CError}$diff${CNone}"
+      else
+         echo -e "$TLel           weight sum diff: ${CGo}$diff${CNone}"
+      fi
+   fi
+   echo ""
+done
+popd > /dev/null 2>&1
+
+echo -e "Now: ${CBrownOrange}$(date '+%Y/%m/%d %H:%M:%S %Z')${CNone}"
+echo ""
+
+cleanExit "$EXECUTABLE" "$TIMESTAMP" "true"

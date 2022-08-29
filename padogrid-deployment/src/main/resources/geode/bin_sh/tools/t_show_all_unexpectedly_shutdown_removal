@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Find the members that unexpectedly shutdown for removal from the cluster
+
+SYNOPSIS
+   ./$EXECUTABLE [suspect_node] [-?]
+
+DESRIPTION
+   Finds the members that unexpectedly shutdown for removal from the cluster. The found members
+   have been removed from the cluster and they no longer participate in the cluster. These
+   members may or may not be running. If they are running then it is possible that they
+   might have formed a cluster of their own, creating a split-brain scenario.
+
+EOF
+exit
+fi
+
+if [ "$TIMESTAMP" == "" ]; then
+   TIMESTAMP=`date +%y%m%d-%H%M%S`
+fi
+
+# Trap Ctrl-C
+LAST_TIMESTAMP_TRAP=0
+trap 'cleanExit "$EXECUTABLE" "$TIMESTAMP" "false"' INT
+
+TMP_FILE1="/tmp/padogrid-$EXECUTABLE-1-$TIMESTAMP.log"
+
+pushd $_LOG_DIR > /dev/null 2>&1
+grep "unexpectedly shut down" $ALL_FILES | grep "Membership received a request to remove" | sed -e 's/^.*Membership received a request to remove//' -e 's/).*$/)/' -e 's/^ //' | awk '!a[$0]++' | sort > $TMP_FILE
+echo ""
+echo "Members removed from the cluster:"
+echo "---------------------------------"
+cat $TMP_FILE1
+echo ""
+echo "Last logged:"
+echo "------------"
+while IFS= read -r line; do
+   grep "unexpectedly shut down" *.log | grep "Membership received a request to remove"  |grep "$line" | tail -n 1
+done < "$TMP_FILE1"
+unset IFS
+echo ""
+popd > /dev/null 2>&1
+
+echo "The members unexpectedly removed from the cluster maybe still running. If so, it is"
+echo "possible that they have formed a cluster of their own, leading to a split-brain scenario."
+echo -e "Now: ${CBrownOrange}$(date '+%Y/%m/%d %H:%M:%S %Z')${CNone}"
+echo ""
+
+cleanExit "$EXECUTABLE" "$TIMESTAMP" "true"

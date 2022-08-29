@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display unexpectedly left members in chronological order
+
+SYNOPSIS
+   ./$EXECUTABLE [suspect_node] [-?]
+
+DESRIPTION
+   Displays unexpectedly left members in chronological order.
+
+EOF
+exit
+fi
+
+if [ "$TIMESTAMP" == "" ]; then
+   TIMESTAMP=`date +%y%m%d-%H%M%S`
+fi
+
+# Trap Ctrl-C
+LAST_TIMESTAMP_TRAP=0
+trap 'cleanExit "$EXECUTABLE" "$TIMESTAMP" "false"' INT
+
+TMP_FILE="/tmp/padogrid-$EXECUTABLE-$TIMESTAMP.log"
+pushd $LOG_DIR > /dev/null 2>&1
+grep "unexpectedly left" $ALL_FILES > $TMP_FILE
+echo ""
+echo "Member unexpectedly left:"
+echo "-------------------------"
+prev_log_file=""
+while IFS= read -r line; do
+  log_file=$(echo $line | sed 's/:.*$//')
+  timestamp=$(echo $line | sed -e "s/$log_file://" -e 's/^.*info //' -e 's/UTC.*$/UTC/' -e 's/ INFO.*$//')
+  #timestamp=$(echo $line | sed -e "s/$log_file://" -e 's/^.*info //' -e "s/$CLUSTER.*$//"  -e 's/info.*//i')
+  #timestamp=$(echo $line | sed -e "s/$log_file://" -e 's/^.*info //' -e "s/$CLUSTER.*$//")
+  member=$(echo $line | sed -e 's/^.*Member at//' -e 's/ unexpectedly.*$//')
+  if [ "$prev_log_file" != "$log_file" ]; then
+     echo "$log_file"
+     prev_log_file=$log_file
+  fi
+  echo "$TTee $timestamp"
+  echo -e "$TBar   $TLel ${CError}$member${CNone}"
+done < "$TMP_FILE"
+unset IFS
+popd > /dev/null 2>&1
+
+echo -e "Now: ${CBrownOrange}$(date '+%Y/%m/%d %H:%M:%S %Z')${CNone}"
+echo ""
+
+cleanExit "$EXECUTABLE" "$TIMESTAMP" "true"

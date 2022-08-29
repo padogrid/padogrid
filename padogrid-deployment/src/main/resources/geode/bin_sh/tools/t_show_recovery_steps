@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-type -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display recovery steps for the specfied type
+
+SYNOPSIS
+   ./$EXECUTABLE -type 0|1|2|3|4|5 [-?]
+
+DESRIPTION
+   Display recovery steps for the specfied type
+
+OPTIONS
+   -type 0|1|2|3|4|5
+             Network partition type.
+
+EOF
+exit
+fi
+
+if [ "$TYPE_ARG" == "" ]; then
+   echo >&2 -e "${CError}ERROR:${CNone} '-type' is not specified. Command aborted."
+   echo >&2 -e "       Usage: ./$EXECUTABLE -type 0|1|2|3|4|5 [interface] [-?]"
+   exit 1
+fi
+if [[ ! $TYPE_ARG =~ [012345] ]]; then
+   echo >&2 -e "${CError}ERROR:${CNone} Invalid type number [$TYPE_ARG]"
+   echo >&2 -e "       Usage: ./$EXECUTABLE -type 0|1|2|3|4|5 [interface] [-?]"
+   exit 2
+fi
+
+echo ""
+cat $CLUSTER_DIR/etc/recovery/type$TYPE_ARG.md
+echo ""

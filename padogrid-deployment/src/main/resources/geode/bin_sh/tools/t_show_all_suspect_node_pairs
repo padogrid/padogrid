@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-long -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Find the specified suspect node from all log files
+
+SYNOPSIS
+   ./$EXECUTABLE [suspect_node] [-long] [-?]
+
+DESRIPTION
+   Finds the specified suspect node from all log files
+
+OPTIONS
+   suspect_node
+             Optional suspect node. If unspecified, then assigns all nodes as suspects.
+
+   -long
+             If specified, displays unfiltered log messages
+
+DEFAULT:
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+if [ "$1" == "-long" ]; then
+   SUSPECT_NODES="$2"
+else
+   SUSPECT_NODES=""
+fi
+
+if [ "$SUSPECT_NODES" = "" ]; then
+   SUSPECT_NODES="$ALL_NODES myself"
+fi
+
+if [ "$TIMESTAMP" == "" ]; then
+   TIMESTAMP=`date +%y%m%d-%H%M%S`
+fi
+
+# Trap Ctrl-C
+LAST_TIMESTAMP_TRAP=0
+trap 'cleanExit "$EXECUTABLE" "$TIMESTAMP" "false"' INT
+
+TMP_FILE_FIRST="/tmp/padogrid-$EXECUTABLE-first-$TIMESTAMP.log"
+TMP_FILE="/tmp/padogrid-$EXECUTABLE-1-$TIMESTAMP.log"
+TMP_FILE2="/tmp/padogrid-$EXECUTABLE-2-$TIMESTAMP.log"
+TMP_FILE3="/tmp/padogrid-$EXECUTABLE-3-$TIMESTAMP.log"
+
+echo ""
+for SUSPECT_NODE in $SUSPECT_NODES; do
+   for NODE in $ALL_NODES; do
+      if [ "$NODE" != "$SUSPECT_NODE" ]; then
+         t_show_suspect_node_pair -first $SUSPECT_NODE $NODE >> $TMP_FILE_FIRST
+         t_show_suspect_node_pair $SUSPECT_NODE $NODE >> $TMP_FILE
+      fi
+   done
+
+   echo "Suspect: $SUSPECT_NODE"
+   echo "---------------------------------------"
+   if [ ! -s $TMP_FILE ]; then
+      echo "Not found."
+   else
+     echo "For:"
+     while IFS= read -r line; do
+        echo "$line" | sed -e 's/^.*for //' -e 's/).*$/)/' >> $TMP_FILE2
+     done < "$TMP_FILE"
+     unset IFS
+     if [ -f "$TMP_FILE2" ]; then
+        cat $TMP_FILE2 | awk '!a[$0]++' | sort  > $TMP_FILE3
+        if [ "$LONG" != "true" ]; then
+           size=$(cat $TMP_FILE2 | wc -l)
+           count=0
+           while IFS= read -r line; do
+              let count=count+1
+              if [ $count -lt $size ]; then
+                 echo "$TTee $line"
+              else
+                 echo "$TLel $line"
+              fi
+           done < "$TMP_FILE2"
+           unset IFS
+        else
+           cat $TMP_FILE3
+        fi
+     fi
+
+     echo ""
+     echo "First logged:"
+     sort $TMP_FILE_FIRST | awk '!a[$0]++' > $TMP_FILE3
+     if [ "$LONG" != "true" ]; then
+        while IFS= read -r line; do
+          log_file=$(echo $line | sed 's/:.*$//')
+          timestamp=$(echo $line | sed -e "s/$log_file://" -e 's/^.*info //' -e "s/$CLUSTER.*$//"  -e 's/info.*//i')
+          from=$(echo $line | sed -e 's/^.*from //' -e 's/ for .*$//')
+          for_before=$(echo $line | sed -e 's/^.*for //')
+          for=$(echo $for_before | sed -e 's/: .*$//');
+          message=$(echo $for_before | sed -e 's/^.*: //');
+          echo "$timestamp"
+          echo "$TTee  log: $log_file"
+          echo "$TTee from: $from"
+          echo "$TTee  for: $for"
+          echo "$TLel  msg: $message"
+        done < "$TMP_FILE3"
+        unset IFS
+     else
+        cat $TMP_FILE3
+     fi
+
+     echo ""
+     echo "Last logged:"
+     sort $TMP_FILE | awk '!a[$0]++' > $TMP_FILE3
+     if [ "$LONG" != "true" ]; then
+        while IFS= read -r line; do
+          log_file=$(echo $line | sed 's/:.*$//')
+          timestamp=$(echo $line | sed -e "s/$log_file://" -e 's/^.*info //' -e "s/$CLUSTER.*$//"  -e 's/info.*//i')
+          from=$(echo $line | sed -e 's/^.*from //' -e 's/ for .*$//')
+          for_before=$(echo $line | sed -e 's/^.*for //')
+          for=$(echo $for_before | sed -e 's/: .*$//');
+          message=$(echo $for_before | sed -e 's/^.*: //');
+          echo "$timestamp"
+          echo "$TTee  log: $log_file"
+          echo "$TTee from: $from"
+          echo "$TTee  for: $for"
+          echo "$TLel  msg: $message"
+        done < "$TMP_FILE3"
+        unset IFS
+     else
+        cat $TMP_FILE3
+     fi
+   fi
+   echo ""
+done
+
+echo -e "Now: ${CBrownOrange}$(date '+%Y/%m/%d %H:%M:%S %Z')${CNone}"
+
+cleanExit "$EXECUTABLE" "$TIMESTAMP" "true"
