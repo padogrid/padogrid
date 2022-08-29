@@ -141,7 +141,6 @@ BEGIN_NUM=1
 END_NUM=
 KILL=
 DEBUG=
-DIR=
 CLEAN=
 LOCAL=false
 QUIET=false
@@ -152,6 +151,10 @@ FOLDER=
 PRIMARY=
 BOX=
 DIR=
+DIAG_ARG=
+DIAG_SPECIFIED=false
+TIMESTAMP=
+TIMESTAMP_SPECIFIED=false
 PREFIX=
 OCTET=
 PM=
@@ -209,8 +212,6 @@ do
          PM=$i
       elif [ "$PREV" == "-nm" ]; then
          NM=$i
-      elif [ "$PREV" == "-dir" ]; then
-         DIR=$i
       elif [ "$PREV" == "-count" ]; then
          COUNT=$i
       elif [ "$PREV" == "-cluster" ]; then
@@ -299,6 +300,10 @@ do
          END_NUM=$i
       elif [ "$PREV" == "-dir" ]; then
          DIR=$i
+      elif [ "$PREV" == "-diag" ]; then
+         DIAG_ARG=$i
+      elif [ "$PREV" == "-timestamp" ]; then
+         TIMESTAMP=$i
       elif [ "$PREV" == "-prefix" ]; then
          PREFIX=$i
       elif [ "$PREV" == "-folder" ]; then
@@ -335,6 +340,10 @@ do
       elif [ "$i" == "-list" ]; then
          LIST=true
          LIST_SPECIFIED=true
+      elif [ "$i" == "-diag" ]; then
+         DIAG_SPECIFIED=true
+      elif [ "$i" == "-timestamp" ]; then
+         TIMESTAMP_SPECIFIED=true
       elif [ "$i" == "-no-color" ]; then
          NO_COLOR=true
       elif [ "$i" == "-header" ]; then

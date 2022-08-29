@@ -453,3 +453,21 @@ function getPadowebPid
    spids=`trimString $spids`
    echo $spids
 }
+
+#
+# Displays the recovery steps for the specified type.
+#
+# @env RECOVERY_SPECIFIED If "true" displays the recovery steps.
+# @env SHOW_OPTS Options such as '-no-color' to pass on to 'show_recovery_steps'.
+#
+# @param type  0|1|2|3|4|5  All other values are sliently ignored.
+#
+function show_recovery
+{
+   if [ "$RECOVERY_SPECIFIED" == "true" ]; then
+      local TYPE_ARG="$1"
+      if [[ $TYPE_ARG =~ [012345] ]]; then
+         t_show_recovery_steps -type $TYPE_ARG $SHOW_OPTS
+      fi
+   fi
+}

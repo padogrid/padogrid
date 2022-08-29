@@ -112,6 +112,7 @@ __padogrid_complete()
    local prev_word="${COMP_WORDS[COMP_CWORD-1]}"
    local len=${#COMP_WORDS[@]}
    local command=$second_word
+   local command2=$third_word
    local is_product="false"
    local is_path="false"
       
@@ -206,6 +207,12 @@ __padogrid_complete()
       fi
      ;;
 
+   -diag)
+      if [ "$command2" == "t_show_type" ]; then
+         type_list="gfsh true false"
+      fi
+      ;;
+
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
@@ -228,6 +235,10 @@ __padogrid_complete()
          if  [ "$product" == "geode" ] || [ "$product" == "gemfire" ]; then
             type_list="$type_list pado padolite"
          fi
+      elif [ "$command2" == "t_show_cluster_views" ]; then
+         type_list="received sending"
+      elif [ "$command2" == "t_show_recovery_steps" ]; then
+         type_list="0 1 2 3 4 5"
       fi
       ;;
 
@@ -431,7 +442,7 @@ __padogrid_complete()
    *)
       if [ "$command" == "cp_sub" ] || [ "$command" == "tools" ]; then
          if [ $len -gt 3 ]; then
-            type_list=`$third_word -options`
+            type_list=`$command2 -options`
          else
             type_list=`ls $PADOGRID_HOME/$PRODUCT/bin_sh/$command`
          fi
@@ -915,6 +926,11 @@ __command_complete()
          type_list="grid"
       fi
       ;;
+   -diag)
+      if [ "$command" == "t_show_type" ]; then
+         type_list="gfsh true false"
+      fi
+      ;;
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
@@ -937,6 +953,10 @@ __command_complete()
          if  [ "$product" == "geode" ] || [ "$product" == "gemfire" ]; then
             type_list="$type_list pado padolite"
          fi
+      elif [ "$command" == "t_show_cluster_views" ]; then
+         type_list="received sending"
+      elif [ "$command" == "t_show_recovery_steps" ]; then
+         type_list="0 1 2 3 4 5"
       fi
       ;;
    -product)
