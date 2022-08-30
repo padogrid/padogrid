@@ -82,7 +82,10 @@ You can monitor Prometheus from your browser:
 
 To view a complete list of metrics:
 
-**URL:** [http://localhost:9090/metrics](http://localhost:9090/metrics)
+- All avalable metrics: [http://localhost:9090/api/v1/label/__name__/values]( http://localhost:9090/api/v1/label/__name__/values)
+- Metadata: http://localhost:9090/api/v1/metadata
+- Prometheus specifics: [http://localhost:9090/metrics](http://localhost:9090/metrics)
+- Federated:
 
 ### Grafana
 
