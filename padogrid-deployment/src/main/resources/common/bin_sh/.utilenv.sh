@@ -721,7 +721,7 @@ function isPodRunning
          __POD_RUNNING="false"
 
          if [ -d "$__POD_DIR/.vagrant/machines" ]; then 
-            __TMP_DIR=$BASE_DIR/tmp
+            __TMP_DIR=$__POD_DIR/tmp
             if [ ! -d "$__TMP_DIR" ]; then
                mkdir -p $__TMP_DIR
             fi
@@ -1313,15 +1313,19 @@ function getMemberNumList
 
 #
 # Returns VirtualBox adapter private IP addresses.
-# @required BASE_DIR
+# @required PADOGRID_WORKSPACE
 #
 function getPrivateNetworkAddresses
 {
-   __TMP_DIR=$BASE_DIR/tmp
+   if [ "$PADOGRID_WORKSPACE" != "" ] && [ -d $PADOGRID_WORKSPACE ]; then
+      __TMP_DIR=$PADOGRID_WORKSPACE/tmp
+   else
+      __TMP_DIR=/tmp
+   fi
    if [ ! -d "$__TMP_DIR" ]; then
       mkdir -p $__TMP_DIR
    fi
-   __TMP_FILE=$__TMP_DIR/tmp.txt
+   __TMP_FILE=$__TMP_DIR/padogrid-tmp.txt
    
    __PRIVATE_IP_ADDRESSES=""
    vb_found="false"
@@ -1353,8 +1357,7 @@ function getPrivateNetworkAddresses
                __PRIVATE_IP_ADDRESSES="$__PRIVATE_IP_ADDRESSES $ip_address"
                vb_found="false"
             fi
-         fi  
-      done < "$__TMP_FILE"
+         fi  done < "$__TMP_FILE"
       unset IFS
    fi
    if [ -f $__TMP_FILE ]; then
@@ -1365,7 +1368,7 @@ function getPrivateNetworkAddresses
 
 #
 # Updates the RWE workspaces envionment variables with the current values
-# in the .rwe/rweenv.sh file.
+# in the $HOME/.padogrid/workspaces/<rwe>/rweenv.sh file.
 # @param rwePath RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assigned.
 # @required PADOGRID_WORKSPACE
 #
@@ -1375,17 +1378,20 @@ function updateRweEnvFile
    if [ "$__RWE_PATH" == "" ]; then
       __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
    fi
-   local RWE_DIR="$__RWE_PATH/.rwe"
-   local RWEENV_FILE="$RWE_DIR/rweenv.sh"
-   if [ ! -d "$RWE_DIR" ]; then
-      mkdir "$RWE_DIR"
-   fi
+   local RWE=$(basename "$__RWE_PATH")
    local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
-   echo "WORKSPACE=\"$WORKSPACE\"" > $RWEENV_FILE
+   local HOME_RWE_DIR="$HOME/.padogrid/workspaces/$RWE"
+   local HOME_RWEENV_FILE="$HOME_RWE_DIR/rweenv.sh"
+
+   if [ ! -d "$HOME_RWE_DIR" ]; then
+      mkdir -p "$HOME_RWE_DIR"
+   fi
+   local HOME_RWEENV_FILE="$HOME_RWE_DIR/rweenv.sh"
+   echo "WORKSPACE=\"$WORKSPACE\"" > $HOME_RWEENV_FILE
 }
 
 #
-# Retrieves the RWE environment variables set in the .rwe/rweenv.sh file.
+# Retrieves the RWE environment variables set in the $HOME/.padogrid/workspaces/<rwe>/rweenv.sh file.
 # @param rwePath RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assigned.
 #
 function retrieveRweEnvFile
@@ -1394,10 +1400,13 @@ function retrieveRweEnvFile
    if [ "$__RWE_PATH" == "" ]; then
       __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
    fi
-   local RWE_DIR="$__RWE_PATH/.rwe"
-   local RWEENV_FILE="$RWE_DIR/rweenv.sh"
-   if [ -f "$RWEENV_FILE" ]; then
-      . "$RWEENV_FILE"
+   local RWE=$(basename "$__RWE_PATH")
+   local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+   local HOME_RWE_DIR="$HOME/.padogrid/workspaces/$RWE"
+   local HOME_RWEENV_FILE="$HOME_RWE_DIR/rweenv.sh"
+
+   if [ -f "$HOME_RWEENV_FILE" ]; then
+      . "$HOME_RWEENV_FILE"
       if [ "$WORKSPACE" != "" ]; then
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$WORKSPACE"
       fi
@@ -1416,7 +1425,7 @@ function retrieveRweEnvFile
 
 #
 # Updates the workspace envionment variables with the current values
-# in the .workspace/workspaceenv.sh file.
+# in the $HOME/.padogrid/workspaces/<rwe>/<workspace>/workspaceenv.sh file.
 # @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
 # @required CLUSTER
 # @required POD
@@ -1432,29 +1441,22 @@ function updateWorkspaceEnvFile
       return 1
    fi
 
-   # Upgrade to the new release directory struture (0.9.6)
-   # Check to see if the workspace path is writable. During the initialization phase, 
-   # PadoGrid submits its own installation path as workspace. This needs to be correted.
-   # This causes this function to log errors, if the PadoGrid installation directory
-   # has no write permissions.
-   if [ -w "$__WORKSPACE_PATH" ]; then
-      if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
-         if [ -f "$__WORKSPACE_PATH/.workspace" ]; then
-            rm -f "$__WORKSPACE_PATH/.workspace"
-         fi
-      fi
-      if [ ! -d "$__WORKSPACE_PATH/.workspace" ]; then
-         mkdir "$__WORKSPACE_PATH/.workspace"
-      fi
-   
-      local WORKSPACEENV_FILE="$__WORKSPACE_PATH/.workspace/workspaceenv.sh"
-      echo "CLUSTER=$CLUSTER" > "$WORKSPACEENV_FILE"
-      echo "POD=$POD" >> "$WORKSPACEENV_FILE"
+   local RWE=$(basename $(dirname "$__WORKSPACE_PATH"))
+   local WORKSPACE=$(basename "$__WORKSPACE_PATH")
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+   local HOME_WORKSPACEENV_FILE="$HOME_WORKSPACE_DIR/workspaceenv.sh"
+
+   if [ ! -d "$HOME_WORKSPACE_DIR" ]; then
+      mkdir -p "$HOME_WORKSPACE_DIR"
    fi
+   
+   echo "CLUSTER=$CLUSTER" > "$HOME_WORKSPACEENV_FILE"
+   echo "POD=$POD" >> "$HOME_WORKSPACEENV_FILE"
 }
 
 #
-# Retrieves the workspace environment variables set in the .workspace/workspaceenv.sh file.
+# Retrieves the workspace environment variables set in the
+# $HOME/.padogrid/workspaces/<rwe>/<workspace>/workspaceenv.sh file.
 # @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
 #
 function retrieveWorkspaceEnvFile
@@ -1463,17 +1465,16 @@ function retrieveWorkspaceEnvFile
    if [ "$__WORKSPACE_PATH" == "" ]; then
       __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
    fi
-   if [ -f "$__WORKSPACE_PATH/.workspace/workspaceenv.sh" ]; then
-      . "$__WORKSPACE_PATH/.workspace/workspaceenv.sh"
-   elif [ ! -d "$__WORKSPACE_PATH/.workspace" ] && [ -f "$__WORKSPACE_PATH/.workspace" ]; then
-      # For backward compatibility (0.9.6)
-      . "$__WORKSPACE_PATH/.workspace"
-      rm "$__WORKSPACE_PATH/.workspace"
+
+   local RWE=$(basename $(dirname "$__WORKSPACE_PATH"))
+   local WORKSPACE=$(basename "$__WORKSPACE_PATH")
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+   local HOME_WORKSPACEENV_FILE="$HOME_WORKSPACE_DIR/workspaceenv.sh"
+
+   if [ -f "$HOME_WORKSPACEENV_FILE" ]; then
+      . "$HOME_WORKSPACEENV_FILE"
    fi
-   # If the cluster does not exist then pick the first cluster and pod in the workspace dir.
-   # Check to see if clusters and pods directories exist. During the initialization phase, 
-   # PadoGrid submits its own installation path as workspace. This needs to be corrected.
-   # This causes this function to log errors.
+
    if [ -d "$__WORKSPACE_PATH/clusters" ]; then
       if [ "$CLUSTER" == "" ] || [ ! -d "$__WORKSPACE_PATH/clusters/$CLUSTER" ]; then
          local __CLUSTERS=$(ls $__WORKSPACE_PATH/clusters)
@@ -1502,7 +1503,7 @@ function retrieveWorkspaceEnvFile
 
 #
 # Updates the product envionment variables with the current values
-# in the .cluster/clusterenv.sh file.
+# in the $HOME/.padogrid/<rwe>/<workspace>/clusters/<cluster>/clusterenv.sh file.
 # @param clusterPath Cluster path. If not specified then $PADOGRID_WORKSPACE/clusters/$CLUSTER is assigned.
 # @required PRODUCT
 # @required CLUSTER_TYPE
@@ -1528,23 +1529,34 @@ function updateClusterEnvFile
       mkdir "$__CLUSTER_PATH/.cluster"
    fi
 
-   local CLUSTERENV_FILE="$__CLUSTER_PATH/.cluster/clusterenv.sh"
+   local __CLUSTER=$(basename "$__CLUSTER_PATH")
+   local WORKSPACE_DIR=$(dirname $(dirname "$__CLUSTER_PATH"))
+   local WORKSPACE=$(basename "$WORKSPACE_DIR")
+   local RWE=$(basename $(dirname "$WORKSPACE_DIR"))
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+   local HOME_CLUSTER_DIR="$HOME_WORKSPACE_DIR/clusters/$__CLUSTER"
+   local HOME_CLUSTERENV_FILE="$HOME_CLUSTER_DIR/clusterenv.sh"
+
+   if [ ! -d "$HOME_CLUSTER_DIR" ]; then
+      mkdir -p "$HOME_CLUSTER_DIR"
+   fi
 
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
    # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
    if [ "$PRODUCT" == "gemfire" ]; then
-      echo "PRODUCT=geode" > "$CLUSTERENV_FILE"
+      echo "PRODUCT=geode" > "$HOME_CLUSTERENV_FILE"
       CLUSTER_TYPE="gemfire"
    elif [ "$PRODUCT" == "jet" ]; then
-      echo "PRODUCT=hazelcast" > "$CLUSTERENV_FILE"
+      echo "PRODUCT=hazelcast" > "$HOME_CLUSTERENV_FILE"
    else
-      echo "PRODUCT=$PRODUCT" > "$CLUSTERENV_FILE"
+      echo "PRODUCT=$PRODUCT" > "$HOME_CLUSTERENV_FILE"
    fi
-   echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$CLUSTERENV_FILE"
+   echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$HOME_CLUSTERENV_FILE"
 }
 
 #
-# Retrieves the cluster environment variables set in the .cluster/clusterenv.sh file.
+# Retrieves the cluster environment variables set in the
+# $HOME/.padogrid/<rwe>/<workspace>/clusters/<cluster>/clusterenv.sh file.
 # @param clusterPath Cluster path. If not specified then the current cluster path is assigned.
 #
 function retrieveClusterEnvFile
@@ -1559,15 +1571,19 @@ function retrieveClusterEnvFile
          __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
       fi
    fi
-   if [ -f "$__CLUSTER_PATH/.cluster/clusterenv.sh" ]; then
-      . "$__CLUSTER_PATH/.cluster/clusterenv.sh"
-   elif [ ! -d "$__CLUSTER_PATH/.cluster" ] && [ -f "$__CLUSTER_PATH/.cluster" ]; then
-      # For backward compatibility (0.9.6)
-      . "$__CLUSTER_PATH/.cluster"
-      rm "$__CLUSTER_PATH/.cluster"
+
+   local __CLUSTER=$(basename "$__CLUSTER_PATH")
+   local WORKSPACE_DIR=$(dirname $(dirname "$__CLUSTER_PATH"))
+   local WORKSPACE=$(basename "$WORKSPACE_DIR")
+   local RWE=$(basename $(dirname "$WORKSPACE_DIR"))
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+   local HOME_CLUSTERENV_FILE="$HOME_WORKSPACE_DIR/clusters/$__CLUSTER/clusterenv.sh"
+
+   if [ -f "$HOME_CLUSTERENV_FILE" ]; then
+      . "$HOME_CLUSTERENV_FILE"
    else
       if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then
-         # Without the .clusterenv.sh file, we cannot determine whether geode or gemfire.
+         # Without the clusterenv.sh file, we cannot determine whether geode or gemfire.
          # Set it to geode for now.
          PRODUCT="geode"
          CLUSTER_TYPE=$PRODUCT
@@ -2153,13 +2169,14 @@ function __switch_cluster
         fi
       done
       export CLUSTER=$__COMPONENT_NAME
-      local WORKSPACEENV_FILE="$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh"
-      if [ ! -d "$PADOGRID_WORKSPACE/.workspace" ]; then
-         # For backward compatibility (0.9.6)
-         updateWorkspaceEnvFile
-      elif [ -f "$WORKSPACEENV_FILE"  ]; then
-         sed -i${__SED_BACKUP} '/CLUSTER=/d' "$WORKSPACEENV_FILE"
-         echo "CLUSTER=$CLUSTER" >> "$WORKSPACEENV_FILE"
+
+      local RWE=$(basename $(dirname "$PADOGRID_WORKSPACE"))
+      local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+      local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+      local HOME_WORKSPACEENV_FILE="$HOME_WORKSPACE_DIR/workspaceenv.sh"
+      if [ -f "$HOME_WORKSPACEENV_FILE"  ]; then
+         sed -i${__SED_BACKUP} '/CLUSTER=/d' "$HOME_WORKSPACEENV_FILE"
+         echo "CLUSTER=$CLUSTER" >> "$HOME_WORKSPACEENV_FILE"
       fi
       determineClusterProduct
       local __PRODUCT
@@ -2305,13 +2322,13 @@ function __switch_pod
         fi
       done
       export POD=$__COMPONENT_NAME
-      local WORKSPACEENV_FILE="$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh"
-      if [ ! -d "$PADOGRID_WORKSPACE/.workspace" ]; then
-         # For backward compatibility (0.9.6)
-         updateWorkspaceEnvFile
-      elif [ -f "$WORKSPACEENV_FILE" ]; then
-         sed -i${__SED_BACKUP} '/POD=/d' "$WORKSPACEENV_FILE"
-         echo "POD=$POD" >> "$WORKSPACEENV_FILE"
+      local RWE=$(basename $(dirname "$PADOGRID_WORKSPACE"))
+      local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
+      local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+      local HOME_WORKSPACEENV_FILE="$HOME_WORKSPACE_DIR/workspaceenv.sh"
+      if [ -f "$HOME_WORKSPACEENV_FILE"  ]; then
+         sed -i${__SED_BACKUP} '/POD=/d' "$HOME_WORKSPACEENV_FILE"
+         echo "POD=$POD" >> "$HOME_WORKSPACEENV_FILE"
       fi
    fi
 }

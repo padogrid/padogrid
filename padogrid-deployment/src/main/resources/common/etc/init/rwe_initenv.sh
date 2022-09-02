@@ -9,18 +9,23 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 #
 #  Set the default environment variable for this RWE.
 #
-RWE_DIR="$PADOGRID_WORKSPACES_HOME/.rwe"
-RWEENV_FILE="$RWE_DIR/rweenv.sh"
-if [ -f "$RWEENV_FILE" ]; then
+RWE=$(basename "$PADOGRID_WORKSPACES_HOME")
+RWEENV_FILE="$HOME/.padogrid/workspaces/$RWE/rweenv.sh"
+if [ -f "$RWEENV_FILE" ]; then 
    . "$RWEENV_FILE"
 fi
-# Find the first workspace directory
-for i in $PADOGRID_WORKSPACES_HOME/*; do
-   if [ -f "$i/initenv.sh" ]; then
-      . "$i/initenv.sh" -quiet
-      break
-   fi
-done
+if [ "$WORKSPACE" == "" ] || [ ! -f "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/initenv.sh" ]; then 
+   # Find the first workspace directory
+   for i in $PADOGRID_WORKSPACES_HOME/*; do
+      if [ -f "$i/initenv.sh" ]; then 
+         WORKSPACE=$(basename "$i")
+         break;  
+      fi      
+   done
+fi
+if [ "$WORKSPACE" != "" ]; then 
+   . "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/initenv.sh" -quiet
+fi
 
 #
 # Remove the previous paths from PATH to prevent duplicates
