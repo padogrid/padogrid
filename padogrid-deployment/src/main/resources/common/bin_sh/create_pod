@@ -582,7 +582,6 @@ mkdir -p $LOG_DIR
 # Copy the Vagrant files
 cp -rf $PADOGRID_HOME/etc/vagrant/* $POD_DIR/
 cp -rf $BASE_DIR/etc/vagrant/* $POD_DIR/
-chmod 755 $POD_DIR/bin_sh/*
 
 # Append the host ip address to setenv.sh
 echo "" >> $POD_DIR/bin_sh/setenv.sh
@@ -618,6 +617,21 @@ echo "" >> $ETC_DIR/pod.properties
 echo "# Host properties." >> $ETC_DIR/pod.properties
 echo "host.productsDir=$HOST_PRODUCTS_DIR" >> $ETC_DIR/pod.properties
 echo "" >> $ETC_DIR/pod.properties
+
+# Make bin_sh scripts executables
+if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+   # Set group permissions for workspace owner
+   chmod -R g+rw,o-rwx $POD_DIR
+   if [ -d "$POD_DIR/bin_sh" ]; then
+      chmod -R 770 $POD_DIR/bin_sh
+      chmod 660 $POD_DIR/bin_sh/.*.sh $POD_DIR/bin_sh/*.sh
+   fi
+else
+   if [ -d "$POD_DIR/bin_sh" ]; then
+      chmod 755 $POD_DIR/bin_sh/*
+      chmod 644 $POD_DIR/bin_sh/.*.sh $POD_DIR/bin_sh/*.sh
+   fi
+fi
 
 # Display pod information
 echo ""

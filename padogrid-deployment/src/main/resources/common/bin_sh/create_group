@@ -344,9 +344,13 @@ if [ "$TYPE_ARG" == "pado" ]; then
    #
    GRID_IDS=""
    for i in $(seq 0 $LAST_CLUSTER_NUM); do
-     CLUSTER="${PREFIX}$i"
-     CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
-     cp $PADOGRID_HOME/geode/pado/etc/grid/pado.properties $CLUSTER_DIR/etc/grid/pado.properties
+      CLUSTER="${PREFIX}$i"
+      CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+      cp $PADOGRID_HOME/geode/pado/etc/grid/pado.properties $CLUSTER_DIR/etc/grid/pado.properties
+      # Set group permissions for workspace owner
+      if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+         chmod g+rw,o-rwx $CLUSTER_DIR/etc/grid/pado.properties
+      fi
    done
 
 fi

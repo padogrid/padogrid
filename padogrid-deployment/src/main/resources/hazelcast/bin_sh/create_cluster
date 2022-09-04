@@ -160,6 +160,12 @@ if [ "`isPodExist $POD`" == "false" ]; then
    exit 1
 fi
 
+# Source in .padogrid/setenv.sh
+SETENV_FILE="$HOME/.padogrid/setenv.sh"
+if [ -f "$SETENV_FILE" ]; then
+   . $SETENV_FILE
+fi
+
 #
 # Check the license key
 #
@@ -233,7 +239,7 @@ function writeCluster()
          updateClusterEnvFile
    
          if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
-            cp $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
+            cp  $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
          else
             cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
           fi
@@ -386,6 +392,11 @@ function writeCluster()
    echo "vm.user=$VM_USER" >> $ETC_DIR/cluster.properties
    echo "# Optional private key file path. You may use the private key file for AWS EC2, for example. " >> $ETC_DIR/cluster.properties
    echo "#vm.privateKeyFile=$VM_KEY_FILE" >> $ETC_DIR/cluster.properties
+
+   # Set group permissions for workspace owner
+   if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+      chmod -R g+rw,o-rwx $CLUSTER_DIR
+   fi
 }
 
 # 

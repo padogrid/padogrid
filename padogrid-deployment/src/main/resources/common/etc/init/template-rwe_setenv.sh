@@ -110,3 +110,6 @@ fi
 # directory. Workspace specifics should be added in <workspace>/setenv.sh.
 #
 
+# Enable group permissions for workspace owners. If "true" then RWX permissions are
+# given to the user's primary group.
+GROUP_PERMISSIONS_ENABLED="false"

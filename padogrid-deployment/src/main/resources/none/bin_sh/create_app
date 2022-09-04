@@ -154,6 +154,21 @@ if [ -d "$APP_DIR/bin_sh" ]; then
    chmod 755 $APP_DIR/bin_sh/*
 fi
 
+# Make bin_sh scripts executables
+if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+   # Set group permissions for workspace owner
+   chmod -R g+rw,o-rwx $APP_DIR
+   if [ -d "$APP_DIR/bin_sh" ]; then
+      chmod -R 770 $APP_DIR/bin_sh
+      chmod 660 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+   fi
+else
+   if [ -d "$APP_DIR/bin_sh" ]; then
+      chmod 755 $APP_DIR/bin_sh/*
+      chmod 644 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+   fi
+fi
+
 echo ""
 echo "App created as follows."
 echo -e "  Product: ${CGo}$PRODUCT${CNone}"
