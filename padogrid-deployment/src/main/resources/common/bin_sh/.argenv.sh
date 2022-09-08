@@ -86,6 +86,7 @@ MIRROR_SPECIFIED=false
 VM_SPECIFIED=false
 VM_HOSTS_ARG=
 VM_JAVA_HOME_ARG=
+VM_PADOGRID_BASE_ARG=
 VM_PADOGRID_HOME_ARG=
 VM_PADOGRID_WORKSPACES_HOME_ARG=
 VM_USER_ARG=
@@ -268,6 +269,8 @@ do
          VM_JAVA_HOME_ARG=$i
       elif [ "$PREV" == "-vm-product" ]; then
          VM_PRODUCT_HOME_ARG=$i
+      elif [ "$PREV" == "-vm-padogrid-base" ]; then
+         VM_PADOGRID_BASE_ARG=$i
       elif [ "$PREV" == "-vm-padogrid" ]; then
          VM_PADOGRID_HOME_ARG=$i
       elif [ "$PREV" == "-vm-workspaces" ]; then

@@ -23,7 +23,6 @@ else
 fi
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
-ALL_NODES="node-01 node-02 node-03 node-04 node-05 node-06 node-07"
 LOCATOR_FILES="*locator*.log"
 SERVER_FILES="$CLUSTER-node*.log"
 ALL_FILES="*.log"
@@ -72,7 +71,12 @@ fi
 
 ALL_NODES=""
 for i in $__ALL_NODES; do
-   NODE=$(echo $i | sed 's/\..*//g')
+   # Remove domain name if not IP address
+   if [[ $i =~ [1-9].* ]]; then
+      NODE=$i
+   else
+      NODE=$(echo $i | sed 's/\..*//g')
+   fi
    ALL_NODES="$ALL_NODES $NODE"
 done
 ALL_NODES=$(trimString "$ALL_NODES")

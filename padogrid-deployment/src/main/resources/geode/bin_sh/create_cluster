@@ -490,12 +490,9 @@ function writeCluster()
    echo "# SSH user name. If not specified then defaults to the shell login session user name." >> $ETC_DIR/cluster.properties
    echo "vm.user=$VM_USER" >> $ETC_DIR/cluster.properties
    echo "# Optional private key file path. You may use the private key file for AWS EC2, for example. " >> $ETC_DIR/cluster.properties
-   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
-      echo "#vm.privateKeyFile=$VM_KEY_FILE" >> $ETC_DIR/cluster.properties
-   else
-      echo "vm.privateKeyFile=$VM_PRIVATE_KEY_FILE" >> $ETC_DIR/cluster.properties
-   fi
-
+   echo "# If not specified, then it defaults to VM_PRIVATE_KEY_FILE defined in the workspace's" >> $ETC_DIR/cluster.properties
+   echo "# 'vmenv.sh' file." >> $ETC_DIR/cluster.properties
+   echo "#vm.privateKeyFile=\${VM_PRIVATE_KEY_FILE}" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
 
    if [ "$VM_ENABLED" == "true" ]; then
@@ -505,6 +502,7 @@ function writeCluster()
          echo "#vm.${VM_HOST}.bindAddress=${VM_HOST}" >> $ETC_DIR/cluster.properties
          echo "vm.${VM_HOST}.hostnameForClients=${VM_HOST}" >> $ETC_DIR/cluster.properties
          echo "vm.${VM_HOST}.redundancyZone=" >> $ETC_DIR/cluster.properties
+         echo "" >> $ETC_DIR/cluster.properties
       done
    fi
 

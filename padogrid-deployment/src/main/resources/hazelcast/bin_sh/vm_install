@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-java -product -mc -vm -simulate -?"
+   echo "-java -product -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -46,20 +46,18 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Install Hazelcast and/or Java remotely on the workspace VMs
+   $EXECUTABLE - Install the specified product on the remote VMs
 
 SYNOPSIS
    $EXECUTABLE [-vm comma_separated_hosts]
-               [-java jdk_distribution_file]
-               [-product imdg_or_jet_distribution_file]
-               [-mc management_center_distribution_file]
+               [-product product_distribution_file]
                [-simulate] [-?]
 
 DESCRIPTION
-   Installs the specified Hazelcast and/or Java remotely on all the VMs defined by
-   the VM_HOSTS environment variable in the workspace 'setenv.sh' file. To install 
-   only on the cluster VMs, specify the cluster with the '-cluster' option. To
-   install on a select list of VMs, specify the VM list with the '-vm' option.
+   Installs the specified product distribtion in all the VMs defined by the VM_HOSTS
+   environment variable in the workspace's 'setenv.sh' file. To install only on the
+   cluster VMs, specify the cluster with the '-cluster' option. To install on a select
+   list of VMs, specify the VM list with the '-vm' option.
 
    Note that this command and all other commands that begin with the "vm_" prefix are
    available only on VM workspaces.
@@ -75,14 +73,8 @@ OPTIONS
               A comma separated list of VM hosts or addresses. If the list contains spaces
              then enclosed it in quotes.
 
-   -java java_distribution_file
-              JDK distribution file, e.g. jdk-8u212-linux-x64.tar.gz.
-
-   -product imdg_or_jet_distribution_file
-              Hazelcast distribution file, e.g. hazelcast-enterprise-4.0.1.tar.gz or hazelcast-jet-enterprise-4.1.tar.gz.
-
-   -mc management_center_distribution_file
-              Management Center distribution file, e.g. hazelcast-management-center-4.0.3.tar.gz or hazelcast-jet-management-center-4.1.tar.gz.
+   -product product_distribution_file
+              A distribution file, e.g., apache-geode-1.15.0.tgz, hazelcast-5.1.3.tar.gz, etc.
 
    -simulate
              Print the remote commands but do not execute.
@@ -106,8 +98,8 @@ EOF
    exit
 fi
 
-if [ "$JAVA_HOME_ARG" == "" ] && [ "$PRODUCT_ARG" == "" ] && [ "$MC" == "" ]; then
-   echo >&2 "ERROR: Must specify -java, -product, or -mc. Command aborted."
+if [ "$PRODUCT_ARG" == "" ]; then
+   echo >&2 "ERROR: Must specify '-product'. Command aborted."
    exit 1
 fi
 
@@ -168,19 +160,21 @@ fi
 __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
 DEFAULT_USER=$(whoami)
 VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
-if [ "$KEY_FILE" == "" ]; then 
-   KEY_FILE="$VM_PRIVATE_KEY_FILE"
+
+if [ "$KEY" == "" ]; then
+   KEY=`getClusterProperty "vm.privateKeyFile"`
 fi
-if [ ! -f "$KEY_FILE" ]; then
-   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
-   echo >&2 "       Command aborted."
-   exit 1
+if [ "$KEY" == "" ]; then 
+   KEY="$VM_PRIVATE_KEY_FILE"
 fi
-if [ "$KEY_FILE" == "" ]; then
-   VM_KEY=""
-else
-   VM_KEY="-i $KEY_FILE"
+VM_KEY=""
+if [ "$KEY" != "" ]; then 
+   if [ ! -f "$KEY" ]; then
+      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+   VM_KEY="-i $KEY"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
@@ -194,36 +188,107 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
-# Set common variables to handle "jet" and "imdg"
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   __VM_PRODUCT_HOME="$VM_JET_HOME"
-   __PRODUCT_NAME="Jet"   
-else
-   __VM_PRODUCT_HOME="$VM_HAZELCAST_HOME"
-   __PRODUCT_NAME="Hazelcast"   
-fi
-__PRODUCT_DIR_NAME=$(basename $__VM_PRODUCT_HOME)
-__VM_MC_HOME="$VM_HAZELCAST_MC_HOME"
 
-# Determine all VMs that do not have Java and Hazelcast installed.
-JAVA_HOME_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
-PRODUCT_HOME_COMMAND="if [ -d "$__VM_PRODUCT_HOME" ]; then echo true; else echo false; fi"
-MC_HOME_COMMAND="if [ -d "$__VM_MC_HOME" ]; then echo true; else echo false; fi"
-JAVA_HOME_NOT_FOUND_LIST=""
-PRODUCT_HOME_NOT_FOUND_LIST=""
-MC_HOME_NOT_FOUND_LIST=""
+#
+# Installs the product defined by the following variables
+#
+# @required VM_PRODUCT_HOME_NOT_FOUND_LIST
+# @required VM_PRODUCT_HOME
+# @required PRODUCT_PATH
+#
+function installProduct
+{
+   if [ "$VM_PRODUCT_HOME_NOT_FOUND_LIST" == "" ]; then
+      echo "Product already installed on all VMs."
+   else
+
+      if [ ! -f "$PRODUCT_PATH" ]; then
+         echo >&2 "ERROR: Invalid path [$PRODUCT_PATH]."
+         echo >&2 "       Command aborted."
+         exit 1
+      fi
+
+      local __PRODUCT_DIST_FILE_NAME=$(basename $PRODUCT_PATH)
+      local __PRODUCT_PARENT_PATH="$(dirname $VM_PRODUCT_HOME_PATH)"
+      local __PRODUCT_DOWNLOADS_PATH="$(dirname $__PRODUCT_PARENT_PATH)/downloads"
+      local __PRODUCT_FILE_PATH="$__PRODUCT_DOWNLOADS_PATH/$__PRODUCT_DIST_FILE_NAME"
+      local __PRODUCT_COMMAND="[ -f $__PRODUCT_DOWNLOADS_PATH/$__PRODUCT_DIST_FILE_NAME ] && echo true || echo false"
+
+      echo "          Local Source: $PRODUCT_PATH"
+      echo "         Remote Target: $__PRODUCT_FILE_PATH"
+      echo "   Remote Product Home: $VM_PRODUCT_HOME_PATH"
+      echo ""
+
+      # Determine the first VM that has product distribution file
+      BASE_VM=""
+      for VM_HOST in $__VM_HOSTS; do
+         __PRODUCT_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$__PRODUCT_COMMAND")
+         if [ "$__PRODUCT_EXISTS" == "true" ]; then
+            BASE_VM=$VM_HOST
+            break
+         fi
+      done
+
+      if [ "$BASE_VM" == "" ]; then
+         for VM_HOST in $VM_PRODUCT_HOME_NOT_FOUND_LIST; do
+            echo "   Uploading $VM_HOST..."
+            BASE_VM=$VM_HOST
+            break
+         done
+         # Upload to the base VM
+         if [ "$SIMULATE" == "true" ]; then
+            echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
+            echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:$__PRODUCT_DOWNLOADS_PATH
+         else
+            ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
+            scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:$__PRODUCT_DOWNLOADS_PATH
+         fi
+      fi
+
+      for VM_HOST in $VM_PRODUCT_HOME_NOT_FOUND_LIST; do
+         echo "   Installing $VM_HOST..."
+         if [ "$VM_HOST" != "$BASE_VM" ]; then
+            # Copy from the base VM
+            if [ "$SIMULATE" == "true" ]; then
+               echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
+               echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY $__PRODUCT_FILE_PATH $VM_USER@$VM_HOST:$__PRODUCT_FILE_PATH"
+            else
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
+               ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY $__PRODUCT_FILE_PATH $VM_USER@$VM_HOST:$__PRODUCT_FILE_PATH"
+            fi
+         fi
+         # Install
+         if [ "$SIMULATE" == "true" ]; then
+            echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT [ ! -d $__PRODUCT_PARENT_PATH ] && mkdir -p $__PRODUCT_PARENT_PATH"
+            echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT tar -C $__PRODUCT_PARENT_PATH/ -xzf $__PRODUCT_FILE_PATH"
+         else
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_PARENT_PATH ] && mkdir -p $__PRODUCT_PARENT_PATH"
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__PRODUCT_PARENT_PATH/ -xzf $__PRODUCT_FILE_PATH"
+         fi
+
+         # Remove
+         #ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm $__PRODUCT_DOWNLOADS_PATH"
+      done
+
+      echo "Remote installation complete: $VM_PRODUCT_HOME_PATH"
+   fi
+}
+
+# Install product
+
+# Arguments to installProduct function
+PRODUCT_PATH=$PRODUCT_ARG
+
+# Determine all the VMs that do not have the product installed
+VM_PADOGRID_ENV_BASE_PATH=$(dirname $(dirname $VM_PADOGRID_WORKSPACES_HOME))
+VM_PRODUCT_DIR_NAME=$(tar tzvf $PRODUCT_PATH | tail -n 1 | sed -e 's/.* //' -e 's/\/.*//')
+VM_PRODUCT_HOME_PATH="$VM_PADOGRID_ENV_BASE_PATH/products/$VM_PRODUCT_DIR_NAME"
+VM_PRODUCT_HOME_COMMAND="[ -d $VM_PRODUCT_HOME_PATH ] && echo true || echo false"
+VM_PRODUCT_HOME_NOT_FOUND_LIST=""
 for VM_HOST in $__VM_HOSTS; do
-   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$JAVA_HOME_COMMAND")
-   PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$PRODUCT_HOME_COMMAND")
-   MC_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$MC_HOME_COMMAND")
-   if [ "$JAVA_HOME_EXISTS" == "false" ]; then
-      JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
-   fi
-   if [ "$PRODUCT_HOME_EXISTS" == "false" ]; then
-      PRODUCT_HOME_NOT_FOUND_LIST="$PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
-   fi
-   if [ "$MC_HOME_EXISTS" == "false" ]; then
-      MC_HOME_NOT_FOUND_LIST="$MC_HOME_NOT_FOUND_LIST $VM_HOST"
+   VM_PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$VM_PRODUCT_HOME_COMMAND")
+   if [[ "$VM_PRODUCT_HOME_EXISTS" == *"false" ]]; then
+      VM_PRODUCT_HOME_NOT_FOUND_LIST="$VM_PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
    fi
 done
 
@@ -235,121 +300,11 @@ if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
    REMOTE_VM_KEY="-i $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME"
 fi
 
-#
-# Installs the product defined by the following variables
-#
-# @required PRODUCT
-# @required PRODUCT_HOME_NOT_FOUND_LIST
-# @required PRODUCT_PATH
-# @required VM_PRODUCT_HOME
-#
-function installProduct
-{
-   if [ "$PRODUCT_HOME_NOT_FOUND_LIST" == "" ]; then
-      echo "$PRODUCT already installed on all VMs."
-   else
-
-      if [ ! -f "$PRODUCT_PATH" ]; then
-         echo >&2 "ERROR: Invalid path [$PRODUCT_PATH]."
-         echo >&2 "       Command aborted."
-         exit 1
-      fi
-
-      local __PRODUCT_DIST_FILE_NAME=$(basename $PRODUCT_PATH)
-      local __PRODUCT_PARENT_PATH="$(dirname "$VM_PRODUCT_HOME")"
-      local __PRODUCT_COMMAND="if [ -f "/tmp/$__PRODUCT_DIST_FILE_NAME" ]; then echo true; else echo false; fi"
-
-      echo "$PRODUCT installation"
-      echo "    Local Source: $PRODUCT_PATH"
-      echo "   Remote Target: $VM_PRODUCT_HOME"
-
-      # Determine the first VM that has product distribution file
-      BASE_VM=""
-      for VM_HOST in $__VM_HOSTS; do
-         __PRODUCT_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$__PRODUCT_COMMAND")
-         if [ "$__PRODUCT_EXISTS" == "true" ]; then
-            BASE_VM=$VM_HOST
-	    break
-         fi
-      done
-
-      if [ "$BASE_VM" == "" ]; then
-         for VM_HOST in $PRODUCT_HOME_NOT_FOUND_LIST; do
-            echo "   Uploading $VM_HOST..."
-            BASE_VM=$VM_HOST
-            break
-         done
-	 # Upload to the base VM
-         if [ "$SIMULATE" == "true" ]; then
-            echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
-         else
-            scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:/tmp/
-	 fi
-      fi
-
-      for VM_HOST in $PRODUCT_HOME_NOT_FOUND_LIST; do
-         echo "   Installing $VM_HOST..."
-         if [ "$VM_HOST" != "$BASE_VM" ]; then
-            # Copy from the base VM
-            if [ "$SIMULATE" == "true" ]; then
-               echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
-            else
-               ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY /tmp/$__PRODUCT_DIST_FILE_NAME $VM_USER@$VM_HOST:/tmp/"
-	    fi
-         fi
-	 # Install
-         if [ "$SIMULATE" == "true" ]; then
-            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
-            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
-         else
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "if [ ! -d "$__PRODUCT_PARENT_PATH" ]; then mkdir -p "$__PRODUCT_PARENT_PATH"; fi"
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__PRODUCT_PARENT_PATH/ -xzf /tmp/$__PRODUCT_DIST_FILE_NAME"
-	 fi
-
-	 # Remove
-         #ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm /tmp/$__PRODUCT_DIST_FILE_NAME"
-      done
-
-      echo "$PRODUCT installation complete."
-   fi
-   echo ""
-}
-
-# Install Java
-if [ "$JAVA_HOME_ARG" != "" ]; then
-   
-   # Arguments to installProduct function
-   PRODUCT="Java"
-   PRODUCT_HOME_NOT_FOUND_LIST=$JAVA_HOME_NOT_FOUND_LIST
-   PRODUCT_PATH=$JAVA_HOME_ARG
-   VM_PRODUCT_HOME=$VM_JAVA_HOME
-   
-   installProduct
-fi
-
-# Install Hazelcast
-if [ "$PRODUCT_ARG" != "" ]; then
-   # Arguments to installProduct function
-   PRODUCT="$__PRODUCT_NAME"
-   PRODUCT_PATH=$PRODUCT_ARG
-   VM_PRODUCT_HOME=$__VM_PRODUCT_HOME
-   
-   installProduct
-fi
-
-# Install Management Center
-if [ "$MC" != "" ]; then
-   # Arguments to installProduct function
-   PRODUCT="Management Center"
-   PRODUCT_HOME_NOT_FOUND_LIST=$MC_HOME_NOT_FOUND_LIST
-   PRODUCT_PATH=$MC
-   VM_PRODUCT_HOME=$__VM_MC_HOME
-   
-   installProduct
-fi
+installProduct
 
 echo "Run 'vm_test' to check installation and configuration status."
-echo ""
 if [ "$SIMULATE" == "true" ]; then
+   echo ""
    echo "Simulation complete."
 fi
+echo ""

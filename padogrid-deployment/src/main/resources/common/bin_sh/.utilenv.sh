@@ -1077,7 +1077,8 @@ function getPropertiesArray
 #
 function getProperty
 {
-   __PROPERTIES_FILE=$1
+   local __PROPERTIES_FILE=$1
+   local __VALUE=""
 local IFS="
 "
    if [ -f $__PROPERTIES_FILE ]; then
@@ -1088,14 +1089,18 @@ local IFS="
             break;
          fi
       done
-      if [ "$__VALUE" == "" ]; then
-         echo "$3"
-      else
-         echo "$__VALUE"
-      fi
-   else
-      echo "$3"
    fi
+   if [ "$__VALUE" == "" ]; then
+      __VALUE="$3"
+   fi
+   if [[ $__VALUE =~ .*\${.*}.* ]]; then
+      local __ENV_VAR=$(echo "$__VALUE" | sed -e 's/^.*${//' -e 's/}.*//')
+      local __ENV_VAR_VALUE=$(eval "echo \${$__ENV_VAR}")
+      # Replace '/' to avoid expansion for the subsequent use.
+      __ENV_VAR_VALUE=$(echo $__ENV_VAR_VALUE | sed 's/\//\\\//g')
+      __VALUE=$(echo $__VALUE | sed -e "s/\${$__ENV_VAR}/$__ENV_VAR_VALUE/")
+   fi
+   echo "$__VALUE"
    unset IFS
 }
 
