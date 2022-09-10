@@ -1135,7 +1135,7 @@ function getProperty2
 #
 # Returns the property value found in the $PODS_DIR/$POD/etc/pod.properties file.
 # @required  POD           Pod name.
-# @parma     propertyName  Property name.
+# @param     propertyName  Property name.
 # @param     defaultValue  If the specified property is not found then this default value is returned.
 #
 function getPodProperty
@@ -1148,7 +1148,7 @@ function getPodProperty
 # Returns the property value found in the $CLUSTERS_DIR/$CLUSTER/cluster.properties file.
 # @required  CLUSTERS_DIR  Cluster directory path.
 # @required  CLUSTER       Cluster name.
-# @parma     propertyName  Property name.
+# @param     propertyName  Property name.
 # @param     defaultValue  If the specified property is not found then this default value is returned.
 #
 function getClusterProperty
@@ -1166,7 +1166,7 @@ function getClusterProperty
 # @param workspaceName Workspace name.
 #                      it assumes the current workspace.
 # @param clusterName   Cluster name.
-# @parma propertyName  Property name.
+# @param propertyName  Property name.
 # @param defaultValue  If the specified property is not found then this default value is returned.
 #
 function getWorkspaceClusterProperty
@@ -1192,7 +1192,7 @@ function getWorkspaceClusterProperty
 # 
 # Sets the specified property in the the properties file.
 # @param propertiesFilePath Properties file path.
-# @parma propertyName       Property name.
+# @param propertyName       Property name.
 # @param propertyValue      Property value.
 #
 function setProperty
@@ -1232,7 +1232,7 @@ function setProperty
 # Sets the specified pod property in the $PODS_DIR/$POD/etc/pod.properties file. 
 # @required  PODS_DIR      Pods directory path
 # @required  POD           Pod name.
-# @parma     propertyName  Property name.
+# @param     propertyName  Property name.
 # @param     propertyValue Property value.
 #
 function setPodProperty
@@ -4164,13 +4164,15 @@ function getProductName
 }
 
 #
-# Sets the specified associative array with all the products found in the first VM.
+# Sets the specified associative array with all the products found in the specified VM host.
 # The array must be declared before invoking this function, otherwise, it will fail with an error.
 #
 #
 # Example:
-#    declare -a vmProductArray
-#    getVmProductArray vmProductArray
+#    VM_HOST="myvm"
+#    declare -A vmProductArray
+#    declare -A vmProductHomeArray
+#    getVmProductArray $VM_HOST vmProductArray vmProductHomeArray
 #    for product in vmProductArray; do
 #       echo "$product ${vmProductArray[$product]}"
 #    done
@@ -4181,33 +4183,36 @@ function getProductName
 # @required VM_USER
 # @required SSH_CONNECT_TIMEOUT
 #
-# @parm vmProductArray Set this associative array with VM product info in the form
+# @param vmHost         VM host address.
+# @param vmProductArray Set this associative array with VM product info in the form
 #                      of vmProductArray[product]=product_dir_name. It must be declared
 #                      before invoking this function, e.g., declear -A vmProductArray.
-# @parm vmProductHomeArray Set this associative array with VM product home info in the form
+# @param vmProductHomeArray Set this associative array with VM product home info in the form
 #                      of vmProductArray[PRODUCT_HOME]=product_dir_name. It must be declared
 #                      before invoking this function, e.g., declear -A vmProductArray.
 #
 function getVmProductArray
 {
-   local array=$1
-   local array2=$2
+   local VM_HOST=$1
+   if [ "$VM_HOST" == "" ]; then
+       echo >&2 "ERROR: getVmProductArray - VM host not specified"
+       return
+   fi
+   local array=$2
+   local array2=$3
    declare -A | grep -q "declare -A ${array}" || echo >&2 "ERROR: getVmProductArray - no ${array} associative array declared"
    declare -A | grep -q "declare -A ${array2}" || echo >&2 "ERROR: getVmProductArray - no ${array2} associative array declared"
    local VM_PADOGRID_ENV_BASE_PATH=$(dirname $(dirname $VM_PADOGRID_WORKSPACES_HOME))
    local VM_PADOGRID_PRODUCTS_PATH="$VM_PADOGRID_ENV_BASE_PATH/products"
    local VM_INSTALLED_PRODUCTS=""
    local PRODUCT_HOME_VAR
-   for VM_HOST in $__VM_HOSTS; do
-      local PRODUCT_DIR_NAME_LIST=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ls $VM_PADOGRID_PRODUCTS_PATH")
-      for i in $PRODUCT_DIR_NAME_LIST; do
-         VM_PRODUCT=$(getProductName $i)
-         PRODUCT_HOME_VAR=$(getProductHome $VM_PRODUCT)
-         if [ "$VM_PRODUCT" != "" ]; then
-            eval "$array[\"\$VM_PRODUCT\"]=${i}"
-            eval "$array2[\"\$PRODUCT_HOME_VAR\"]=${i}"
-         fi
-      done
-      break;
+   local PRODUCT_DIR_NAME_LIST=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ls $VM_PADOGRID_PRODUCTS_PATH")
+   for i in $PRODUCT_DIR_NAME_LIST; do
+      local VM_PRODUCT=$(getProductName $i)
+      local PRODUCT_HOME_VAR=$(getProductHome $VM_PRODUCT)
+      if [ "$VM_PRODUCT" != "" ]; then
+         eval "$array[\"\$VM_PRODUCT\"]=${i}"
+         eval "$array2[\"\$PRODUCT_HOME_VAR\"]=${i}"
+      fi
    done
 }

@@ -179,6 +179,9 @@ if [ "$KEY" != "" ]; then
    VM_KEY="-i $KEY"
 fi
 
+echo ""
+echo "Scanning VMs... Please wait."
+
 # Fail fast: Exit if any of the hosts is not reachable
 for VM_HOST in $__VM_HOSTS; do
    REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
@@ -258,10 +261,11 @@ if [ "$INSTALL_PADOGRID_HOST_LIST" != "" ]; then
    done
 fi
 
-# Set installed products in arrays
+# Set first VM's installed products in arrays
+__VM_HOST_FIRST=$(echo $__VM_HOSTS | sed 's/ .*//')
 declare -A vm_installed_product_array
 declare -A vm_installed_product_home_array
-getVmProductArray vm_installed_product_array vm_installed_product_home_array
+getVmProductArray $__VM_HOST_FIRST vm_installed_product_array vm_installed_product_home_array
 VM_INSTALLED_PRODUCTS=${!vm_installed_product_array[@]}
 VM_INSTALLED_PRODUCTS="$(echo $(printf '%s\n' $VM_INSTALLED_PRODUCTS|sort -u))"
 VM_INSTALLED_PRODUCT_HOMES=${!vm_installed_product_home_array[@]}
@@ -274,7 +278,6 @@ ABS_PATH="$PADOGRID_WORKSPACE"
 INITENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/initenv.sh" ] && echo true || echo false"
 ADDONENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh" ] && echo true || echo false"
 SETENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/setenv.sh" ] && echo true || echo false"
-echo ""
 if [ "$INSTALL_WORKSPACE_SETENV_LIST" != "" ]; then
    if [ "SETENV_DOWNLOADED" != "true" ]; then
       cp $PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE
@@ -304,6 +307,7 @@ fi
 #
 # Synchronize workspacse
 #
+echo ""
 echo "Workspace sync: $WORKSPACE_NAME"
 if [ -f "$VM_PRIVATE_KEY_FILE" ]; then
    PRIVATE_KEY_FILE_NAME=$(basename $VM_PRIVATE_KEY_FILE)
@@ -441,8 +445,8 @@ else
       VALUE=$(echo $line | sed -e "s/^.*$PRODUCT_HOME_VAR=//" -e "s/\"//g")
       echo "------------------------------------------------------------------------------------------"
       echo -e "${CGo}INFO:${CNone}"
-      echo "The cluster product [$PRODUCT_NAME] is configured to with the following installation:"
-      echo "   PRODUCT_HOME_VAR=$VALUE"
+      echo "The cluster product [$PRODUCT_NAME] is configured with the following installation:"
+      echo "   $PRODUCT_HOME_VAR=$VALUE"
       echo "------------------------------------------------------------------------------------------"
    else   
       echo "------------------------------------------------------------------------------------------"
