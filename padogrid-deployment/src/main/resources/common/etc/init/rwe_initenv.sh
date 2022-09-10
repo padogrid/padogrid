@@ -56,7 +56,9 @@ export PATH="$CLEANED_PATH"
 #
 # Initialize auto completion
 #
-. $PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash
+if [ -f "$PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash" ]; then
+   . "$PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash"
+fi
 
 #
 # Need to reset here for the direct call, i.e., from .bashrc

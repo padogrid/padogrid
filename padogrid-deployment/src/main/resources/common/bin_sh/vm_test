@@ -164,17 +164,19 @@ if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
       done
    fi
 fi
-if [ "$KEY" == "" ]; then
-   KEY=$VM_PRIVATE_KEY_FILE
+KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" == "" ]; then 
+   KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-VM_KEY=""
-if [ "$KEY" != "" ]; then 
-   if [ ! -f "$KEY" ]; then
-      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
-      echo >&2 "       Command aborted."
-      exit 1
-   fi
-   VM_KEY="-i $KEY"
+if [ ! -f "$KEY_FILE" ]; then
+   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
+   echo >&2 "       Command aborted."
+   exit 1
+fi
+if [ "$KEY_FILE" == "" ]; then
+   VM_KEY=""
+else
+   VM_KEY="-i $KEY_FILE"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
@@ -182,7 +184,7 @@ for VM_HOST in $__VM_HOSTS; do
    REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
    EXIT_CODE=$?
    if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+      echo -e "ERROR: $VM_HOST - ${CError}Failed${CNone} ($REPLY)"
       echo "       Command aborted."
       exit 1
    fi
@@ -200,14 +202,14 @@ cat <<EOF
 Workspace: $WORKSPACE
 
 Environment:
-              VM_ENABLED=$VM_ENABLED
-                VM_HOSTS=$VM_HOSTS
-                 VM_USER=$VM_USER
-     VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE
-            VM_JAVA_HOME=$VM_JAVA_HOME
-           VM_GEODE_HOME=$VM_GEODE_HOME
-        VM_PADOGRID_HOME=$VM_PADOGRID_HOME
-   VM_PADOGRID_WORKSPACE=$VM_PADOGRID_WORKSPACE
+                  VM_ENABLED=$VM_ENABLED
+                    VM_HOSTS=$VM_HOSTS
+                     VM_USER=$VM_USER
+         VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE
+   VM_PADOGRID_ENV_BASE_PATH=$VM_PADOGRID_ENV_BASE_PATH
+                VM_JAVA_HOME=$VM_JAVA_HOME
+            VM_PADOGRID_HOME=$VM_PADOGRID_HOME
+       VM_PADOGRID_WORKSPACE=$VM_PADOGRID_WORKSPACE
 ------------------------------------------------------------------------------------------
 EOF
 
@@ -219,37 +221,34 @@ for VM_HOST in $__VM_HOSTS; do
   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
   EXIT_CODE=$?
   if [ "$EXIT_CODE" != "0" ]; then
-     echo -e "   $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+     echo -e "   $VM_HOST - ${CError}Failed${CNone} ($REPLY)"
      ISSUES_FOUND="true"
      NETWORK_ISSUES_VM_HOSTS="$NETWORK_ISSUES_VM_HOSTS $VM_HOST" 
   else
-     echo -e "   $VM_HOST - ${CLightGreen}OK${CNone}"
+     echo -e "   $VM_HOST - ${CGo}OK${CNone}"
   fi
 done
 echo "------------------------------------------------------------------------------------------"
 
-# Determine and display all VMs that do not have Java and Geode installed.
+# Determine and display all VMs that do not have Java and the current cluster installed.
 SOFTWARE_ISSUES_FOUND="false"
-ADDON_COMMAND="if [ -d "$VM_PADOGRID_HOME" ]; then echo true; else echo false; fi"
-JAVA_HOME_COMMAND="if [ -d "$VM_JAVA_HOME" ]; then echo true; else echo false; fi"
-GEODE_HOME_COMMAND="if [ -d "$VM_GEODE_HOME" ]; then echo true; else echo false; fi"
+PADOGRID_HOME_COMMAND="[ -d "$VM_PADOGRID_HOME" ] && echo true || echo false"
+JAVA_HOME_COMMAND="[ -d "$VM_JAVA_HOME" ] && echo true || echo false"
 ADDON_NOT_FOUND_LIST=""
 JAVA_HOME_NOT_FOUND_LIST=""
-GEODE_HOME_NOT_FOUND_LIST=""
+PADOGRID_HOME_NOT_FOUND_LIST=""
+echo "Determining installed products... Please wait."
 for VM_HOST in $__VM_HOSTS; do
-   ADDON_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$ADDON_COMMAND")
+   PADOGRID_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$PADOGRID_HOME_COMMAND")
    JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$JAVA_HOME_COMMAND")
-   GEODE_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$GEODE_HOME_COMMAND")
-   if [[ "$ADDON_EXISTS" == *"false" ]]; then
-      ADDON_NOT_FOUND_LIST="$ADDON_NOT_FOUND_LIST $VM_HOST"
-   fi
-   if [[ "$JAVA_HOME_EXISTS" == *"false" ]]; then
-      JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
+   PADOGRID_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$PADOGRID_HOME_COMMAND")
+   if [ "$PADOGRID_HOME_EXISTS" == "false" ]; then
+      PADOGRID_HOME_NOT_FOUND_LIST="$PADOGRID_HOME_NOT_FOUND_LIST $VM_HOST"
       ISSUES_FOUND="true"
       SOFTWARE_ISSUES_FOUND="true"
    fi
-   if [[ "$GEODE_HOME_EXISTS" == *"false" ]]; then
-      GEODE_HOME_NOT_FOUND_LIST="$GEODE_HOME_NOT_FOUND_LIST $VM_HOST"
+   if [ "$JAVA_HOME_EXISTS" == "false" ]; then
+      JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
       ISSUES_FOUND="true"
       SOFTWARE_ISSUES_FOUND="true"
    fi
@@ -260,8 +259,8 @@ if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
    echo "------------------------------------------------------------------------------------------"
    echo -e "${CBrownOrange}WARNING:${CNone}"
    echo "   Java is not installed on the following VMs. The workspace will not be operational"
-   echo "   until you install Java on these VMs."
-   echo -e "      ${CLightRed}$JAVA_HOME_NOT_FOUND_LIST${CNone}"
+   echo "   until you have installed Java on these VMs."
+   echo -e "      ${CError}$JAVA_HOME_NOT_FOUND_LIST${CNone}"
    echo ""
    echo "VM Java Home Path:"
    echo "      $VM_JAVA_HOME"
@@ -269,46 +268,57 @@ if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
    echo "   To install Java on the above VMs, download the correct version of Java and execute 'vm_install'."
    echo ""
    echo "   Example:"
-   echo "      vm_install -java $JAVA_DIR_NAME.tar.gz"
+   echo "      vm_install -product $JAVA_DIR_NAME.tar.gz"
    echo "------------------------------------------------------------------------------------------"
 fi
-if [ "$GEODE_HOME_NOT_FOUND_LIST" != "" ]; then
-   GEODE_DIR_NAME=$(basename $VM_GEODE_HOME)
+if [ "$PADOGRID_HOME_NOT_FOUND_LIST" != "" ]; then
    echo "------------------------------------------------------------------------------------------"
    echo -e "${CBrownOrange}WARNING:${CNone}"
-   echo "$VM_GEODE_HOME"
-   echo "   Geode is not installed on the following VMs. The workspace will not be operational"
-   echo "   until you install Geode on these VMs."
-   echo -e "      ${CLightRed}$GEODE_HOME_NOT_FOUND_LIST${CNone}"
+   echo "   PadoGrid is not installed on the following VMs. Please execute 'vm_sync' to resolve"
+   echo "   this issue."
+   echo -e "      ${CHighlight}$PADOGRID_HOME_NOT_FOUND_LIST${CNone}"
    echo ""
-   echo "VM Geode Path:"
-   echo "    $VM_GEODE_HOME"
-   echo ""
-   echo "   To install Geode on the above VMs, download the correct version of Geode and"
-   echo "   execute 'vm_install'."
-   echo ""
-   echo "   Example:"
-   echo "      vm_install -product $GEODE_DIR_NAME.tar.gz"
-   echo "------------------------------------------------------------------------------------------"
-fi
-if [ "$ADDON_NOT_FOUND_LIST" != "" ]; then
-   echo "------------------------------------------------------------------------------------------"
-   echo "$VM_PADOGRID_HOME"
-   echo "   padogrid is not installed on the following VMs. It will be automatically installed"
-   echo "   when you execute 'vm_sync'."
-   echo "      $ADDON_NOT_FOUND_LIST"
+   echo "VM PadoGrid Home Path:"
+   echo "      $VM_PADOGRID_HOME"
    echo "------------------------------------------------------------------------------------------"
 fi
 
+# Determine all products installed on VMs
+if [ "$PADOGRID_HOME_NOT_FOUND_LIST" == "" ]; then
+   declare -A vm_installed_product_array
+   declare -A vm_installed_product_home_array
+   getVmProductArray vm_installed_product_array vm_installed_product_home_array
+   VM_INSTALLED_PRODUCTS=${!vm_installed_product_array[@]}
+   VM_INSTALLED_PRODUCTS="$(echo $(printf '%s\n' $VM_INSTALLED_PRODUCTS|sort -u))"
+
+   echo "------------------------------------------------------------------------------------------"
+   echo "VM Installed Products:"
+   for VM_PRODUCT in $VM_INSTALLED_PRODUCTS; do
+      echo "   $VM_PRODUCT: ${vm_installed_product_array[$VM_PRODUCT]}"
+   done
+   echo "------------------------------------------------------------------------------------------"
+fi
+PRODUCT_TYPE=$PRODUCT
+if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+   PRODUCT_TYPE="gemfire"
+fi
+if [[ "$VM_INSTALLED_PRODUCTS" != *"$PRODUCT_TYPE"* ]]; then
+   echo "------------------------------------------------------------------------------------------"
+   echo -e "${CBrownOrange}WARNING:${CNone}"
+   echo "   The cluster product [$PRODUCT_TYPE] is not installed in the VMs. The workspace will"
+   echo "   not be operational until you have installed the product."
+   echo ""
+   echo "To install the product in the VMs, download the correct version of the product and"
+   echo "execute 'vm_install'."
+   echo "------------------------------------------------------------------------------------------"
+   SOFTWARE_ISSUES_FOUND="true"
+fi
+
 # Display cluster info
-if [ "$CLUSTER_SPECIFIED" == "true" ]; then
 __VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 __VM_HOSTS_CLUSTER=`getClusterProperty "vm.hosts"`
 __VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
 __VM_PRIVATE_KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
-if [ "$__VM_PRIVATE_KEY_FILE" == "" ]; then 
-   __VM_PRIVATE_KEY_FILE="$VM_PRIVATE_KEY_FILE"
-fi
 cat <<EOF
 ------------------------------------------------------------------------------------------
 Cluster: $CLUSTER
@@ -316,7 +326,7 @@ Cluster: $CLUSTER
 Cluster Properties File:
    $ETC_DIR/cluster.properties
 
-Environment:
+Cluster:
           vm.enabled=$__VM_ENABLED
             vm.hosts=$__VM_HOSTS_CLUSTER
              vm.user=$__VM_USER
@@ -329,16 +339,26 @@ if [ "$__VM_ENABLED" != "true" ]; then
    echo "The cluster is not VM enabled."
    CLUSTER_ISSUES_FOUND="true"
 fi
-if [ "$__VM_HOSTS" != "$VM_HOSTS" ]; then
-   echo "The cluster VM host list is different from the workspace VM host list."
+if [ "$__VM_USER" == "" ]; then
+   echo "The cluster VM user name is not defined. Using the workspace VM user name instead."
+   echo "   Workspace: $VM_USER"
+elif [ "$__VM_USER" != "$VM_USER" ]; then
+   echo "The cluster user name is different from the workspace VM user name."
+   echo "     Cluster: $__VM_USER"
+   echo "   Workspace: $VM_USER"
    CLUSTER_ISSUES_FOUND="true"
 fi
-if [ "$__VM_USER" != "$VM_USER" ]; then
-   echo "The cluster VM user name is different from the workspace VM user name."
-   CLUSTER_ISSUES_FOUND="true"
-fi
-if [ "$__VM_PRIVATE_KEY_FILE" != "$VM_PRIVATE_KEY_FILE" ]; then
+if [ "$__VM_PRIVATE_KEY_FILE" == "" ]; then
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      echo "The cluster VM private key file is not defined. Defaulting to this host's public key."
+   else
+      echo "The cluster VM private key file is not defined. Using the workspace VM key file instead."
+      echo "   Workspace: $VM_PRIVATE_KEY_FILE"
+   fi
+elif [ "$__VM_PRIVATE_KEY_FILE" != "$VM_PRIVATE_KEY_FILE" ]; then
    echo "The cluster VM private key file is different from the workspace VM private key file."
+   echo "     Cluster: $__VM_PRIVATE_KEY_FILE"
+   echo "   Workspace: $VM_PRIVATE_KEY_FILE"
    CLUSTER_ISSUES_FOUND="true"
 fi
 
@@ -364,41 +384,44 @@ if [ "$NETWORK_ISSUES_VM_HOSTS" == "" ]; then
    done
 fi
 echo "------------------------------------------------------------------------------------------"
-fi
 
 # Summary
 echo "------------------------------------------------------------------------------------------"
 echo "Summary:"
 if [ "$ISSUES_FOUND" == "true" ]; then
-   echo -e "   ${CLightRed}One or more VM issues found. Please correct them before executing 'vm_sync'.${CNone}"
+   echo -e "   ${CError}One or more VM issues found.${CNone}"
 else
-   echo -e "   ${CLightGreen}No issues found.${CNone} To sync the VM workspace, execute 'vm_sync'."
+   echo -e "   ${CGo}No issues found.${CNone} To sync the VM workspace, execute 'vm_sync'."
 fi
 echo ""
 echo "Workspace Issues: "
 if [ "$VM_ENABLED" != "true" ]; then
    echo "   VM disabled. Set VM_ENABLED=true in the workspace 'setenv.sh' file."
 else
-   echo -e "   ${CLightGreen}None.${CNone}"
+   echo -e "   ${CGo}None.${CNone}"
 fi
 echo "Network Issues: "
 if [ "$NETWORK_ISSUES_VM_HOSTS" != "" ]; then
    echo "   The following VMs encountered network issues."
-   echo -e "      ${CLightRed}$NETWORK_ISSUES_VM_HOSTS${CNone}"
+   echo -e "      ${CError}$NETWORK_ISSUES_VM_HOSTS${CNone}"
 else
-   echo -e "   ${CLightGreen}None.${CNone}"
+   echo -e "   ${CGo}None.${CNone}"
 fi
 echo "Software Issues: "
 if [ "$SOFTWARE_ISSUES_FOUND" != "true" ]; then
-   echo -e "   ${CLightGreen}None.${CNone}"
+   echo -e "   ${CGo}None.${CNone}"
 else
    if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
-      echo -e "   ${CLightRed}Java missing${CNone} from the following VMs. Install Java with 'vm_install -java'."
-      echo "     $JAVA_HOME_NOT_FOUND_LIST"
+      echo -e "   - ${CError}Java missing${CNone} from the following VMs. Please install Java with 'vm_install'."
+      echo "       $JAVA_HOME_NOT_FOUND_LIST"
    fi
-   if [ "$GEODE_HOME_EXISTS" != "" ]; then
-      echo -e "   ${CLightRed}Geode missing${CNone} from the following VMs. Install Geode with 'vm_install -product'."
-      echo "     $GEODE_HOME_NOT_FOUND_LIST"
+   if [ "$PADOGRID_HOME_NOT_FOUND_LIST" != "" ]; then
+      echo -e "   - ${CHighlight}PadoGrid missing${CNone} from the following VMs. It will be automatically installed"
+      echo "     when you execute 'vm_sync'."
+      echo "       $PADOGRID_HOME_NOT_FOUND_LIST"
+   fi
+   if [[ "$VM_INSTALLED_PRODUCTS" != *"$PRODUCT_TYPE"* ]]; then
+      echo -e "   - ${CError}$PRODUCT_TYPE not installed${CNone}. Please install $PRODUCT_TYPE with 'vm_install'."
    fi
 fi
 if [ "$CLUSTER_SPECIFIED" == "true" ]; then
@@ -406,14 +429,15 @@ echo "Cluster Issues: "
 if [ "$CLUSTER_ISSUES_FOUND" == "true" ]; then
    if [ "$CLUSTER_NOT_FOUND_LIST" != "" ]; then
       echo "   The following VM hosts do not have the '$CLUSTER' cluster deployed."
-      echo -e "     ${CLightRed}$CLUSTER_NOT_FOUND_LIST${CNone}"
+      echo -e "     ${CError}$CLUSTER_NOT_FOUND_LIST${CNone}"
    else
       echo "   The cluster VM environment is different from the workspace VM environment. This might" 
       echo "   not be an error as cluster settings are typically a subset of the workspace settings."
       echo "   Please verify."
    fi
 else
-   echo -e "   ${CLightGreen}None.${CNone}"
+   echo -e "   ${CGo}None.${CNone}"
 fi
 fi
 echo "------------------------------------------------------------------------------------------"
+

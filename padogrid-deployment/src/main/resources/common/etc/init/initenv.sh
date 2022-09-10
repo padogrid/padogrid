@@ -35,7 +35,9 @@ export PATH="$CLEANED_PATH"
 #
 # Initialize auto completion
 #
-. $PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash
+if [ -f "$PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash" ]; then
+   . "$PADOGRID_HOME/$PRODUCT/bin_sh/.${PRODUCT}_completion.bash"
+fi
 
 #
 # Display initialization info

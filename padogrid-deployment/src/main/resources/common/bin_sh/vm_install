@@ -54,7 +54,7 @@ SYNOPSIS
                [-simulate] [-?]
 
 DESCRIPTION
-   Installs the specified product distribtion in all the VMs defined by the VM_HOSTS
+   Installs the specified product distribtion on all the VMs defined by the VM_HOSTS
    environment variable in the workspace's 'setenv.sh' file. To install only on the
    cluster VMs, specify the cluster with the '-cluster' option. To install on a select
    list of VMs, specify the VM list with the '-vm' option.
@@ -64,6 +64,8 @@ DESCRIPTION
 
    The '-vm' option overrides both the '-cluster' option and VM_HOSTS. The '-cluster' option
    overrides VM_HOSTS. 
+
+   This command also updates the product home path in the VM workspace 'setenv.sh' file.
 
 OPTIONS
    -cluster cluster_name
@@ -188,13 +190,13 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
-
 #
 # Installs the product defined by the following variables
 #
 # @required VM_PRODUCT_HOME_NOT_FOUND_LIST
 # @required VM_PRODUCT_HOME
 # @required PRODUCT_PATH
+# @required __VM_HOSTS
 #
 function installProduct
 {
@@ -265,12 +267,22 @@ function installProduct
             ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_PARENT_PATH ] && mkdir -p $__PRODUCT_PARENT_PATH"
             ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__PRODUCT_PARENT_PATH/ -xzf $__PRODUCT_FILE_PATH"
          fi
-
-         # Remove
-         #ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm $__PRODUCT_DOWNLOADS_PATH"
       done
-
       echo "Remote installation complete: $VM_PRODUCT_HOME_PATH"
+   fi
+
+   # Update product home in workspace setenv.sh
+   if [ "$VM_PRODUCT_HOME_PATH" != "" ]; then
+      local __VM_PRODUCT_NAME=$(getProductName $VM_PRODUCT_HOME_PATH)
+      local __VM_PRODUCT_HOME=$(getProductHome $__VM_PRODUCT_NAME)
+      echo "Updating VM $__VM_PRODUCT_HOME..."
+      for VM_HOST in $__VM_HOSTS; do
+         if [ "$SIMULATE" == "true" ]; then
+            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|^.*export $__VM_PRODUCT_HOME=.*$|   export $__VM_PRODUCT_HOME="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/setenv.sh"
+         else
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|^.*export $__VM_PRODUCT_HOME=.*$|   export $__VM_PRODUCT_HOME="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/setenv.sh"
+         fi
+      done
    fi
 }
 

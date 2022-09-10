@@ -1045,7 +1045,7 @@ function unique_words
 #    fi
 #    
 # @param propFilePath  Properties file path 
-# @param propArray     Associative array containing properties in the form of
+# @param propArray     Sets this index array containing properties in the form of
 #                      "key=value". It must be declared before invoking this
 #                      function, e.g., declear -a propArray.
 #
@@ -1053,7 +1053,7 @@ function getPropertiesArray
 {
    local __PROPERTIES_FILE=$1
    local array=$2
-   declare -a | grep -q "declare -a ${array}" || echo >&2 "ERROR: getPropertiesArray - no ${array} associative array declared"
+   declare -a | grep -q "declare -a ${array}" || echo >&2 "ERROR: getPropertiesArray - no ${array} index array declared"
    local index=0
    if [ -f $__PROPERTIES_FILE ]; then
       while IFS= read -r line; do
@@ -4066,7 +4066,6 @@ function get_time_in_seconds
 # If the executable is executing other scripts that also generate temporary files then the first
 # argument must be a space separated list of those script names including the executable name
 # itself.
-# before the exit is invoked.
 #
 # You can also exit without Ctrl-C by passing in "true" as described below.
 #
@@ -4089,4 +4088,126 @@ function cleanExit
          LAST_TIMESTAMP_TRAP=$(date +%s)
       fi
    fi
+}
+
+#
+# Returns the specified product's HOME env variable name.
+#
+# @param product  Product name, i.e., geode, gemfire, hazelcast, etc. If not specified, then
+#                 the value of the PRODUCT env var is used.
+#
+function getProductHome
+{
+   local PRODUCT_TYPE="$1"
+   if [ "$PRODUCT_TYPE" == "" ]; then
+      PRODUCT_TYPE=$PRODUCT
+   fi
+   if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+      PRODUCT_TYPE="gemfire"
+   fi
+   if [ "$PRODUCT_TYPE" == "hazelcast-enterprise" ]; then
+      PRODUCT_TYPE="hazelcast"
+   fi
+   # Convert to uppper case and replace '-' with '_'
+   local __VM_PRODUCT_HOME="$(echo ${PRODUCT_TYPE^^} | sed 's/-/_/')_HOME"
+   echo $__VM_PRODUCT_HOME
+}
+
+#
+# Returns the product name of the specified product directory.
+#
+# @param productDir  Product, product directory name or directory path.
+# @param clusterType Optional cluster type. The product name of products such as gemfire
+#                    is determined by th cluster type due to the shared name, 'geode'.
+#
+function getProductName
+{
+   local __PRODUCT_DIR="$1"
+   local __CLUSTER_TYPE="$2"
+   local __PRODUCT
+
+   if [ "$CLUSTER_TYPE" == "gemfire" ]; then
+      __PRODUCT="gemfire"
+   elif [[ "$__PRODUCT_DIR" == **"padogrid"** ]]; then
+      __PRODUCT="padogrid"
+   elif [[ "$__PRODUCT_DIR" == **"padodesktop"** ]] || [[ "$__PRODUCT_DIR" == **"pado-desktop"** ]]; then
+      __PRODUCT="padodesktop"
+   elif [[ "$__PRODUCT_DIR" == **"padoweb"** ]]; then
+      __PRODUCT="padoweb"
+   elif [[ "$__PRODUCT_DIR" == **"pado"** ]]; then
+      __PRODUCT="pado"
+   elif [[ "$__PRODUCT_DIR" == **"geode"** ]]; then
+      __PRODUCT="geode"
+   elif [[ "$__PRODUCT_DIR" == **"hazelcast-enterprise"** ]]; then
+      __PRODUCT="hazelcast-enterprise"
+   elif [[ "$__PRODUCT_DIR" == **"hazelcast-management-center"** ]]; then
+      __PRODUCT="hazelcast-mc"
+   elif [[ "$__PRODUCT_DIR" == **"hazelcast"** ]]; then
+      __PRODUCT="hazelcast"
+   elif [[ "$__PRODUCT_DIR" == **"redis"** ]]; then
+      __PRODUCT="redis"
+   elif [[ "$__PRODUCT_DIR" == **"snappydata"** ]]; then
+      __PRODUCT="snappydata"
+   elif [[ "$__PRODUCT_DIR" == **"spark"** ]]; then
+      __PRODUCT="spark"
+   elif [[ "$__PRODUCT_DIR" == **"kafka"** ]]; then
+      __PRODUCT="kafka"
+   elif [[ "$__PRODUCT_DIR" == **"gemfire"** ]]; then
+      __PRODUCT="gemfire"
+   elif [[ "$__PRODUCT_DIR" == **"coherence"** ]]; then
+      __PRODUCT="coherence"
+   elif [[ "$__PRODUCT_DIR" == **"jdk"** ]]; then
+      __PRODUCT="java"
+   fi
+
+   echo $__PRODUCT
+}
+
+#
+# Sets the specified associative array with all the products found in the first VM.
+# The array must be declared before invoking this function, otherwise, it will fail with an error.
+#
+#
+# Example:
+#    declare -a vmProductArray
+#    getVmProductArray vmProductArray
+#    for product in vmProductArray; do
+#       echo "$product ${vmProductArray[$product]}"
+#    done
+#
+# @required VM_PADOGRID_ENV_BASE_PATH
+# @required VM_PADOGRID_WORKSPACES_HOME
+# @required VM_KEY
+# @required VM_USER
+# @required SSH_CONNECT_TIMEOUT
+#
+# @parm vmProductArray Set this associative array with VM product info in the form
+#                      of vmProductArray[product]=product_dir_name. It must be declared
+#                      before invoking this function, e.g., declear -A vmProductArray.
+# @parm vmProductHomeArray Set this associative array with VM product home info in the form
+#                      of vmProductArray[PRODUCT_HOME]=product_dir_name. It must be declared
+#                      before invoking this function, e.g., declear -A vmProductArray.
+#
+function getVmProductArray
+{
+   local array=$1
+   local array2=$2
+   declare -A | grep -q "declare -A ${array}" || echo >&2 "ERROR: getVmProductArray - no ${array} associative array declared"
+   declare -A | grep -q "declare -A ${array2}" || echo >&2 "ERROR: getVmProductArray - no ${array2} associative array declared"
+   local VM_PADOGRID_ENV_BASE_PATH=$(dirname $(dirname $VM_PADOGRID_WORKSPACES_HOME))
+   local VM_PADOGRID_PRODUCTS_PATH="$VM_PADOGRID_ENV_BASE_PATH/products"
+   local VM_INSTALLED_PRODUCTS=""
+   local PRODUCT_HOME_VAR
+   for VM_HOST in $__VM_HOSTS; do
+      local PRODUCT_DIR_NAME_LIST=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ls $VM_PADOGRID_PRODUCTS_PATH")
+      for i in $PRODUCT_DIR_NAME_LIST; do
+         VM_PRODUCT=$(getProductName $i)
+         PRODUCT_HOME_VAR=$(getProductHome $VM_PRODUCT)
+         if [ "$VM_PRODUCT" != "" ]; then
+            eval "$array[\"\$VM_PRODUCT\"]=${i}"
+            eval "$array2[\"\$PRODUCT_HOME_VAR\"]=${i}"
+         fi
+      done
+      break;
+   done
 }
