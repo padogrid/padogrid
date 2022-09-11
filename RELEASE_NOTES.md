@@ -6,8 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.20-SNAPSHOT
 
-### Release Date: 09/04/22
+### Release Date: 09/11/22
 
+- Overhauled support for VM clusters by adding an extensive product validation process and refactoring common routines. The `vm_install`, `vm_sync`, and `vm_test` commands are now generic and support all products.
 - Added support for multitenancy. You can now sandbox workspaces by user groups. This capability allows the `padogrid` administrator to grant or revoke workspace privileges by adding/removing a user to/from the workspace group. For example, the user `foo` belongs to the `finance` group has access to the workspaces owned by that group. A user can belong to one or more groups and have access to workspaces across multiple groups. All other workspaces owned by groups that the user does not belong to are not viewable or accessible. Please see the [Multitenancy](https://github.com/padogrid/padogrid/wiki/Multitenancy) section in the manual for details.
 - Added support for the `padogrid.rwe` marker for VMs and Vagrant pods. The previous version (v0.9.19) added this marker to uniquely identify running processes throughout RWEs. With that change, v0.9.19 is broken. It is unable to detect VM and Vagrant pod processes.
 - Fixed Geode/GemFire locator issues in pods. Locators were not properly identified in pod VMs.
