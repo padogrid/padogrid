@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-java -product -vm -simulate -?"
+   echo "-product -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -283,6 +283,24 @@ function installProduct
             ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|^.*export $__VM_PRODUCT_HOME=.*$|   export $__VM_PRODUCT_HOME="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/setenv.sh"
          fi
       done
+      # Update vmenv.sh if java
+      if [ "$__VM_PRODUCT_NAME" == "padogrid" ] || [ "$__VM_PRODUCT_NAME" == "java" ]; then
+         # local vmenv.sh
+         if [ "$SIMULATE" == "true" ]; then
+            echo sed -i$__SED_BACKUP -e "s|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}=\"${VM_PRODUCT_HOME_PATH}\"|" "$PADOGRID_WORKSPACE/vmenv.sh"
+         else
+            sed -i$__SED_BACKUP -e "s|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}=\"${VM_PRODUCT_HOME_PATH}\"|" "$PADOGRID_WORKSPACE/vmenv.sh"
+         fi
+         # remote vmenv.sh
+         for VM_HOST in $__VM_HOSTS; do
+            if [ "$SIMULATE" == "true" ]; then
+               echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/vmenv.sh"
+            else
+               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/vmenv.sh"
+            fi
+         done
+      fi
+
    fi
 }
 

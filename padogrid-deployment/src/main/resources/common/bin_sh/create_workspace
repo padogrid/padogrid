@@ -64,9 +64,9 @@ DESCRIPTION
    then specify '-quiet' option along with the other options to configure the workspace.
 
    Once the workspace has been created, you can modify the configurations set by 
-   this command in the workspace's 'setenv.sh' and 'setenv_vm.sh' files. The 'setenv.sh'
-   file contains local workspace settings and the 'setenv_vm.sh' file contains
-   remote VM workspace settings.
+   this command in the workspace's 'setenv.sh' and 'vmenv.sh' files. The 'setenv.sh'
+   file contains local workspace settings and the 'vmenv.sh' file contains remote
+   VM workspace settings.
 
 OPTIONS
    -name workspace_name
@@ -105,8 +105,8 @@ cat <<EOF
               not specified then all other '-vm-' options are still recorded but the workspace
               will not be VM enabled and all clusters will be locally created instead. If this
               option is specified alone without a list of host names, then the workspace is
-              still VM enabled. The VM hosts and be modified or entered in the workspace 'setenv.sh'
-              file after the workspace has been created.
+              still VM enabled. The VM hosts can be modified or entered in the workspace
+              'vmenv.sh' file after the workspace has been created.
 
    -vm-user vm_user_name
               VM user name. All VMs must be accessible via ssh with this user name.
@@ -119,8 +119,8 @@ cat <<EOF
 
    -quiet
               Quiet mode. Supresses the interactive prompts. The options not specified will
-              default to their default values. You can change the option values in the workspace's
-              'setenv.sh' file as needed after the workspace is created.
+              set to their default values. You can change the option values in the workspace's
+              'setenv.sh' and 'vmenv.sh' files as needed after the workspace is created.
 
 DEFAULT
    $EXECUTABLE
@@ -699,6 +699,10 @@ echo "# Add your workspace-wide environment variables in this file." >> $WORKSPA
 echo "# The environment variables set in this file are used for all clusters running" >> $WORKSPACE_DIR/setenv.sh
 echo "# in this workspace. Cluster specifics should be added in clusters/<cluster>/setenv.sh." >> $WORKSPACE_DIR/setenv.sh
 echo "#" >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
+echo "# VM private key file path. If not set, then the first .pem file found in the workspace" >> $WORKSPACE_DIR/setenv.sh
+echo "# directory is assigned." >> $WORKSPACE_DIR/setenv.sh
+echo "#VM_PRIVATE_KEY_FILE="" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# Set default pod name. This pod name is used if the '-pod' option is not specified" >> $WORKSPACE_DIR/setenv.sh
 echo "# when running padogrid commands" >> $WORKSPACE_DIR/setenv.sh

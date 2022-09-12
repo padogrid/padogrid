@@ -163,6 +163,17 @@ __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
 DEFAULT_USER=$(whoami)
 VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
 
+# Set the first private key file found in the workspace directory if exists
+__VM_PRIVATE_KEY_FILE_FOUND="false"
+if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+   if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+      for i in $PADOGRID_WORKSPACE/*.pem; do
+         VM_PRIVATE_KEY_FILE=$i
+         __VM_PRIVATE_KEY_FILE_FOUND="true"
+         break
+      done
+   fi
+fi
 if [ "$KEY" == "" ]; then
    KEY=`getClusterProperty "vm.privateKeyFile"`
 fi
@@ -208,11 +219,10 @@ for VM_HOST in $__VM_HOSTS; do
    VM_HOME=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "cd && pwd")
    break;
 done
-VM_HOME=$(echo $VM_HOME | sed 's/\//\\\//g')
-sed -i$__SED_BACKUP -e "s/\~/$VM_HOME/" "$PADOGRID_WORKSPACE/vmenv.sh"
-VM_PADOGRID_ENV_BASE_PATH=$(echo $VM_PADOGRID_ENV_BASE_PATH | sed -e "s/\~/$VM_HOME/")
-VM_PADOGRID_WORKSPACES_HOME=$(echo $VM_PADOGRID_WORKSPACES_HOME | sed -e "s/\~/$VM_HOME/")
-VM_JAVA_HOME=$(echo $VM_JAVA_HOME | sed -e "s/\~/$VM_HOME/")
+sed -i$__SED_BACKUP -e "s|\~|$VM_HOME|" "$PADOGRID_WORKSPACE/vmenv.sh"
+VM_PADOGRID_ENV_BASE_PATH=$(echo $VM_PADOGRID_ENV_BASE_PATH | sed -e "s|\~|$VM_HOME|")
+VM_PADOGRID_WORKSPACES_HOME=$(echo $VM_PADOGRID_WORKSPACES_HOME | sed -e "s|\~|$VM_HOME|")
+VM_JAVA_HOME=$(echo $VM_JAVA_HOME | sed -e "s|\~|$VM_HOME|")
 
 # Check if we need to deploy padogrid to any of the VMs
 PADOGRID_COMMAND="[ -d "$VM_PADOGRID_HOME" ] && echo true || echo false"
@@ -226,7 +236,7 @@ for VM_HOST in $__VM_HOSTS; do
       INSTALL_PADOGRID_HOST_LIST="$INSTALL_PADOGRID_HOST_LIST $VM_HOST"
    fi
    if [ "$SETENV_DOWNLOADED" == "false" ]; then
-      # Download the first setenv.sh. We'll use this later to update the VMs that do have it.
+      # Download the first setenv.sh. We'll use this later to update the VMs that do not have it.
       # That could happen if new VMs were added or there were network issues.
       if [ "$SIMULATE" == "true" ]; then
         echo "scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE > /dev/null 2>&1"
@@ -304,16 +314,30 @@ if [ "SETENV_DOWNLOADED" != "true" ]; then
    done
 fi
 
-#
-# Synchronize workspaces
-#
-echo ""
-echo "Workspace sync: $WORKSPACE_NAME"
+# Set the found private key in 'setenv.sh'
 if [ -f "$VM_PRIVATE_KEY_FILE" ]; then
    PRIVATE_KEY_FILE_NAME=$(basename $VM_PRIVATE_KEY_FILE)
 else
    PRIVATE_KEY_FILE_NAME=""
 fi
+if [ "$__VM_PRIVATE_KEY_FILE_FOUND" == "true" ]; then
+   if [ "$SIMULATE" == "true" ]; then
+      echo sed -i$__SED_BACKUP -e "s|VM_PRIVATE_KEY_FILE=.*$|VM_PRIVATE_KEY_FILE=\"$VM_PRIVATE_KEY_FILE\"|" -e "s|^.*#.*VM_PRIVATE_KEY_FILE|VM_PRIVATE_KEY_FILE|" "$PADOGRID_WORKSPACE/setenv.sh"
+      echo sed -i$__SED_BACKUP -e "s|VM_PRIVATE_KEY_FILE=.*$|VM_PRIVATE_KEY_FILE=\"$REMOTE_PRIVATE_KEY_FILE\"|" -e "s|^.*#.*VM_PRIVATE_KEY_FILE|VM_PRIVATE_KEY_FILE|" "$TMP_SETENV_FILE"
+   else
+      # local
+      sed -i$__SED_BACKUP -e "s|VM_PRIVATE_KEY_FILE=.*$|VM_PRIVATE_KEY_FILE=\"$VM_PRIVATE_KEY_FILE\"|" -e "s|^.*#.*VM_PRIVATE_KEY_FILE|VM_PRIVATE_KEY_FILE|" "$PADOGRID_WORKSPACE/setenv.sh"
+      # remote
+      REMOTE_PRIVATE_KEY_FILE="$VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME"
+      sed -i$__SED_BACKUP -e "s|VM_PRIVATE_KEY_FILE=.*$|VM_PRIVATE_KEY_FILE=\"$REMOTE_PRIVATE_KEY_FILE\"|" -e "s|^.*#.*VM_PRIVATE_KEY_FILE|VM_PRIVATE_KEY_FILE|" "$TMP_SETENV_FILE"
+   fi
+fi
+
+#
+# Synchronize workspaces
+#
+echo ""
+echo "Workspace sync: $WORKSPACE_NAME"
 pushd $ABS_PATH > /dev/null 2>&1
 tar czf $TMP_VM_SYNC_TARBALL_FILE .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
 popd > /dev/null 2>&1
