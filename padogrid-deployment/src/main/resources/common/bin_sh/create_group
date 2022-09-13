@@ -56,6 +56,11 @@ DESCRIPTION
        Group: groups/group_name/etc/group.properties
      Cluster: clusters/cluster_name/etc/cluster.properties
 
+   To create an empty group, specify the '-count 0' option, otherwise, by default, it 
+   creates two (2) clusters. To add an existing cluster to a group, run 'add_cluster'.
+   Similary, to remove a cluster from a group, run 'remove_cluster. You can also manually
+   update the 'group.properties' to add or remove clusters.
+
 OPTIONS
    -product product_name
              Cluster product name. If unspecified then the current cluster's product is assigned.
@@ -71,19 +76,21 @@ OPTIONS
    -prefix cluster_name_prefix
              The prefix of each cluster's name. Cluster names are enumuerated starting from
              0 and incremented by 1. For example, if the prefix is 'mycluster' then the first
-             cluster is named 'mycluster0', the second, 'mycluster1', and so on up to one
-             less than the number specified by the '-count' option. If '-count' is 3 then
-             then the last cluster is named 'mycluster2'.
+             cluster is named 'mycluster0', the second, 'mycluster1', and so on. If this option
+             is not specified then the default prefix 'grid' is used. Default: grid
 
    -type default|pado
              If the 'pado' option is specified, then it creates a Pado cluster that includes
-             full support for grid federation. The 'default' option creates a normal cluster
+             full support for grid federation. The first Pado cluster it creates is the parent
+             cluster of the subsequent clusters. The 'default' option creates a normal cluster
              without any Pado dependencies. Note that Pado supports only Geode and GemFire
              at this time. For other products, this option is ignored.
   
    -count cluster_count
             The number of clusters. The max number of clusters allowed is 10. If this option
-            is not specified then by default it creates two (2) clusters.
+            is not specified then by default it creates two (2) clusters. If this option is 0,
+            then it creates an empty group. In that case, you can add existing clusters later
+            using the 'add_cluster' command. To remove, use the counterpart, 'remove_cluster'.
 
    -port first_port_number
              First member's port number. Port number is incremented
@@ -113,7 +120,7 @@ fi
 GROUP_DIR="$PADOGRID_WORKSPACE/groups/$GROUP"
 
 if [ -d "$GROUP_DIR" ]; then
-   echo >&2 -e "${CLightRed}ERROR:${CNone} Specified group already exists: [$GROUP]. Command aborted."
+   echo >&2 -e "${CError}ERROR:${CNone} Specified group already exists: [$GROUP]. Command aborted."
    exit 1
 fi
 
@@ -121,7 +128,7 @@ if [ "$PRODUCT_ARG" == "" ]; then
    PRODUCT_ARG=$PRODUCT
 fi
 if [ "$(containsWord "$(getInstalledProducts)" "$PRODUCT_ARG")" == "false" ]; then
-   echo >&2 -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
+   echo >&2 -e "${CError}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
    exit 1
 fi
 if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
@@ -138,21 +145,31 @@ if [ "$TYPE_ARG" == "pado" ]; then
      echo >&2 "----------------------------------------------------------------"
      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
      echo >&2 "----------------------------------------------------------------"
-     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is only supported for Geode and GemFire: [$PRODUCT_ARG]. Command aborted."
+     echo -e >&2 "    ${CError}ERROR:${CNone} Pado is only supported for Geode and GemFire: [$PRODUCT_ARG]. Command aborted."
      exit 1
   fi
   if [ "$PADO_HOME" == "" ]; then
      echo >&2 "----------------------------------------------------------------"
      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
      echo >&2 "----------------------------------------------------------------"
-     echo -e >&2 "    ${CLightRed}ERROR:${CNone} Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
+     echo -e >&2 "    ${CError}ERROR:${CNone} Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
      echo >&2 "           workspace 'setenv.sh' file."
-     echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
+     echo >&2 -e "       ${CError}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
      echo >&2 "           Command aborted."
      exit 1
   fi
 elif [ "$TYPE_ARG" != "default" ]; then
-   >&2 echo -e "${CLightRed}ERROR:${CNone} Specified type is not supported: [$TYPE_ARG]. Command aborted."
+   >&2 echo -e "${CError}ERROR:${CNone} Specified type is not supported: [$TYPE_ARG]. Command aborted."
+   exit 1
+fi
+
+if [ "$COUNT" == "" ]; then
+   COUNT=2
+fi
+if [ "$(isNumber $COUNT)" == "false" ]; then
+   echo >&2 "----------------------------------------------------------------"
+   echo -e >&2 "    ${CError}ERROR:${CNone} Invalid number: [$COUNT]. Command aborted."
+   echo >&2 "----------------------------------------------------------------"
    exit 1
 fi
 
@@ -160,32 +177,31 @@ if [ -z $PREFIX ]; then
    PREFIX="grid"
 fi
 
-if [ "$COUNT" == "" ]; then
-   COUNT=2
-fi
 let LAST_CLUSTER_NUM=COUNT-1
 
-if [ "$COUNT" -lt 1 ] || [ "$COUNT" -gt 10 ]; then
+if [ "$COUNT" -lt 0 ] || [ "$COUNT" -gt 10 ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo -e >&2 "    ${CLightRed}ERROR:${CNone} Invalid count. The valid range is [1, 10]. Command aborted."
+   echo -e >&2 "    ${CError}ERROR:${CNone} Invalid count. The valid range is [0, 10]. Command aborted."
    echo >&2 "----------------------------------------------------------------"
    exit 1
 fi
 
 # Abort if any of the clusters exists
-for i in $(seq 0 $LAST_CLUSTER_NUM); do
-   CLUSTER=$PREFIX$i
-   CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
-   if [ -d $CLUSTER_DIR ]; then
-      echo >&2 "----------------------------------------------------------------"
-      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo -e >&2 "    ${CLightRed}ERROR:${CNone} Cluster already exists: [$CLUSTER]. Use the '-prefix' option to set a different name."
-      echo >&2 "           Command aborted."
-      echo >&2 "----------------------------------------------------------------"
-      exit 1
-   fi
-done
+if [ $LAST_CLUSTER_NUM -gt 0 ]; then
+   for i in $(seq 0 $LAST_CLUSTER_NUM); do
+      CLUSTER=$PREFIX$i
+      CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+      if [ -d $CLUSTER_DIR ]; then
+         echo >&2 "----------------------------------------------------------------"
+         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo -e >&2 "    ${CError}ERROR:${CNone} Cluster already exists: [$CLUSTER]. Use the '-prefix' option to set a different name."
+         echo >&2 "           Command aborted."
+         echo >&2 "----------------------------------------------------------------"
+         exit 1
+      fi
+   done
+fi
 
 #
 # Generate base clusters
@@ -197,18 +213,21 @@ else
    FIRST_START_PORT=$(getDefaultStartPortNumber "$PRODUCT_ARG")
 fi
 FIRST_PORT=$FIRST_START_PORT
-for i in $(seq 0 $LAST_CLUSTER_NUM); do
-   CLUSTER_NAME="$PREFIX$i"
-   make_cluster -product $PRODUCT_ARG -cluster $CLUSTER_NAME -type $TYPE_ARG -port $FIRST_PORT
-   let FIRST_PORT=FIRST_PORT+100
-   if [ $i -eq 0 ]; then
-      CLUSTER_NAMES="$CLUSTER_NAME"
-   else
-      CLUSTER_NAMES="$CLUSTER_NAMES, $CLUSTER_NAME"
-   fi
-done
+if [ $LAST_CLUSTER_NUM -gt 0 ]; then
+   for i in $(seq 0 $LAST_CLUSTER_NUM); do
+      CLUSTER_NAME="$PREFIX$i"
+      make_cluster -product $PRODUCT_ARG -cluster $CLUSTER_NAME -type $TYPE_ARG -port $FIRST_PORT
+      let FIRST_PORT=FIRST_PORT+100
+      if [ $i -eq 0 ]; then
+         CLUSTER_NAMES="$CLUSTER_NAME"
+      else
+         CLUSTER_NAMES="$CLUSTER_NAMES, $CLUSTER_NAME"
+      fi
+   done
+fi
 
-if [ "$TYPE_ARG" == "pado" ]; then
+# Generate Pado clusters
+if [ "$TYPE_ARG" == "pado" ] && [ $LAST_CLUSTER_NUM -gt 0 ]; then
    
    # Generate pado.xml
    PARENT_PADO_XML="pado.xml"
@@ -218,11 +237,11 @@ if [ "$TYPE_ARG" == "pado" ]; then
    # sys
    CHILD_GRIDS=""
    if [ $LAST_CLUSTER_NUM -gt 0 ]; then
-   for i in $(seq 1 $LAST_CLUSTER_NUM); do
-     CLUSTER="${PREFIX}$i"
-     CHILD_GRID="                \<grid id=\"${CLUSTER}\"\ routing-weight=\"1\">\<\/grid\>"
-     CHILD_GRIDS="                ${CHILD_GRIDS}\|${CHILD_GRID}"
-   done
+      for i in $(seq 1 $LAST_CLUSTER_NUM); do
+        CLUSTER="${PREFIX}$i"
+        CHILD_GRID="                \<grid id=\"${CLUSTER}\"\ routing-weight=\"1\">\<\/grid\>"
+        CHILD_GRIDS="                ${CHILD_GRIDS}\|${CHILD_GRID}"
+      done
    fi
    
    # app1
@@ -379,3 +398,9 @@ echo "group.type=$TYPE_ARG" >> "$GROUP_FILE"
 echo "" >> "$GROUP_FILE"
 echo "# First port of the first cluster"  >> "$GROUP_FILE"
 echo "group.firstPort=$FIRST_START_PORT" >> "$GROUP_FILE"
+
+echo "-----------------------------------------------------------------------------------"
+echo "Cluster group created: [$GROUP] with $COUNT cluster(s)."
+echo "To set this group as the current context, execute 'switch_group' as follows:"
+echo -e "   ${CGo}switch_group $GROUP${CNone}"
+echo "-----------------------------------------------------------------------------------"
