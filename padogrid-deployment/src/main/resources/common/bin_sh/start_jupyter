@@ -54,8 +54,7 @@ DESCRIPTION
 
 OPTIONS
    -host [ip_address]
-             The IP address the notebook server will listen on. Default: localhost
-             If ip_address is not specified then the host name is assigned.
+             The IP address the notebook server will listen on. Default: 0.0.0.0
 
    -port [port_number]
              The port the notebook server will listen on. Default: 8888
@@ -76,14 +75,14 @@ EOF
 fi
 
 if [ "$(which jupyter 2> /dev/null)" == "" ]; then
-   echo >&2 "ERROR: jupyter executable not found. Command aborted."
+   echo >&2 -e "${CError}ERROR:${CNone} jupyter executable not found. Command aborted."
    exit 1
 fi
 
 if [ "$HOST_SPECIFIED" == "true" ]; then
    IP_ADDRESS=$HOST
 else
-   IP_ADDRESS="localhost"
+   IP_ADDRESS="0.0.0.0"
 fi
 if [ "$IP_ADDRESS" == "" ]; then
    IP_ADDRESS=$(hostname)
@@ -94,10 +93,11 @@ if [ "$PORT_NUMBER" == "" ]; then
    PORT_NUMBER="8888"
 fi
 
-NOTEBOOK_SERVERS=$(jupyter notebook list | grep -v "Currently")
+NOTEBOOK_SERVERS=$(jupyter lab list | grep -v "Currently")
 
 if [[ "$NOTEBOOK_SERVERS" == *"$PORT_NUMBER"* ]]; then
-   echo >&2 "ERROR: Notebook server already running. Command aborted."
+   echo >&2 -e "${CError}ERROR:${CNone} Notebook server already running. Command aborted."
+   show_jupyter
    exit 1
 fi
 

@@ -182,7 +182,7 @@ if [ "$QUIET" == "true" ]; then
    WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/$WORKSPACE
    if [ -d "$WORKSPACE_DIR" ]; then
       echo >&2 "ERROR: Workspace already exists [$WORKSPACE]. Command aborted."
-      exit
+      exit 1
    fi
    if [ -f "$WORKSPACE_DIR" ]; then
       echo >&2 "ERROR: A file with the sanem workspace name exists in the RWE parent directory."
@@ -194,14 +194,19 @@ if [ "$QUIET" == "true" ]; then
    if [ "$PRODUCT_HOME_ARG" != "" ] && [ ! -d "$PRODUCT_HOME_ARG" ]; then
       echo >&2 "ERROR: The specified product home path does not exists [$PRODUCT_HOME_ARG]."
       echo >&2 "       Command aborted."
-      exit
+      exit 1
    fi
    if [ "$JAVA_HOME_ARG" != "" ]; then
       if [ ! -d "$JAVA_HOME_ARG" ]; then
          echo >&2 "ERROR: The specified Java home path does not exists [$JAVA_HOME_ARG]."
          echo >&2 "       Command aborted."
-         exit
+         exit 1
       fi
+   fi
+   if [ "$VM_PRIVATE_KEY_FILE_ARG" != "" ] && [ ! -f $VM_PRIVATE_KEY_FILE_ARG ]; then
+      echo >&2 "ERROR: The specified private key file does not exists [$VM_PRIVATE_KEY_FILE_ARG]."
+      echo >&2 "       Command aborted."
+      exit 1
    fi
 
    # Set PADOGRID_HOME - required when create_rwe is executed.
@@ -574,6 +579,14 @@ mkdir -p $WORKSPACE_DIR/bundles
 mkdir -p $WORKSPACE_DIR/k8s
 mkdir -p $WORKSPACE_DIR/docker
 
+echo debug: 1 VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE
+if [ "$VM_PRIVATE_KEY_FILE" != "" ] && [ -f $VM_PRIVATE_KEY_FILE ]; then
+   __VM_PRIVATE_FILE_NAME=$(basename "$VM_PRIVATE_KEY_FILE")
+   cp "$VM_PRIVATE_KEY_FILE" "$WORKSPACE_DIR/$__VM_PRIVATE_FILE_NAME"
+   VM_PRIVATE_KEY_FILE="$WORKSPACE_DIR/$__VM_PRIVATE_FILE_NAME"
+   chmod 400 "$VM_PRIVATE_KEY_FILE"
+fi
+
 if [ "$PRODUCT" == "" ]; then
    PRODUCT="none"
 fi
@@ -702,15 +715,15 @@ echo "#" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# VM private key file path. If not set, then the first .pem file found in the workspace" >> $WORKSPACE_DIR/setenv.sh
 echo "# directory is assigned." >> $WORKSPACE_DIR/setenv.sh
-echo "#VM_PRIVATE_KEY_FILE="" >> $WORKSPACE_DIR/setenv.sh
+echo "VM_PRIVATE_KEY_FILE=\"$VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/setenv.sh
 echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# Set default pod name. This pod name is used if the '-pod' option is not specified" >> $WORKSPACE_DIR/setenv.sh
 echo "# when running padogrid commands" >> $WORKSPACE_DIR/setenv.sh
 echo "#export POD=" >> $WORKSPACE_DIR/setenv.sh
-echo " " >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
 echo "# Set Java options. Your Java options are added to the padogrid Java options." >> $WORKSPACE_DIR/setenv.sh
 echo "#JAVA_OPTS=" >> $WORKSPACE_DIR/setenv.sh
-echo " " >> $WORKSPACE_DIR/setenv.sh
+echo "" >> $WORKSPACE_DIR/setenv.sh
 if [ "$PRODUCT" == "hazelcast" ]; then
    echo "# Set Management Center Java options, i.e., -Dhazelcast.mc.forceLogoutOnMultipleLogin=true" >> $WORKSPACE_DIR/setenv.sh
    echo "#MC_JAVA_OPTS=" >> $WORKSPACE_DIR/setenv.sh
@@ -764,20 +777,6 @@ echo "# VM_HOSTS must be set, otherwise, VM_HOSTS and other VM_ variables are ig
 echo "VM_HOSTS=\"$VM_HOSTS\"" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM user name." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_USER=\"$VM_USER\"" >> $WORKSPACE_DIR/vmenv.sh
-echo "# VM private key file path. If not set, then it defaults to the first .pem file" >> $WORKSPACE_DIR/vmenv.sh
-echo "# found in the workspace directory." >> $WORKSPACE_DIR/vmenv.sh
-if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
-   cp $VM_PRIVATE_KEY_FILE $WORKSPACE_DIR/
-   __VM_PRIVATE_KEY_FILE="$(basename $VM_PRIVATE_KEY_FILE)"
-   chmod 400 $WORKSPACE_DIR/$__VM_PRIVATE_KEY_FILE
-else
-   __VM_PRIVATE_KEY_FILE=""
-fi
-if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
-echo "VM_PRIVATE_KEY_FILE=\"\$PADOGRID_WORKSPACE/$__VM_PRIVATE_KEY_FILE\"" >> $WORKSPACE_DIR/vmenv.sh
-else
-echo "VM_PRIVATE_KEY_FILE=\"\"" >> $WORKSPACE_DIR/vmenv.sh
-fi
 echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM hosts may have installation paths dfferent from the local paths." >> $WORKSPACE_DIR/vmenv.sh
 echo "" >> $WORKSPACE_DIR/vmenv.sh
