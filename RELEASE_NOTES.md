@@ -6,13 +6,15 @@ https://github.com/padogrid
 
 ## Version 0.9.20-SNAPSHOT
 
-### Release Date: 09/12/22
+### Release Date: 09/14/22
 
-- Overhauled support for VM clusters by adding an extensive product validation process and refactoring common routines. The `vm_install`, `vm_sync`, and `vm_test` commands are now generic and support all products. These enhancments are incorporated into workspaces, simplifying multi-tenant workspace management in particular. Please see [Geode/GemFire on AWS EC2 Instances](https://github.com/padogrid/padogrid/wiki/Geode-on-AWS-EC2) and [Hazelcast on AWS EC2](https://github.com/padogrid/padogrid/wiki/Hazelcast-on-AWS-EC2) for examples.
+- Overhauled support for VM clusters by adding an extensive product validation process and refactoring common routines. The `vm_install`, `vm_sync`, and `vm_test` commands are now generic and support all products. These enhancements are incorporated into workspaces, simplifying multi-tenant workspace management in particular. Please see [Geode/GemFire on AWS EC2 Instances](https://github.com/padogrid/padogrid/wiki/Geode-on-AWS-EC2) and [Hazelcast on AWS EC2](https://github.com/padogrid/padogrid/wiki/Hazelcast-on-AWS-EC2) for examples.
 - Added support for multitenancy. You can now sandbox workspaces by user groups. This capability allows the `padogrid` administrator to grant or revoke workspace privileges by adding/removing a user to/from the workspace group. For example, the user `foo` belongs to the `finance` group has access to the workspaces owned by that group. A user can belong to one or more groups and have access to workspaces across multiple groups. All other workspaces owned by groups that the user does not belong to are not viewable or accessible. Please see the [Multitenancy](https://github.com/padogrid/padogrid/wiki/Multitenancy) section in the manual for details.
 - Added support for the `padogrid.rwe` marker for VMs and Vagrant pods. The previous version (v0.9.19) added this marker to uniquely identify running processes throughout RWEs. With that change, v0.9.19 is broken. It is unable to detect VM and Vagrant pod processes.
 - Fixed Geode/GemFire locator issues in pods. Locators were not properly identified in pod VMs.
 - Added support for `LOCATOR_JAVA_OPTS` and `MEMBER_JAVA_OPTS` for Geode/GemFire clusters. These variables can be set in `bin_sh/setenv.sh`.
+- Added support for creating empty groups. Prior to this release, the `creat_group` command created at least one (1) cluster. You can now create an empty group and then add existing clusters to the group.
+- Updated the Jupyter commands to bind to `0.0.0.0`. It was binding to `localhost` previously if the `-host` option is not specified to `start_jupyter` or `open_jupyter`.
 - Added support for `PADOGRID_CHARSET` for displaying nested structures in `unicode`. Set this environment variable to `unicode` for the nested structure displaying commands like `show_rwe` if they display control characters.
 
 ```bash
