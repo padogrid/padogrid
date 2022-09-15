@@ -519,7 +519,7 @@ function getDownloadablePadogridVersions
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//' -e 's/\/padoweb.*//' -e 's/\/pado_.*//' -e 's/\/pado\-desktop.*//')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -s $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         local assets_urls=$(curl -s $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
@@ -547,7 +547,7 @@ function getDownloadablePadoVersions
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado_.*" | sed -e 's/\.tar\.gz.*//')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -s $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         local assets_urls=$(curl -s $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
@@ -605,7 +605,7 @@ function getDownloadablePadodesktopVersions
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -sL $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         local assets_urls=$(curl -sL $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
@@ -634,7 +634,7 @@ function getDownloadablePadoEclipseVersions
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "com.netcrest.pado.eclipse_" | grep '\.jar' |  sed -e 's/.*padogrid_//' |  grep "\/com.netcrest.pado.eclipse_.*" | sed -e 's/\.jar.*//')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -sL $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         local assets_urls=$(curl -sL $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
@@ -695,7 +695,7 @@ function getDownloadableHazelcastDesktopVersions
       local PAGE_VERSIONS=$(curl -s $download_url | grep "hazelcast-desktop_" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-desktop_//' -e 's/\.tar\.gz.*//')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -sL $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         local assets_urls=$(curl -sL $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
@@ -730,7 +730,7 @@ function getDownloadableJetOssVersions
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -s $download_url | grep "hazelcast-jet-" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         local assets_urls=$(curl -s $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
@@ -759,8 +759,20 @@ function getDownloadableRedisVersions
       local PAGE_VERSIONS=$(curl -sL $download_url |  grep '\.tar\.gz' | sed -e 's/\.tar.*$//' -e 's/.*\///')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         # Redis has source distributions only. No assets sub-url.
-         is_next_page="false"
+         local assets_urls=$(curl -s $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            versions=$(echo $assets_urls | sed 's/http:.*expanded_assets//g')
+            for url in $assets_urls; do
+               versions=$(echo $url | sed 's|.*expanded_assets/||')
+               # The following check tar ball - not necessary, takes long time
+               # versions=$(curl -sL $url |  grep '\.tar\.gz' | sed -e 's/\.tar.*$//' -e 's/.*\///')
+               if [ "$versions" != "" ]; then
+                  ALL_REDIS_VERSIONS="$ALL_REDIS_VERSIONS $versions"
+               fi
+            done
+         fi
       else
          ALL_REDIS_VERSIONS="$ALL_REDIS_VERSIONS $PAGE_VERSIONS"
       fi
@@ -779,7 +791,7 @@ function getDownloadableSnappyDataVersions
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -s $download_url | grep "snappydata-" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         local assets_urls=$(curl -s $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
