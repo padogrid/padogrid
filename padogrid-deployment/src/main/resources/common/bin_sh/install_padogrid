@@ -25,11 +25,13 @@ else
    PRODUCT_SPECIFIED="false"
    PRODUCT_ARG=""
    QUIET="false" 
+   NO_STTY_SPECIFIED="false"
    PREV=""
    for i in "$@"; do
       case $i in
          -quiet ) QUIET="true";;
          -product ) PRODUCT_SPECIFIED="true";;
+         -no-stty ) NO_STTY_SPECIFIED="true";;
          -?) HELP="true";;
          * ) if [ "$PREV" == "-product" ]; then PRODUCT_ARG="$i"; else echo "Invalid option: [$i]. Command aborted.";  exit 1; fi;;
       esac
@@ -78,7 +80,8 @@ PADOECLIPSE_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
 GEODE_DOWNLOAD_URL="https://archive.apache.org/dist/geode/"
 HAZELCAST_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.org/imdg/download/archives/#hazelcast-imdg"
-HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
+#HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
+HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/open-source-projects/downloads/archives/"
 HAZELCAST_DESKTOP_DOWNLOAD_URL="https://github.com/netcrest/hazelcast-desktop/releases"
 JET_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
 JET_OSS_DOWNLOAD_URL="https://github.com/hazelcast/hazelcast-jet/releases"
@@ -508,78 +511,148 @@ function unique_words
 
 function getDownloadablePadogridVersions
 {
-  local ALL_PADOGRID_VERSIONS=$(curl -sL $PADOGRID_DOWNLOAD_URL | grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//' -e 's/\/padoweb.*//' -e 's/\/pado_.*//' -e 's/\/pado\-desktop.*//')
-  if [ "$ALL_PADOGRID_VERSIONS" == "" ]; then
-     ALL_PADOGRID_VERSIONS=$(curl -sL $PADOGRID_DOWNLOAD_URL | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//' | sed 's/.*padogrid_//')
-     local assets_urls=$(curl -s $PADOGRID_DOWNLOAD_URL | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-     for url in $assets_urls; do
-        versions=$(curl -sL $url  |grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//' -e 's/\/padoweb.*//' -e 's/\/pado_.*//' -e 's/\/pado\-desktop.*//')
-        ALL_PADOGRID_VERSIONS="$ALL_PADOGRID_VERSIONS $versions"
-     done
-  fi
-  unique_words "$ALL_PADOGRID_VERSIONS"
+   local is_next_page="true"
+   local page=1
+   local ALL_PADOGRID_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${PADOGRID_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//' -e 's/\/padoweb.*//' -e 's/\/pado_.*//' -e 's/\/pado\-desktop.*//')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -s $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url  |grep "padogrid_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' -e 's/\.tar\.gz.*//' -e 's/\/padoweb.*//' -e 's/\/pado_.*//' -e 's/\/pado\-desktop.*//')
+               versions=$(unique_words "$versions")
+               ALL_PADOGRID_VERSIONS="$ALL_PADOGRID_VERSIONS $versions"
+            done
+         fi
+      else
+         ALL_PADOGRID_VERSIONS="$ALL_PADOGRID_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
+   unique_words "$ALL_PADOGRID_VERSIONS"
 }
 
 function getDownloadablePadoVersions
 {
-  local ALL_PADO_VERSIONS=$(curl -sL $PADO_DOWNLOAD_URL | grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado_.*" | sed -e 's/\.tar\.gz.*//')
-  if [ "$ALL_PADO_VERSIONS" == "" ]; then
-     local assets_urls=$(curl -s $PADO_DOWNLOAD_URL | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-     for url in $assets_urls; do
-        versions=$(curl -sL $url  | grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado_.*" | sed -e 's/\.tar\.gz.*//')
-        if [ "$versions" != "" ]; then
-           ALL_PADO_VERSIONS="$ALL_PADO_VERSIONS $versions"
-        fi
-     done
-  fi
-  unique_words "$ALL_PADO_VERSIONS"
+   local is_next_page="true"
+   local page=1
+   local ALL_PADO_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${PADO_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado_.*" | sed -e 's/\.tar\.gz.*//')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -s $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url  | grep "pado_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado_.*" | sed -e 's/\.tar\.gz.*//')
+               if [ "$versions" != "" ]; then
+                  ALL_PADO_VERSIONS="$ALL_PADO_VERSIONS $versions"
+               fi
+            done
+         fi
+      else
+         ALL_PADO_VERSIONS="$ALL_PADO_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
+   unique_words "$ALL_PADO_VERSIONS"
 }
 
 function getDownloadablePadowebVersions
 {
-  local ALL_PADOWEB_VERSIONS=$(curl -sL $PADOWEB_DOWNLOAD_URL | grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
-  if [ "$ALL_PADOWEB_VERSIONS" == "" ]; then
-     local assets_urls=$(curl -sL $PADOWEB_DOWNLOAD_URL | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-     for url in $assets_urls; do
-        versions=$(curl -sL $url  | grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
-        if [ "$versions" != "" ]; then
-           ALL_PADOWEB_VERSIONS="$ALL_PADOWEB_VERSIONS $versions"
-        fi
-     done
-  fi
-  unique_words "$ALL_PADOWEB_VERSIONS"
+   local is_next_page="true"
+   local page=1
+   local ALL_PADOWEB_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${PADOWEB_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -sL $download_url | grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url  | grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
+               if [ "$versions" != "" ]; then
+                  ALL_PADOWEB_VERSIONS="$ALL_PADOWEB_VERSIONS $versions"
+               fi
+            done
+         fi
+      else
+         ALL_PADOWEB_VERSIONS="$ALL_PADOWEB_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
+   unique_words "$ALL_PADOWEB_VERSIONS"
 }
 
 function getDownloadablePadodesktopVersions
 {
-  local ALL_PADODESKTOP_VERSIONS=$(curl -sL $PADODESKTOP_DOWNLOAD_URL | grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
-  if [ "$ALL_PADODESKTOP_VERSIONS" == "" ]; then
-     local assets_urls=$(curl -sL $PADODESKTOP_DOWNLOAD_URL | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-     for url in $assets_urls; do
-        versions=$(curl -sL $url | grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
-        if [ "$versions" != "" ]; then
-           ALL_PADODESKTOP_VERSIONS="$ALL_PADODESKTOP_VERSIONS $versions"
-        fi
-     done
-  fi
-  unique_words "$ALL_PADODESKTOP_VERSIONS"
+   local is_next_page="true"
+   local page=1
+   local ALL_PADODESKTOP_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${PADODESKTOP_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -sL $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url | grep "pado-desktop_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/pado-desktop_.*" | sed -e 's/\.tar\.gz.*//')
+               if [ "$versions" != "" ]; then
+                  ALL_PADODESKTOP_VERSIONS="$ALL_PADODESKTOP_VERSIONS $versions"
+               fi
+            done
+         fi
+      else
+         ALL_PADODESKTOP_VERSIONS="$ALL_PADODESKTOP_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
+   unique_words "$ALL_PADODESKTOP_VERSIONS"
 }
 
 function getDownloadablePadoEclipseVersions
 {
-  local ALL_PADOECLIPSE_VERSIONS=$(curl -sL $PADOGRID_DOWNLOAD_URL | grep "com.netcrest.pado.eclipse_" | grep '\.jar' |  sed -e 's/.*padogrid_//' |  grep "\/com.netcrest.pado.eclipse_.*" | sed -e 's/\.jar.*//')
-  if [ "$ALL_PADOECLIPSE_VERSIONS" == "" ]; then
-     local assets_urls=$(curl -sL $PADOGRID_DOWNLOAD_URL | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-     for url in $assets_urls; do
-        versions=$(curl -sL $url  | grep "com.netcrest.pado.eclipse_" | grep '\.jar' |  sed -e 's/.*padogrid_//' |  grep "\/com.netcrest.pado.eclipse_.*" | sed -e 's/\.jar.*//')
-        if [ "$versions" != "" ]; then
-           ALL_PADOECLIPSE_VERSIONS="$ALL_PADOECLIPSE_VERSIONS $versions"
-        fi
-     done
-  fi
-  unique_words "$ALL_PADOECLIPSE_VERSIONS"
+   local is_next_page="true"
+   local page=1
+   local ALL_PADOECLIPSE_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${PADOECLIPSE_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "com.netcrest.pado.eclipse_" | grep '\.jar' |  sed -e 's/.*padogrid_//' |  grep "\/com.netcrest.pado.eclipse_.*" | sed -e 's/\.jar.*//')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -sL $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url  | grep "com.netcrest.pado.eclipse_" | grep '\.jar' |  sed -e 's/.*padogrid_//' |  grep "\/com.netcrest.pado.eclipse_.*" | sed -e 's/\.jar.*//')
+               if [ "$versions" != "" ]; then
+                  ALL_PADOECLIPSE_VERSIONS="$ALL_PADOECLIPSE_VERSIONS $versions"
+               fi
+            done
+         fi
+      else
+         ALL_PADOECLIPSE_VERSIONS="$ALL_PADOECLIPSE_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
+   unique_words "$ALL_PADOECLIPSE_VERSIONS"
 }
-
+ 
 function getDownloadableGeodeVersions
 {
    local ALL_GEODE_VERSIONS=$(curl -sL $GEODE_DOWNLOAD_URL |grep img | grep -v unknown | grep -v incubating | sed -e 's/.*>1./1./' -e 's/\/.*//' | grep -v img)
@@ -594,45 +667,51 @@ function getDownloadableHazelcastEnterpriseVersions
 
 function getDownloadableHazelcastOssVersions
 {
-  local ALL_HAZELCAST_OSS_VERSIONS_5=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "Platform 5" | sed -e 's/.*Platform 5/5/' -e 's/<.*//')
-  local ALL_HAZELCAST_OSS_VERSIONS_5_SLIM=""
-  for i in $ALL_HAZELCAST_OSS_VERSIONS_5; do
-     ALL_HAZELCAST_OSS_VERSIONS_5_SLIM="$ALL_HAZELCAST_OSS_VERSIONS_5_SLIM $i-slim"
-  done
-  local ALL_HAZELCAST_OSS_VERSIONS_4=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
-  local ALL_HAZELCAST_OSS_VERSIONS_3=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 3" | sed -e 's/.*IMDG 3/3/' -e 's/<.*//')
-  ALL_HAZELCAST_OSS_VERSIONS="$ALL_HAZELCAST_OSS_VERSIONS_5 $ALL_HAZELCAST_OSS_VERSIONS_5_SLIM $ALL_HAZELCAST_OSS_VERSIONS_4 $ALL_HAZELCAST_OSS_VERSIONS_3"
-  unique_words "$ALL_HAZELCAST_OSS_VERSIONS"
+   local ALL_HAZELCAST_OSS_VERSIONS_5=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "Platform 5" | sed -e 's/.*Platform 5/5/' -e 's/<.*//')
+   local ALL_HAZELCAST_OSS_VERSIONS_5_SLIM=""
+   for i in $ALL_HAZELCAST_OSS_VERSIONS_5; do
+      ALL_HAZELCAST_OSS_VERSIONS_5_SLIM="$ALL_HAZELCAST_OSS_VERSIONS_5_SLIM $i-slim"
+   done
+   local ALL_HAZELCAST_OSS_VERSIONS_4=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 4" | sed -e 's/.*IMDG 4/4/' -e 's/<.*//')
+   local ALL_HAZELCAST_OSS_VERSIONS_3=$(curl -sL $HAZELCAST_OSS_DOWNLOAD_URL | grep "IMDG 3" | sed -e 's/.*IMDG 3/3/' -e 's/<.*//')
+   ALL_HAZELCAST_OSS_VERSIONS="$ALL_HAZELCAST_OSS_VERSIONS_5 $ALL_HAZELCAST_OSS_VERSIONS_5_SLIM $ALL_HAZELCAST_OSS_VERSIONS_4 $ALL_HAZELCAST_OSS_VERSIONS_3"
+   unique_words "$ALL_HAZELCAST_OSS_VERSIONS"
 }
 
 function getDownloadableHazelcastManCenterVersions
 {
-  local ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(curl -sL $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL | grep hazelcast-management-center | grep "tar.gz" |  sed -e 's/.*hazelcast-management-center-//' -e 's/\.tar\.gz.*//')
-  if [ "$ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS" == "" ]; then
-     local assets_urls=$(curl -s $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL | grep hazelcast-management-center | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-     for url in $assets_urls; do
-        versions=$(curl -sL $url  | grep hazelcast-management-center | grep "tar.gz" |  sed -e 's/.*hazelcast-management-center-//' -e 's/\.tar\.gz.*//')
-        if [ "$versions" != "" ]; then
-           ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS="$ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS $versions"
-        fi
-     done
-  fi
-  unique_words "$ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS"
+   local ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(curl -sL $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL | grep hazelcast-management-center | grep "tar.gz" |  sed -e 's/.*hazelcast-management-center-//' -e 's/\.tar\.gz.*//')
+   curl -sL "https://hazelcast.com/open-source-projects/downloads/archives/#hazelcast-management-center" | grep "management-center" | grep tar.gz | sed -e 's/.*management-center-//' -e 's/.tar.gz.*//'
+   unique_words "$ALL_HAZELCAST_MANAGEMENT_CENTER_VERSIONS"
 }
 
 function getDownloadableHazelcastDesktopVersions
 {
-  local ALL_HAZELCAST_DESKTOP_VERSIONS=$(curl -s $HAZELCAST_DESKTOP_DOWNLOAD_URL | grep "hazelcast-desktop_" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-desktop_//' -e 's/\.tar\.gz.*//')
-  if [ "$ALL_HAZELCAST_DESKTOP_VERSIONS" == "" ]; then
-     local assets_urls=$(curl -s $HAZELCAST_DESKTOP_DOWNLOAD_URL | grep "hazelcast-desktop_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-     for url in $assets_urls; do
-        versions=$(curl -sL $url  | grep "hazelcast-desktop_" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-desktop_//' -e 's/\.tar\.gz.*//')
-        if [ "$versions" != "" ]; then
-           ALL_HAZELCAST_DESKTOP_VERSIONS="$ALL_HAZELCAST_DESKTOP_VERSIONS $versions"
-        fi
-     done
-  fi
-  unique_words "$ALL_HAZELCAST_DESKTOP_VERSIONS"
+   local is_next_page="true"
+   local page=1
+   local ALL_HAZELCAST_DESKTOP_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${HAZELCAST_DESKTOP_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -s $download_url | grep "hazelcast-desktop_" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-desktop_//' -e 's/\.tar\.gz.*//')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -sL $download_url | grep "padogrid_" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url  | grep "hazelcast-desktop_" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-desktop_//' -e 's/\.tar\.gz.*//')
+               if [ "$versions" != "" ]; then
+                  ALL_HAZELCAST_DESKTOP_VERSIONS="$ALL_HAZELCAST_DESKTOP_VERSIONS $versions"
+               fi
+            done
+         fi
+      else
+         ALL_HAZELCAST_DESKTOP_VERSIONS="$ALL_HAZELCAST_DESKTOP_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
+   unique_words "$ALL_HAZELCAST_DESKTOP_VERSIONS"
 }
 
 function getDownloadableJetEnterpriseVersions
@@ -643,37 +722,79 @@ function getDownloadableJetEnterpriseVersions
 
 function getDownloadableJetOssVersions
 {
-   local ALL_JET_OSS_VERSIONS=$(curl -sL $JET_OSS_DOWNLOAD_URL | grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
-   if [ "$ALL_JET_OSS_VERSIONS" == "" ]; then
-      local assets_urls=$(curl -s $JET_OSS_DOWNLOAD_URL | grep "hazelcast-jet-" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-      for url in $assets_urls; do
-         versions=$(curl -sL $url  | grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
-         if [ "$versions" != "" ]; then
-            ALL_JET_OSS_VERSIONS="$ALL_JET_OSS_VERSIONS $versions"
+   local is_next_page="true"
+   local page=1
+   local ALL_JET_OSS_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${JET_OSS_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -s $download_url | grep "hazelcast-jet-" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url  | grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
+               if [ "$versions" != "" ]; then
+                  ALL_JET_OSS_VERSIONS="$ALL_JET_OSS_VERSIONS $versions"
+               fi
+            done
          fi
-      done
-   fi
+      else
+         ALL_JET_OSS_VERSIONS="$ALL_JET_OSS_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
    unique_words "$ALL_JET_OSS_VERSIONS"
 }
 
 function getDownloadableRedisVersions
 {
-   local ALL_REDIS_VERSIONS=$(curl -sL $REDIS_DOWNLOAD_URL |  grep '\.tar\.gz' | sed -e 's/\.tar.*$//' -e 's/.*\///')
+   local is_next_page="true"
+   local page=1
+   local ALL_REDIS_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${REDIS_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url |  grep '\.tar\.gz' | sed -e 's/\.tar.*$//' -e 's/.*\///')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         # Redis has source distributions only. No assets sub-url.
+         is_next_page="false"
+      else
+         ALL_REDIS_VERSIONS="$ALL_REDIS_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
    unique_words "$ALL_REDIS_VERSIONS"
 }
 
 function getDownloadableSnappyDataVersions
 {
-   local ALL_SNAPPYDATA_VERSIONS=$(curl -sL $SNAPPYDATA_DOWNLOAD_URL | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
-   if [ "$ALL_SNAPPYDATA_VERSIONS" == "" ]; then
-      local assets_urls=$(curl -s $SNAPPYDATA_DOWNLOAD_URL | grep "snappydata-" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-      for url in $assets_urls; do
-         versions=$(curl -sL $url  | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
-         if [ "$versions" != "" ]; then
-            ALL_SNAPPYDATA_VERSIONS="$ALL_SNAPPYDATA_VERSIONS $versions"
+   local is_next_page="true"
+   local page=1
+   local ALL_SNAPPYDATA_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${SNAPPYDATA_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      if [ "$PAGE_VERSIONS" == "" ]; then
+         local assets_urls=$(curl -s $download_url | grep "snappydata-" | grep "assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
+         if [ "$assets_urls" == "" ]; then
+            is_next_page="false"
+         else
+            for url in $assets_urls; do
+               versions=$(curl -sL $url  | grep "snappydata-" | grep "tar.gz" | grep -v ec2 | sed -e 's/.*snappydata-//' -e 's/\.tar\.gz.*//')
+               if [ "$versions" != "" ]; then
+                  ALL_SNAPPYDATA_VERSIONS="$ALL_SNAPPYDATA_VERSIONS $versions"
+               fi
+            done
          fi
-      done
-   fi
+      else
+         ALL_SNAPPYDATA_VERSIONS="$ALL_SNAPPYDATA_VERSIONS $PAGE_VERSIONS"
+      fi
+      let page=page+1
+   done
    unique_words "$ALL_SNAPPYDATA_VERSIONS"
 }
 
@@ -1036,7 +1157,9 @@ echo "Scanning downloadable products... Please wait."
 echo ""
 
 # Turn off the enter key while waiting
-stty igncr
+if [ "NO_STTY_SPECIFIED" != "true" ]; then
+   stty igncr
+fi
 
 PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions)"))
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
@@ -1055,28 +1178,28 @@ if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
    GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
-   HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastEnterpriseVersions))
+   HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastEnterpriseVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
-   HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastOssVersions))
+   HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastOssVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
-   HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastManCenterVersions))
+   HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastManCenterVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
-   HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(getDownloadableHazelcastDesktopVersions))
+   HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastDesktopVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(getDownloadableJetEnterpriseVersions))
+   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetEnterpriseVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
-   JET_OSS_DOWNLOAD_VERSIONS=($(getDownloadableJetOssVersions))
+   JET_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetOssVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
-   REDIS_DOWNLOAD_VERSIONS=($(getDownloadableRedisVersions))
+   REDIS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableRedisVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
-   SNAPPYDATA_DOWNLOAD_VERSIONS=($(getDownloadableSnappyDataVersions))
+   SNAPPYDATA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSnappyDataVersions)"))
 fi
 if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
    SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
@@ -1089,7 +1212,9 @@ if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
 fi
 
 # Enable the enter key
-stty -igncr
+if [ "NO_STTY_SPECIFIED" != "true" ]; then
+   stty -igncr
+fi
 
 # Version variables set by user inputs
 PADOGRID_VERSION=""
