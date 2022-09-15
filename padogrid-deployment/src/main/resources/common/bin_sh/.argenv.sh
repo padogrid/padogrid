@@ -145,6 +145,7 @@ DEBUG=
 CLEAN=
 LOCAL=false
 QUIET=false
+NO_STTY_SPECIFIED=false
 SHORT=false
 LONG=false
 DATASOURCE=
@@ -388,6 +389,8 @@ do
          LOCAL=true
       elif [ "$i" == "-quiet" ]; then
          QUIET=true
+      elif [ "$i" == "-no-stty" ]; then
+         NO_STTY_SPECIFIED=true
       elif [ "$i" == "-short" ]; then
          SHORT=true
       elif [ "$i" == "-long" ]; then
