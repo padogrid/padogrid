@@ -118,7 +118,7 @@ function appendSpaces
          padded_str="$padded_str "
       done
    fi
-   echo "      $padded_str"
+   echo "$padded_str"
 }
 
 #
@@ -130,11 +130,23 @@ function displayCommands
 {
    local dir="$1"
    local name_part="$2"
+
+   local command_len=26
+
    pushd $dir > /dev/null 2>&1
    local COMMANDS=$(ls $name_part)
    for i in $COMMANDS; do
-      COMMAND=$(appendSpaces $i 26)
-      echo "$COMMAND $(grep "^. *\$EXECUTABLE - " $i | sed 's/^.*\$EXECUTABLE - //')"
+      if [[ "$i" == *".sh" ]]; then
+         continue;
+      fi
+      COMMAND=$(appendSpaces $i $command_len)
+      local description="$(echo $spaces | sed 's/1//g')$(grep "^. *\$EXECUTABLE - " $i | sed 's/^.*\$EXECUTABLE - //')"
+      if [ ${#i} -gt $command_len ]; then
+         echo "      $COMMAND"
+         echo "                                 $description"
+      else
+         echo "      $COMMAND $description"
+      fi
    done
    popd > /dev/null 2>&1
 }
