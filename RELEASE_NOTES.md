@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.21-SNAPSHOT
 
-### Release Date: 09/14/22
+### Release Date: 09/16/22
 
-- Initial snapshot.
+- Fixed backward compatibility issues introduced by multitenancy. The previous release introduced support for multitenancy which moved workspace metadata to `~/.padogrid`. This broke the bundles that rely on workspace embedded metadata. Please upgrade to v0.9.21 to remedy this issue.
 
 ---
 
