@@ -1410,6 +1410,14 @@ function retrieveRweEnvFile
    local HOME_RWE_DIR="$HOME/.padogrid/workspaces/$RWE"
    local HOME_RWEENV_FILE="$HOME_RWE_DIR/rweenv.sh"
 
+   # For backward compatibility
+   if [ ! -d "$HOME_RWE_DIR" ]; then
+      if [ -f "$__RWE_PATH/rweenv.sh" ]; then
+         mkdir -p "$HOME_RWE_DIR"
+         cp "$__RWE_PATH/.rwe/rweenv.sh" "$HOME_RWE_DIR/"
+      fi
+   fi
+
    if [ -f "$HOME_RWEENV_FILE" ]; then
       . "$HOME_RWEENV_FILE"
       if [ "$WORKSPACE" != "" ]; then
@@ -1475,6 +1483,14 @@ function retrieveWorkspaceEnvFile
    local WORKSPACE=$(basename "$__WORKSPACE_PATH")
    local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
    local HOME_WORKSPACEENV_FILE="$HOME_WORKSPACE_DIR/workspaceenv.sh"
+
+   # For backward compatibility
+   if [ ! -d "$HOME_WORKSPACE_DIR" ]; then
+      if [ -f "$__WORKSPACE_PATH/.workspace/workspaceenv.sh" ]; then
+         mkdir -p "$HOME_WORKSPACE_DIR"
+         cp "$__WORKSPACE_PATH/.workspace/workspaceenv.sh" "$HOME_WORKSPACE_DIR/"
+      fi
+   fi
 
    if [ -f "$HOME_WORKSPACEENV_FILE" ]; then
       . "$HOME_WORKSPACEENV_FILE"
@@ -1583,6 +1599,14 @@ function retrieveClusterEnvFile
    local RWE=$(basename $(dirname "$WORKSPACE_DIR"))
    local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
    local HOME_CLUSTERENV_FILE="$HOME_WORKSPACE_DIR/clusters/$__CLUSTER/clusterenv.sh"
+
+   # For backward compatibility
+   if [ ! -d "$HOME_WORKSPACE_DIR/clusters/$__CLUSTER" ]; then
+      if [ -f "$__CLUSTER_PATH/.cluster/clusterenv.sh" ]; then
+         mkdir -p "$HOME_WORKSPACE_DIR/clusters/$__CLUSTER"
+         cp "$__CLUSTER_PATH/.cluster/clusterenv.sh" "$HOME_WORKSPACE_DIR/clusters/$__CLUSTER/"
+      fi
+   fi
 
    if [ -f "$HOME_CLUSTERENV_FILE" ]; then
       . "$HOME_CLUSTERENV_FILE"
