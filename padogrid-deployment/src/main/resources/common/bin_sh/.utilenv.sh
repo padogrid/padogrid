@@ -2044,17 +2044,33 @@ function switch_group
 # Returns the current cluster group. It returns an empty string if the current cluster
 # does not belong to any group.
 #
+# @required PADOGRID_WORKSPACES_HOME RWE path.
+# @param workspace Optional workspace name. If not specified, then the current workspace name is assumed.
+# @param cluster   Optional cluster name. If not specified, then the current cluster name is assumed.
+#
 function getCurrentClusterGroup
 {
-   local GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
-   local GROUP_NAMES=$(list_groups)
+   local WORKSPACE="$1"
+   local CLUSTER_NAME="$2"
+   if [ "$CLUSTER_NAME" == "" ]; then
+      CLUSTER_NAME=$CLUSTER
+   fi
+   local GROUPS_DIR
+   local GROUP_NAMES
+   if [ "$WORKSPACE" == "" ]; then
+      GROUPS_DIR="$PADOGRID_WORKSPACE/groups"
+      GROUP_NAMES=$(list_groups)
+   else
+      GROUPS_DIR="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/groups"
+      GROUP_NAMES=$(list_groups -workspace $WORKSPACE)
+   fi
    local GROUP=""
    for __GROUP in $GROUP_NAMES; do
       GROUP_FILE="$GROUPS_DIR/$__GROUP/etc/group.properties"
       local CLUSTER_NAMES_COMMAS=$(getProperty "$GROUP_FILE" "group.cluster.names")
       local CLUSTER_NAMES=$(echo $CLUSTER_NAMES_COMMAS | sed 's/,/ /g')
       for i in $CLUSTER_NAMES; do
-         if [ "$i" == "$CLUSTER" ]; then
+         if [ "$i" == "$CLUSTER_NAME" ]; then
             GROUP=$__GROUP
             break;
          fi

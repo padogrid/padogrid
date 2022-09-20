@@ -285,7 +285,7 @@ __padogrid_complete()
       elif [ "$command" == "uninstall_product" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS gemfire"
       elif [ "$command" == "update_products" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire jet-mc"
+         type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -975,7 +975,7 @@ __command_complete()
       elif [ "$command" == "uninstall_product" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS gemfire"
       elif [ "$command" == "update_products" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire jet-mc"
+         type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
       else
          is_path="true"
       fi

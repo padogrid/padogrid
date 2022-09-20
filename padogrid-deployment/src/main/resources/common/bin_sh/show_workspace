@@ -71,6 +71,11 @@ WORKSPACE=$(basename  "$WORKSPACE_DIR")
 WORKSPACE_INFO=$(getWorkspaceInfoList $WORKSPACE)
 RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
 SWITCH_WORKSPACE_COMMAND="switch_rwe $RWE_NAME $WORKSPACE"
+
+if [ "$GROUP" == "" ]; then
+   GROUP=$(getCurrentClusterGroup)
+fi
+
 echo ""
 echo "Workspace:"
 echo "   $WORKSPACE [$WORKSPACE_INFO]"
@@ -87,7 +92,7 @@ echo "   VM"
 else
 echo "   local"
 fi
-NODES="apps clusters docker k8s pods"
+NODES="apps clusters docker groups k8s pods"
 for NODE in $NODES; do
    ITEMS=$(getClusters "$NODE" $WORKSPACE_ARG)
    if [ "$ITEMS" != "" ]; then
@@ -95,6 +100,8 @@ for NODE in $NODES; do
       echo "$NODE"
       if [ "$NODE" == "clusters" ]; then
          showTree "$ITEMS" "$CLUSTER"
+      elif [ "$NODE" == "groups" ]; then
+         showTree "$ITEMS" "$GROUP"
       elif [ "$NODE" == "pods" ]; then
          showTree "$ITEMS" "$POD"
       else

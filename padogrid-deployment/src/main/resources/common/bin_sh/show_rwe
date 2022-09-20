@@ -124,6 +124,9 @@ function displayTreeNode
 {
    TOP_NODE="$1"
    IS_LAST_NON_EMPTY_NODE="$2"
+   if [ "$IS_CURRENT_WORKSPACE" == "true" ]; then
+      GROUP=$(getCurrentClusterGroup)
+   fi
    if [ -d "$__RWE_PATH/$WORKSPACE/$TOP_NODE" ]; then
       ITEMS=`ls $__RWE_PATH/$WORKSPACE/$TOP_NODE`
       ITEMS=$(removeTokens "$ITEMS" "initenv.sh setenv.sh")
@@ -142,8 +145,16 @@ function displayTreeNode
       fi
       local CHilight=""
       for ((i = 0; i < ${#ITEMS[@]}; i++)); do
-         if [ "$IS_CURRENT_WORKSPACE" == "true" ] && [ "$TOP_NODE" == "clusters" ] && [ "${ITEMS[$i]}" == "$CLUSTER" ]; then 
-            CHilight="${CLightGreen}"
+         if [ "$IS_CURRENT_WORKSPACE" == "true" ]; then
+            if [ "$TOP_NODE" == "clusters" ] && [ "${ITEMS[$i]}" == "$CLUSTER" ]; then 
+               CHilight="${CGo}"
+            elif [ "$TOP_NODE" == "groups" ] && [ "${ITEMS[$i]}" == "$GROUP" ]; then 
+               CHilight="${CGo}"
+            elif [ "$TOP_NODE" == "pods" ] && [ "${ITEMS[$i]}" == "$POD" ]; then 
+               CHilight="${CGo}"
+            else
+               CHilight="${CNone}"
+            fi
          else
             CHilight="${CNone}"
          fi
@@ -171,7 +182,7 @@ for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
    WORKSPACE_INFO=$(getWorkspaceInfoList "$WORKSPACE" "$__RWE_PATH")
    if [ $j -lt $WORKSPACES_LAST_INDEX ]; then
       if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ] && [ "$PADOGRID_WORKSPACES_HOME" == "$__RWE_PATH" ]; then
-         echo -e "$TTee ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+         echo -e "$TTee ${CGo}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
 	 IS_CURRENT_WORKSPACE="true"
       else
          echo "$TTee $WORKSPACE [$WORKSPACE_INFO]"
@@ -180,7 +191,7 @@ for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
       LEADING_BAR="$TBar"
    else
       if [ "$WORKSPACE" == "$CURRENT_WORKSPACE" ] && [ "$PADOGRID_WORKSPACES_HOME" == "$__RWE_PATH" ]; then
-         echo -e "$TLel ${CLightGreen}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
+         echo -e "$TLel ${CGo}$WORKSPACE [$WORKSPACE_INFO]${CNone}"
 	 IS_CURRENT_WORKSPACE="true"
       else
          echo "$TLel $WORKSPACE [$WORKSPACE_INFO]"
@@ -189,7 +200,7 @@ for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
       LEADING_BAR=" "
    fi
 
-   NODES="apps clusters docker k8s pods"
+   NODES="apps clusters docker groups k8s pods"
    LAST_NON_EMPTY_NODE=""
    for NODE in $NODES; do
       IS_EMPTY=$(isTreeEmpty "$NODE")
