@@ -9,6 +9,7 @@ https://github.com/padogrid
 ### Release Date: 09/16/22
 
 - Fixed backward compatibility issues introduced by multitenancy. The previous release introduced support for multitenancy which moved workspace metadata to `~/.padogrid`. This broke the bundles that rely on workspace embedded metadata. Please upgrade to v0.9.21 to remedy this issue.
+- Added `groups` in tree views. The `show_workspace` and `show_rwe` commands now include `groups` in their views.
 
 ---
 
