@@ -80,29 +80,10 @@ fi
 RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
 WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
-# Determine if the workspace exists - Not used.
-WORKSPACE_LAYOUT=$(jupyter lab workspaces export $RWE_NAME | grep layout)
-if [ "$WORKSPACE_LAYOUT" == "" ]; then
-   NEW_WORKSPACE="true"
-else
-   NEW_WORKSPACE="false"
-fi
-
-# Create the default Jupyter workspace using the template.
-if [ ! -f $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json ]; then
-   if [ ! -d "$PADOGRID_WORKSPACES_HOME/.jupyter" ]; then
-      mkdir "$PADOGRID_WORKSPACES_HOME/.jupyter"
-   fi
-   sed -e "s/\${WORKSPACE}/${WORKSPACE_NAME}/g" \
-       -e "s/\${RWE}/$RWE_NAME/g" \
-       $PADOGRID_HOME/etc/jupyter/template-jupyter-workspace.json \
-       > $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json
-fi
-
 if [ "$HOST_SPECIFIED" == "true" ]; then
    IP_ADDRESS=$HOST
 else
-   IP_ADDRESS="localhost"
+   IP_ADDRESS="0.0.0.0"
 fi
 if [ "$IP_ADDRESS" == "" ]; then
    IP_ADDRESS=$(hostname)
@@ -114,14 +95,9 @@ fi
 
 JUPYTER_SERVERS=$(jupyter lab list | grep -v "Currently" | grep $PORT_NUMBER)
 
-# Import the workspace configuration file
-if [ -f $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json ]; then
-   jupyter lab workspaces import $PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json
-fi
-
 # Start the notebook server if is not running
 if [ "$JUPYTER_SERVERS" == "" ]; then
-   start_jupyter $@
+   start_jupyter -import $@
    sleep 3
 fi
 RWE_URL="http://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME"

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-host -port -?"
+   echo "-host -port -import -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Start Jupyter Notebook server
 
 SYNOPSIS
-   $EXECUTABLE [-host [ip_address]] [-port port_number] -?]
+   $EXECUTABLE [-host [ip_address]] [-port port_number] [-import] [-?]
 
 NOTES
    Jupyter commands are experimental and subject to change in future releases.
@@ -58,6 +58,9 @@ OPTIONS
 
    -port [port_number]
              The port the notebook server will listen on. Default: 8888
+
+   -import
+             If specified, then it imports the current workspace template.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -99,6 +102,36 @@ if [[ "$NOTEBOOK_SERVERS" == *"$PORT_NUMBER"* ]]; then
    echo >&2 -e "${CError}ERROR:${CNone} Notebook server already running. Command aborted."
    show_jupyter
    exit 1
+fi
+
+if [ "$IMPORT_SPECIFIED" == "true" ]; then
+   RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
+
+   # Determine if the workspace exists - Not used.
+   WORKSPACE_LAYOUT=$(jupyter lab workspaces export $RWE_NAME | grep layout)
+   if [ "$WORKSPACE_LAYOUT" == "" ]; then
+      NEW_WORKSPACE="true"
+   else
+      NEW_WORKSPACE="false"
+   fi
+
+   # Create the default Jupyter workspace using the template.
+   JUPYTER_WORKSPACE_FILE="$PADOGRID_WORKSPACES_HOME/.jupyter/${WORKSPACE_NAME}.json"
+   if [ ! -f "$JUPYTER_WORKSPACE_FILE" ]; then
+      if [ ! -d "$PADOGRID_WORKSPACES_HOME/.jupyter" ]; then
+         mkdir "$PADOGRID_WORKSPACES_HOME/.jupyter"
+      fi
+      sed -e "s/\${WORKSPACE}/${WORKSPACE_NAME}/g" \
+          -e "s/\${RWE}/$RWE_NAME/g" \
+          "$PADOGRID_HOME/etc/jupyter/template-jupyter-workspace.json" \
+          > "$JUPYTER_WORKSPACE_FILE"
+   fi
+
+   # Import the workspace configuration file
+   if [ -f "$JUPYTER_WORKSPACE_FILE" ]; then
+      jupyter lab workspaces import "$JUPYTER_WORKSPACE_FILE"
+   fi
 fi
 
 pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1

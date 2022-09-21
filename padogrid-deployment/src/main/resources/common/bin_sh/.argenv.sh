@@ -44,6 +44,7 @@ WORKSPACE_ARG=
 CHECKOUT_ARG=
 WORKSPACE_SPECIFIED=false
 CHECKOUT_SPECIFIED=false
+IMPORT_SPECIFIED=false
 JAVA_HOME_ARG=
 PATH_ARG=
 JAR_ARG=
@@ -341,6 +342,8 @@ do
          WORKSPACE_SPECIFIED=true
       elif [ "$i" == "-checkout" ]; then
          CHECKOUT_SPECIFIED=true
+      elif [ "$i" == "-import" ]; then
+         IMPORT_SPECIFIED=true
       elif [ "$i" == "-list" ]; then
          LIST=true
          LIST_SPECIFIED=true
