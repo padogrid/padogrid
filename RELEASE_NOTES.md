@@ -6,10 +6,11 @@ https://github.com/padogrid
 
 ## Version 0.9.21-SNAPSHOT
 
-### Release Date: 09/16/22
+### Release Date: 09/21/22
 
 - Fixed backward compatibility issues introduced by multitenancy. The previous release introduced support for multitenancy which moved workspace metadata to `~/.padogrid`. This broke the bundles that rely on workspace embedded metadata. Please upgrade to v0.9.21 to remedy this issue.
 - Added `groups` in tree views. The `show_workspace` and `show_rwe` commands now include `groups` in their views.
+- Updated Jupyter commands to comply with the latest JupyterLab (v3.4.7). JupyterLab is still evolving with many changes that are impacting PadoGrid. Some versions of JupyterLab found to be inconsistent with other versions in terms of import/export support. This releas of PadoGrid has been tested with JupyterLab v3.4.7.
 
 ---
 
