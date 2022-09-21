@@ -60,7 +60,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 	private String gemfirePropertyFile;
 	private String gemfireClientFile;
 	private String regionPath;
-	private Region regon;
+	private Region region;
 	private boolean isSmtEnabled = true;
 	private boolean isDeleteEnabled = true;
 	private String keyClassName;
@@ -181,7 +181,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 		System.setProperty(DebeziumKafkaSinkConnector.GEMFIRE_CLIENT_CONFIG_FILE_CONFIG, gemfireClientFile);
 
 		clientCache = new ClientCacheFactory().create();
-		regon = clientCache.getRegion(regionPath);
+		region = clientCache.getRegion(regionPath);
 	}
 	
 	private Object[] getFieldFromMap(Map keyMap) {
@@ -245,10 +245,14 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 
 			// Struct objects expected
 			System.out.println("*************************key:" + sinkRecord.key().getClass().toString());
-			System.out.println("*************************value:" + sinkRecord.value().getClass().toString());
 			System.out.println("sinkeRecord.key()=" + sinkRecord.key().toString());
-			System.out.println("sinkRecord.value()=" + sinkRecord.value().toString());
-
+			if (sinkRecord.value() == null) {
+				System.out.println("*************************value: null");
+			} else {
+				System.out.println("*************************value:" + sinkRecord.value().getClass().toString());
+				System.out.println("sinkRecord.value()=" + sinkRecord.value().toString());
+			}
+			
 			Object keyFieldValues[] = null;
 			Object valueFieldValues[] = null;
 			boolean isDelete;
@@ -312,7 +316,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				if (valueColumnNames == null) {
 					valueColumnNames = getColumnNames(valueStruct);
 				}
-				if (valueColumnNames != null) {
+				if (afterStruct != null && valueColumnNames != null) {
 					valueFieldValues = new Object[valueColumnNames.length];
 					Class<?> valueFieldTypes[] = objConverter.getValueFielTypes();
 					for (int j = 0; j < valueColumnNames.length; j++) {
@@ -345,7 +349,7 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 				System.out.println("key = " + key);
 			}
 			if (isDeleteEnabled && isDelete) {
-				regon.destroy(key);
+				region.destroy(key);
 				continue;
 			}
 
@@ -368,12 +372,12 @@ public class DebeziumKafkaSinkTask extends SinkTask {
 			keyValueMap.put(key, value);
 			count++;
 			if (count % 100 == 0) {
-				regon.putAll(keyValueMap);
+				region.putAll(keyValueMap);
 				keyValueMap.clear();
 			}
 		}
 		if (count % 100 > 0) {
-			regon.putAll(keyValueMap);
+			region.putAll(keyValueMap);
 			keyValueMap.clear();
 		}
 	}
