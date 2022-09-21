@@ -82,26 +82,36 @@ if [ "$PORT_NUMBER" == "" ]; then
 fi
 
 echo ""
+JUPYTER_FOUND="false"
 if [ "$ALL" == "true" ]; then
    JUPYTER_PORTS=$(jupyter notebook list | grep token | sed -e 's/\/\?token.*//' -e 's/.*://')
    JUPYTER_PORTS=$(unique_words "$JUPYTER_PORTS")
    for PORT_NUMBER in $JUPYTER_PORTS; do
       jupyter notebook stop $PORT_NUMBER
       echo "Jupyter notebook server stopped: [$PORT_NUMBER]"
+      JUPYTER_FOUND="true"
    done
    JUPYTER_PIDS=$(ps -ef | grep jupyter | grep "\-\-no-browser" | grep -v grep | awk '{print $2}')
    JUPYTER_PIDS="$JUPYTER_PIDS $(ps -ef | grep ipykernel_launcher | grep -v grep | awk '{print $2}')"
    JUPYTER_PIDS=$(unique_words "$JUPYTER_PIDS")
    if [ "$JUPYTER_PIDS" != "" ]; then
       kill -9 $JUPYTER_PIDS
+      JUPYTER_FOUND="true"
+   fi
+   if [ "$JUPYTER_FOUND" = "true" ]; then
+      echo "All Jupyter notebook server(s) stopped."
+   else
+      echo "Jupyter notebook servers not running."
    fi
 else
    JUPYTER_PIDS=$(ps -ef | grep jupyter | grep "\-\-no-browser" | grep $PORT_NUMBER | grep -v grep | awk '{print $2}')
    JUPYTER_PIDS=$(unique_words "$JUPYTER_PIDS")
    if [ "$JUPYTER_PIDS" != "" ]; then
       kill -9 $JUPYTER_PIDS
+      echo "Jupyter notebook server stopped: [$PORT_NUMBER]"
+   else
+      echo "Jupyter notebook server [$PORT_NUMBER] not running."
    fi
-   echo "Jupyter notebook server stopped: [$PORT_NUMBER]"
 fi
 echo ""
 
