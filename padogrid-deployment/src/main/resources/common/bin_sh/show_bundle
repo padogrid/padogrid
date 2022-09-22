@@ -359,20 +359,46 @@ else
          BUNDLE_FOUND="true"
       fi
    else
-      GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
-      BUNDLE_REPOS="https://github.com/$GITHUB_USER?tab=repositories"
-      RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
-      HREF=$(curl -sS $BUNDLE_REPOS | grep "\/$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-")
-      BUNDLE_LIST=""
-      for i in $HREF; do
-         if [[ $i == *href=* ]]; then
-            BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
-            BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
-         fi
-      done
-      for BUNDLE_NAME in $BUNDLE_LIST; do
-         if [ "$BUNDLE_NAME" == "$BUNDLE_FILE_PATH" ]; then
-            BUNDLE_FOUND="true"
+      # GitHub
+      for GITHUB_USER in $GITHUB_USERS; do
+         GITHUB_USER_HOME="$GITHUB_BASE_URL/$GITHUB_USER"
+         BUNDLE_REPOS="$GITHUB_USER_HOME?tab=repositories&sort=true&page="
+         RAW_BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER"
+         PAGE_NUM=1
+         NEXT_URL=${BUNDLE_REPOS}$PAGE_NUM
+         while [ "$NEXT_URL" != "" ]; do
+            BUFFER=$(curl -sSL $NEXT_URL)
+            # Look for "Next" link. If not found then this is the last page.
+            HREF=$(echo "$BUFFER" | grep "Next" | sed -e 's/.*href="//' -e 's/">Next.*$//')
+            let PAGE_NUM=PAGE_NUM+1
+            NEXT_URL=""
+            if [ "$HREF" != "" ]; then
+               NEXT_URL=${BUNDLE_REPOS}$PAGE_NUM
+            fi
+            for BUNDLE_PRODUCT in $BUNDLE_PRODUCTS; do
+               HREF=$(echo "$BUFFER" | grep "\/$GITHUB_USER/bundle-${BUNDLE_PRODUCT}\-")
+               BUNDLE_LIST=""
+               for i in $HREF; do
+                  if [[ $i == *href=* ]]; then
+                      BUNDLE_NAME=$(echo $i | sed -e "s/.*href=\"//" -e  "s/\"//g" -e "s/\/$GITHUB_USER\///")
+                      if [[ $BUNDLE_NAME != *\/* ]]; then 
+                         BUNDLE_LIST="$BUNDLE_LIST $BUNDLE_NAME"
+                      fi
+                  fi
+               done
+               for BUNDLE_NAME in $BUNDLE_LIST; do
+                  if [ "$BUNDLE_NAME" == "$BUNDLE_FILE_PATH" ]; then
+                     BUNDLE_FOUND="true"
+                     break;
+                  fi
+               done
+            done
+            if [ "$BUNDLE_FOUND" == "true" ]; then
+               break;
+            fi
+         done
+         if [ "$BUNDLE_FOUND" == "true" ]; then
+            break;
          fi
       done
    fi
