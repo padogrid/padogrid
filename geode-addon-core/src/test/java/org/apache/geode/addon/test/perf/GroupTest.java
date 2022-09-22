@@ -165,16 +165,17 @@ public class GroupTest implements Constants {
 	private void init(boolean runDb) throws Exception {
 		if (runDb == false) {
 			clientCache = new ClientCacheFactory().create();
-		}
-		// Get data structures
-		for (Operation operation : operationMap.values()) {
-			switch (operation.ds) {
-			case map:
-			case region:
-				operation.region = clientCache.getRegion(operation.dsName);
-				break;
-			default:
-				break;
+
+			// Get data structures
+			for (Operation operation : operationMap.values()) {
+				switch (operation.ds) {
+				case map:
+				case region:
+					operation.region = clientCache.getRegion(operation.dsName);
+					break;
+				default:
+					break;
+				}
 			}
 		}
 	}
