@@ -13,6 +13,7 @@ https://github.com/padogrid
 - Updated Jupyter commands to comply with the latest JupyterLab (v3.4.7). JupyterLab is still evolving with many changes that are impacting PadoGrid. Some versions of JupyterLab found to be inconsistent with other versions in terms of import/export support. This releas of PadoGrid has been tested with JupyterLab v3.4.7.
 - Fixed a delete bug in Geode `DebeziumKafkaSinkTask` that generated NPE.
 - Fixed a `test_group` bug in Geode perf_test that threw NPE when ingesting mock data into database.
+- Fixed the wrong VM workspace name set in `vmenv.sh` by `install_bundle`. `vmenv.sh` was introduced in v0.9.20 which holds VM specific variables. The `VM_PADOGRID_WORKSPACE` variable was incorrectly set if the `-workspace` or `-checkout` option specified for the `install_bundle` commadn.
 
 ---
 
