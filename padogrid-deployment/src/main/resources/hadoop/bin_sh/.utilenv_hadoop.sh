@@ -49,9 +49,9 @@ function getNameNodePid
    local namenodes
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       if [ "$__RWE" == "" ]; then
-         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
       else
-         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
       fi
    else
       if [ "$__RWE" == "" ]; then
@@ -59,14 +59,14 @@ function getNameNodePid
          if [[ "$OS_NAME" == "CYGWIN"* ]]; then
             local namenodes="$(WMIC path win32_process get Caption,Processid,Commandline |grep java | grep pado.vm.id=$__NAMENODE | grep "padogrid.workspace=$__WORKSPACE"  | grep -v grep | awk '{print $(NF-1)}')"
          else
-            local namenodes="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep -v grep | awk '{print $1}')"
+            local namenodes="$(ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep -v grep | awk '{print $1}')"
          fi
       else
          # Use eval to handle commands with spaces
          if [[ "$OS_NAME" == "CYGWIN"* ]]; then
             local namenodes="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep pado.vm.id=$__NAMENODE | grep "padogrid.workspace=$__WORKSPACE" | grep "padogrid.rwe=$__RWE" | grep -v grep | awk '{print $(NF-1)}')"
          else
-            local namenodes="$(ps -eo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
+            local namenodes="$(ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
          fi
       fi
    fi
@@ -97,9 +97,9 @@ function getVmNameNodePid
    local __RWE=$4
 
    if [ "$__RWE" == "" ]; then
-      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
    fi
    spids=""
    for j in $namenodes; do
