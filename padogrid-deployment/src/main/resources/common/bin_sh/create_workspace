@@ -149,13 +149,13 @@ fi
 # 
 # Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
 #
-if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+if [ "$PADOGRID_WORKSPACES_HOME" != "" ]; then
+   PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+elif [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
    if [ "$PADOGRID_HOME" == "" ]; then
       PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
-   else
-      PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
    fi
-fi      
+fi
 
 if [ "$JAVA_HOME_ARG" == "" ]; then
    JAVA_HOME_ARG="$JAVA_HOME"
@@ -579,6 +579,7 @@ mkdir -p $WORKSPACE_DIR/bundles
 mkdir -p $WORKSPACE_DIR/k8s
 mkdir -p $WORKSPACE_DIR/docker
 
+echo debug: 1 VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE
 if [ "$VM_PRIVATE_KEY_FILE" != "" ] && [ -f $VM_PRIVATE_KEY_FILE ]; then
    __VM_PRIVATE_FILE_NAME=$(basename "$VM_PRIVATE_KEY_FILE")
    cp "$VM_PRIVATE_KEY_FILE" "$WORKSPACE_DIR/$__VM_PRIVATE_FILE_NAME"

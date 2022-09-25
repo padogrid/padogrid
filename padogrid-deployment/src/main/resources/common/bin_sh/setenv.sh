@@ -50,11 +50,11 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 #
 # Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
 #
-if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+if [ "$PADOGRID_WORKSPACES_HOME" != "" ]; then
+   PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+elif [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
    if [ "$PADOGRID_HOME" == "" ]; then
-      export PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
-   else
-      export PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+      PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
    fi
 fi
 
