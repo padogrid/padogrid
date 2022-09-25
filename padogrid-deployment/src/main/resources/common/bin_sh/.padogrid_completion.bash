@@ -340,8 +340,12 @@ __padogrid_complete()
    -host)
       if [ "$command" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
-      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
-         type_list="localhost `hostname`"
+      fi
+      ;;
+
+   -ip)
+      if [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
+         type_list="0.0.0.0 $(getHostIpAddresses)"
       fi
       ;;
 
@@ -1049,8 +1053,11 @@ __command_complete()
    -host)
       if [ "$command" == "create_docker" ]; then
          type_list="$(getHostIPv4List) host.docker.internal"
-      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
-         type_list="localhost `hostname`"
+      fi
+      ;;
+   -ip)
+      if [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
+         type_list="0.0.0.0 $(getHostIpAddresses)"
       fi
       ;;
    -user)

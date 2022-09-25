@@ -4256,3 +4256,11 @@ function getVmProductArray
       fi
    done
 }
+
+#
+# Returns a space-sparated list of this host's IP addresses
+#
+function getHostIpAddresses
+{
+   echo $(ifconfig | grep inet | grep netmask | awk '{print $2}' | sort)
+}

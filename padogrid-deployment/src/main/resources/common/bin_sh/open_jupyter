@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-host -port -?"
+   echo "-ip -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,18 +41,18 @@ NAME
    $EXECUTABLE - Open the current RWE JupyterLab workspace
 
 SYNOPSIS
-   $EXECUTABLE [-host [ip_address]] [-port port_number] [-?]
+   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-?]
 
 DESCRIPTION
    Opens the current RWE JupyterLab workspace. It starts a Jupyter Notebook server if it is not
-   running. If a Jupyter Notebook server is already running, then the '-host' '-port' options are
+   running. If a Jupyter Notebook server is already running, then the '-ip' '-port' options are
    ignored.
 
 OPTIONS
-   -host [ip_address]
+   -ip [ip_address]
              The IP address the notebook server will listen on.  If ip_address is not 
-             specified then the host name is assigned. This option is ignored if the
-             notebook server is already running. Default: localhost
+             specified then 0.0.0.0 is assigned. This option is ignored if the
+             notebook server is already running. Default: 0.0.0.0
 
    -port [port_number]
              The port the notebook server will listen on. Default: 8888
@@ -61,7 +61,7 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -host localhost -port 8888
+   $EXECUTABLE -ip 0.0.0.0 -port 8888
 
 EOF
 fi
@@ -80,14 +80,10 @@ fi
 RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
 WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
-if [ "$HOST_SPECIFIED" == "true" ]; then
-   IP_ADDRESS=$HOST
-else
+if [ "$IP_ADDRESS" == "" ]; then
    IP_ADDRESS="0.0.0.0"
 fi
-if [ "$IP_ADDRESS" == "" ]; then
-   IP_ADDRESS=$(hostname)
-fi
+
 PORT_NUMBER="$PORT_ARG"
 if [ "$PORT_NUMBER" == "" ]; then
    PORT_NUMBER="8888"

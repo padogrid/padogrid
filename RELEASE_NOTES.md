@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.21-SNAPSHOT
 
-### Release Date: 09/22/22
+### Release Date: 09/25/22
 
 - Fixed backward compatibility issues introduced by multitenancy. The previous release introduced support for multitenancy which moved workspace metadata to `~/.padogrid`. This broke the bundles that rely on workspace embedded metadata. Please upgrade to v0.9.21 to remedy this issue.
 - Added `groups` in tree views. The `show_workspace` and `show_rwe` commands now include `groups` in their views.
@@ -14,6 +14,7 @@ https://github.com/padogrid
 - Fixed a delete bug in Geode `DebeziumKafkaSinkTask` that generated NPE.
 - Fixed a `test_group` bug in Geode perf_test that threw NPE when ingesting mock data into database.
 - Fixed the wrong VM workspace name set in `vmenv.sh` by `install_bundle`. `vmenv.sh` was introduced in v0.9.20 which holds VM specific variables. The `VM_PADOGRID_WORKSPACE` variable was incorrectly set if the `-workspace` or `-checkout` option specified for the `install_bundle` commadn.
+- Replaced the option `-host` with `-ip` in the `open_jupyter` and `start_jupyter` commands to bind a specific IP address.
 
 ---
 

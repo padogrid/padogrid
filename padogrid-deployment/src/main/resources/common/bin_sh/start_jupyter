@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-host -port -import -?"
+   echo "-ip -port -import -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,19 +41,17 @@ NAME
    $EXECUTABLE - Start Jupyter Notebook server
 
 SYNOPSIS
-   $EXECUTABLE [-host [ip_address]] [-port port_number] [-import] [-?]
+   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-import] [-?]
 
 NOTES
    Jupyter commands are experimental and subject to change in future releases.
 
 DESCRIPTION
    Starts Jupyter Notebook server in the current RWE. By default, the Jupyter Notebook server listens
-   on localhost. To access the Jupyter Notebook server remotely, this machine's host name or IP address
-   must be specified using the '-host' option. If '-host' is specified without the IP address then it
-   defaults to this machine's host name.
+   on 0.0.0.0. To bind to a specific IP address, use the '-ip' option. 
 
 OPTIONS
-   -host [ip_address]
+   -ip [ip_address]
              The IP address the notebook server will listen on. Default: 0.0.0.0
 
    -port [port_number]
@@ -66,7 +64,7 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -host localhost -port 8888
+   $EXECUTABLE -ip 0.0.0.0 -port 8888
 
 EOF
 fi
@@ -82,13 +80,8 @@ if [ "$(which jupyter 2> /dev/null)" == "" ]; then
    exit 1
 fi
 
-if [ "$HOST_SPECIFIED" == "true" ]; then
-   IP_ADDRESS=$HOST
-else
-   IP_ADDRESS="0.0.0.0"
-fi
 if [ "$IP_ADDRESS" == "" ]; then
-   IP_ADDRESS=$(hostname)
+   IP_ADDRESS="0.0.0.0"
 fi
 
 PORT_NUMBER="$PORT_ARG"
@@ -135,6 +128,7 @@ if [ "$IMPORT_SPECIFIED" == "true" ]; then
 fi
 
 pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
+echo jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}'
 nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > /dev/null 2>&1 &
 popd > /dev/null 2>&1
 

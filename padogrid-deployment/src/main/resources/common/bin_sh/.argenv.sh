@@ -64,6 +64,8 @@ DOCKER=
 DOCKER_SPECIFIED=false
 HOST=
 HOST_SPECIFIED=false
+IP_ADDRESS=
+IP_SPECIFIED=false
 COUNT=
 INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
@@ -238,6 +240,8 @@ do
          DOCKER=$i
       elif [ "$PREV" == "-host" ]; then
          HOST=$i
+      elif [ "$PREV" == "-ip" ]; then
+         IP_ADDRESS=$i
       elif [ "$PREV" == "-group" ]; then
          GROUP=$i
       elif [ "$PREV" == "-clustergroup" ]; then
@@ -414,6 +418,8 @@ do
          APP_SPECIFIED=true
       elif [ "$i" == "-host" ]; then
          HOST_SPECIFIED="true"      
+      elif [ "$i" == "-ip" ]; then
+         IP_SPECIFIED="true"      
       elif [ "$i" == "-grid" ]; then
          GRID_SPECIFIED=true
       elif [ "$i" == "-site" ]; then
