@@ -6,15 +6,17 @@ https://github.com/padogrid
 
 ## Version 0.9.21-SNAPSHOT
 
-### Release Date: 09/25/22
+### Release Date: 09/26/22
 
+- This release has been tested with multi-tenant workspaces. Please see the manual sections [Multitenancy](https://github.com/padogrid/padogrid/wiki/Multitenancy) and [Multitenancy Best Practices](https://github.com/padogrid/padogrid/wiki/Multitenancy-Best-Practices) for details.
 - Fixed backward compatibility issues introduced by multitenancy. The previous release introduced support for multitenancy which moved workspace metadata to `~/.padogrid`. This broke the bundles that rely on workspace embedded metadata. Please upgrade to v0.9.21 to remedy this issue.
 - Added `groups` in tree views. The `show_workspace` and `show_rwe` commands now include `groups` in their views.
-- Updated Jupyter commands to comply with the latest JupyterLab (v3.4.7). JupyterLab is still evolving with many changes that are impacting PadoGrid. Some versions of JupyterLab found to be inconsistent with other versions in terms of import/export support. This releas of PadoGrid has been tested with JupyterLab v3.4.7.
+- Updated Jupyter commands to comply with the latest JupyterLab (v3.4.7). JupyterLab is still evolving with many changes that are impacting PadoGrid. Some versions of JupyterLab found to be inconsistent with other versions in terms of import/export support. This release of PadoGrid has been tested with JupyterLab v3.4.7.
 - Fixed a delete bug in Geode `DebeziumKafkaSinkTask` that generated NPE.
-- Fixed a `test_group` bug in Geode perf_test that threw NPE when ingesting mock data into database.
+- Fixed a `test_group` bug in Geode `perf_test` that threw NPE when ingesting mock data into database.
 - Fixed the wrong VM workspace name set in `vmenv.sh` by `install_bundle`. `vmenv.sh` was introduced in v0.9.20 which holds VM specific variables. The `VM_PADOGRID_WORKSPACE` variable was incorrectly set if the `-workspace` or `-checkout` option specified for the `install_bundle` commadn.
 - Replaced the option `-host` with `-ip` in the `open_jupyter` and `start_jupyter` commands to bind a specific IP address.
+- Fixed a primary and data node pod memory sizing issue. Previous versions incorrectly had primary memory set to data memory and vice versa.
 
 ---
 

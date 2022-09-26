@@ -3223,14 +3223,20 @@ function getWorkspaceInfoList
    fi
 
    # Remove blank lines from grep results. Pattern includes space and tab.
-   local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   # If multi-tenant workspace then the user might not have read access.
+   if [ -r "$WORKSPACE_PATH/setenv.sh" ]; then
+      local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   else
+      local __JAVA_HOME=""
+   fi
+
    if [ "$__JAVA_HOME" == "" ]; then
       # Get the RWE's JAVA_HOME
       __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
    fi
    local JAVA_VERSION=""
    local JAVA_INFO=""
-   if [ -f "$__JAVA_HOME/bin/java" ]; then
+   if [ "$__JAVA_HOME" != "" ] && [ -f "$__JAVA_HOME/bin/java" ]; then
       # Use eval to handle commands with spaces
       local __COMMAND="\"$__JAVA_HOME/bin/java\" -version 2>&1 | grep version "
       JAVA_VERSION=$(eval $__COMMAND)
@@ -3245,7 +3251,12 @@ function getWorkspaceInfoList
       VM_WORKSPACE="";
    fi
    # Remove blank lines from grep results. Pattern includes space and tab.
-   local PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   # If multi-tenant workspace then the user might not have read access.
+   if [ -r "$WORKSPACE_PATH/setenv.sh" ]; then
+      local PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+   else
+      PADOGRID_VERSION=""
+   fi
    if [ "$PADOGRID_VERSION" == "" ]; then
       # Get the RWE's PADOGRID_HOME
       PADOGRID_VERSION=$(grep "export PADOGRID_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
@@ -3277,7 +3288,12 @@ function isWorkspaceVmEnabled
       if [ ! -d "$WORKSPACE_PATH" ]; then
          VM_ENABLED="false"
       else
-         local VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
+         # If multi-tenant workspace then the user might not have read access.
+         if [ -r "$WORKSPACE_PATH/setenv.sh" ]; then
+            local VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
+         else
+            local VM_ENABLED="false"
+         fi
          VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
       fi
    fi
