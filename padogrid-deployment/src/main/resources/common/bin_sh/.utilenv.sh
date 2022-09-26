@@ -753,7 +753,7 @@ function isPodRunning
             for i in *; do
                if [ -f "$i/virtualbox/id" ]; then
                   __VB_ID=`cat $i/virtualbox/id`
-                  __VB_ID_PROCESS=`ps -wweo |grep $__VB_ID | grep -v grep`
+                  __VB_ID_PROCESS=`ps -wwef |grep $__VB_ID | grep -v grep`
                   if [ "$__VB_ID_PROCESS" != "" ]; then
                      __POD_RUNNING="true"
                      break;
