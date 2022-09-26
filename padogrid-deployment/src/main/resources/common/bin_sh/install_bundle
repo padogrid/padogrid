@@ -660,16 +660,17 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          popd > /dev/null 2>&1 
       fi
       if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-         TEMP_WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/__ws-${BUNDLE_NAME}
+         TEMP_WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/__ws-${WORKSPACE_NAME}
          # Copy the workspace files
          if [ "$PRODUCT_HOME" == "" ]; then
-            create_workspace -quiet -name __ws-${BUNDLE_NAME} > /dev/null
+            create_workspace -quiet -name __ws-${WORKSPACE_NAME} > /dev/null
          else
-            create_workspace -quiet -name __ws-${BUNDLE_NAME} -product $PRODUCT_HOME > /dev/null
+            create_workspace -quiet -name __ws-${WORKSPACE_NAME} -product $PRODUCT_HOME > /dev/null
          fi
          rm -rf "$TEMP_WORKSPACE_DIR"/clusters/*
          cp -r "$TEMP_WORKSPACE_DIR"/* "$GIT_DIR"/
          cp "$TEMP_WORKSPACE_DIR"/.addonenv.sh "$GIT_DIR"/
+         sed -e "s/__ws-${WORKSPACE_NAME}/${WORKSPACE_NAME}/" "$TEMP_WORKSPACE_DIR/vmenv.sh" > "$GIT_DIR/vmenv.sh"
          rm -rf "$TEMP_WORKSPACE_DIR"
 
          if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
