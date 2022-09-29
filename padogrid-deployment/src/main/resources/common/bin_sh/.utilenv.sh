@@ -591,7 +591,7 @@ function getAppOptions
 {
    local __PRODUCT="$1"
    if [ "$__PRODUCT" == "hazelcast" ]; then
-      echo "dekstop grafana perf_test"
+      echo "desktop grafana perf_test"
    elif [ "$__PRODUCT" == "jet" ]; then
       echo "desktop jet_demo"
    elif [ "$__PRODUCT" == "geode" ] || [ "$__PRODUCT" == "gemfire" ]; then
