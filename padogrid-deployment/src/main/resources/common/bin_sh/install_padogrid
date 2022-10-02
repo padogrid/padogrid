@@ -26,12 +26,15 @@ else
    PRODUCT_ARG=""
    QUIET="false" 
    NO_STTY_SPECIFIED="false"
+   SCAN_SPECIFIED="false"
+   SAVE_SPECIFIED="false"
    PREV=""
    for i in "$@"; do
       case $i in
          -quiet ) QUIET="true";;
          -product ) PRODUCT_SPECIFIED="true";;
          -no-stty ) NO_STTY_SPECIFIED="true";;
+         -scan ) SCAN_SPECIFIED="true";;
          -save ) SAVE_SPECIFIED="true";;
          -?) HELP="true";;
          * ) 
@@ -80,6 +83,7 @@ CLightRed='\033[1;31m'
 CUnderline='\033[4m'
 CUrl=$CBlue$CUnderline
 
+DOWNLODABLED_VERSIONS_URL="https://github.com/padogrid/padogrid/releases/download/nightly/padogrid_download_versions.sh"
 PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases"
 #PADO_DOWNLOAD_URL="https://github.com/netcrest/pado2/releases"
 PADO_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
@@ -101,9 +105,14 @@ HADOOP_DOWNLOAD_URL="https://archive.apache.org/dist/hadoop/common/"
 
 PADOECLIPSE_MANUAL_URL="https://github.com/padogrid/padogrid/wiki/Eclipse"
 
+PADOGRID_DOWNLOADS_PATH="$PADOGRID_ENV_BASE_PATH/downloads"
+PADOGRID_PRODUCTS_PATH="$PADOGRID_ENV_BASE_PATH/products"
+PADOGRID_SNAPSHOTS_PATH="$PADOGRID_ENV_BASE_PATH/snapshots"
+PADOGRID_WORKSPACES_PATH="$PADOGRID_ENV_BASE_PATH/workspaces"
+
 __options()
 {
-   echo "-product -quiet -simulate -?"
+   echo "-product -quiet -simulate -save -scan -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -118,7 +127,7 @@ NAME
    $EXECUTABLE - Install Padogrid and downloable products
 
 SYNOPSIS
-   $EXECUTABLE [-product] [-quiet] [-simulate] [-?]
+   $EXECUTABLE [-product] [-quiet] [-simulate] [-scan] [-save file_path] [-?]
 
 DESCRIPTION
    Installs PadoGrid and downloadable products. This command downloads one or more selected products
@@ -139,6 +148,16 @@ cat <<EOF
 
    -simulate
              If specified, then it only simulates the download steps by printing the 'curl' commands.
+
+   -scan
+             If specified, then it scans all downlodable product versions. This may take over a minute
+             to complete. By default, if this option is specified, then it uses the the cached product
+             versions downloaded from the PadoGrid site. The cached product versions are updated
+             nightly.
+
+   -save file_path
+             Saves the downloadble product versions to the specified file path. If the '-scan' option
+             is specified then it saves the scanned product versions.
 
    -quiet
              If specified, then it runs in the non-internactive mode. By default, it installs all of
@@ -1206,71 +1225,97 @@ if [ "$DOWNLOAD_VERSIONS_FILE" != "" ]; then
    echo "   $DOWNLOAD_VERSIONS_FILE"
 fi
 
-#
-# Scan downloadable product versions
-#
-echo ""
-echo "Scanning downloadable products... Please wait."
-echo ""
+if [ "$SCAN_SPECIFIED" != "true" ]; then
+   # Download the cached product versions
+   DOWNLODABLED_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
+   curl -sL -o "$DOWNLODABLED_VERSIONS_FILE" "$DOWNLODABLED_VERSIONS_URL"
+fi
+if [ -f "$DOWNLODABLED_VERSIONS_FILE" ]; then
+   . "$DOWNLODABLED_VERSIONS_FILE"
+   PADOGRID_DOWNLOAD_VERSIONS=($PADOGRID_DOWNLOAD_VERSIONS)
+   PADO_DOWNLOAD_VERSIONS=($PADO_DOWNLOAD_VERSIONS)
+   PADODESKTOP_DOWNLOAD_VERSIONS=($PADODESKTOP_DOWNLOAD_VERSIONS)
+   PADOWEB_DOWNLOAD_VERSIONS=($PADOWEB_DOWNLOAD_VERSIONS)
+   PADOECLIPSE_DOWNLOAD_VERSIONS=($PADOECLIPSE_DOWNLOAD_VERSIONS)
+   GEODE_DOWNLOAD_VERSIONS=($GEODE_DOWNLOAD_VERSIONS)
+   HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS)
+   HAZELCAST_OSS_DOWNLOAD_VERSIONS=($HAZELCAST_OSS_DOWNLOAD_VERSIONS)
+   HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS)
+   HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS)
+   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($JET_ENTERPRISE_DOWNLOAD_VERSIONS)
+   JET_OSS_DOWNLOAD_VERSIONS=($JET_OSS_DOWNLOAD_VERSIONS)
+   REDIS_DOWNLOAD_VERSIONS=($REDIS_DOWNLOAD_VERSIONS)
+   SNAPPYDATA_DOWNLOAD_VERSIONS=($SNAPPYDATA_DOWNLOAD_VERSIONS)
+   SPARK_DOWNLOAD_VERSIONS=($SPARK_DOWNLOAD_VERSIONS)
+   KAFKA_DOWNLOAD_VERSIONS=($KAFKA_DOWNLOAD_VERSIONS)
+   HADOOP_DOWNLOAD_VERSIONS=($HADOOP_DOWNLOAD_VERSIONS)
+else
+   #
+   # Scan downloadable product versions
+   #
+   echo ""
+   echo "Scanning downloadable products... Please wait."
+   echo ""
 
-# Turn off the enter key while waiting
-if [ "$NO_STTY_SPECIFIED" != "true" ]; then
-   stty igncr
-fi
+   # Turn off the enter key while waiting
+   if [ "$NO_STTY_SPECIFIED" != "true" ]; then
+      stty igncr
+   fi
 
-PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions)"))
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
-   PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
-   PADODESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadodesktopVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
-   PADOWEB_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadowebVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
-   PADOECLIPSE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoEclipseVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
-   GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
-   HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastEnterpriseVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
-   HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastOssVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
-   HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastManCenterVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
-   HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastDesktopVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetEnterpriseVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
-   JET_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetOssVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
-   REDIS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableRedisVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
-   SNAPPYDATA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSnappyDataVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
-   SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
-   KAFKA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableKafkaVersions)"))
-fi
-if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
-   HADOOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHadoopVersions)"))
-fi
+   PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions)"))
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+      PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+      PADODESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadodesktopVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+      PADOWEB_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadowebVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
+      PADOECLIPSE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoEclipseVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+      GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+      HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastEnterpriseVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+      HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastOssVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
+      HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastManCenterVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
+      HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastDesktopVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+      JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetEnterpriseVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
+      JET_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetOssVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
+      REDIS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableRedisVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+      SNAPPYDATA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSnappyDataVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+      SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+      KAFKA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableKafkaVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
+      HADOOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHadoopVersions)"))
+   fi
 
-# Enable the enter key
-if [ "$NO_STTY_SPECIFIED" != "true" ]; then
-   stty -igncr
+   # Enable the enter key
+   if [ "$NO_STTY_SPECIFIED" != "true" ]; then
+      stty -igncr
+   fi
 fi
 
 # Save downloadable versions and exit
@@ -1283,6 +1328,7 @@ if [ "$SAVE_SPECIFIED" == "true" ]; then
    echo "GEODE_DOWNLOAD_VERSIONS=\"${GEODE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=\"${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "HAZELCAST_OSS_DOWNLOAD_VERSIONS=\"${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=\"${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=\"${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "JET_ENTERPRISE_DOWNLOAD_VERSIONS=\"${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "JET_OSS_DOWNLOAD_VERSIONS=\"${JET_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
@@ -2336,11 +2382,6 @@ fi
 #
 # Install user-entered versions
 #
-
-PADOGRID_DOWNLOADS_PATH="$PADOGRID_ENV_BASE_PATH/downloads"
-PADOGRID_PRODUCTS_PATH="$PADOGRID_ENV_BASE_PATH/products"
-PADOGRID_SNAPSHOTS_PATH="$PADOGRID_ENV_BASE_PATH/snapshots"
-PADOGRID_WORKSPACES_PATH="$PADOGRID_ENV_BASE_PATH/workspaces"
 
 # downloads
 if [ ! -d "$PADOGRID_DOWNLOADS_PATH" ]; then

@@ -137,6 +137,7 @@ ALL=false
 ALL_SPECIFIED=false
 SAVE_ARG=
 SAVE_SPECIFIED=false
+SCAN_SPECIFIED=false
 OSS=false
 RHEL=false
 WAN=false
@@ -382,6 +383,8 @@ do
          ALL_SPECIFIED=true
       elif [ "$i" == "-save" ]; then
          SAVE_SPECIFIED=true
+      elif [ "$i" == "-scan" ]; then
+         SCAN_SPECIFIED=true
       elif [ "$i" == "-oss" ]; then
          OSS=true
       elif [ "$i" == "-rhel" ]; then

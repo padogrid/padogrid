@@ -439,7 +439,7 @@ __padogrid_complete()
       type_list="$(whoami)"
       ;;
 
-   -path | -java | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -path | -java | -save | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
       is_path="true"
      ;;
 
@@ -466,6 +466,8 @@ __padogrid_complete()
           type_list=$(__cd_complete_arg "apps" 2)
       elif [ "$command" == "cd_k8s" ]; then
           type_list=$(__cd_complete_arg "k8s" 2)
+      elif [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
+         is_path="true"
       else
          if [ "$command" == "-version" ]; then
             type_list=""
@@ -1155,12 +1157,16 @@ __command_complete()
       type_list="$(whoami)"
       ;;
 
-   -path | -java | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -path | -java | -save | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
      is_path="true"
      ;;
    *)
-      # Command options
-      type_list=`$command -options`
+      if [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
+         is_path="true"
+      else
+         # Command options
+         type_list=`$command -options`
+      fi
      ;;
    esac
 
