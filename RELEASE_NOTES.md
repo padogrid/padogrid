@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.21-SNAPSHOT
 
-### Release Date: 09/26/22
+### Release Date: 10/01/22
 
 - This release has been tested with multi-tenant workspaces. Please see the manual sections [Multitenancy](https://github.com/padogrid/padogrid/wiki/Multitenancy) and [Multitenancy Best Practices](https://github.com/padogrid/padogrid/wiki/Multitenancy-Best-Practices) for details.
 - Fixed backward compatibility issues introduced by multitenancy. The previous release introduced support for multitenancy which moved workspace metadata to `~/.padogrid`. This broke the bundles that rely on workspace embedded metadata. Please upgrade to v0.9.21 to remedy this issue.
@@ -17,6 +17,7 @@ https://github.com/padogrid
 - Fixed the wrong VM workspace name set in `vmenv.sh` by `install_bundle`. `vmenv.sh` was introduced in v0.9.20 which holds VM specific variables. The `VM_PADOGRID_WORKSPACE` variable was incorrectly set if the `-workspace` or `-checkout` option specified for the `install_bundle` commadn.
 - Replaced the option `-host` with `-ip` in the `open_jupyter` and `start_jupyter` commands to bind a specific IP address.
 - Fixed a primary and data node pod memory sizing issue. Previous versions incorrectly had primary memory set to data memory and vice versa.
+- Updated `install_padogrid` to default to the cached product versions downloaded from the PadoGrid's `nightly` release. Prior to this change, the downloadable product versions were scanned resulting a long delay. You can still scan product versions by specifying the `-scan` option. Please see the usage by specifying `-?`.
 
 ---
 
