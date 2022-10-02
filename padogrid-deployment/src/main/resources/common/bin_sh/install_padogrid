@@ -32,8 +32,17 @@ else
          -quiet ) QUIET="true";;
          -product ) PRODUCT_SPECIFIED="true";;
          -no-stty ) NO_STTY_SPECIFIED="true";;
+         -save ) SAVE_SPECIFIED="true";;
          -?) HELP="true";;
-         * ) if [ "$PREV" == "-product" ]; then PRODUCT_ARG="$i"; else echo "Invalid option: [$i]. Command aborted.";  exit 1; fi;;
+         * ) 
+            if [ "$PREV" == "-product" ]; then
+               PRODUCT_ARG="$i";
+            elif [ "$PREV" == "-save" ]; then
+               SAVE_ARG="$i";
+            else
+               echo "Invalid option: [$i]. Command aborted."
+               exit 1
+            fi;;
       esac
       PREV="$i"
    done
@@ -316,6 +325,15 @@ if [ "$PRODUCT_ARG" != "" ]; then
       for i in $DOWNLOADABLE_PRODUCTS; do
          echo >&2 "          $i"
       done
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+fi
+# Exit if invalid save option specified
+DOWNLOAD_VERSIONS_FILE="$SAVE_ARG"
+if [ "$SAVE_SPECIFIED" == "true" ]; then
+   if [ "$SAVE_ARG" == "" ] || [[ "$SAVE_ARG" == "-"** ]]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid save option: [$SAVE_ARG]. Please enter file name."
       echo >&2 "       Command aborted."
       exit 1
    fi
@@ -1154,11 +1172,38 @@ function doUserInput
    fi
 }
 
+# @required PRODUCT_DOWNLOAD_VERSIONS Downloadable product versions
+function saveDownloadableVersions
+{
+   PRODUCT_DOWNLOAD_VERSIONS
+}
+
 # Simulation message
 if [ "$SIMULATE" == "true" ]; then
    echo ""
-   echo -e "${CBrownOrange}Simulation Only. You have specified the '-simulate' option. File downloads will be"
-   echo -e "simulated and will not be downloaded.${CNone}"
+   if [ "$SAVE_SPECIFIED" == "true" ]; then
+      echo "You have specified both '-save' and '-simulate'. Simulation ignored."
+   else
+      echo -e "${CBrownOrange}Simulation Only. You have specified the '-simulate' option. File downloads will be"
+      echo -e "simulated and will not be downloaded.${CNone}"
+   fi
+fi
+
+if [ "$DOWNLOAD_VERSIONS_FILE" != "" ]; then
+   __DIR=$(dirname $DOWNLOAD_VERSIONS_FILE)
+   if [ ! -d "$__DIR" ]; then
+      echo -e "${CError}ERROR:${CNone} Invalid file path. Directory does not exist. Command aborted."
+      echo "   $DOWNLOAD_VERSIONS_FILE"
+      exit 1
+   fi
+   if [ ! -w "$__DIR" ]; then
+      echo -e "${CError}ERROR:${CNone} Invalid file path. You do not have write permissions. Command aborted."
+      echo "   $DOWNLOAD_VERSIONS_FILE"
+      exit 1
+   fi
+   echo ""
+   echo "Product versions will be saved in the specified file."
+   echo "   $DOWNLOAD_VERSIONS_FILE"
 fi
 
 #
@@ -1228,6 +1273,29 @@ if [ "$NO_STTY_SPECIFIED" != "true" ]; then
    stty -igncr
 fi
 
+# Save downloadable versions and exit
+if [ "$SAVE_SPECIFIED" == "true" ]; then
+   echo "PADOGRID_DOWNLOAD_VERSIONS=\"${PADOGRID_DOWNLOAD_VERSIONS[@]}\"" > "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADO_DOWNLOAD_VERSIONS=\"${PADO_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADODESKTOP_DOWNLOAD_VERSIONS=\"${PADODESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADOWEB_DOWNLOAD_VERSIONS=\"${PADOWEB_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADOECLIPSE_DOWNLOAD_VERSIONS=\"${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "GEODE_DOWNLOAD_VERSIONS=\"${GEODE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=\"${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_OSS_DOWNLOAD_VERSIONS=\"${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=\"${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "JET_ENTERPRISE_DOWNLOAD_VERSIONS=\"${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "JET_OSS_DOWNLOAD_VERSIONS=\"${JET_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "REDIS_DOWNLOAD_VERSIONS=\"${REDIS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "SNAPPYDATA_DOWNLOAD_VERSIONS=\"${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "SPARK_DOWNLOAD_VERSIONS=\"${SPARK_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "KAFKA_DOWNLOAD_VERSIONS=\"${KAFKA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HADOOP_DOWNLOAD_VERSIONS=\"${HADOOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "Downloadable prodduct versions saved:"
+   echo "   + $DOWNLOAD_VERSIONS_FILE"
+   exit
+fi
+
 # Version variables set by user inputs
 PADOGRID_VERSION=""
 PADO_VERSION=""
@@ -1270,6 +1338,7 @@ if [ "$QUIET" == "true" ]; then
    HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_OSS_VERSION=${HAZELCAST_OSS_DOWNLOAD_VERSIONS[0]}
    HAZELCAST_MANAGEMENT_CENTER_VERSION=${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[0]}
+
    HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[0]}
    JET_ENTERPRISE_VERSION=${JET_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
    JET_OSS_VERSION=${JET_OSS_DOWNLOAD_VERSIONS[0]}

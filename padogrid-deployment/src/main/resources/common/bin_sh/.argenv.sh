@@ -135,6 +135,8 @@ TREE=false
 OVERWRITE=false
 ALL=false
 ALL_SPECIFIED=false
+SAVE_ARG=
+SAVE_SPECIFIED=false
 OSS=false
 RHEL=false
 WAN=false
@@ -321,6 +323,8 @@ do
          DATASOURCE=$i
       elif [ "$PREV" == "-version" ]; then
          VERSION_ARG=$i
+      elif [ "$PREV" == "-save" ]; then
+         SAVE_ARG=$i
       fi
 
    else
@@ -376,6 +380,8 @@ do
       elif [ "$i" == "-all" ]; then
          ALL=true
          ALL_SPECIFIED=true
+      elif [ "$i" == "-save" ]; then
+         SAVE_SPECIFIED=true
       elif [ "$i" == "-oss" ]; then
          OSS=true
       elif [ "$i" == "-rhel" ]; then

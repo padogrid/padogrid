@@ -1,0 +1,29 @@
+# 
+# Nightly generate padogrid_download_versions.sh file that includes downlodable product versions
+#
+name: Publish Downloadable Product Versions
+
+on:
+  schedule:
+    - cron: '30 0 * * *'
+
+jobs:
+       
+  archive-build-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Step 1 - Run install_padogrid -save padogrid_download_versions.sh
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid | /bin/bash -s -- -no-stty -quiet -save padogrid_download_versions.sh
+        
+      - name: Step 2 - Upload padogrid_download_versions.sh to the branch release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          file: padogrid_download_versions.sh
+          asset_name: padogrid_download_versions.sh
+          tag: nightly
+          overwrite: true
+          body: "PadoGrid downlodable product versions"
