@@ -384,7 +384,7 @@ GC_LOG_FILE_ENABLED=`getClusterProperty "gc.log.file.enabled" $DEFAULT_GC_LOG_FI
 # server.properties
 SERVER_PROPERTIES_FILE="$ETC_DIR/server-$MEMBER_NUM.properties"
 
-JAVA_OPTS="$JAVA_OPTS -Dlog4j.configuration=file:$ETC_DIR/log4j.properties -DLOG_FILE=$LOG_FILE"
+JAVA_OPTS="$JAVA_OPTS -Dlog4j2.configuration=file:$ETC_DIR/log4j.properties -DLOG_FILE=$LOG_FILE"
 
 # Set worker system properties
 if [ -f "$ETC_DIR/worker.properties" ]; then
@@ -449,7 +449,7 @@ else
        if [ $RUNNING_MEMBER_COUNT -lt $MEMBER_COUNT ]; then
           #echo KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE" \
           echo KAFKA_OPTS="$JAVA_OPTS"
-          echo KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$LOG4J_FILE"
+          echo KAFKA_LOG4J_OPTS="-Dlog4j2.configuration=file:$LOG4J_FILE"
           echo KAFKA_HEAP_OPTS="-Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}"
           echo ${KAFKA_HOME}/bin/kafka-server-start.sh -daemon "$SERVER_PROPERTIES_FILE" \
           --override node.id=$MEMBER_NUM_NO_LEADING_ZERO \
@@ -457,7 +457,7 @@ else
 
           #KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE" \
           KAFKA_OPTS="$JAVA_OPTS" \
-          KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$LOG4J_FILE" \
+          KAFKA_LOG4J_OPTS="-Dlog4j2.configuration=file:$LOG4J_FILE" \
           KAFKA_HEAP_OPTS="-Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}" \
           ${KAFKA_HOME}/bin/kafka-server-start.sh -daemon "$SERVER_PROPERTIES_FILE" \
           --override node.id=$MEMBER_NUM_NO_LEADING_ZERO \
