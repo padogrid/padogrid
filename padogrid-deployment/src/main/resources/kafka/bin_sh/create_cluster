@@ -183,7 +183,7 @@ function writeCluster()
    # Copy the template prometheus file
    cp $BASE_DIR/etc/template-prometheus.yml $ETC_DIR/prometheus.yml
 
-   # Due to the lack of --override option provided by kafka-storage.sh, we need to 
+   # Due to the lack of --override option provided by KAFKA_STORAGE, we need to 
    # create server.properties for each member.
    __MEMBER_1_DIR=$(echo $MEMBER_1_DIR | sed 's/\//\\\//g')
    __MEMBER_2_DIR=$(echo $MEMBER_2_DIR | sed 's/\//\\\//g')
@@ -226,9 +226,9 @@ function writeCluster()
        "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-03.properties"
 
    # Format storages
-   CLASSPATH="" $KAFKA_HOME/bin/kafka-storage.sh format -t $CLUSTER_ID -c $ETC_DIR/server-01.properties
-   CLASSPATH="" $KAFKA_HOME/bin/kafka-storage.sh format -t $CLUSTER_ID -c $ETC_DIR/server-02.properties
-   CLASSPATH="" $KAFKA_HOME/bin/kafka-storage.sh format -t $CLUSTER_ID -c $ETC_DIR/server-03.properties
+   CLASSPATH="" $KAFKA_HOME/bin/$KAFKA_STORAGE format -t $CLUSTER_ID -c $ETC_DIR/server-01.properties
+   CLASSPATH="" $KAFKA_HOME/bin/$KAFKA_STORAGE format -t $CLUSTER_ID -c $ETC_DIR/server-02.properties
+   CLASSPATH="" $KAFKA_HOME/bin/$KAFKA_STORAGE format -t $CLUSTER_ID -c $ETC_DIR/server-03.properties
 
    # Create bin_sh/setenv.sh
    mkdir -p $CLUSTER_DIR/bin_sh
@@ -246,7 +246,7 @@ function writeCluster()
    echo "#    Windows notations. For example,"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#"  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Set RUN_SCRIPT. Absolute path required." >> $CLUSTER_DIR/bin_sh/setenv.sh
-   echo "# If set, the 'start_server' command will run this script instead of Kafka 'kafka-server-start.sh'." >> $CLUSTER_DIR/bin_sh/setenv.sh
+   echo "# If set, the 'start_server' command will run this script instead of Kafka '$KAFKA_SERVER_START'." >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "# Your run script will inherit the following:" >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    JAVA      - Java executable."  >> $CLUSTER_DIR/bin_sh/setenv.sh
    echo "#    JAVA_OPTS - Java options set by padogrid." >> $CLUSTER_DIR/bin_sh/setenv.sh
@@ -536,7 +536,7 @@ if [ "$POD" != "local" ]; then
 fi
 
 # Generate Kafka cluster ID
-CLASSPATH="" CLUSTER_ID=$(kafka-storage.sh random-uuid)
+CLASSPATH="" CLUSTER_ID=$($KAFKA_STORAGE random-uuid)
 CLUSTER_TYPE="kraft"
 
 # Write cluster files

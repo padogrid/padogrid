@@ -163,3 +163,13 @@ RUN_SCRIPT=
 if [ -f $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh ] && [ "$1" != "-options" ]; then
    . $CLUSTERS_DIR/$CLUSTER/bin_sh/setenv.sh
 fi
+
+#
+# Aliases. Kafka scripts end with '.sh' and Confluent scripts do not use file extension.
+#
+KAFKA_SERVER_START="kafka-server-start"
+KAFKA_STORAGE="kafka-storage"
+if [ ! -f "$KAFKA_HOME/bin/$KAFKA_SERVER_START" ]; then
+   KAFKA_SERVER_START=${KAFKA_SERVER_START}.sh
+   KAFKA_STORAGE=${KAFKA_STORAGE}.sh
+fi

@@ -51,7 +51,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka hadoop"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop"
 
 EXECUTABLE="`basename $0`"
 
@@ -101,6 +101,7 @@ REDIS_DOWNLOAD_URL="https://github.com/redis/redis/releases"
 SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
 SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
 KAFKA_DOWNLOAD_URL="https://archive.apache.org/dist/kafka/"
+CONFLUENT_DOWNLOAD_URL="https://packages.confluent.io/archive/"
 HADOOP_DOWNLOAD_URL="https://archive.apache.org/dist/hadoop/common/"
 
 PADOECLIPSE_MANUAL_URL="https://github.com/padogrid/padogrid/wiki/Eclipse"
@@ -220,6 +221,7 @@ echo -e "      - Redis OSS                   ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
 echo -e "      - TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
+echo -e "      - Kafka Confluent Platform    ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
 
 else
@@ -236,6 +238,7 @@ echo -e "      - Redis OSS                   $REDIS_DOWNLOAD_URL"
 echo -e "      - TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
 echo -e "      - Apache Spark                $SPARK_DOWNLOAD_URL"
 echo -e "      - Apache Kafka                $KAFKA_DOWNLOAD_URL"
+echo -e "      - Kafka Confluent Platform    $CONFLUENT_DOWNLOAD_URL"
 echo -e "      - Apache Hadoop               $HADOOP_DOWNLOAD_URL"
 
 fi
@@ -272,17 +275,19 @@ EOF
 
 if [ "$MAN_SPECIFIED" == "false" ]; then
   
-echo -e "      - Oracle JDK           ${CUrl}https://www.oracle.com/java/technologies/javase-downloads.html${CNone}"
-echo -e "      - Oracle Reference JDK ${CUrl}https://jdk.java.net/${CNone}"
-echo -e "      - Azule OpenJDK        ${CUrl}https://www.azul.com/downloads/${CNone}"
-echo -e "      - Adoptium OpenJDK     ${CUrl}https://adoptium.net/${CNone}"
+echo -e "      - Oracle JDK              ${CUrl}https://www.oracle.com/java/technologies/javase-downloads.html${CNone}"
+echo -e "      - Oracle Reference JDK    ${CUrl}https://jdk.java.net/${CNone}"
+echo -e "      - Azule OpenJDK           ${CUrl}https://www.azul.com/downloads/${CNone}"
+echo -e "      - Adoptium OpenJDK        ${CUrl}https://adoptium.net/${CNone}"
+echo -e "      - Amazon Corretto OpenJDK ${CUrl}https://aws.amazon.com/corretto${CNone}"
 
 else
 
-echo -e "      - Oracle JDK           https://www.oracle.com/java/technologies/javase-downloads.html"
-echo -e "      - Oracle Reference JDK https://jdk.java.net/"
-echo -e "      - Azule OpenJDK        https://www.azul.com/downloads/"
-echo -e "      - Adoptium OpenJDK     https://adoptium.net/"
+echo -e "      - Oracle JDK              https://www.oracle.com/java/technologies/javase-downloads.html"
+echo -e "      - Oracle Reference JDK    https://jdk.java.net/"
+echo -e "      - Azule OpenJDK           https://www.azul.com/downloads/"
+echo -e "      - Adoptium OpenJDK        https://adoptium.net/"
+echo -e "      - Amazon Corretto OpenJDK https://adoptium.net/"
 
 fi
 
@@ -292,8 +297,7 @@ NOTES
    - Jet Management Center installation is no longer supported. Install Hazelcast Management Center
      instead. It supports both IMDG and Jet.
 
-   - PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0 or
-     a later version.
+   - PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0+ or Confluent 7.0.0+.
 
    - PadoEclipse is an Eclipse plugin for generating Gedoe/GemFire and Pado data classes. Once it is
      downloaded, place it in the Eclipse's 'dropins' folder. Please see instructions in the following link.
@@ -378,7 +382,8 @@ echo -e "[8]  REDIS OSS                   ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
 echo -e "[9]  TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "[10] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
 echo -e "[11] Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
-echo -e "[12] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
+echo -e "[12] Kafka Confluent Platform    ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}"
+echo -e "[13] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
 
 else
 
@@ -394,7 +399,8 @@ echo -e "[8]  Redis OSS                   $REDIS_DOWNLOAD_URL"
 echo -e "[9]  TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
 echo -e "[10] Apache Spark                $SPARK_DOWNLOAD_URL"
 echo -e "[11] Apache Kafka                $KAFKA_DOWNLOAD_URL"
-echo -e "[12] Apache Hadoop               $HADOOP_DOWNLOAD_URL"
+echo -e "[12] Kafka Confluent Platform    $CONFLUENT_DOWNLOAD_URL"
+echo -e "[13] Apache Hadoop               $HADOOP_DOWNLOAD_URL"
 
 fi
 
@@ -871,6 +877,21 @@ function getScalaKafkaVersions
    unique_words "$SCALA_KAFKA_VERSIONS"
 }
 
+function getDownloadableConfluentVersions
+{
+   local MINOR_VERSIONS=$(curl -sL ${CONFLUENT_DOWNLOAD_URL} | grep href | grep archive | sed -e 's/.*">//' -e 's/\/.*//')
+   local ALL_CONFLUENT_VERSIONS
+   for i in $MINOR_VERSIONS; do
+      local MAJOR_VERSION=$(echo $i | awk -F. '{printf "%s", $1}')
+      # KRaft supported startingetDownloadableConfluentVersionsg 7.0
+      if [ $MAJOR_VERSION -ge 6 ]; then
+         local versions=$(curl -sL ${CONFLUENT_DOWNLOAD_URL}$i/ | grep "confluent-.*.tar.gz<" | sed -e 's/.*>confluent/confluent/' -e 's/.tar.gz.*//')
+         ALL_CONFLUENT_VERSIONS="$ALL_CONFLUENT_VERSIONS $versions"
+      fi
+   done
+   unique_words "$ALL_CONFLUENT_VERSIONS"
+}
+
 function getDownloadableHadoopVersions
 {
   local ALL_HADOOP_VERSIONS=$(curl -sL $HADOOP_DOWNLOAD_URL | grep img | grep -v unknown | grep -v incubating  | grep -v preview |grep \[DIR\] | grep -v Parent | grep -v TXT | grep hadoop | sed -e 's/.*href.*\/">//' -e 's/\/.*$//' -e 's/hadoop-//')
@@ -924,6 +945,7 @@ function sortVersionList
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
 #    KAFKA_VERSIONS
+#    CONFLUENT_VERSIONS
 #    HADOOP_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
@@ -946,6 +968,7 @@ function determineInstalledProductVersions
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
    KAFKA_VERSIONS=""
+   CONFLUENT_VERSIONS=""
    HADOOP_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
@@ -1071,6 +1094,14 @@ function determineInstalledProductVersions
       done
       KAFKA_VERSIONS=$(sortVersionList "$__versions")
 
+      # Confluent
+      __versions=""
+      for i in confluent-*; do
+         __version=${i#confluent-}
+         __versions="$__versions $__version "
+      done
+      CONFLUENT_VERSIONS=$(sortVersionList "$__versions")
+
       # Hadoop
       __versions=""
       for i in hadoop-*; do
@@ -1113,10 +1144,21 @@ function doUserInput
    for i in ${PRODUCT_DOWNLOAD_VERSIONS[@]}; do
       __INSTALLED="false"
       for j in ${INSTALLED_VERSIONS[@]}; do
-         #if [[ "$j" == "$i" ]]; then
          if [[ "$j" == "${i#*_}" ]]; then
             __INSTALLED="true"
             break;
+         elif [ "$i" == "confluent-community-$j" ]; then
+            # community
+            if [ ! -f "$PADOGRID_ENV_BASE_PATH/products/confluent-$j/bin/confluent-hub" ]; then
+               __INSTALLED="true"
+               break;
+            fi
+         elif [ "$i" == "confluent-$j" ]; then
+            # commercial
+            if [ -f "$PADOGRID_ENV_BASE_PATH/products/confluent-$j/bin/confluent-hub" ]; then
+               __INSTALLED="true"
+               break;
+            fi
          fi
       done
       if [ "$__INSTALLED" == "true" ]; then
@@ -1246,6 +1288,8 @@ if [ -f "$DOWNLODABLED_VERSIONS_FILE" ]; then
    SNAPPYDATA_DOWNLOAD_VERSIONS=($SNAPPYDATA_DOWNLOAD_VERSIONS)
    SPARK_DOWNLOAD_VERSIONS=($SPARK_DOWNLOAD_VERSIONS)
    KAFKA_DOWNLOAD_VERSIONS=($KAFKA_DOWNLOAD_VERSIONS)
+   CONFLUENT_DOWNLOAD_VERSIONS=$(sortVersionList "$CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS $CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS")
+   CONFLUENT_DOWNLOAD_VERSIONS=($CONFLUENT_DOWNLOAD_VERSIONS)
    HADOOP_DOWNLOAD_VERSIONS=($HADOOP_DOWNLOAD_VERSIONS)
 else
    #
@@ -1306,6 +1350,14 @@ else
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
       KAFKA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableKafkaVersions)"))
    fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
+      CONFLUENT_DOWNLOAD_VERSIONS=$(getDownloadableConfluentVersions)
+      CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=$(echo $CONFLUENT_DOWNLOAD_VERSIONS | sed 's/confluent-community-[0-9].[0-9].[0-9]//g')
+      CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=$(echo $CONFLUENT_DOWNLOAD_VERSIONS | sed 's/confluent-[0-9].[0-9].[0-9]//g')
+      CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS"))
+      CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS"))
+      CONFLUENT_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_DOWNLOAD_VERSIONS"))
+   fi
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
       HADOOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHadoopVersions)"))
    fi
@@ -1334,6 +1386,8 @@ if [ "$SAVE_SPECIFIED" == "true" ]; then
    echo "SNAPPYDATA_DOWNLOAD_VERSIONS=\"${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "SPARK_DOWNLOAD_VERSIONS=\"${SPARK_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "KAFKA_DOWNLOAD_VERSIONS=\"${KAFKA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "HADOOP_DOWNLOAD_VERSIONS=\"${HADOOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "Downloadable prodduct versions saved:"
    echo "   + $DOWNLOAD_VERSIONS_FILE"
@@ -1357,6 +1411,7 @@ REDIS_VERSION=""
 SNAPPYDATA_VERSION=""
 SPARK_VERSION=""
 KAFKA_VERSION=""
+CONFLUENT_VERSION=""
 HADOOP_VERSION=""
 
 if [ "$QUIET" == "true" ]; then
@@ -1394,6 +1449,8 @@ if [ "$QUIET" == "true" ]; then
       SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop
    fi
    KAFKA_VERSION=${KAFKA_DOWNLOAD_VERSIONS[0]}
+   CONFLUENT_DIST_VERSION=${CONFLUENT_DOWNLOAD_VERSIONS[0]}
+   CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//')
    HADOOP_VERSION=${HADOOP_DOWNLOAD_VERSIONS[0]}
 
    echo "Installing the latest products versions as follows:"
@@ -1414,6 +1471,7 @@ if [ "$QUIET" == "true" ]; then
    echo "SnappyData           $SNAPPYDATA_VERSION"
    echo "Spark                $SPARK_VERSION"
    echo "Kafka                $KAFKA_VERSION"
+   echo "Kafka Confluent      $CONFLUENT_VERSION"
    echo "Hadoop               $HADOOP_VERSION"
    echo ""
 else
@@ -1780,6 +1838,22 @@ while [ "$REDO" == "true" ]; do
       fi
    fi
 
+   # Kafka Confluent
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
+      PRODUCT_NAME="Confluent"
+      PRODUCT_DOWNLOAD_VERSIONS=("${CONFLUENT_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$CONFLUENT_VERSIONS
+      echo -e "Confluent ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}"
+      echo -e "(PadoGrid currently ${CLightGreen}supports only Confluent 7.0 and above.${CNone} Unsupported versions require manual management."
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      CONFLUENT_DIST_VERSION=$INSTALL_VERSION
+      CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//')
+      echo ""
+   fi
+
    # Hadoop
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
       PRODUCT_NAME="Hadoop"
@@ -1849,6 +1923,9 @@ while [ "$REDO" == "true" ]; do
    fi
    if [ "$KAFKA_VERSION" != "" ]; then
       echo -e "Kafka: ${CLightGreen}$KAFKA_DIST_VERSION${CNone}"
+   fi
+   if [ "$CONFLUENT_VERSION" != "" ]; then
+      echo -e "Kafka Confluent: ${CLightGreen}$CONFLUENT_DIST_VERSION${CNone}"
    fi
    if [ "$HADOOP_VERSION" != "" ]; then
       echo -e "Hadoop: ${CLightGreen}$HADOOP_VERSION${CNone}"
@@ -1929,6 +2006,9 @@ fi
 #
 # @required KAFKA_RELEASE
 # @required KAFKA_TARBALL
+#
+# @required CONFLUENT_MINOR_VERSION
+# @required CONFLUENT_TARBALL
 #
 # @required HADOOP_RELEASE
 # @required HADOOP_TARBALL
@@ -2338,6 +2418,30 @@ function installProduct
          fi
       fi
 
+   elif [ "$__PRODUCT" == "confluent" ]; then 
+      
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$CONFLUENT_DIST_VERSION" ]; then
+         echo "Already installed - $CONFLUENT_DIST_VERSION"
+      else
+         # --------------
+         # Download Kafka
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$CONFLUENT_TARBALL..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$CONFLUENT_TARBALL" "https://packages.confluent.io/archive/$CONFLUENT_MINOR_VERSION/$CONFLUENT_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$CONFLUENT_TARBALL" "https://packages.confluent.io/archive/$CONFLUENT_MINOR_VERSION/$CONFLUENT_TARBALL"
+         fi
+      
+         # Install Kafka
+         echo "  Installing Kafka $CONFLUENT_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$CONFLUENT_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$CONFLUENT_TARBALL"
+            echo "  Installed - $CONFLUENT_TARBALL"
+         fi
+      fi
+
    elif [ "$__PRODUCT" == "hadoop" ]; then 
       
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$HADOOP_VERSION" ]; then
@@ -2491,6 +2595,12 @@ if [ "$KAFKA_VERSION" != "" ] && [ "$KAFKA_DIST_VERSION" != "" ]; then
    KAFKA_TARBALL="kafka_$KAFKA_DIST_VERSION.tgz"
    installProduct "kafka" "$SIMULATE"
 fi
+if [ "$CONFLUENT_VERSION" != "" ] && [ "$CONFLUENT_DIST_VERSION" != "" ]; then
+   # Minor version
+   CONFLUENT_MINOR_VERSION=$(echo $CONFLUENT_VERSION | awk -F. '{printf "%s.%s", $1, $2}')
+   CONFLUENT_TARBALL="$CONFLUENT_DIST_VERSION.tar.gz"
+   installProduct "confluent" "$SIMULATE"
+fi
 if [ "$HADOOP_VERSION" != "" ]; then
    HADOOP_RELEASE="hadoop-$HADOOP_VERSION"
    HADOOP_TARBALL="hadoop-$HADOOP_VERSION.tar.gz"
@@ -2584,6 +2694,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
        SPARK_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"kafka"** ]]; then
        KAFKA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"confluent"** ]]; then
+       KAFKA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"gemfire"** ]]; then
        GEMFIRE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
 #     elif [[ "$i" == **"coherence"** ]]; then
@@ -2646,7 +2758,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "REDIS_HOME=\"$REDIS_HOME\"" >> $TMP_ENV_FILE
       echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
       echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
-      echo "KAFKA_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
+      echo "KAFKA_HOME=\"$KAFKA_HOME\"" >> $TMP_ENV_FILE
       echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
       echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
       echo "HADDOP_HOME=\"$HADOOP_HOME\"" >> $TMP_ENV_FILE

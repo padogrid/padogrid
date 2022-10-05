@@ -3538,6 +3538,7 @@ function determineInstalledProductVersions
    HAZELCAST_OSS_VERSIONS=""
    JET_MANAGEMENT_CENTER_VERSIONS=""
    KAFKA_VERSIONS=""
+   CONFLUENT_VERSIONS=""
    REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
@@ -3587,6 +3588,14 @@ function determineInstalledProductVersions
       if [ -f "$COHERENCE_HOME/product.xml" ]; then
          COHERENCE_VERSIONS=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
       fi
+      #
+      # Confluent
+      __versions=""
+      for i in confluent-*; do
+         __version=${i#confluent-}
+         __versions="$__versions $__version "
+      done
+      CONFLUENT_VERSIONS=$(sortVersionList "$__versions")
 
       # GemFire
       __versions=""
@@ -4163,6 +4172,8 @@ function getProductHome
    fi
    if [ "$PRODUCT_TYPE" == "hazelcast-enterprise" ]; then
       PRODUCT_TYPE="hazelcast"
+   elif [ "$PRODUCT_TYPE" == "confluent" ]; then
+      PRODUCT_TYPE="kafka"
    fi
    # Convert to uppper case and replace '-' with '_'
    local __VM_PRODUCT_HOME="$(echo ${PRODUCT_TYPE^^} | sed 's/-/_/')_HOME"

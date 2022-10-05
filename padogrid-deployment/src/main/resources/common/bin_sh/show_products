@@ -98,7 +98,12 @@ function getCurrentProductVersions
    else
       __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-jet-management-center-}
    fi
-   __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
+   local kafka_dir_name=$(basename $KAFKA_HOME)
+   if [[ "$kafka_dir_name" == "kafka"* ]]; then
+      __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
+   else
+      __CONFLUENT_VERSION=${KAFKA_HOME#*confluent-}
+   fi
    __REDIS_VERSION=${REDIS_HOME#*redis-}
    __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
    __SPARK_VERSION=${SPARK_HOME#*spark-}
@@ -178,6 +183,8 @@ echo ""
 printVersionTree "Jet Management Center" "$JET_MANAGEMENT_CENTER_VERSIONS" "$__JET_MC_VERSION"
 echo ""
 printVersionTree "Kafka" "$KAFKA_VERSIONS" "$__KAFKA_VERSION"
+echo ""
+printVersionTree "Kafka Confluent Platform" "$CONFLUENT_VERSIONS" "$__CONFLUENT_VERSION"
 echo ""
 printVersionTree "Redis" "$REDIS_VERSIONS" "$__REDIS_VERSION"
 echo ""

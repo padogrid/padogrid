@@ -144,6 +144,12 @@ function getProductVersions
    else
       __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-jet-management-center-}
    fi
+   local kafka_dir_name=$(basename $KAFKA_HOME)
+   if [[ "$kafka_dir_name" == "kafka"* ]]; then
+      __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
+   else
+      __CONFLUENT_VERSION=${KAFKA_HOME#*confluent-}
+   fi
    __REDIS_VERSION=${REDIS_HOME#*redis-}
    __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
    __SPARK_VERSION=${SPARK_HOME#*spark-}
@@ -151,8 +157,15 @@ function getProductVersions
 }
 
 #
-# 
-# @output SELECTED_INDEX
+# Prompts for selection of a product from the specified list of installed product versions.
+# It sets SELECTED_INDEX with the user selected index.
+#
+# @param productName           Product name.
+# @param productVersions       A space separated list of currently installed versions.j
+# @param currentProductVersion Current product version.
+# @param selectedIndex         Selected index. Default: 0
+#
+# @output SELECTED_INDEX       Selected index of the product list.
 #
 function doUserInput
 {
@@ -173,13 +186,24 @@ function doUserInput
       echo "   (not installed)"
    else
       local CURRRENT_PRODUCT_INDEX=""
+      local version
       for i in ${VERSIONS[@]}; do
-        if [ "$i" == "$CURRENT_PRODUCT_VERSION" ]; then
-           echo -e "   [$index] ${CLightGreen}$i${CNone}"
-        else
-           echo "   [$index] $i"
-        fi
-        let index=index+1
+         if [[ "$i" != *"none"* ]] && [ "${PRODUCT_NAME}" == "Kafka Confluent Platform" ]; then
+            if [ -f "$PADOGRID_ENV_BASE_PATH/products/confluent-$i/bin/confluent-hub" ]; then
+               version="$i (commercial)"
+            else
+               version="$i (community)"
+            fi
+         else
+            version=$i
+         fi
+
+         if [ "$i" == "$CURRENT_PRODUCT_VERSION" ]; then
+            echo -e "   [$index] ${CLightGreen}$version${CNone}"
+         else
+            echo "   [$index] $version"
+         fi
+         let index=index+1
       done
       
       local __REDO="true"
@@ -221,6 +245,7 @@ REDIS_VERSIONS="(none) $REDIS_VERSIONS"
 SNAPPYDATA_VERSIONS="(none) $SNAPPYDATA_VERSIONS"
 SPARK_VERSIONS="(none) $SPARK_VERSIONS"
 KAFKA_VERSIONS="(none) $KAFKA_VERSIONS"
+CONFLUENT_VERSIONS="(none) $CONFLUENT_VERSIONS"
 HADOOP_VERSIONS="(none) $HADOOP_VERSIONS"
 
 # Convert to array
@@ -241,6 +266,7 @@ __REDIS_VERSIONS=($REDIS_VERSIONS)
 __SNAPPYDATA_VERSIONS=($SNAPPYDATA_VERSIONS)
 __SPARK_VERSIONS=($SPARK_VERSIONS)
 __KAFKA_VERSIONS=($KAFKA_VERSIONS)
+__CONFLUENT_VERSIONS=($CONFLUENT_VERSIONS)
 __HADOOP_VERSIONS=($HADOOP_VERSIONS)
 
 echo ""
@@ -268,6 +294,7 @@ SELECTED_INDEX_REDIS=""
 SELECTED_INDEX_SNAPPYDATA=""
 SELECTED_INDEX_SPARK=""
 SELECTED_INDEX_KAFKA=""
+SELECTED_INDEX_CONFLUENT=""
 SELECTED_INDEX_HADOOP=""
 
 # Product PRODUCT_EVAL_ARRAY.
@@ -286,10 +313,12 @@ INDEX_REDIS=11
 INDEX_SNAPPYDATA=12
 INDEX_SPARK=13
 INDEX_KAFKA=14
-INDEX_HADOOP=15
+INDEX_CONFLUENT=15
+INDEX_HADOOP=16
 
-# PRODUCT_HOME_ARRAY contains an ordered list of product home environment variable names
-PRODUCT_HOME_ARRAY=(PADOGRID_HOME PADO_HOME PADODESKTOP_HOME PADOWEB_HOME GEMFIRE_HOME GEODE_HOME HAZELCAST_HOME HAZELCAST_MC_HOME HAZELCAST_DESKTOP_HOME JET_HOME JET_MC_HOME REDIS_HOME SNAPPYDATA_HOME SPARK_HOME KAFKA_HOME HADOOP_HOME)
+# PRODUCT_HOME_ARRAY contains an ordered list of product home environment variable names.
+# KAFKA_HOME shared by Kafka and Confluent.
+PRODUCT_HOME_ARRAY=(PADOGRID_HOME PADO_HOME PADODESKTOP_HOME PADOWEB_HOME GEMFIRE_HOME GEODE_HOME HAZELCAST_HOME HAZELCAST_MC_HOME HAZELCAST_DESKTOP_HOME JET_HOME JET_MC_HOME REDIS_HOME SNAPPYDATA_HOME SPARK_HOME KAFKA_HOME KAFKA_HOME HADOOP_HOME)
 
 # PRODUCT_EVAL_ARRAY is an ordered list of selected product versions. See INDEX_ variables above.
 # [0] PADOGRID
@@ -307,7 +336,8 @@ PRODUCT_HOME_ARRAY=(PADOGRID_HOME PADO_HOME PADODESKTOP_HOME PADOWEB_HOME GEMFIR
 # [12] SNAPPYDATA
 # [13] SPARK
 # [14] KAFKA
-# [15] HADOOP
+# [15] CONFLUENT
+# [16] HADOOP
 # "none" indicates no product selection
 unset PRODUCT_EVAL_ARRAY
 let LAST_INDEX=${#PRODUCT_HOME_ARRAY[@]}-1
@@ -580,6 +610,15 @@ while [ "$REDO" == "true" ]; do
       echo ""
    fi
 
+   # Kafka Confluent Platform
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
+      doUserInput "Kafka Confluent Platform" "$CONFLUENT_VERSIONS" "$__CONFLUENT_VERSION" "$SELECTED_INDEX_CONFLUENT"
+      echo "Selected: [$SELECTED_INDEX] ${__CONFLUENT_VERSIONS[$SELECTED_INDEX]}"
+      SELECTED_INDEX_CONFLUENT=$SELECTED_INDEX
+      PRODUCT_EVAL_ARRAY[$INDEX_CONFLUENT]=${__CONFLUENT_VERSIONS[$SELECTED_INDEX]}
+      echo ""
+   fi
+
    # Hadoop
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
       doUserInput "Hadoop" "$HADOOP_VERSIONS" "$__HADOOP_VERSION" "$SELECTED_INDEX_HADOOP"
@@ -651,6 +690,7 @@ while [ "$REDO" == "true" ]; do
    echo "      SnappyData: ${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX_SNAPPYDATA]}"
    echo "           Spark: ${__SPARK_VERSIONS[$SELECTED_INDEX_SPARK]}"
    echo "           Kafka: ${__KAFKA_VERSIONS[$SELECTED_INDEX_KAFKA]}"
+   echo "       Confluent: ${__CONFLUENT_VERSIONS[$SELECTED_INDEX_CONFLUENT]}"
    echo "          Hadoop: ${__HADOOP_VERSIONS[$SELECTED_INDEX_HADOOP]}"
    echo "       Coherence: ${NEW_COHERENCE_HOME}"
    echo ""
@@ -734,6 +774,7 @@ function getProductDirName
     $INDEX_SNAPPYDATA ) DIR_NAME="snappydata-$VERSION";;
     $INDEX_SPARK ) DIR_NAME="spark-$VERSION";;
     $INDEX_KAFKA ) DIR_NAME="kafka_$VERSION";;
+    $INDEX_CONFLUENT ) DIR_NAME="confluent-$VERSION";;
     $INDEX_HADOOP ) DIR_NAME="hadoop-$VERSION";;
   esac
   echo $DIR_NAME
