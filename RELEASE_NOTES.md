@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.22-SNAPSHOT
 
-### Release Date: 10/01/22
+### Release Date: 10/05/22
 
-- Initial snapshot.
+- Added support for Confluent Platform. You can now install Confluent Platform by running `install_padogrid -product confluent`. Confluent and Kafka share the same cluster commands.
 
 ---
 
