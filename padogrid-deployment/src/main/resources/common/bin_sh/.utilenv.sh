@@ -1774,11 +1774,14 @@ function switch_rwe
          return 1
       elif [ "$__WORKSPACE" != "" ]; then
          NEW_WORKSPACE_DIR="$NEW_RWE_DIR/$__WORKSPACE"
-         if [ ! -d "$NEW_WORKSPACE_DIR" ]; then
-            echo >&2 "ERROR: Invalid workspace name: [$__WORKSPACE]. Workspace does not exist. Command aborted."
+         if [ ! -r "$NEW_RWE_DIR/initenv.sh" ]; then
+            echo -e >&2 "${CError}ERROR:${CNone} RWE access denied: [$__RWE]. You do not have RWE access permissions. Command aborted."
+            return 1
+         elif [ ! -d "$NEW_WORKSPACE_DIR" ]; then
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace name: [$__WORKSPACE]. Workspace does not exist. Command aborted."
             return 1
          elif [ ! -r "$NEW_WORKSPACE_DIR" ]; then
-            echo >&2 "ERROR: Workspace access denied: [$__WORKSPACE]. You do not have workspace access permissions. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Workspace access denied: [$__WORKSPACE]. You do not have workspace access permissions. Command aborted."
             return 1
          fi
 
@@ -1814,6 +1817,11 @@ function switch_rwe
          cd_workspace $__SHIFTED
 
       else
+
+         if [ ! -r "$NEW_RWE_DIR/initenv.sh" ]; then
+            echo -e >&2 "${CError}ERROR:${CNone} RWE access denied: [$__RWE]. You do not have RWE access permissions. Command aborted."
+            return 1
+         fi
 
          . "$NEW_RWE_DIR/initenv.sh" -quiet
 
