@@ -23,7 +23,7 @@ if [ "$WORKSPACE" == "" ] || [ ! -f "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/initen
       fi      
    done
 fi
-if [ "$WORKSPACE" != "" ]; then 
+if [ "$WORKSPACE" != "" ] && [ -r "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/initenv.sh" ]; then 
    . "$PADOGRID_WORKSPACES_HOME/$WORKSPACE/initenv.sh" -quiet
 fi
 

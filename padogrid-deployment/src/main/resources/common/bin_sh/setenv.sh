@@ -37,8 +37,8 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # ---------
 # PADOGRID_WORKSPACE 
 #                        User's padogrid directory where user specifics such as cluster, pods, 
-#                        apps and bundles are stored. If not specified then the padogrid home
-#                        directory ($PADOGRID_HOME) is assigned.
+#                        apps and bundles are stored. If not specified then the workspace is
+#                        undefined.
 # JAVA_HOME              Java root directory path. If not specified then the default java executable
 #                        in your PATH will be used.
 
@@ -63,13 +63,6 @@ fi
 # 
 JAVA_OPTS=""
 CLASSPATH=""
-
-# 
-# User padogrid directory
-#
-if [ -z $PADOGRID_WORKSPACE ]; then
-   export PADOGRID_WORKSPACE=$BASE_DIR
-fi
 
 #
 # Default workspace used when initializing workspaces by running create_workspace.
@@ -273,7 +266,11 @@ fi
 
 # Current RWE and WORKSPACE
 RWE=$(basename "$PADOGRID_WORKSPACES_HOME")
-WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+if [ "$PADOGRID_WORKSPACE" == "" ]; then
+   WORKSPACE=""
+else
+   WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+fi
 
 #
 # Source in the rwe and workspace setenv.sh files (for license keys and workspace specifics)

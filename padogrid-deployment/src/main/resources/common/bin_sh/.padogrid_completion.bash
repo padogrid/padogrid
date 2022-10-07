@@ -535,8 +535,14 @@ __rwe_complete_arg()
       if [ ! -d "$RWE_HOME/$prev_word" ]; then
          echo "No such RWE: $prev_word"
       else
-         type_list=`ls $RWE_HOME/$prev_word`
-         type_list=$(removeTokens "$type_list" "setenv.sh initenv.sh")
+         local __type_list=`ls $RWE_HOME/$prev_word`
+         local __type_list=$(removeTokens "$__type_list" "setenv.sh initenv.sh")
+         type_list=""
+         for i in $__type_list; do
+            if [ -r "$RWE_HOME/$prev_word/$i" ]; then
+               type_list="$type_list $i"
+            fi
+         done
       fi
    else
       local WORKSPACE_DIR="$RWE_HOME/${COMP_WORDS[start_index]}/${COMP_WORDS[start_index+1]}"

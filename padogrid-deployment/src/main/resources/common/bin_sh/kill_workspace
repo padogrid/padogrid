@@ -33,8 +33,10 @@ fi
 
 if [ "$WORKSPACE_ARG" != "" ]; then
    WORKSPACE=$WORKSPACE_ARG
-else
+elif [ "$PADOGRID_WORKSPACE" != "" ]; then
    WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+else
+   WORKSPACE=""
 fi
 
 if [ "$HELP" == "true" ]; then
@@ -82,9 +84,19 @@ EOF
    exit
 fi
 
+
 CURRENT_DIR="`pwd`"
-CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+if [ "$PADOGRID_WORKSPACE" == "" ]; then
+   CURRENT_WORKSPACE=""
+else
+   CURRENT_WORKSPACE="`basename $PADOGRID_WORKSPACE`"
+fi
 CURRENT_CLUSTER=$CLUSTER
+
+if [ "$WORKSPACE" == "" ] && [ "$CURRENT_WORKSPACE" == "" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Workspace undefined. The current workspace is undefined. Command aborted."
+   exit 1
+fi
 
 if [ "$WORKSPACE" != "$CURRENT_WORKSPACE" ]; then
    switch_workspace $WORKSPACE

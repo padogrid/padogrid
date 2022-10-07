@@ -297,13 +297,13 @@ function getRweList
       local ROOT_DIRS=$(ls "$RWE_HOME")
       pushd $RWE_HOME > /dev/null 2>&1
       for i in $ROOT_DIRS; do
-      if [ -f "$i/initenv.sh" ] && [ -f "$i/.addonenv.sh" ] && [ -f "$i/setenv.sh" ]; then
-       if [ "$ROOTS" == "" ]; then
-          ROOTS="$i"
-       else
-          ROOTS="$ROOTS $i"
-       fi
-      fi
+         if [ -f "$i/initenv.sh" ] && [ -f "$i/.addonenv.sh" ] && [ -f "$i/setenv.sh" ]; then
+          if [ "$ROOTS" == "" ]; then
+             ROOTS="$i"
+          else
+             ROOTS="$ROOTS $i"
+          fi
+         fi
       done
       popd > /dev/null 2>&1
    fi
@@ -1422,11 +1422,15 @@ function retrieveRweEnvFile
       . "$HOME_RWEENV_FILE"
       if [ "$WORKSPACE" != "" ]; then
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$WORKSPACE"
+      else
+         PADOGRID_WORKSPACE=""
       fi
+   else
+      PADOGRID_WORKSPACE=""
    fi
    # If the workspace does not exist then pick the first workspace in the RWE dir
-   if [ ! -d "$PADOGRID_WORKSPACE" ]; then
-      local __WORKSPACES=$(list_workspaces)
+   if [ "$PADOGRID_WORKSPACE" == "" ] || [ ! -d "$PADOGRID_WORKSPACE" ]; then
+      local __WORKSPACES=$(list_workspaces -rwe $RWE)
       for i in $__WORKSPACES; do
          __WORKSPACE=$i
          PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/$__WORKSPACE"
@@ -1773,6 +1777,9 @@ function switch_rwe
          if [ ! -d "$NEW_WORKSPACE_DIR" ]; then
             echo >&2 "ERROR: Invalid workspace name: [$__WORKSPACE]. Workspace does not exist. Command aborted."
             return 1
+         elif [ ! -r "$NEW_WORKSPACE_DIR" ]; then
+            echo >&2 "ERROR: Workspace access denied: [$__WORKSPACE]. You do not have workspace access permissions. Command aborted."
+            return 1
          fi
 
          # Set PADOGRID_WORKSPACES_HOME here. It's a new RWE.
@@ -1816,18 +1823,20 @@ function switch_rwe
          # PADOGRID_WORKSPACE is retrieved by the above call, retrieveRweEnvFile
          NEW_WORKSPACE_DIR=$PADOGRID_WORKSPACE
 
-         # Retreive last switched cluster/pod
-         retrieveWorkspaceEnvFile
+         if [ "$NEW_WORKSPACE_DIR" != "" ] && [ -r "$NEW_WORKSPACE_DIR/initenv.sh" ]; then
+            # Retreive last switched cluster/pod
+            retrieveWorkspaceEnvFile
 
-         # Source in the last switched cluster (pod has no env file)
-         retrieveClusterEnvFile "$NEW_WORKSPACE_DIR/clusters/$CLUSTER"
+            # Source in the last switched cluster (pod has no env file)
+            retrieveClusterEnvFile "$NEW_WORKSPACE_DIR/clusters/$CLUSTER"
 
-         export PADOGRID_WORKSPACES_HOME
-         export CLUSTER
-         export POD
-         export PRODUCT
-         export CLUSTER_TYPE
-         . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
+            export PADOGRID_WORKSPACES_HOME
+            export CLUSTER
+            export POD
+            export PRODUCT
+            export CLUSTER_TYPE
+            . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
+         fi
 
          cd_rwe $__RWE
       fi
@@ -1899,7 +1908,10 @@ function switch_workspace
    if [ "$1" == "" ]; then
 
       # If the current workspace does not exist then retrieve it from the rweenv file.
-      if [ ! -d "$PADOGRID_WORKSPACE" ]; then
+      if [ "$PADOGRID_WORKSPACE" == "" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Workspace undefined. Command aborted."
+         return 1
+      elif [ ! -d "$PADOGRID_WORKSPACE" ]; then
          retrieveRweEnvFile
          export PADOGRID_WORKSPACE
       fi
@@ -1921,7 +1933,7 @@ function switch_workspace
 
    else
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
-         echo >&2 "ERROR: Invalid workspace: [$1]. Workspace does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Workspace does not exist. Command aborted."
          return 1
       fi
       local __PATH=""
@@ -2509,7 +2521,12 @@ function cd_workspace
    fi
 
    if [ "$1" == "" ]; then
-      cd $PADOGRID_WORKSPACE
+      if [ "$PADOGRID_WORKSPACE" == "" ]; then
+         echo >&2 "ERROR: Workspace undefined. The current workspace is undefined. Command aborted."
+         return 1
+      else
+         cd $PADOGRID_WORKSPACE
+      fi
    else
       local PARENT_DIR="$PADOGRID_WORKSPACES_HOME"
       if [ ! -d "$PARENT_DIR/$1" ]; then
