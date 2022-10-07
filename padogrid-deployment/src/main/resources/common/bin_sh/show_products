@@ -123,21 +123,31 @@ function printVersionTree
    if [ $len -eq 0 ]; then
       echo "$TLel (not installed)"
    else
+      local version
       for i in ${VERSIONS[@]}; do
-        if [ $index -lt $last_index ]; then
-           if [ "$i" == "$CURRENT_PRODUCT_VERSION" ]; then
-              echo -e "$TTee ${CLightGreen}$i${CNone}"
-           else
-              echo "$TTee $i"
-           fi
-        else
-           if [ "$i" == "$CURRENT_PRODUCT_VERSION" ]; then
-               echo -e "$TLel ${CLightGreen}$i${CNone}"
-           else
-              echo "$TLel $i"
-           fi
-        fi
-        let index=index+1
+         if [[ "$i" != *"none"* ]] && [ "${PRODUCT_NAME}" == "Kafka Confluent Platform" ]; then
+            if [ -f "$PADOGRID_ENV_BASE_PATH/products/confluent-$i/bin/confluent-hub" ]; then
+               version="$i (commercial)"
+            else
+               version="$i (community)"
+            fi
+         else
+            version=$i
+         fi
+         if [ $index -lt $last_index ]; then
+            if [ "$i" == "$CURRENT_PRODUCT_VERSION" ]; then
+               echo -e "$TTee ${CLightGreen}$version${CNone}"
+            else
+               echo "$TTee $version"
+            fi
+         else
+            if [ "$i" == "$CURRENT_PRODUCT_VERSION" ]; then
+                echo -e "$TLel ${CLightGreen}$i${CNone}"
+            else
+               echo "$TLel $version"
+            fi
+         fi
+         let index=index+1
       done
    fi
 }
