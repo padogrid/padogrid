@@ -123,7 +123,11 @@ fi
 
 # Set the default cluster name if not specified
 if [ "$CLUSTER_ARG" == "" ]; then
-   CLUSTER=$DEFAULT_CLUSTER
+   if [ "$CLUSTER_TYPE_ARG" == "confluent" ]; then
+      CLUSTER=$DEFAULT_CONFLUENT_CLUSTER
+   else
+      CLUSTER=$DEFAULT_CLUSTER
+   fi
 fi
 
 # Abort if the cluster exists
@@ -158,18 +162,6 @@ if [ "$PRODUCT_ARG" != "" ]; then
    PRODUCT=$PRODUCT_ARG
 fi
 
-if [ "$TYPE_ARG" == "pado" ]; then
-  if [ "$PADO_HOME" == "" ]; then
-   echo >&2 "----------------------------------------------------------------"
-   echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "----------------------------------------------------------------"
-   echo >&2 "ERROR: Pado is not found. You must set PADO_HOME with the Pado installation path in the following"
-   echo >&2 "       workspace 'setenv.sh' file."
-   echo >&2 -e "       ${CLightRed}$PADOGRID_WORKSPACE/setenv.sh${CNone}"
-   echo >&2 "       Command aborted."
-   exit 1
-  fi
-fi
 
 function writeCluster() 
 {
@@ -196,33 +188,42 @@ function writeCluster()
 
    BROKER_PORT=$NEW_MEMBER_START_PORT
    let CONTROLLER_PORT=BROKER_PORT+1
+   let HTTP_PORT=$NEW_HTTP_START_PORT
    LISTENERS_1="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
    ADVERTISED_LISTENERS_1="PLAINTEXT:\/\/localhost:$BROKER_PORT"
+   CONFLUENT_HTTP_SERVER_LISTENERS_1="http:\/\/0.0.0.0:$HTTP_PORT"
    let BROKER_PORT=BROKER_PORT+100
    let CONTROLLER_PORT=BROKER_PORT+1
+   let HTTP_PORT=HTTP_PORT+1
    LISTENERS_2="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
    ADVERTISED_LISTENERS_2="PLAINTEXT:\/\/localhost:$BROKER_PORT"
+   CONFLUENT_HTTP_SERVER_LISTENERS_2="http:\/\/0.0.0.0:$HTTP_PORT"
    let BROKER_PORT=BROKER_PORT+100
    let CONTROLLER_PORT=BROKER_PORT+1
+   let HTTP_PORT=HTTP_PORT+1
    LISTENERS_3="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
    ADVERTISED_LISTENERS_3="PLAINTEXT:\/\/localhost:$BROKER_PORT"
+   CONFLUENT_HTTP_SERVER_LISTENERS_3="http:\/\/0.0.0.0:$HTTP_PORT"
    sed -e 's/\${node.id}/1/' \
        -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
        -e 's/\${log.dirs}/'${__MEMBER_1_DIR}'/' \
        -e 's/\${listeners}/'${LISTENERS_1}'/' \
        -e 's/\${advertised.listeners}/'${ADVERTISED_LISTENERS_1}'/' \
+       -e 's/\${confluent.http.server.listeners}/'${CONFLUENT_HTTP_SERVER_LISTENERS_1}'/' \
        "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-01.properties"
    sed -e 's/\${node.id}/2/' \
        -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
        -e 's/\${log.dirs}/'${__MEMBER_2_DIR}'/' \
        -e 's/\${listeners}/'${LISTENERS_2}'/' \
        -e 's/\${advertised.listeners}/'${ADVERTISED_LISTENERS_2}'/' \
+       -e 's/\${confluent.http.server.listeners}/'${CONFLUENT_HTTP_SERVER_LISTENERS_2}'/' \
        "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-02.properties"
    sed -e 's/\${node.id}/3/' \
        -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
        -e 's/\${log.dirs}/'${__MEMBER_3_DIR}'/' \
        -e 's/\${listeners}/'${LISTENERS_3}'/' \
        -e 's/\${advertised.listeners}/'${ADVERTISED_LISTENERS_3}'/' \
+       -e 's/\${confluent.http.server.listeners}/'${CONFLUENT_HTTP_SERVER_LISTENERS_3}'/' \
        "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-03.properties"
 
    # Format storages
@@ -293,6 +294,11 @@ function writeCluster()
    # TCP port
    echo "# Member (server) TCP start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
    echo "tcp.startPort=$NEW_MEMBER_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   #
+   # HTTP port
+   echo "# Member REST API HTTP start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "http.startPort=$NEW_HTTP_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
 
    # Debug
@@ -405,6 +411,7 @@ popd > /dev/null 2>&1
 # we can ignore the port number conflicts.
 if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "$VM_ENABLED" == "true" ]; then
    NEW_MEMBER_START_PORT=$DEFAULT_MEMBER_START_PORT
+   NEW_HTTP_START_PORT=$DEFAULT_MEMBER_HTTP_START_PORT
    NEW_DEBUG_START_PORT=$DEFAULT_DEBUG_START_PORT
    NEW_JMX_START_PORT=$DEFAULT_JMX_START_PORT
    NEW_PROMETHEUS_START_PORT=$DEFAULT_PROMETHEUS_START_PORT
@@ -412,6 +419,7 @@ else
    NEW_MEMBER_START_PORT=$PORT_ARG
    let PORT_DIFF=NEW_MEMBER_START_PORT-DEFAULT_MEMBER_START_PORT
    let NEW_MEMBER_START_PORT=DEFAULT_MEMBER_START_PORT+PORT_DIFF
+   let NEW_HTTP_START_PORT=DEFAULT_MEMBER_HTTP_START_PORT+PORT_DIFF
    let NEW_DEBUG_START_PORT=DEFAULT_DEBUG_START_PORT+PORT_DIFF
    let NEW_PROMETHEUS_START_PORT=DEFAULT_PROMETHEUS_START_PORT+PORT_DIFF
    let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
@@ -537,7 +545,9 @@ fi
 
 # Generate Kafka cluster ID
 CLASSPATH="" CLUSTER_ID=$($KAFKA_STORAGE random-uuid)
-CLUSTER_TYPE="kraft"
+if [ "$CLUSTER_TYPE_SPECIFIED" == "true" ]; then
+   CLUSTER_TYPE="kafka"
+fi
 
 # Write cluster files
 writeCluster

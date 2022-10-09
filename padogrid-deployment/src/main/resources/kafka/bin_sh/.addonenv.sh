@@ -108,6 +108,11 @@ DEFAULT_JMX_START_PORT=12701
 #
 DEFAULT_PROMETHEUS_START_PORT=8791
 
+#
+# Default HTTP port (Confluent)
+#
+DEFAULT_MEMBER_HTTP_START_PORT=8090
+
 # Kafka config file paths
 CONFIG_FILE=$ETC_DIR/conf-env.sh
 
@@ -119,22 +124,58 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    LOG4J_FILE="$(cygpath -wp "$LOG4J_FILE")"
 fi
 LOG_PROPERTIES="-Dlog4j.configurationFile=$LOG4J_FILE"
+#
+# PATH Depends on PRODUCT_HOME due to switch_workspace which does not have cluster info.
+# We need to change that accordingly here.
+# Also, set PRODUCT to "kafka" to override "confluent". This is required due to both products
+# sharing the same resources under the name "kafka".
+# 6/29/22 - CLUSTER_TYPE setting done here is removed. This may affect older versions of PadoGrid.
+export PRODUCT="kafka"
+#if [ "$CLUSTER_TYPE_SPECIFIED" == "false" ]; then
+#   if [[ "$PRODUCT_HOME" == *"confluent"* ]]; then
+#      export CLUSTER_TYPE="confluent"
+#   elif [[ "$PRODUCT_HOME" == *"kafka"* ]]; then
+#      export CLUSTER_TYPE="kafka"
+#   fi
+#fi
 
-export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$KAFKA_HOME/sbin:$KAFKA_HOME/bin:$PATH"
+
+IS_KAFKA_ENTERPRISE=false
+if [ "$CLUSTER_TYPE_ARG" == "confluent" ] || [ "$CLUSTER_TYPE" == "confluent" ]; then
+   if [ -f "$CONFLUENT_HOME/bin/confluent-hub" ]; then
+      IS_KAFKA_ENTERPRISE=true
+   fi
+   export CLUSTER_TYPE="confluent"
+   export PRODUCT_HOME="$CONFLUENT_HOME"
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$CONFLUENT_HOME/bin:$PATH"
+else
+   IS_KAFKA_ENTERPRISE=false
+   export CLUSTER_TYPE="kafka"
+   export PRODUCT_HOME="$KAFKA_HOME"
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$KAFKA_HOME/bin:$PATH"
+fi
 
 #
 # KAFKA_VERSION/PRODUCT_VERSION: Determine the Kafka version
+# Geode and GemFire share the same 'kafka' prefix for jar names.
 #
 KAFKA_VERSION=""
-IS_KAFKA_ENTERPRISE=false
-if [ "$KAFKA_HOME" != "" ]; then
+if [ "$PRODUCT_HOME" == "" ]; then
+   KAFKA_VERSION=""
+   KAFKA_MAJOR_VERSION_NUMBER=""
+elif [ "$CLUSTER_TYPE" == "confluent" ]; then
+   file=$(basename $CONFLUENT_HOME)
+   file=${file#*confluent-}
+   KAFKA_VERSION=${file#*\-}
+   KAFKA_MAJOR_VERSION_NUMBER=`expr "$KAFKA_VERSION" : '\([0-9]*\)'`
+else
    file=$(basename $KAFKA_HOME)
    file=${file#*kafka_}
    KAFKA_VERSION=${file#*\-}
    KAFKA_MAJOR_VERSION_NUMBER=`expr "$KAFKA_VERSION" : '\([0-9]*\)'`
-   PRODUCT_VERSION=$KAFKA_VERSION
-   PRODUCT_MAJOR_VERSION=$KAFKA_MAJOR_VERSION_NUMBER
 fi
+PRODUCT_VERSION=$KAFKA_VERSION
+PRODUCT_MAJOR_VERSION=$KAFKA_MAJOR_VERSION_NUMBER
 
 #
 # CLASSPATH
@@ -153,7 +194,11 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-__CLASSPATH="$__CLASSPATH:$KAFKA_HOME/libs/*"
+if [ "$CLUSTER_TYPE" == "confluent" ]; then
+   __CLASSPATH="$__CLASSPATH:$CONFLUENT_HOME/share/java/kafka/*"
+else
+   __CLASSPATH="$__CLASSPATH:$KAFKA_HOME/libs/*"
+fi
 export CLASSPATH="$__CLASSPATH"
 
 #

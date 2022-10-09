@@ -124,6 +124,7 @@ fi
 
 CLUSTER_ID=`getClusterProperty "cluster.id"`
 MEMBER_START_PORT=`getClusterProperty "tcp.startPort"`
+MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
 POD=`getClusterProperty "pod.name" "local"`
 
 #
@@ -212,7 +213,7 @@ if  [ ! -d $CLUSTER_DIR ]; then
 fi
 
 if [ "$MEMBER_NUM_SPECIFIED" == "true" ]; then
-   NEW_MEMBER_NUMBER=$MEMBER_NUM
+   NEW_MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 else
    if [ "$REMOTE_SPECIFIED" == "true" ]; then
       NEW_MEMBER_NUMBER=1
@@ -250,6 +251,7 @@ else
    __NEW_MEMBER_NUMBER=`getMemberNumWithLeadingZero $NEW_MEMBER_NUMBER`
    BROKER_PORT=$(($MEMBER_START_PORT+($NEW_MEMBER_NUMBER-1)*100))
    let CONTROLLER_PORT=BROKER_PORT+1
+   let MEMBER_HTTP_PORT=MEMBER_HTTP_START_PORT+NEW_MEMBER_NUMBER-1
    QUORUM_VOTERS=""
    let MEMBER_CONTROLLER_PORT=MEMBER_START_PORT+1
    for i in $(seq 1 3); do
@@ -262,11 +264,13 @@ else
 
    LISTENERS="PLAINTEXT:\/\/:$BROKER_PORT,CONTROLLER:\/\/:$CONTROLLER_PORT"
    ADVERTISED_LISTENERS="PLAINTEXT:\/\/localhost:$BROKER_PORT"
+   CONFLUENT_HTTP_SERVER_LISTENERS="http:\/\/0.0.0.0:$MEMBER_HTTP_PORT"
    sed -e 's/\${node.id}/'${NEW_MEMBER_NUMBER}'/' \
        -e 's/\${controller.quorum.voters}/'${QUORUM_VOTERS}'/' \
        -e 's/\${log.dirs}/'${__NEW_MEMBER_DIR}'/' \
        -e 's/\${listeners}/'${LISTENERS}'/' \
        -e 's/\${advertised.listeners}/'${ADVERTISED_LISTENERS}'/' \
+       -e 's/\${confluent.http.server.listeners}/'${CONFLUENT_HTTP_SERVER_LISTENERS}'/' \
        "$BASE_DIR/etc/template-server.properties" > "$ETC_DIR/server-$__NEW_MEMBER_NUMBER.properties"
    # Create a new Kafka storage in the run directory.
    CLASSPATH="" $KAFKA_HOME/bin/$KAFKA_STORAGE format -t $CLUSTER_ID -c $ETC_DIR/server-$__NEW_MEMBER_NUMBER.properties

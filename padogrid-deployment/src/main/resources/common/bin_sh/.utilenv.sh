@@ -623,7 +623,7 @@ function getClusterPortOptions
       __DEFAULT_PORT="$DEFAULT_HADOOP_START_PORT";;
    hazelcast|jet)
       __DEFAULT_PORT="$DEFAULT_HAZELCAST_START_PORT";;
-   kafka)
+   kafka|confluent)
       __DEFAULT_PORT="$DEFAULT_KAFKA_START_PORT";;
    redis)
       __DEFAULT_PORT="$DEFAULT_REDIS_START_PORT";;
@@ -1568,11 +1568,15 @@ function updateClusterEnvFile
 
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
    # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
+   local PRODUCT_TYPE="$PRODUCT"
    if [ "$PRODUCT" == "gemfire" ]; then
       echo "PRODUCT=geode" > "$HOME_CLUSTERENV_FILE"
       CLUSTER_TYPE="gemfire"
    elif [ "$PRODUCT" == "jet" ]; then
       echo "PRODUCT=hazelcast" > "$HOME_CLUSTERENV_FILE"
+   elif [ "$PRODUCT" == "confluent" ]; then
+      echo "PRODUCT=kafka" > "$HOME_CLUSTERENV_FILE"
+      CLUSTER_TYPE="confluent"
    else
       echo "PRODUCT=$PRODUCT" > "$HOME_CLUSTERENV_FILE"
    fi
@@ -1639,8 +1643,10 @@ function retrieveClusterEnvFile
          PRODUCT="spark"
          CLUSTER_TYPE="standalone"
       elif [ -f "$CLUSTER_DIR/etc/server.properties" ]; then
+         # Without the clusterenv.sh file, we cannot determine whether kafka or confluent.
+         # Set it to kafka for now.
          PRODUCT="kafka"
-         CLUSTER_TYPE="kraft"
+         CLUSTER_TYPE=$PRODUCT
       elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then
          PRODUCT="hadoop"
          CLUSTER_TYPE="pseudo"
@@ -1651,10 +1657,13 @@ function retrieveClusterEnvFile
    fi
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
    # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
+   # Override "confluent" with "kafka". Both products share resources under the name "kafka".
    if [ "$PRODUCT" == "gemfire" ]; then
       PRODUCT="geode"
    elif [ "$PRODUCT" == "jet" ]; then
       PRODUCT="hazelcast"
+   elif [ "$PRODUCT" == "confluent" ]; then
+      PRODUCT="kafka"
    elif [ "$PRODUCT" == "" ]; then
       PRODUCT="none"
       CLUSTER_TYPE="none"
@@ -2281,7 +2290,11 @@ function __switch_cluster
          export PRODUCT_HOME=$REDIS_HOME
          __PRODUCT="redis"
       elif [ "$PRODUCT" == "kafka" ]; then
-         export PRODUCT_HOME=$KAFKA_HOME
+         if [ "$CLUSTER_TYPE" == "confluent" ]; then
+            export PRODUCT_HOME=$CONFLUENT_HOME
+         else
+            export PRODUCT_HOME=$KAFKA_HOME
+         fi
          __PRODUCT="kafka"
       elif [ "$PRODUCT" == "hadoop" ]; then
          export PRODUCT_HOME=$HADOOP_HOME
@@ -3751,7 +3764,7 @@ function determineInstalledProductVersions
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
-#                   set to kraft if PRODUCT is kafka,
+#                   set to kafka or confluent if PRODUCT is kafka or confluent,
 #                   set to pseudo if PRODUCT is hadoop,
 #                   set to PRODUCT for all others.
 #   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy, myspark
@@ -3763,7 +3776,8 @@ function determineInstalledProductVersions
 #   REDIS_HOME      Set to PRODUCT_HOME if PRODUCT is redis.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 #   SPARK_HOME      Set to PRODUCT_HOME if PRODUCT is spark.
-#   KAFKA_HOME      Set to PRODUCT_HOME if PRODUCT is kafka.
+#   KAFKA_HOME      Set to PRODUCT_HOME if PRODUCT is kafka or confluent.
+#   CONFLUENT_HOME  Set to PRODUCT_HOME if PRODUCT is confluent.
 #   HADOOP_HOME     Set to PRODUCT_HOME if PRODUCT is hadoop.
 #
 # @required PRODUCT_HOME Product home path (installation path)
@@ -3791,7 +3805,7 @@ function determineProduct
       GEODE_HOME="$PRODUCT_HOME"
    elif [[ "$PRODUCT_HOME" == *"hadoop"* ]]; then
       PRODUCT="hadoop"
-      PRODUCT_HOME="$PRODUCT_HOME"
+      HADOOP_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="pseudo"
       CLUSTER=$DEFAULT_HADOOP_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"hazelcast"* ]]; then
@@ -3809,11 +3823,22 @@ function determineProduct
          fi
          HAZELCAST_HOME="$PRODUCT_HOME"
       fi
-   elif [[ "$PRODUCT_HOME" == *"kafka"* ]]; then
+   elif [[ "$PRODUCT_HOME" == *"kafka"* ]] || [[ "$PRODUCT_HOME" == *"confluent"* ]]; then
       PRODUCT="kafka"
-      PRODUCT_HOME="$PRODUCT_HOME"
-      CLUSTER_TYPE="kraft"
-      CLUSTER=$DEFAULT_KAFKA_CLUSTER
+      if [[ "$PRODUCT_HOME" == *"kafka"* ]]; then
+         CONFLUENT_HOME=""
+         CLUSTER_TYPE="kafka"
+         if [ "$CLUSTER" == "" ]; then
+            CLUSTER=$DEFAULT_KAFKA_CLUSTER
+         fi
+      else
+         CONFLUENT_HOME="$PRODUCT_HOME"
+         CLUSTER_TYPE="confluent"
+         if [ "$CLUSTER" == "" ]; then
+            CLUSTER=$DEFAULT_CONFLUENT_CLUSTER
+         fi
+      fi
+      KAFKA_HOME="$PRODUCT_HOME"
    elif [[ "$PRODUCT_HOME" == *"redis"* ]]; then
       PRODUCT="redis"
       REDIS_HOME="$PRODUCT_HOME"
@@ -3826,7 +3851,7 @@ function determineProduct
       CLUSTER=$DEFAULT_SNAPPYDATA_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"spark"* ]]; then
       PRODUCT="spark"
-      PRODUCT_HOME="$PRODUCT_HOME"
+      SPARK_HOME="$PRODUCT_HOME"
       CLUSTER_TYPE="standalone"
       CLUSTER=$DEFAULT_SPARK_CLUSTER
    else
@@ -3909,6 +3934,9 @@ function getInstalledProducts
   fi
   if [ "$KAFKA_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS kafka"
+  fi
+  if [ "$CONFLUENT_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS confluent"
   fi
   if [ "$HADOOP_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS hadoop"
@@ -4194,11 +4222,10 @@ function getProductHome
    fi
    if [ "$CLUSTER_TYPE" == "gemfire" ]; then
       PRODUCT_TYPE="gemfire"
-   fi
-   if [ "$PRODUCT_TYPE" == "hazelcast-enterprise" ]; then
+   elif [ "$CLUSTER_TYPE" == "confluent" ]; then
+      PRODUCT_TYPE="confluent"
+   elif [ "$PRODUCT_TYPE" == "hazelcast-enterprise" ]; then
       PRODUCT_TYPE="hazelcast"
-   elif [ "$PRODUCT_TYPE" == "confluent" ]; then
-      PRODUCT_TYPE="kafka"
    fi
    # Convert to uppper case and replace '-' with '_'
    local __VM_PRODUCT_HOME="$(echo ${PRODUCT_TYPE^^} | sed 's/-/_/')_HOME"
@@ -4220,6 +4247,8 @@ function getProductName
 
    if [ "$CLUSTER_TYPE" == "gemfire" ]; then
       __PRODUCT="gemfire"
+   elif [ "$CLUSTER_TYPE" == "confluent" ]; then
+      __PRODUCT="confluent"
    elif [[ "$__PRODUCT_DIR" == **"padogrid"** ]]; then
       __PRODUCT="padogrid"
    elif [[ "$__PRODUCT_DIR" == **"padodesktop"** ]] || [[ "$__PRODUCT_DIR" == **"pado-desktop"** ]]; then
@@ -4243,6 +4272,8 @@ function getProductName
    elif [[ "$__PRODUCT_DIR" == **"spark"** ]]; then
       __PRODUCT="spark"
    elif [[ "$__PRODUCT_DIR" == **"kafka"** ]]; then
+      __PRODUCT="kafka"
+   elif [[ "$__PRODUCT_DIR" == **"confluent"** ]]; then
       __PRODUCT="kafka"
    elif [[ "$__PRODUCT_DIR" == **"gemfire"** ]]; then
       __PRODUCT="gemfire"
