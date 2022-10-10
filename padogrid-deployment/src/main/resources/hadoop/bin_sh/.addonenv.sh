@@ -239,7 +239,12 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-__CLASSPATH="$__CLASSPATH:$HADOOP_HOME/lib/*"
+__CLASSPATH="$__CLASSPATH:$HADOOP_HOME/lib/native/*"
+__CLASSPATH="$__CLASSPATH:$HADOOP_HOME/share/hadoop/common/*"
+__CLASSPATH="$__CLASSPATH:$HADOOP_HOME/share/hadoop/common/lib/*"
+__CLASSPATH="$__CLASSPATH:$HADOOP_HOME/share/hadoop/mapreduce/*"
+__CLASSPATH="$__CLASSPATH:$HADOOP_HOME/share/hadoop/client/*"
+__CLASSPATH="$__CLASSPATH:$HADOOP_HOME/share/hadoop/tools/lib/*"
 export CLASSPATH="$__CLASSPATH"
 
 #
