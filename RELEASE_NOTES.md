@@ -10,7 +10,7 @@ https://github.com/padogrid
 
 - Added support for Confluent Platform. You can now install Confluent Platform by running `install_padogrid -product confluent`. Confluent and Kafka share the same cluster commands. The `CLUSTER_TYPE` value of `kraft` has been replaced with `kafka` and `confluent`. PadoGrid now supports Kafka, Confluent Community, and Confluent Commertial versions.
 - Updated RWE and workspace commands to properly handle file permissions enforced when multitenancy is enabled.
-- Added `perf_test` to Kafka. The `perf_test` for Kafka includes the `test_group` command for ingesting Avro-based blob and mock data into Kafka and the `subscribe_topic` command for listening on topics. It also includes support for ingesting mock data directly into databases. See [Kafka `perf_tst` App](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/kafka/apps/perf_test/README.md) for details.
+- Added `perf_test` to Kafka. The `perf_test` for Kafka includes the `test_group` command for ingesting Avro-based blob and mock data into Kafka and the `subscribe_topic` command for listening on topics. It also includes support for ingesting mock data directly into databases. See [Kafka `perf_test` App](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/kafka/apps/perf_test/README.md) for details.
 
 ---
 
