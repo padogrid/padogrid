@@ -6,14 +6,14 @@ The `perf_test` app provides Redisson client programs to perform the following:
 - Ingest transactional data of any size
 - Ingest mock data with entity relationships (ER)
 - Ingest mock data directly to databases
-- Simulate complex appliation workflows that invoke Redisson operations without coding
+- Simulate complex application workflows that invoke Redisson operations without coding
 - Measure Redisson latencies and throughputs in a multi-threaded user session environment
 
 The `perf_test` app provides a pair of scripts to ingest and transact mock data for testing Redisson throughputs and latencies. It provides a quick way to run your performance tests by configuring a few properties such as the payload size, the number of objects (entries), and the number of worker threads. Out of the box, these properties have already been pre-configured in `etc/ingestion.properties` and `etc/tx.properties`, which you can modify as needed to meet your test criteria.
 
 The `perf_test` app also includes the `test_group` script that allows you to configure one or more groups of Redisson data structure operations and execute them in sequence and/or in parallel. A group is analogous to a function that makes multiple data structure method calls in the order they are specified in the `etc/group.properties` file. The `etc` directory also contains the `group-put.properties` and `group-get.properties` files for demonstrating complex workflows that invoke 22 put calls and 22 get calls on 22 different maps. There are also several example `group-*.properties` files for each data structure. You can also configure the Near Cache in `etc/redisson-client.yaml` to measure the improved throughput. 
 
-The `perf_test` app can directly *upsert* mock data into your database of choice using Hibernate, which automatically creates tables as needed. This capability allows you to quickly synchrnize Redisson with your database and perform latency tests.
+The `perf_test` app can directly *upsert* mock data into your database of choice using Hibernate, which automatically creates tables as needed. This capability allows you to quickly synchronize Redisson with your database and perform latency tests.
 
 ## Transaction Test Cases
 
@@ -36,7 +36,7 @@ The following table describes a list of preconfigured properties files in the `e
 | `group.properties`     | Defines properties for performing groups of `IMap` method calls. |
 | `group-put.properties` | Defines properties for making 22 put calls on 22 different maps in a single group. |
 | `group-get.properties` | Defines properties for making 22 get calls on 22 different maps in a single group. Note that before invoking this file, `group-put.properties` must be invoked first to ingest data. |
-| `group-put-sleep.properties` | Defines properties for tesing the sleep operation. |
+| `group-put-sleep.properties` | Defines properties for testing the sleep operation. |
 | `group-cache.properties` | Defines properties for `MapCache` operations. Unlike other, data structures, `MapCache` requires you to first configure the cluster with the caches that you want to test before running the `test_group` script. |
 | `group-queue.properties` |  Defines properties for `Queue` operations. |
 | `group-rtopic.properties` | Defines properties for `ReliableTopic` operations.|
@@ -53,7 +53,7 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 
 | Script | Default Config | Description |
 | ------ | -------------- | ----------- |
-| `build_app` | pom.xml | Downloads the required libraries by running Maven. **You must first run the `build_app` script before you can run other scripts.** If you are behind a firewall then you can manually download `redisson-<version>.jar` from the following MVNRepository and place it in the workspace lib directory: https://mvnrepository.com/artifact/org.redisson/redisson |
+| `build_app` | pom.xml | Downloads the required libraries by running Maven. **You must first run the `build_app` script before you can run other scripts.** If you are behind a firewall then you can manually download `redisson-<version>.jar` from the following MVNRepository and place it in the workspace `lib` directory: https://mvnrepository.com/artifact/org.redisson/redisson |
 | `test_ingestion` |  etc/ingestion.properties | Displays or runs data ingestion test cases (`putall` or `put`) specified in the `etc/ingestion.properties` file. It ingests mock data into the `eligibility` and `profile` maps. |
 | `test_tx` | etc/tx.properties | **NOT SUPPORTED DUE TO REDIS LIMITATIONS.** Displays or runs transaction and query test cases specified in the `etc/tx.properties` file. It runs `get`, `getall`, `tx` test cases specified in the `tx.properties` file. |
 | `test_group` | etc/group.properties | Displays or runs group test cases (`set`, `put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Redisson `IMap` operations. |
@@ -203,7 +203,7 @@ Stop Time: Tue Jun 21 21:08:31 EDT 2022
 
 ## Inserting and Updating Database Tables
 
-The `group_test -db` command directly loads mock data into database tables without connecting to Redisson. You can use this command to pre-populate the database before testing database synchronization tests in Redisson. This command is also useful for testing the CDC use case in which database changes are automatically ingested into Redisson via a CDC product such as Debezium ansd Striim.
+The `group_test -db` command directly loads mock data into database tables without connecting to Redisson. You can use this command to pre-populate the database before testing database synchronization tests in Redisson. This command is also useful for testing the CDC use case in which database changes are automatically ingested into Redisson via a CDC product such as Debezium and Striim.
 
 ```bash
 # Edit setenv.sh to set the correct hibernate configuration file.

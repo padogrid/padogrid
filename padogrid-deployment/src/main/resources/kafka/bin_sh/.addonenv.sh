@@ -193,7 +193,14 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
    __CLASSPATH="$__CLASSPATH:$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*"
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
-__CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
+
+# Exclude slf4j (included in kafka distribution)
+for i in $PADOGRID_HOME/lib/*; do
+  if [[ "$i" != *"slf4j"* ]]; then
+     __CLASSPATH="$__CLASSPATH:$i"
+  fi
+done
+
 if [ "$CLUSTER_TYPE" == "confluent" ]; then
    __CLASSPATH="$__CLASSPATH:$CONFLUENT_HOME/share/java/kafka/*"
 else

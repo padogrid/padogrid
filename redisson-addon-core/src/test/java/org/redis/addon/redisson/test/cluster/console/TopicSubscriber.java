@@ -27,7 +27,7 @@ public class TopicSubscriber {
 		writeLine("   " + executableName + " - Listen on a topic and print received messages");
 		writeLine();
 		writeLine("SYNOPSIS");
-		writeLine("   " + executableName + " [-create-topic] -type topic|rtopic|stopic topic_name [-?]");
+		writeLine("   " + executableName + " -type topic|rtopic|stopic topic_name [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Listens on the specified topic and prints received messages.");
@@ -41,13 +41,13 @@ public class TopicSubscriber {
 		writeLine("              Topic name.");
 		writeLine();
 		writeLine("EXAMPLES");
-		writeLine("   # Listen on my_topic if it exists");
+		writeLine("   # Listen on Topic, my_topic");
 		writeLine("   ./" + executableName + " -type topic my_topic");
 		writeLine();
-		writeLine("   # Create my_reliable_topic if it does not exist");
+		writeLine("   # Listen on ReliableTopic, my_reliable_topic");
 		writeLine("   ./" + executableName + " -type rtopic my_reliable_topic");
 		writeLine();
-		writeLine("   # Create my_sharded_topic if it does not exist");
+		writeLine("   # Create on SharedTopic, my_sharded_topic");
 		writeLine("   ./" + executableName + " -type stopic my_sharded_topic");
 		writeLine();
 	}

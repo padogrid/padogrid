@@ -52,7 +52,7 @@ fi
 . $APP_DIR/bin_sh/setenv.sh
 
 # Log properties for log4j2. The log file name is set in executable scripts.
-#JAVA_OPTS="$JAVA_OPTS -Dorg.redission.addon.logging.type=log4j2 \
+#JAVA_OPTS="$JAVA_OPTS -Dorg.redisson.addon.logging.type=log4j2 \
 #-Dlog4j.configurationFile=$LOG_CONFIG_FILE"
 
 # k8s
