@@ -43,5 +43,6 @@ fi
 # Source in app specifics
 . $APP_DIR/bin_sh/setenv.sh
 
+# log4j is disabled by default due to Geode conflicts. Enable it by uncommenting the line below.
 # Log properties for log4j2. The log file name is set in executable scripts.
-JAVA_OPTS="$JAVA_OPTS --J=-Dlog4j.configurationFile=$LOG_CONFIG_FILE"
+#JAVA_OPTS="$JAVA_OPTS --J=-Dlog4j.configurationFile=$LOG_CONFIG_FILE"

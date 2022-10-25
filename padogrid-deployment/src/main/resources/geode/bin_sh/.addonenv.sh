@@ -193,11 +193,11 @@ CLIENT_CONFIG_FILE=$ETC_DIR/cache-client.xml
 #else
 #   __ETC_DIR=$ETC_DIR
 #fi
-LOG4J_FILE="$ETC_DIR/log4j2.properties"
-if [[ ${OS_NAME} == CYGWIN* ]]; then
-   LOG4J_FILE="$(cygpath -wp "$LOG4J_FILE")"
-fi
-LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
+#LOG4J_FILE="$ETC_DIR/log4j2.properties"
+#if [[ ${OS_NAME} == CYGWIN* ]]; then
+#   LOG4J_FILE="$(cygpath -wp "$LOG4J_FILE")"
+#fi
+#LOG_PROPERTIES="--J=-Dlog4j.configurationFile=$LOG4J_FILE"
 
 # PATH Depends on PRODUCT_HOME due to switch_workspace which does not have cluster info.
 # We need to change that accordingly here.
@@ -267,10 +267,11 @@ __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 
 # Exclude slf4j (included in geode distribution)
 for i in $PADOGRID_HOME/lib/*; do
-  if [[ "$i" != *"slf4j"* ]]; then
+  if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
      __CLASSPATH="$__CLASSPATH:$i"
   fi
 done
+
 #__CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
 if [ "$CLUSTER_TYPE" == "gemfire" ]; then
    __CLASSPATH="$__CLASSPATH:$GEMFIRE_HOME/lib/geode-dependencies.jar"
