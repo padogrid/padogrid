@@ -318,7 +318,8 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
 else
    __LOG_DIR=$LOG_DIR
 fi
-export LOG_FILE_NAME=${MEMBER}.log
+#export LOG_FILE_NAME=${MEMBER}.log
+export LOG_FILE_NAME=kafkaServer.out
 export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
@@ -449,17 +450,17 @@ else
        if [ $RUNNING_MEMBER_COUNT -lt $MEMBER_COUNT ]; then
           #echo KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE" \
           echo KAFKA_OPTS="$JAVA_OPTS"
-          echo KAFKA_LOG4J_OPTS="-Dlog4j2.configuration=file:$LOG4J_FILE"
+          echo KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$LOG4J_FILE"
           echo KAFKA_HEAP_OPTS="-Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}"
-          echo ${KAFKA_HOME}/bin/$KAFKA_SERVER_START -daemon "$SERVER_PROPERTIES_FILE" \
+          echo ${PRODUCT_HOME}/bin/$KAFKA_SERVER_START -daemon "$SERVER_PROPERTIES_FILE" \
           --override node.id=$MEMBER_NUM_NO_LEADING_ZERO \
           --override log.dirs="$MEMBER_DIR"
 
           #KAFKA_OPTS="-Dpado.vm.id=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE" \
           KAFKA_OPTS="$JAVA_OPTS" \
-          KAFKA_LOG4J_OPTS="-Dlog4j2.configuration=file:$LOG4J_FILE" \
+          KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$LOG4J_FILE" \
           KAFKA_HEAP_OPTS="-Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}" \
-          ${KAFKA_HOME}/bin/$KAFKA_SERVER_START -daemon "$SERVER_PROPERTIES_FILE" \
+          ${PRODUCT_HOME}/bin/$KAFKA_SERVER_START -daemon "$SERVER_PROPERTIES_FILE" \
           --override node.id=$MEMBER_NUM_NO_LEADING_ZERO \
           --override log.dirs="$MEMBER_DIR"
        fi

@@ -330,7 +330,13 @@ fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __VERSION_DIR=v${HAZELCAST_VERSION:0:1}
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/$__VERSION_DIR/*:$BASE_DIR/lib/$__VERSION_DIR/*"
-__CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
+
+# Exclude slf4j and log4j included in geode distribution
+for i in $PADOGRID_HOME/lib/*; do
+  if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
+     __CLASSPATH="$__CLASSPATH:$i"
+  fi
+done
 
 if [ "$HAZELCAST_VERSION" != "" ]; then
    if [ "$CLUSTER_TYPE" == "jet" ]; then

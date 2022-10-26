@@ -123,7 +123,8 @@ LOG4J_FILE="$ETC_DIR/log4j.properties"
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    LOG4J_FILE="$(cygpath -wp "$LOG4J_FILE")"
 fi
-LOG_PROPERTIES="-Dlog4j.configurationFile=$LOG4J_FILE"
+LOG_PROPERTIES="-Dlog4j.configuration=file:$LOG4J_FILE"
+
 #
 # PATH Depends on PRODUCT_HOME due to switch_workspace which does not have cluster info.
 # We need to change that accordingly here.
@@ -138,7 +139,6 @@ export PRODUCT="kafka"
 #      export CLUSTER_TYPE="kafka"
 #   fi
 #fi
-
 
 IS_KAFKA_ENTERPRISE=false
 if [ "$CLUSTER_TYPE_ARG" == "confluent" ] || [ "$CLUSTER_TYPE" == "confluent" ]; then
@@ -194,9 +194,9 @@ if [ "$PADOGRID_WORKSPACE" != "" ] && [ "$PADOGRID_WORKSPACE" != "$BASE_DIR" ]; 
 fi
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 
-# Exclude slf4j (included in kafka distribution)
+# Exclude slf4j and log4j included in geode distribution
 for i in $PADOGRID_HOME/lib/*; do
-  if [[ "$i" != *"slf4j"* ]]; then
+  if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
      __CLASSPATH="$__CLASSPATH:$i"
   fi
 done
@@ -221,7 +221,7 @@ fi
 #
 KAFKA_SERVER_START="kafka-server-start"
 KAFKA_STORAGE="kafka-storage"
-if [ ! -f "$KAFKA_HOME/bin/$KAFKA_SERVER_START" ]; then
+if [ ! -f "$PRODUCT_HOME/bin/$KAFKA_SERVER_START" ]; then
    KAFKA_SERVER_START=${KAFKA_SERVER_START}.sh
    KAFKA_STORAGE=${KAFKA_STORAGE}.sh
 fi
