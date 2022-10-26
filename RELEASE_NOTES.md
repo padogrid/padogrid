@@ -13,6 +13,7 @@ https://github.com/padogrid
 - Added `perf_test` to Kafka. The `perf_test` for Kafka includes the `test_group` command for ingesting Avro-based blob and mock data into Kafka and the `subscribe_topic` command for listening on topics. It also includes support for ingesting mock data directly into databases. See [Kafka `perf_test` App](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/kafka/apps/perf_test/README.md) for details.
 - Excluded `log4j` from the cluster class paths to prevent version conflicts. Due to the recent security updates made by `log4j`, many of the products are fragile to `log4j` versions other than the versions included in their distributions. PadoGrid now includes `log4j` binary for running client apps only.
 - Fixed Kafka cluster log file name to `kafkaServer.out`. Both `server.log` and `kafkaServer.out` names were used previously.
+- Added bundle support for Kafka and Confluent. See [Kafka Confluent Bundle Catalog](https://github.com/padogrid/catalog-bundles/blob/master/confluent-catalog.md)
 
 ---
 

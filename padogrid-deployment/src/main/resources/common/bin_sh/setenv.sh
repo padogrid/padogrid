@@ -347,7 +347,7 @@ DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
 DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka none redis snappydata spark"
+BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka confluent none redis snappydata spark"
 
 # Supported Docker Products
 DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
