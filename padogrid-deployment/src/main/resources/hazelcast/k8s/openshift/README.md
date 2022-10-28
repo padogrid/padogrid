@@ -125,7 +125,7 @@ oc adm policy who-can use scc nonroot
 oc adm policy add-scc-to-user nonroot system:serviceaccount:myocp:default
 ```
 
-:exclamation: Note that depending on the `oc` version, e.g., **v4.5.9**, `oc get scc nonroot -o yaml` may not show the user you added using CLI. This also true for the user added using the editor, which may not be shown in the output of `oc adm policy who-can use scc nonroot`.
+:exclamation: Note that depending on the `oc` version, e.g., **v4.5.9**, `oc get scc nonroot -o yaml` may not show the user you added using CLI. This is also true for the user added using the editor, which may not be shown in the output of `oc adm policy who-can use scc nonroot`.
 
 ## 4. Create Hazelcast Enterprise RHEL regitry secret
 
@@ -253,9 +253,26 @@ cd_app perft_test; cd bin_sh
 
 ### 8.2. External Client
 
-To connect to the Hazelcast cluster from an external client, you have two choices: Dummy Client and Smart Client. Dummy Client connects to a single Hazelcast member via a load balancer service whereas SmartClient connects to all Hazelcast members via the Hazelcast Kubernetes discovery service.
+To connect to the Hazelcast cluster from an external client outside the Kubernetes cluster, you have two choices: setup port forwarding or create public IP addresses. Port-fowarding is supported by `oc` and if you are using CRC, it is recommended. Enabling public IP addresses, on the other hand, involves configuring Kubernetes with plugins and is out of scope for this article. 
 
-#### 8.2.1. Dummy Client
+If you are not able to create public IP addresses, then follow the instructions in the [8.2.1. Port Forwarding](#821-port-forwarding) section.
+
+If your OpenShift cluster is capable of creating public IP addresses then you can choose either [Dummy Client](#822-dummy-client) or [Smart Client](#823-smart-clienti) as described in the subsequent sections. Dummy Client connects to a single Hazelcast member via a load balancer service whereas SmartClient connects to all Hazelcast members via the Hazelcast Kubernetes discovery service.
+
+#### 8.2.1. Port Forwarding
+
+If OpenShift nodes have **socat** installed then you can forward one or more local ports to a pod. Run the provided `listen_hazelcast_port_forward` to forward localhost 5701 to pods.
+
+```bash
+cd_k8s $PROJECT; cd bin_sh
+# The following command blocks.
+./listen_hazelcast_port_forward
+```
+
+If port-forwarding is successful then you can run smart clients (or dummy clients) by connecting to localhost:5701. This means you can simply create and run the `perf_test` app without any modifications.
+
+
+#### 8.2.2. Dummy Client
 
 ```xml
 <hazelcast>
@@ -270,7 +287,7 @@ To connect to the Hazelcast cluster from an external client, you have two choice
 </hazelcast>
 ```
 
-#### 8.2.2. Smart Client
+#### 8.2.3. Smart Client
 
 To run Smart Client, each pod must be reachable via an external IP. The `start_hazelcast` script has already exposed the required node ports as described in [Section 5](#5-Start-Hazelcast). Note that even though the node ports are exposed, the OpenShift cluster may have been configured to prevent them from being externally exposed. If so, Smart Client cannot be used. Unfortunately, this is the case for CRC. Please check with your OpenShift administrator.
 
@@ -465,19 +482,6 @@ cd_app perf_test
 # Make the above changes in the etc/hazelcast-client.xml file.
 vi etc/hazelcast-client.xml
 ```
-
-#### 8.2.3. Port Forwarding
-
-If the OpenShift node has **socat** installed then you can forward one or more local ports to a pod. Run the provided `listen_hazelcast_port_forward` to forward localhost 5701 to pods.
-
-```bash
-cd_k8s $PROJECT; cd bin_sh
-# The following command blocks.
-./listen_hazelcast_port_forward
-```
-
-If port-forwarding is successful then you can run smart clients (or dummy clients) by connecting to localhost:5701. This means you can simply create and run the `perf_test` app without any modifications.
-
 ### 8.3. Running `perf_test`
 
 Run `test_ingestion`:
