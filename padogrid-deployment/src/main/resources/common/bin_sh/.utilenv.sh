@@ -1053,7 +1053,7 @@ function getPropertiesArray
 {
    local __PROPERTIES_FILE=$1
    local array=$2
-   declare -a | grep -q "declare -a ${array}" || echo >&2 "ERROR: getPropertiesArray - no ${array} index array declared"
+   declare -a | grep -q "declare -a ${array}" || echo -e >&2 "${CError}ERROR:${CNone} getPropertiesArray - no ${array} index array declared"
    local index=0
    if [ -f $__PROPERTIES_FILE ]; then
       while IFS= read -r line; do
@@ -1779,7 +1779,10 @@ function switch_rwe
       done
       NEW_RWE_DIR="$PARENT_DIR/$__RWE"
       if [ ! -d "$PARENT_DIR/$__RWE" ]; then
-         echo >&2 "ERROR: Invalid RWE name: [$__RWE]. RWE does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid RWE name: [$__RWE]. RWE does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PARENT_DIR/$__RWE" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid RWE: [$__RWE]. Permission denied. Command aborted."
          return 1
       elif [ "$__WORKSPACE" != "" ]; then
          NEW_WORKSPACE_DIR="$NEW_RWE_DIR/$__WORKSPACE"
@@ -1828,7 +1831,7 @@ function switch_rwe
       else
 
          if [ ! -r "$NEW_RWE_DIR/initenv.sh" ]; then
-            echo -e >&2 "${CError}ERROR:${CNone} RWE access denied: [$__RWE]. You do not have RWE access permissions. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid RWE: [$__RWE]. Permission denied. Command aborted."
             return 1
          fi
 
@@ -1924,11 +1927,15 @@ function switch_workspace
 
    if [ "$1" == "" ]; then
 
-      # If the current workspace does not exist then retrieve it from the rweenv file.
       if [ "$PADOGRID_WORKSPACE" == "" ]; then
          echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Workspace undefined. Command aborted."
          return 1
+      elif [ ! -r "$PADOGRID_WORKSPACE" ]; then
+         local __WORKSPACE="$(basename $PADOGRID_WORKSPACE)"
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$__WORKSPACE]. Permission denied. Command aborted."
+         return 1
       elif [ ! -d "$PADOGRID_WORKSPACE" ]; then
+         # If the current workspace does not exist then retrieve it from the rweenv file.
          retrieveRweEnvFile
          export PADOGRID_WORKSPACE
       fi
@@ -1951,6 +1958,9 @@ function switch_workspace
    else
       if [ ! -d "$PADOGRID_WORKSPACES_HOME/$1" ]; then
          echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Workspace does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PADOGRID_WORKSPACES_HOME/$1" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Permission denied. Command aborted."
          return 1
       fi
       local __PATH=""
@@ -2244,6 +2254,14 @@ function __switch_cluster
       done
       export CLUSTER=$__COMPONENT_NAME
 
+      if [ ! -d "$__PATH" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Cluster does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$__PATH" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Permission denied. Command aborted."
+         return 1
+      fi
+
       local RWE=$(basename $(dirname "$PADOGRID_WORKSPACE"))
       local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
       local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
@@ -2400,6 +2418,15 @@ function __switch_pod
         fi
       done
       export POD=$__COMPONENT_NAME
+
+      if [ ! -d "$__PATH" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid pod: [$POD]. Pod does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$__PATH" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid pod: [$POD]. Permission denied. Command aborted."
+         return 1
+      fi
+
       local RWE=$(basename $(dirname "$PADOGRID_WORKSPACE"))
       local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
       local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
@@ -2470,7 +2497,10 @@ function cd_rwe
    else
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid RWE name: [$1]. RWE does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid RWE name: [$1]. RWE does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PARENT_DIR/$1" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid RWE: [$1]. Permission denied. Command aborted."
          return 1
       else
          local DIR=""
@@ -2479,7 +2509,7 @@ function cd_rwe
          done
          DIR="${PARENT_DIR}${DIR}"
          if [ ! -d "$DIR" ]; then
-            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
          cd "$DIR"
@@ -2543,7 +2573,11 @@ function cd_workspace
 
    if [ "$1" == "" ]; then
       if [ "$PADOGRID_WORKSPACE" == "" ]; then
-         echo >&2 "ERROR: Workspace undefined. The current workspace is undefined. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Workspace undefined. The current workspace is undefined. Command aborted."
+         return 1
+      elif [ ! -r "$PADOGRID_WORKSPACE" ]; then
+         local __WORKSPACE="$(basename $PADOGRID_WORKSPACE)"
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$__WORKSPACE]. Permission denied. Command aborted."
          return 1
       else
          cd $PADOGRID_WORKSPACE
@@ -2551,7 +2585,10 @@ function cd_workspace
    else
       local PARENT_DIR="$PADOGRID_WORKSPACES_HOME"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid workspace name: [$1]. Workspace does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace name: [$1]. Workspace does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PARENT_DIR/$1" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Permission denied. Command aborted."
          return 1
       else
          local DIR=""
@@ -2560,7 +2597,7 @@ function cd_workspace
          done
          DIR="${PARENT_DIR}${DIR}"
          if [ ! -d "$DIR" ]; then
-            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
          cd "$DIR"
@@ -2646,9 +2683,14 @@ function cd_pod
       fi
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/pods"
-      if [ "$__COMPONENT_NAME" != "local" ] && [ ! -d "$PARENT_DIR/$__COMPONENT_NAME" ]; then
-         echo >&2 "ERROR: Invalid pod name: [$__COMPONENT_NAME]. Pod does not exist. Command aborted."
-         return 1
+      if [ "$__COMPONENT_NAME" != "local" ]; then
+         if [ ! -d "$PARENT_DIR/$__COMPONENT_NAME" ]; then
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid pod name: [$__COMPONENT_NAME]. Pod does not exist. Command aborted."
+            return 1
+         elif [ ! -r "$PARENT_DIR/$__COMPONENT_NAME" ]; then
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid pod: [$__COMPONENT_NAME]. Permission denied. Command aborted."
+            return 1
+         fi
       else
          local DIR=""
          for i in "$@"; do
@@ -2659,9 +2701,12 @@ function cd_pod
             if [ "$__COMPONENT_NAME" == "local" ] && [ "$__INDEX" -eq 1 ]; then
                cd $PADOGRID_WORKSPACE/pods
             else
-               echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+               echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
                return 1
             fi
+         elif [ ! -r "$DIR" ]; then
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Permission denied. Command aborted."
+            return 1
          else
             cd "$DIR"
          fi
@@ -2723,7 +2768,7 @@ function cd_group
       echo "EXAMPLES"
       echo "   - Change directory to 'mygroup/etc'"
       echo ""
-      echo "        cd_cluster mygroup/etc/"
+      echo "        cd_group mygroup/etc/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -2746,7 +2791,10 @@ function cd_group
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/groups"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid group name: [$1]. Group does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid group name: [$1]. Group does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PARENT_DIR/$1" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid group: [$1]. Permission denied. Command aborted."
          return 1
       else
          local DIR=""
@@ -2755,7 +2803,7 @@ function cd_group
          done
          DIR="${PARENT_DIR}${DIR}"
          if [ ! -d "$DIR" ]; then
-            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
          cd "$DIR"
@@ -2825,11 +2873,23 @@ function cd_cluster
       if [ -z $CLUSTER ]; then
          retrieveWorkspaceEnvFile
       fi
+
+      if [ ! -d "$PADOGRID_WORKSPACE/clusters/$CLUSTER" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Cluster does not exit. Command aborted."
+         return 1
+      elif [ ! -r "$PADOGRID_WORKSPACE/clusters/$CLUSTER" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Permission denied. Command aborted."
+         return 1
+      fi
+
       cd $PADOGRID_WORKSPACE/clusters/$CLUSTER
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/clusters"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid cluster name: [$1]. Cluster does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster name: [$1]. Cluster does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PARENT_DIR/" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Permission denied. Command aborted."
          return 1
       else
          local DIR=""
@@ -2838,7 +2898,10 @@ function cd_cluster
          done
          DIR="${PARENT_DIR}${DIR}"
          if [ ! -d "$DIR" ]; then
-            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         elif [ ! -r "$DIR" ]; then
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Permission denied. Command aborted."
             return 1
          fi
          cd "$DIR"
@@ -2886,7 +2949,7 @@ function cd_k8s
       echo "EXAMPLES"
       echo "   - Change directory to 'myk8s/bin_sh'"
       echo ""
-      echo "        cd_pod myk8s/bin_sh/"
+      echo "        cd_k8s myk8s/bin_sh/"
       if [ "$MAN_SPECIFIED" == "false" ]; then
       echo ""
       echo "DEFAULT"
@@ -2906,7 +2969,10 @@ function cd_k8s
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/k8s"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid k8s name: [$1]. K8s cluster does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid k8s name: [$1]. K8s cluster does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PARENT_DIR/$1" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid k8s: [$1]. Permission denied. Command aborted."
          return 1
       else
          local DIR=""
@@ -2915,7 +2981,7 @@ function cd_k8s
          done
          DIR="${PARENT_DIR}${DIR}"
          if [ ! -d "$DIR" ]; then
-            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
          cd "$DIR"
@@ -2983,7 +3049,10 @@ function cd_docker
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/docker"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid docker name: [$1]. Docker cluster does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR: Invalid docker name: [$1]. Docker cluster does not exist. Command aborted."
+         return 1
+      elif [ ! -r "$PARENT_DIR/$1" ]; then
+         echo -e >&2 "${CError}ERROR: Invalid docker: [$1]. Permission denied. Command aborted."
          return 1
       else
          local DIR=""
@@ -2992,7 +3061,7 @@ function cd_docker
          done
          DIR="${PARENT_DIR}${DIR}"
          if [ ! -d "$DIR" ]; then
-            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
          cd "$DIR"
@@ -3060,7 +3129,10 @@ function cd_app
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/apps"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo >&2 "ERROR: Invalid app name: [$1]. App does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid app name: [$1]. App does not exist. Command aborted."
+         return 1
+      elif [ ! -d "$PARENT_DIR/$1" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid app: [$1]. Permission denied. Command aborted."
          return 1
       else 
          local DIR=""
@@ -3069,7 +3141,7 @@ function cd_app
          done
          DIR="${PARENT_DIR}${DIR}"
          if [ ! -d "$DIR" ]; then
-            echo >&2 "ERROR: Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
             return 1
          fi
          cd "$DIR"
@@ -3143,7 +3215,7 @@ function padogrid
       echo "$PADOGRID_VERSION"
       return 0
    elif [[ "$1" == *"-"* ]]; then
-      echo >&2 -e "${CLightRed}ERROR:${CNone} Invalid option: [$1]. Command aborted."
+      echo >&2 -e "${CError}ERROR:${CNone} Invalid option: [$1]. Command aborted."
       return 1
    else
       local COMMAND=$1
@@ -4318,13 +4390,13 @@ function getVmProductArray
 {
    local VM_HOST=$1
    if [ "$VM_HOST" == "" ]; then
-       echo >&2 "ERROR: getVmProductArray - VM host not specified"
+       echo -e >&2 "${CError}ERROR:${CNone} getVmProductArray - VM host not specified"
        return
    fi
    local array=$2
    local array2=$3
-   declare -A | grep -q "declare -A ${array}" || echo >&2 "ERROR: getVmProductArray - no ${array} associative array declared"
-   declare -A | grep -q "declare -A ${array2}" || echo >&2 "ERROR: getVmProductArray - no ${array2} associative array declared"
+   declare -A | grep -q "declare -A ${array}" || echo -e >&2 "${CError}ERROR:${CNone} getVmProductArray - no ${array} associative array declared"
+   declare -A | grep -q "declare -A ${array2}" || echo -e >&2 "${CError}ERROR:${CNone} getVmProductArray - no ${array2} associative array declared"
    local VM_PADOGRID_ENV_BASE_PATH=$(dirname $(dirname $VM_PADOGRID_WORKSPACES_HOME))
    local VM_PADOGRID_PRODUCTS_PATH="$VM_PADOGRID_ENV_BASE_PATH/products"
    local VM_INSTALLED_PRODUCTS=""
