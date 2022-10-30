@@ -331,7 +331,7 @@ __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __VERSION_DIR=v${HAZELCAST_VERSION:0:1}
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/$__VERSION_DIR/*:$BASE_DIR/lib/$__VERSION_DIR/*"
 
-# Exclude slf4j and log4j included in geode distribution
+# Exclude slf4j and log4j included in PadoGrid distribution
 for i in $PADOGRID_HOME/lib/*; do
   if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
      __CLASSPATH="$__CLASSPATH:$i"

@@ -2254,14 +2254,6 @@ function __switch_cluster
       done
       export CLUSTER=$__COMPONENT_NAME
 
-      if [ ! -d "$__PATH" ]; then
-         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Cluster does not exist. Command aborted."
-         return 1
-      elif [ ! -r "$__PATH" ]; then
-         echo -e >&2 "${CError}ERROR:${CNone} Invalid cluster: [$CLUSTER]. Permission denied. Command aborted."
-         return 1
-      fi
-
       local RWE=$(basename $(dirname "$PADOGRID_WORKSPACE"))
       local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
       local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
@@ -2418,14 +2410,6 @@ function __switch_pod
         fi
       done
       export POD=$__COMPONENT_NAME
-
-      if [ ! -d "$__PATH" ]; then
-         echo -e >&2 "${CError}ERROR:${CNone} Invalid pod: [$POD]. Pod does not exist. Command aborted."
-         return 1
-      elif [ ! -r "$__PATH" ]; then
-         echo -e >&2 "${CError}ERROR:${CNone} Invalid pod: [$POD]. Permission denied. Command aborted."
-         return 1
-      fi
 
       local RWE=$(basename $(dirname "$PADOGRID_WORKSPACE"))
       local WORKSPACE=$(basename "$PADOGRID_WORKSPACE")
