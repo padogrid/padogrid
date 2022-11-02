@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+#
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+#
+if [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
+   if [ "$PADOGRID_HOME" == "" ]; then
+      PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
+   else
+      PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+   fi
+fi
+
+RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
+
+__options()
+{
+   echo "-user -rwe -replace -checkout -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Install the specified bundles in the specified RWE
+
+SYNOPSIS
+   $EXECUTABLE [-user git_user_name] [-rwe rwe_name]
+               [-replace sed_substitution_expression]
+               [-checkout] [-simulate] [-?] comma_separted_bundle_names
+
+DESCRIPTION
+   Installs the specified bundles as workspaces in the specified RWE. This command is
+   useful when there are multiple bundles that make up a single application. Instead of
+   individually installing each bundle, you can group them as workspaces into an RWE.
+
+OPTIONS
+   comma_separted_bundle_names
+             A comma-separated bundle names. At least one bundle must be specified.
+
+   -user git_user_name
+             Git user name. If specified, then it downloads the specified bundle from user's
+             Git repos.
+
+   -rwe rwe_name
+             Name of RWE to which the specified bundles to be installed. It creates the RWE if
+             it does not exist.
+
+   -replace "sed_substitution_expression"
+             'sed' expression for substituting workspace names. This option allows renaming of
+             the long bundles names with more appropriate workspace names. It has the format of
+             '/from_exp/to_exp/' which translates to "sed 's/from_exp/to_exp/'". For example,
+             the following removes the prefix 'bundle-' from workspace names.
+
+             -replace "/bundle-//"
+
+             If spaces are in the substitition expression then the entire expression  must be
+             in double quotes.
+
+   -checkout
+             If specified, then checks out the bundles so that bundles can be checked in
+             using 'git'.
+
+   -simulate
+             If specified, then it only simulates installations and does NOT perform actual
+             installations.
+EOF
+if [ "$MAN_SPECIFIED" == "true" ]; then
+cat <<EOF
+             Default: current RWE
+EOF
+else
+   echo "             Default: $(pwd_rwe)"             
+fi
+cat <<EOF
+
+SEE ALSO
+EOF
+   printSeeAlsoList "*install* *bundle*" $EXECUTABLE
+   exit
+fi
+
+BUNDLES="$LAST_ARG"
+# Replace , with space
+BUNDLES=$(echo "$BUNDLES" | sed "s/,/ /g")
+
+# Exit if invalid bundles specified. Bundle names must begin with 'bundle-'.
+if [[ "$BUNDLES" != "bundle-"* ]]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid bundles: [$BUNDLES]. Command aborted."
+   exit 1
+fi
+
+# Exit if -replace expression is invalid
+SED_SUB_EXPRESSION="$REPLACE_ARG"
+if [ "$SED_SUB_EXPRESSION" != "" ]; then
+   if [[ "$SED_SUB_EXPRESSION" != "/"* ]] || [[ "$SED_SUB_EXPRESSION" != *"/" ]]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid sed substitituion expression: [$SED_SUB_EXPRESSION]. Must begin and end with '/'. Command aborted."
+      exit 2
+   fi
+fi
+
+echo ""
+if [ "$SIMULATE" == "true" ]; then
+   echo "Simulating..."
+   echo ""
+fi
+
+# Handle -user
+GITHUB_USER="$USER"
+
+# Handle -checkout
+if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
+   INSTALL_BUNDLE_OPTIONS="-checkout"
+else
+   INSTALL_BUNDLE_OPTIONS="-download -workspace"
+fi
+
+# Handle RWE option
+RWE_SWITCHED="false"
+RWE=$RWE_ARG
+if [ "$RWE_ARG" != "" ] && [ "$RWE_ARG" != "$RWE_NAME" ]; then
+   FOUND="false"
+   for i in $(list_rwes); do
+      if [ "$i" == "$RWE_ARG" ]; then
+         FOUND="true"
+         break;
+      fi
+   done
+
+   # Create RWE if it does not exist
+   if [ "$FOUND" != "true" ]; then
+      echo "Creating RWE, $RWE_ARG..."
+      if [ "$SIMULATE" == "true" ]; then
+         echo create_rwe -quiet -rwe $RWE_ARG
+      else
+         create_rwe -quiet -rwe $RWE_ARG
+      fi
+   fi
+
+   # Switch RWE before installing bundles
+   if [ "$SIMULATE" == "true" ]; then
+      echo switch_rwe $RWE_ARG
+   else
+      eval "switch_rwe $RWE_ARG"
+   fi
+   RWE_SWITCHED="true"
+fi
+
+echo "Installing bundles in $(pwd_rwe)..."
+
+# Install all the specified bundles
+for BUNDLE in $BUNDLES; do
+   if [ "$SED_SUB_EXPRESSION" != "" ]; then
+      WORKSPACE=$(echo $BUNDLE | sed "s$SED_SUB_EXPRESSION")
+   else
+      WORKSPACE=""
+   fi
+   if [ "$SIMULATE" == "true" ]; then
+      echo install_bundle -force -connect https -user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
+   else
+      install_bundle -force -connect https -user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
+   fi
+done
+
+echo ""
+echo -e "             Current RWE: ${CGo}$RWE_NAME${CNone}"
+if [ "$RWE_NAME" == "$(pwd_rwe)" ]; then
+   echo -e "Bundles installed in RWE: ${CGo}$(pwd_rwe)${CNone}"
+else
+   echo "Bundles installed in RWE: $(pwd_rwe)"
+fi
+if [ "$SIMULATE" == "true" ]; then
+   echo "Simulation mode only. Bundles are not installed."
+fi
+echo ""
