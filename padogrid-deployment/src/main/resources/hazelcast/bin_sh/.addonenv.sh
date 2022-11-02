@@ -130,66 +130,6 @@ DEFAULT_PROMETHEUS_START_PORT=8291
 #
 MAX_MEMBER_COUNT=20
 
-# Member health monitoring properties
-DEFAULT_HEALTH_MONITOR_ENABLED="true"
-HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
--Dhazelcast.health.monitoring.delay.seconds=10 \
--Dhazelcast.health.monitoring.threshold.memory.percentage=70 \
--Dhazelcast.health.monitoring.threshold.cpu.percentage=70"
-
-# Disagnostics logging
-DEFAULT_DIAGNOSTICS_ENABLED="true"
-DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
--Dhazelcast.diagnostics.metric.level=Debug \
--Dhazelcast.diagnostics.invocation.sample.period.seconds=30 \
--Dhazelcast.diagnostics.pending.invocations.period.seconds=30 \
--Dhazelcast.diagnostics.slowoperations.period.seconds=30 \
--Dhazelcast.diagnostics.storeLatency.period.seconds=60"
-
-# Hazelcast config file paths
-#CONFIG_FILE=$ETC_DIR/hazelcast.yaml
-CONFIG_FILE=$ETC_DIR/hazelcast.xml
-CLIENT_CONFIG_FILE=$ETC_DIR/hazelcast-client.xml
-#JET_CONFIG_FILE=$ETC_DIR/hazelcast-jet.yaml
-JET_CONFIG_FILE=$ETC_DIR/hazelcast-jet.xml
-JET_MC_APPLICATION_PROPERTIES_FILE=$ETC_DIR/jet-mc-application.properties
-
-#
-# log4j2 logging
-#
-if [[ ${OS_NAME} == CYGWIN* ]]; then
-   __ETC_DIR="$(cygpath -wp "$ETC_DIR")"
-else
-   __ETC_DIR=$ETC_DIR
-fi
-LOG_PROPERTIES="-Dhazelcast.logging.type=log4j2 \
--Dlog4j.configurationFile=$__ETC_DIR/log4j2.properties"
-
-#
-# Shutdown hook - shutdown members gracefully with "kill -15", i.e. stop_member
-#
-SHUTDOWN_HOOK_PROPERTIES="-Dhazelcast.shutdownhook.enabled=true \
--Dhazelcast.shutdownhook.policy=GRACEFUL"
-
-#
-# Set Hazelcast IMDG Management Center home directory if undefined in setenv.sh
-#
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   if [ "$JET_MC_HOME" == "" ]; then
-      JET_MC_HOME=$JET_HOME/hazelcast-jet-management-center
-   fi
-else
-   if [ "$HAZELCAST_MC_HOME" == "" ]; then
-      HAZELCAST_MC_HOME=$HAZELCAST_HOME/management-center
-   fi
-fi
-
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$JET_HOME/bin:$PATH"
-else
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
-fi
-
 #
 # HAZELCAST_VERSION/PROUDCT_VERSION: Determine the Hazelcast version
 #
@@ -304,6 +244,73 @@ HAZELCAST_MAJOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,".")
 HAZELCAST_MINOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[2]'})
 PRODUCT_VERSION=$HAZELCAST_VERSION
 PRODUCT_MAJOR_VERSION=$HAZELCAST_MAJOR_VERSION_NUMBER
+
+# Member health monitoring properties
+DEFAULT_HEALTH_MONITOR_ENABLED="true"
+HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
+-Dhazelcast.health.monitoring.delay.seconds=10 \
+-Dhazelcast.health.monitoring.threshold.memory.percentage=70 \
+-Dhazelcast.health.monitoring.threshold.cpu.percentage=70"
+
+# Disagnostics logging
+DEFAULT_DIAGNOSTICS_ENABLED="true"
+if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -eq 3 ]; then
+   DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
+-Dhazelcast.diagnostics.metric.level=Debug"
+else
+   DIAGNOSTICS_PROPERTIES="-Dhazelcast.metrics.datastructures.enabled=true \
+-Dhazelcast.metrics.debug.enabled=true"
+fi
+DIAGNOSTICS_PROPERTIES="$DIAGNOSTICS_PROPERTIES \
+-Dhazelcast.diagnostics.invocation.sample.period.seconds=30 \
+-Dhazelcast.diagnostics.pending.invocations.period.seconds=30 \
+-Dhazelcast.diagnostics.slowoperations.period.seconds=30 \
+-Dhazelcast.diagnostics.storeLatency.period.seconds=60"
+
+# Hazelcast config file paths
+#CONFIG_FILE=$ETC_DIR/hazelcast.yaml
+CONFIG_FILE=$ETC_DIR/hazelcast.xml
+CLIENT_CONFIG_FILE=$ETC_DIR/hazelcast-client.xml
+#JET_CONFIG_FILE=$ETC_DIR/hazelcast-jet.yaml
+JET_CONFIG_FILE=$ETC_DIR/hazelcast-jet.xml
+JET_MC_APPLICATION_PROPERTIES_FILE=$ETC_DIR/jet-mc-application.properties
+
+#
+# log4j2 logging
+#
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   __ETC_DIR="$(cygpath -wp "$ETC_DIR")"
+else
+   __ETC_DIR=$ETC_DIR
+fi
+LOG_PROPERTIES="-Dhazelcast.logging.type=log4j2 \
+-Dlog4j.configurationFile=$__ETC_DIR/log4j2.properties"
+
+#
+# Shutdown hook - shutdown members gracefully with "kill -15", i.e. stop_member
+#
+SHUTDOWN_HOOK_PROPERTIES="-Dhazelcast.shutdownhook.enabled=true \
+-Dhazelcast.shutdownhook.policy=GRACEFUL"
+
+#
+# Set Hazelcast IMDG Management Center home directory if undefined in setenv.sh
+#
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   if [ "$JET_MC_HOME" == "" ]; then
+      JET_MC_HOME=$JET_HOME/hazelcast-jet-management-center
+   fi
+else
+   if [ "$HAZELCAST_MC_HOME" == "" ]; then
+      HAZELCAST_MC_HOME=$HAZELCAST_HOME/management-center
+   fi
+fi
+
+if [ "$CLUSTER_TYPE" == "jet" ]; then
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$JET_HOME/bin:$PATH"
+else
+   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
+fi
+
 
 #
 # JAVA_OPTS

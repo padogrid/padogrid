@@ -475,7 +475,9 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             REQUIRED_PRODUCTS_CONTENT_URL="$REPOS_URL/$GITHUB_USER/${BUNDLE_FILE_PATH}/contents/required_products.txt"
             curl -sS -X GET "$REQUIRED_PRODUCTS_CONTENT_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d > $REQUIRED_PRODUCTS_FILE_PATH 2>/dev/null
          else
-            if [ "$CONNECT" == "ssh" ] || [ "$GITHUB_PRIVATE_REPO_ENABLED" == "true" ]; then
+            if [ "$CONNECT_ARG" == "https" ]; then
+                GITHUB_USER_HOME="https://github.com/$GITHUB_USER"
+            elif [ "$CONNECT" == "ssh" ] || [ "$GITHUB_PRIVATE_REPO_ENABLED" == "true" ]; then
                 GITHUB_USER_HOME="git@github.com:$GITHUB_USER"
             else
                 GITHUB_USER_HOME="https://github.com/$GITHUB_USER"

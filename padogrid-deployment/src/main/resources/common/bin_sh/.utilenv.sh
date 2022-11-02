@@ -3474,6 +3474,7 @@ function printSeeAlsoList
    local COMMANDS=`ls $FILTER 2> /dev/null`
    popd > /dev/null 2>&1
    local LINE=""
+   COMMANDS=$(unique_words "$COMMANDS")
    COMMANDS=($COMMANDS)
    local len=${#COMMANDS[@]}
    local last_index

@@ -125,6 +125,8 @@ USER=
 GITHOST=github
 BRANCH=
 CONNECT=https
+CONNECT_ARG=
+REPLACE_ARG=
 LIST=false
 LIST_SPECIFIED=false
 NO_COLOR=false
@@ -265,6 +267,9 @@ do
          BRANCH=$i
       elif [ "$PREV" == "-connect" ]; then
          CONNECT=$i
+         CONNECT_ARG=$i
+      elif [ "$PREV" == "-replace" ]; then
+         REPLACE_ARG=$i
       elif [ "$PREV" == "-wan" ]; then
          WAN_ARG=$i
          WAN=true
