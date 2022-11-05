@@ -63,6 +63,17 @@ fi
 # Source in app specifics
 . $APP_DIR/bin_sh/setenv.sh
 
+if [ $JAVA_MAJOR_VERSION_NUMBER -gt 8 ]; then
+   JAVA_OPTS="$JAVA_OPTS \
+     --add-modules java.se \
+     --add-exports java.base/jdk.internal.ref=ALL-UNNAMED \
+     --add-opens java.base/java.lang=ALL-UNNAMED \
+     --add-opens java.base/java.nio=ALL-UNNAMED \
+     --add-opens java.base/sun.nio.ch=ALL-UNNAMED \
+     --add-opens java.management/sun.management=ALL-UNNAMED \
+     --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED"
+fi
+
 # Log properties for log4j2. The log file name is set in executable scripts.
 JAVA_OPTS="$JAVA_OPTS -Dhazelcast.logging.type=log4j2 \
 -Dlog4j.configurationFile=$LOG_CONFIG_FILE"
