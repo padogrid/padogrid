@@ -52,6 +52,7 @@ CLASSPATH_ARG=
 JET_ARG=
 NAME_ARG=
 PORT_ARG=
+PORT_SPECIFIED=false
 CREATE_SCRIPT=false
 POD_SPECIFIED=false
 AVAHI_SPECIFIED=false
@@ -114,7 +115,9 @@ CP_GROUP=
 UUID==
 START=false
 LOG=
+LOG_SPECIFIED=
 FULL=false
+LOG_SPECIFIED=
 HELP=
 OPTIONS=false
 SIMULATE=false
@@ -446,6 +449,10 @@ do
          MEMBER_SPECIFIED=true
       elif [ "$i" == "-locator" ]; then
          LOCATOR_SPECIFIED=true
+      elif [ "$i" == "-log" ]; then
+         LOG_SPECIFIED=true
+      elif [ "$i" == "-port" ]; then
+         PORT_SPECIFIED=true
       elif [ "$i" == "-vm" ]; then
          VM_SPECIFIED=true
       elif [ "$i" == "-rwe" ]; then

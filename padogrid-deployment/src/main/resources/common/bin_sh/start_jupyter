@@ -97,8 +97,8 @@ if [[ "$NOTEBOOK_SERVERS" == *"$PORT_NUMBER"* ]]; then
    exit 1
 fi
 
+RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
 if [ "$IMPORT_SPECIFIED" == "true" ]; then
-   RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
    WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
    # Determine if the workspace exists - Not used.
@@ -127,8 +127,10 @@ if [ "$IMPORT_SPECIFIED" == "true" ]; then
    fi
 fi
 
+JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
+
 pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
-nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > /dev/null 2>&1 &
+jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > $JUPYTER_LOG_FILE 2>&1 &
 popd > /dev/null 2>&1
 
 RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)

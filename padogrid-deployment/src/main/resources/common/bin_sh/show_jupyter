@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-?"
+   echo "-port -all -full -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,13 +41,32 @@ NAME
    $EXECUTABLE - Display Jupyter Notebook server status
 
 SYNOPSIS
-   $EXECUTABLE [-?]
+   $EXECUTABLE [-port [port_number]] [-all | -full] [-?]
 
 NOTES
    Jupyter commands are experimental and subject to change in future releases.
 
 DESCRIPTION
-   Displays Jupyter Notebook server status
+   Displays Jupyter Notebook server status or log file(s) in the current RWE.
+   If no options are specified, then it displays the server statuses. The '-full'
+   and '-all' options are not allowed together. If port_number is not specified,
+   then it defaults to 8888.
+
+OPTIONS
+   -port [port_number]
+             Displays the log file of the specified port number that is opened by
+             the corresponding server in the current RWE.  By default, it follows the
+             tail part of the log, equivalent to 'tail -f'. To view the full log,
+             specify the '-full' option, which is equivalent to 'less'.
+
+             If port_number is not specified, then defaults to '8888'.
+
+   -all
+             Displays all active log files under the current RWE.
+
+   -full
+             If specified then displays the entire log file using 'less'; otherwise, displays
+             the Jupyter Notebook server status.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -68,6 +87,40 @@ if [ "$(which jupyter)" == "" ]; then
    echo >&2 -e "${CError}ERROR:${CNone} jupyter executable not found. Command aborted."
    exit 1
 fi
+if [ "$ALL" == "true" ] && [ "$FULL" == "true" ]; then 
+   echo >&2 -e "${CLightRed}ERROR:${CNone} '-all' and '-full' cannot be specified together. Command aborted ."
+   exit 1
+fi
 
-jupyter lab list
+if [ "$PORT_SPECIFIED" == "true" ] || [ "$ALL" == "true" ] || [ "$FULL" == "true" ]; then
+   if [ "$PORT_ARG" == "" ]; then
+      PORT_NUMBER="8888"
+   else
+      PORT_NUMBER=$PORT_ARG
+   fi
+   RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
 
+   echo ""
+   if [ "$ALL" == "true" ]; then
+      echo -e "Showing log: ${CHighlight}All active server log files${CNone}"
+   else
+      echo -e "Showing log: ${CHighlight}$JUPYTER_LOG_FILE${CNone}"
+   fi
+   echo ""
+
+   if [ "$ALL" == "true" ]; then
+      LOG_FILES=""
+      PORTS=$(getActiveJupyterPorts)
+      for i in $PORTS; do
+         LOG_FILES="$LOG_FILES $HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$i.log"
+      done
+      tail -f $LOG_FILES
+   elif [ "$FULL" == "true" ]; then
+      less $JUPYTER_LOG_FILE
+   else
+      tail -f $JUPYTER_LOG_FILE
+   fi
+else
+   jupyter lab list
+fi

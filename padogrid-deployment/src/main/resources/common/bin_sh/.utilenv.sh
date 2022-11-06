@@ -4404,3 +4404,11 @@ function getHostIpAddresses
 {
    echo $(ifconfig | grep inet | grep netmask | awk '{print $2}' | sort)
 }
+
+#
+# Returns a space-sparated list of active Jupyter server port numbers
+#
+function getActiveJupyterPorts
+{
+   echo $(ps -wwef |grep jupyter | grep "\-\-port" | grep -v grep | sed 's/^.*\-\-port=//' | awk '{print $1}')
+}

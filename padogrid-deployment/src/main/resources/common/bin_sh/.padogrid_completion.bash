@@ -175,6 +175,8 @@ __padogrid_complete()
 
       elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list="8888"
+      elif [ "$command" == "show_jupyter" ]; then
+         type_list=$(getActiveJupyterPorts)
       fi
       ;;
 
@@ -1146,6 +1148,8 @@ __command_complete()
 
       elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list="8888"
+      elif [ "$command" == "show_jupyter" ]; then
+         type_list=$(getActiveJupyterPorts)
       fi
      ;;
 
