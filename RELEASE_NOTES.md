@@ -15,6 +15,7 @@ https://github.com/padogrid
 - Fixed Kafka cluster log file name to `kafkaServer.out`. Both `server.log` and `kafkaServer.out` names were used previously.
 - Added bundle support for Kafka and Confluent. See [Kafka Confluent Bundle Catalog](https://github.com/padogrid/catalog-bundles/blob/master/confluent-catalog.md)
 - Added support for viewing Jupyter log files in `show_jupyter`. Use the `-port` option to view the specific server's log file or `-all` to view all active server log files.
+- Added `-simulate` option in `start_mc` to support simulation of the Hazelcast Management Center bootstrap process. As with members, you can now view the Management Center bootstrap details without actually starting it. 
 
 ---
 
