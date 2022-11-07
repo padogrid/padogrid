@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -?"
+   echo "-cluster -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -49,6 +49,9 @@ DESCRIPTION
 OPTIONS
    -cluster cluster_name
              Cluster name.
+   -simulate
+             If specified then it only displays the Management Center information
+             and does not run the Management Center.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -69,6 +72,13 @@ fi
 # Source in Hazelcast specific env
 if [ -f $PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh ]; then
    . $PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh
+fi
+#
+# Set -simulate if specified
+if [ "$SIMULATE" == "true" ]; then
+   SIMULATE_OPT="-simulate"
+else
+   SIMULATE_OPT=""
 fi
 
 #
@@ -99,7 +109,7 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
       # For Vagrant VMs, run local if '.local' is suffix
       if [ "$MC_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
-         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/hazelcast/bin_sh/start_mc -remote $MC_HOST -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
+         ssh -q -n $VM_KEY $VM_USER@$MC_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/hazelcast/bin_sh/start_mc $SIMULATE_OPT -remote $MC_HOST -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
          exit
       fi
    fi
@@ -257,6 +267,19 @@ if [ ! -d "$WORKING_DIR" ]; then
    mkdir -p "$WORKING_DIR"
 fi
 
+# If the management center is already running, then exit.
+if [ "$SIMULATE" == "false" ]; then
+   PID=`getMcPid $MC_NAME $WORKSPACE $RWE`
+   if [ -n "${PID}" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Status: This Management Center for this cluster is already running PID=[$PID]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+fi
+
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"
@@ -265,7 +288,7 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
 fi
 
-JAVA_OPTS="-Dhazelcast.mc.name=$MC_NAME -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE -Dhazelcast.mc.jmx.enabled=true -Dhazelcast.mc.jmx.port=$MC_JMX_PORT -Dhazelcast.mc.jmx.rmi.port=$MC_JMX_RMI_PORT -Dcom.sun.management.jmxremote.ssl=false -Dhazelcast.mc.allowMultipleLogin=true"
+JAVA_OPTS="-Dpadogrid.hazelcast.mc.name=$MC_NAME -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE -Dhazelcast.mc.jmx.enabled=true -Dhazelcast.mc.jmx.port=$MC_JMX_PORT -Dhazelcast.mc.jmx.rmi.port=$MC_JMX_RMI_PORT -Dcom.sun.management.jmxremote.ssl=false -Dhazelcast.mc.allowMultipleLogin=true"
 
 if [ "$MC_LICENSE_KEY" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.license=$MC_LICENSE_KEY"
@@ -311,22 +334,30 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
       esac
       __PREV="$i"
    done
-
-  "$JAVA" $JAVA_OPTS -jar "$MC_HOME"/$JET_MC_JAR $ARGS > $LOG_FILE 2>&1 &
-
+   if [ "$SIMULATE" != "true" ]; then
+      "$JAVA" $JAVA_OPTS -jar "$MC_HOME"/$JET_MC_JAR $ARGS > $LOG_FILE 2>&1 &
+   fi
 else
    if [ "$MC_HTTPS_ENABLED" == "true" ]; then
        MC_HTTP_PORT=$MC_HTTPS_PORT
    fi
    if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
       JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT -Dhazelcast.mc.contextPath=hazelcast-mancenter"
-      "$JAVA" $JAVA_OPTS -cp $CLASSPATH com.hazelcast.webmonitor.Launcher > $LOG_FILE 2>&1 &
+      if [ "$SIMULATE" != "true" ]; then
+         "$JAVA" $JAVA_OPTS -cp $CLASSPATH com.hazelcast.webmonitor.Launcher > $LOG_FILE 2>&1 &
+      fi
    else
       ARGS="$MC_HTTP_PORT $MC_HTTP_PORT hazelcast-mancenter"
-      "$JAVA" $JAVA_OPTS -cp $CLASSPATH Launcher $ARGS > $LOG_FILE 2>&1 &
+      if [ "$SIMULATE" != "true" ]; then
+         "$JAVA" $JAVA_OPTS -cp $CLASSPATH Launcher $ARGS > $LOG_FILE 2>&1 &
+      fi
    fi
 fi
-PID=$!
+if [ "$SIMULATE" == "true" ]; then
+   PID="Simulated"
+else
+   PID=$!
+fi
 
 echo "----------------------------------------------------------------"
 echo "        WORKSPACE: $PADOGRID_WORKSPACE"
@@ -357,3 +388,19 @@ echo "        JAVA_OPTS: $JAVA_OPTS"
 echo "        CLASSPATH: $CLASSPATH"
 echo "        Arguments: $ARGS"
 echo "----------------------------------------------------------------"
+
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "JAVA_OPTS"
+   echo "---------"
+   printJavaOpts "$JAVA_OPTS"
+   echo ""
+   echo "CLASSPATH"
+   echo "---------"
+   printClassPath "$CLASSPATH"
+   echo ""
+   echo "Environment Variable(s)"
+   echo "-----------------------"
+   echo "LOG_FILE=$LOG_FILE"
+   echo ""
+fi
