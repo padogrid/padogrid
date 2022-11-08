@@ -76,6 +76,7 @@ function getCurrentProductVersions
    fi
    __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
    __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
+   __GRAFANA_VERSION=${GRAFANA_HOME#*grafana-}
    __HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_HOME##*hazelcast-desktop_}
    __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
    __HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_HOME#*hazelcast-enterprise-}
@@ -100,6 +101,7 @@ function getCurrentProductVersions
    fi
    __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
    __CONFLUENT_VERSION=${CONFLUENT_HOME#*confluent-}
+   __PROMETHEUS_VERSION=${PROMETHEUS_HOME#*prometheus-}
    __REDIS_VERSION=${REDIS_HOME#*redis-}
    __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
    __SPARK_VERSION=${SPARK_HOME#*spark-}
@@ -126,6 +128,12 @@ function printVersionTree
                version="$i (commercial)"
             else
                version="$i (community)"
+            fi
+         elif [[ "$i" != *"none"* ]] && [ "${PRODUCT_NAME}" == "Grafana" ]; then
+            if [ "$(grep GNU "$PADOGRID_ENV_BASE_PATH/products/grafana-$i/LICENSE")" != "" ]; then
+               version="$i (oss)"
+            else
+               version="$i (enterprise)"
             fi
          else
             version=$i
@@ -172,6 +180,8 @@ printVersionTree "GemFire" "$GEMFIRE_VERSIONS" "$__GEMFIRE_VERSION"
 echo ""
 printVersionTree "Geode" "$GEODE_VERSIONS" "$__GEODE_VERSION"
 echo ""
+printVersionTree "Grafana" "$GRAFANA_VERSIONS" "$__GRAFANA_VERSION"
+echo ""
 printVersionTree "Hadoop" "$HADOOP_VERSIONS" "$__HADOOP_VERSION"
 echo ""
 printVersionTree "Hazelcast Desktop" "$HAZELCAST_DESKTOP_VERSIONS" "$__HAZELCAST_DESKTOP_VERSION"
@@ -191,6 +201,8 @@ echo ""
 printVersionTree "Kafka" "$KAFKA_VERSIONS" "$__KAFKA_VERSION"
 echo ""
 printVersionTree "Kafka Confluent Platform" "$CONFLUENT_VERSIONS" "$__CONFLUENT_VERSION"
+echo ""
+printVersionTree "Prometheus" "$PROMETHEUS_VERSIONS" "$__PROMETHEUS_VERSION"
 echo ""
 printVersionTree "Redis" "$REDIS_VERSIONS" "$__REDIS_VERSION"
 echo ""

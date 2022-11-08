@@ -173,9 +173,9 @@ __padogrid_complete()
          fi
          type_list=$(getClusterPortOptions $product_name)
 
-      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
          type_list="8888"
-      elif [ "$command" == "show_jupyter" ]; then
+      elif [ "$command" == "show_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list=$(getActiveJupyterPorts)
       fi
       ;;
@@ -285,9 +285,13 @@ __padogrid_complete()
       elif [ "$command" == "install_padogrid" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "uninstall_product" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS gemfire"
+         # Replace grafana-enterprise and granfana-oss with grafana
+         local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
+         type_list="$__DOWNLOADABLE_PRODUCTS gemfire"
       elif [ "$command" == "update_products" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
+         # Replace grafana-enterprise and granfana-oss with grafana
+         local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
+         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -441,7 +445,7 @@ __padogrid_complete()
       type_list="$(whoami)"
       ;;
 
-   -path | -java | -save | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
       is_path="true"
      ;;
 
@@ -987,9 +991,13 @@ __command_complete()
       elif [ "$command" == "install_padogrid" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "uninstall_product" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS gemfire"
+         # Replace grafana-enterprise and granfana-oss with grafana
+         local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
+         type_list="$__DOWNLOADABLE_PRODUCTS gemfire"
       elif [ "$command" == "update_products" ]; then
-         type_list="$DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
+         # Replace grafana-enterprise and granfana-oss with grafana
+         local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
+         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
       else
          is_path="true"
       fi
@@ -1146,9 +1154,9 @@ __command_complete()
          #   type_list="$DEFAULT_NAMENODE_START_PORT";;
          #esac
 
-      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
+      elif [ "$command" == "open_jupyter" ] || [ "$command" == "start_jupyter" ]; then
          type_list="8888"
-      elif [ "$command" == "show_jupyter" ]; then
+      elif [ "$command" == "show_jupyter" ] || [ "$command" == "stop_jupyter" ]; then
          type_list=$(getActiveJupyterPorts)
       fi
      ;;
@@ -1167,7 +1175,7 @@ __command_complete()
       type_list="$(whoami)"
       ;;
 
-   -path | -java | -save | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
      is_path="true"
      ;;
    *)

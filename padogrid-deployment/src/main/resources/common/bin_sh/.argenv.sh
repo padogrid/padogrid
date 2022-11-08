@@ -142,6 +142,8 @@ ALL=false
 ALL_SPECIFIED=false
 SAVE_ARG=
 SAVE_SPECIFIED=false
+LOAD_ARG=
+LOAD_SPECIFIED=false
 SCAN_SPECIFIED=false
 OSS=false
 RHEL=false
@@ -334,6 +336,8 @@ do
          VERSION_ARG=$i
       elif [ "$PREV" == "-save" ]; then
          SAVE_ARG=$i
+      elif [ "$PREV" == "-load" ]; then
+         LOAD_ARG=$i
       fi
 
    else
@@ -391,6 +395,8 @@ do
          ALL_SPECIFIED=true
       elif [ "$i" == "-save" ]; then
          SAVE_SPECIFIED=true
+      elif [ "$i" == "-load" ]; then
+         LOAD_SPECIFIED=true
       elif [ "$i" == "-scan" ]; then
          SCAN_SPECIFIED=true
       elif [ "$i" == "-oss" ]; then
@@ -476,6 +482,9 @@ do
 done
 
 # Bash color code
+if [ "$MAN_SPECIFIED" == "true" ]; then
+   NO_COLOR="true"
+fi
 if [ "$NO_COLOR" != "true" ]; then
   CNone='\033[0m' # No Color
   CBlack='\033[0;30m'
@@ -505,7 +514,7 @@ if [ "$NO_COLOR" != "true" ]; then
 fi
 
 # Tree characters
-if [ "$PADOGRID_CHARSET" == "unicode" ] ;then
+if [ "$MAN_SPECIFIED" == "true" ] || [ "$PADOGRID_CHARSET" == "unicode" ] ;then
    # Unicode characters
    TBar='|'
    TTee='|--'

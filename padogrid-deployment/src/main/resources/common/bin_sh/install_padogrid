@@ -28,6 +28,9 @@ else
    NO_STTY_SPECIFIED="false"
    SCAN_SPECIFIED="false"
    SAVE_SPECIFIED="false"
+   SAVE_ARG=""
+   LOAD_SPECIFIED="false"
+   LOAD_ARG=""
    PREV=""
    for i in "$@"; do
       case $i in
@@ -36,12 +39,15 @@ else
          -no-stty ) NO_STTY_SPECIFIED="true";;
          -scan ) SCAN_SPECIFIED="true";;
          -save ) SAVE_SPECIFIED="true";;
+         -file ) LOAD_SPECIFIED="true";;
          -?) HELP="true";;
          * ) 
             if [ "$PREV" == "-product" ]; then
                PRODUCT_ARG="$i";
             elif [ "$PREV" == "-save" ]; then
                SAVE_ARG="$i";
+            elif [ "$PREV" == "-load" ]; then
+               LOAD_ARG="$i";
             else
                echo "Invalid option: [$i]. Command aborted."
                exit 1
@@ -51,7 +57,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss"
 
 EXECUTABLE="`basename $0`"
 
@@ -76,14 +82,19 @@ fi
 #       from the .utilenv.sh and .argenv.sh files.
 #
 
-CNone='\033[0m' # No Color
-CBlue='\033[0;34m'
-CLightGreen='\033[1;32m'
-CLightRed='\033[1;31m'
-CUnderline='\033[4m'
-CUrl=$CBlue$CUnderline
+if [ "$NO_COLOR" != "true" ]; then
+   CNone='\033[0m' # No Color
+   CBlue='\033[0;34m'
+   CLightGreen='\033[1;32m'
+   CLightRed='\033[1;31m'
+   CUnderline='\033[4m'
+   CUrl=$CBlue$CUnderline
+fi
 
-DOWNLODABLED_VERSIONS_URL="https://github.com/padogrid/padogrid/releases/download/nightly/padogrid_download_versions.sh"
+OS_NAME="$(uname -s | awk '{print tolower($0)}')"
+HARDWARE_NAME="$(uname -m)"
+
+DOWNLOAD_VERSIONS_URL="https://github.com/padogrid/padogrid/releases/download/nightly/padogrid_download_versions.sh"
 PADOGRID_DOWNLOAD_URL="https://github.com/padogrid/padogrid/releases"
 #PADO_DOWNLOAD_URL="https://github.com/netcrest/pado2/releases"
 PADO_DOWNLOAD_URL=$PADOGRID_DOWNLOAD_URL
@@ -103,6 +114,9 @@ SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
 KAFKA_DOWNLOAD_URL="https://archive.apache.org/dist/kafka/"
 CONFLUENT_DOWNLOAD_URL="https://packages.confluent.io/archive/"
 HADOOP_DOWNLOAD_URL="https://archive.apache.org/dist/hadoop/common/"
+PROMETHEUS_DOWNLOAD_URL="https://github.com/prometheus/prometheus/releases"
+GRAFANA_GITHUB_RELEASES_URL="https://github.com/grafana/grafana/releases"
+GRAFANA_DOWNLOAD_URL="https://grafana.com/grafana/download?edition=enterprise&pg=get&plcmt=selfmanaged-box1-cta1${None}"
 
 PADOECLIPSE_MANUAL_URL="https://github.com/padogrid/padogrid/wiki/Eclipse"
 
@@ -113,7 +127,7 @@ PADOGRID_WORKSPACES_PATH="$PADOGRID_ENV_BASE_PATH/workspaces"
 
 __options()
 {
-   echo "-product -quiet -simulate -save -scan -?"
+   echo "-product -quiet -simulate -save -load -scan -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -178,25 +192,11 @@ cat <<EOF
 
    The base directory has the following structure and contains all of PadoGrid files including workspaces.
 
-EOF
-if [ "$MAN_SPECIFIED" == "false" ]; then
-cat <<EOF
       .
       $TTee downloads
       $TTee products
       $TTee snapshots
       $TLel workspaces
-EOF
-else
-cat <<EOF
-      .
-      |-- downloads
-      |-- products
-      |-- snapshots
-      |-- workspaces
-EOF
-fi
-cat <<EOF
 
       - The 'downloads' directory contains the files downloaded by this command.
       - The 'products' directory contains the installed products.
@@ -206,8 +206,6 @@ cat <<EOF
    The following products are downlodable and you can install them using this command.
 
 EOF
-
-if [ "$MAN_SPECIFIED" == "false" ]; then
 
 echo -e "      - PadoGrid                    ${CUrl}$PADOGRID_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Geode                ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
@@ -223,25 +221,9 @@ echo -e "      - Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
 echo -e "      - Kafka Confluent Platform    ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
+echo -e "      - Prometheus                  ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
+echo -e "      - Grafana Enterprise/OSS      ${CUrl}$GRAFANA_DOWNLOAD_URL${CNone}"
 
-else
-
-echo -e "      - PadoGrid                    $PADOGRID_DOWNLOAD_URL"
-echo -e "      - Apache Geode                $GEODE_DOWNLOAD_URL"
-echo -e "      - Hazelcast Enterprise        $HAZELCAST_ENTERPRISE_DOWNLOAD_URL"
-echo -e "      - Hazelcst OSS                $HAZELCAST_OSS_DOWNLOAD_URL"
-echo -e "      - Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL"
-echo -e "      - HazelcastDesktop            $HAZELCAST_DESKTOP_DOWNLOAD_URL"
-echo -e "      - Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
-echo -e "      - Jet OSS                     $JET_OSS_DOWNLOAD_URL"
-echo -e "      - Redis OSS                   $REDIS_DOWNLOAD_URL"
-echo -e "      - TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
-echo -e "      - Apache Spark                $SPARK_DOWNLOAD_URL"
-echo -e "      - Apache Kafka                $KAFKA_DOWNLOAD_URL"
-echo -e "      - Kafka Confluent Platform    $CONFLUENT_DOWNLOAD_URL"
-echo -e "      - Apache Hadoop               $HADOOP_DOWNLOAD_URL"
-
-fi
 cat <<EOF
 
    The following products are not downlodable due to their sign-in requirements. You must manually
@@ -249,23 +231,12 @@ cat <<EOF
 
 EOF
 
-if [ "$MAN_SPECIFIED" == "false" ]; then
-
 echo -e "      - Oracle Coherence     ${CUrl}https://www.oracle.com/middleware/technologies/coherence-downloads.html${CNone}"
 echo -e "      - TIBCO ComputeDB      ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
 echo -e "      - Redis Enterprise     ${CUrl}https://redis.com/redis-enterprise-software/download-center/software/${CNone}"
 echo -e "      - Redis Stack          ${CUrl}https://redis.io/download/${CNone}"
 echo -e "      - VMware Tanzu GemFire ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
 
-else
-
-echo -e "      - Oracle Coherence     https://www.oracle.com/middleware/technologies/coherence-downloads.html"
-echo -e "      - TIBCO ComputeDB      https://edelivery.tibco.com/storefront/index.ep"
-echo -e "      - Redis Enterprise     https://redis.com/redis-enterprise-software/download-center/software/"
-echo -e "      - Redis Stack          https://redis.io/download/"
-echo -e "      - VMware Tanzu GemFire https://network.pivotal.io/products/pivotal-gemfire"
-
-fi
 cat <<EOF
 
    This command does not install Java. It expects that you have already installed JDK 1.8+ and prompts for
@@ -273,23 +244,11 @@ cat <<EOF
 
 EOF
 
-if [ "$MAN_SPECIFIED" == "false" ]; then
-  
 echo -e "      - Oracle JDK              ${CUrl}https://www.oracle.com/java/technologies/javase-downloads.html${CNone}"
 echo -e "      - Oracle Reference JDK    ${CUrl}https://jdk.java.net/${CNone}"
 echo -e "      - Azule OpenJDK           ${CUrl}https://www.azul.com/downloads/${CNone}"
 echo -e "      - Adoptium OpenJDK        ${CUrl}https://adoptium.net/${CNone}"
 echo -e "      - Amazon Corretto OpenJDK ${CUrl}https://aws.amazon.com/corretto${CNone}"
-
-else
-
-echo -e "      - Oracle JDK              https://www.oracle.com/java/technologies/javase-downloads.html"
-echo -e "      - Oracle Reference JDK    https://jdk.java.net/"
-echo -e "      - Azule OpenJDK           https://www.azul.com/downloads/"
-echo -e "      - Adoptium OpenJDK        https://adoptium.net/"
-echo -e "      - Amazon Corretto OpenJDK https://adoptium.net/"
-
-fi
 
 cat <<EOF
 
@@ -304,15 +263,7 @@ NOTES
 
 EOF
 
-if [ "$MAN_SPECIFIED" == "false" ]; then
-
 echo -e "     ${CUrl}$PADOECLIPSE_MANUAL_URL${CNone}"
-
-else
-
-echo -e "     $PADOECLIPSE_MANUAL_URL"
-
-fi
 echo ""
 
 if [ "$IS_STANDALONE_SCRIPT" == "false" ]; then
@@ -361,14 +312,30 @@ if [ "$SAVE_SPECIFIED" == "true" ]; then
       exit 1
    fi
 fi
+# Exit if invalid load option specified
+DOWNLOAD_VERSIONS_FILE="$LOAD_ARG"
+if [ "$LOAD_SPECIFIED" == "true" ]; then
+   if [ "$LOAD_ARG" == "" ] || [[ "$LOAD_ARG" == "-"** ]]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid load option: [$LOAD_ARG]. Please enter file name."
+      echo >&2 "       Command aborted."
+      exit 1
+   elif [ ! -f "$DOWNLOAD_VERSIONS_FILE" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid file: [$DOWNLOAD_VERSIONS_FILE]. Please enter a valid file name."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+fi
+
+if [ "$SAVE_SPECIFIED" == "true" ] && [ "$LOAD_SPECIFIED" == "true" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-load' and '-save' are not allowed together. Command aborted."
+   exit 1
+fi
 
 cat <<EOF
 
 This command installs the following downlodable products:
 
 EOF
-
-if [ "$MAN_SPECIFIED" == "false" ]; then
 
 echo -e "[0]  PadoGrid                    ${CUrl}$PADOGRID_DOWNLOAD_URL${CNone}"
 echo -e "[1]  Apache Geode                ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
@@ -384,25 +351,8 @@ echo -e "[10] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
 echo -e "[11] Apache Kafka                ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
 echo -e "[12] Kafka Confluent Platform    ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}"
 echo -e "[13] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
-
-else
-
-echo -e "[0]  PadoGrid                    $PADOGRID_DOWNLOAD_URL"
-echo -e "[1]  Apache Geode                $GEODE_DOWNLOAD_URL"
-echo -e "[2]  Hazelcast Enterprise        $HAZELCAST_ENTERPRISE_DOWNLOAD_URL"
-echo -e "[3]  Hazelcst OSS                $HAZELCAST_OSS_DOWNLOAD_URL"
-echo -e "[4]  Hazelcast Management Center $HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL"
-echo -e "[5]  HazelcastDesktop            $HAZELCAST_DESKTOP_DOWNLOAD_URL"
-echo -e "[6]  Jet Enterprise              $JET_ENTERPRISE_DOWNLOAD_URL"
-echo -e "[7]  Jet OSS                     $JET_OSS_DOWNLOAD_URL"
-echo -e "[8]  Redis OSS                   $REDIS_DOWNLOAD_URL"
-echo -e "[9]  TIBCO SnappyData            $SNAPPYDATA_DOWNLOAD_URL"
-echo -e "[10] Apache Spark                $SPARK_DOWNLOAD_URL"
-echo -e "[11] Apache Kafka                $KAFKA_DOWNLOAD_URL"
-echo -e "[12] Kafka Confluent Platform    $CONFLUENT_DOWNLOAD_URL"
-echo -e "[13] Apache Hadoop               $HADOOP_DOWNLOAD_URL"
-
-fi
+echo -e "[14] Prometheus                  ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
+echo -e "[15] Grafana Enterprise/OSS      ${CUrl}$GRAFANA_DOWNLOAD_URL${CNone}"
 
 cat <<EOF
 
@@ -412,23 +362,12 @@ products directory. See the PadoGrid manual for instructions.
 
 EOF
 
-if [ "$MAN_SPECIFIED" == "false" ]; then
+echo -e "[1] Oracle Coherence     ${CUrl}https://www.oracle.com/middleware/technologies/coherence-downloads.html${CNone}"
+echo -e "[2] Redis Enterprise     ${CUrl}https://redis.com/redis-enterprise-software/download-center/software/${CNone}"
+echo -e "[3] Redis Stack          ${CUrl}https://redis.io/download/${CNone}"
+echo -e "[4] TIBCO ComputeDB      ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
+echo -e "[5] VMware Tanzu GemFire ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
 
-echo -e "[0] Oracle Coherence     ${CUrl}https://www.oracle.com/middleware/technologies/coherence-downloads.html${CNone}"
-echo -e "[1] Redis Enterprise     ${CUrl}https://redis.com/redis-enterprise-software/download-center/software/${CNone}"
-echo -e "[2] Redis Stack          ${CUrl}https://redis.io/download/${CNone}"
-echo -e "[3] TIBCO ComputeDB      ${CUrl}https://edelivery.tibco.com/storefront/index.ep${CNone}"
-echo -e "[4] VMware Tanzu GemFire ${CUrl}https://network.pivotal.io/products/pivotal-gemfire${CNone}"
-
-else
-
-echo -e "[0] Oracle Coherence     https://www.oracle.com/middleware/technologies/coherence-downloads.html"
-echo -e "[1] Redis Enterprise     https://redis.com/redis-enterprise-software/download-center/software/"
-echo -e "[2] Redis Stack          https://redis.io/download/"
-echo -e "[3] TIBCO ComputeDB      https://edelivery.tibco.com/storefront/index.ep"
-echo -e "[4] VMware Tanzu GemFire https://network.pivotal.io/products/pivotal-gemfire"
-
-fi
 cat <<EOF
 
 Note that this command does not install Java. It expects that you have already installed JDK 1.8+ and
@@ -437,21 +376,10 @@ following sites.
 
 EOF
 
-if [ "$MAN_SPECIFIED" == "false" ]; then
-
 echo -e "[0] Oracle JDK       ${CUrl}https://www.oracle.com/java/technologies/javase-downloads.html${CNone}"
 echo -e "[1] Oracle OpenJDK   ${CUrl}https://jdk.java.net/${CNone}"
 echo -e "[2] Azule OpenJDK    ${CUrl}https://www.azul.com/downloads/${CNone}"
 echo -e "[3] Adoptium OpenJDK ${CUrl}https://adoptium.net/${CNone}"
-
-else
-
-echo -e "[0] Oracle JDK       https://www.oracle.com/java/technologies/javase-downloads.html"
-echo -e "[1] Oracle OpenJDK   https://jdk.java.net/"
-echo -e "[2] Azule OpenJDK    https://www.azul.com/downloads/"
-echo -e "[3] Adoptium OpenJDK https://adoptium.net/"
-
-fi
 
 function getLatestProductVersion
 {
@@ -898,6 +826,38 @@ function getDownloadableHadoopVersions
    unique_words "$ALL_HADOOP_VERSIONS"
 }
 
+function getDownloadablePrometheusVersions
+{
+   local is_next_page="true"
+   local page=1
+   local ALL_PROMETHEUS_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${PROMETHEUS_DOWNLOAD_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "/prometheus/prometheus/tree/v" | sed -e 's|^.*/prometheus/prometheus/tree/v||' -e 's/".*$//')
+      is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      ALL_PROMETHEUS_VERSIONS="$ALL_PROMETHEUS_VERSIONS $PAGE_VERSIONS"
+      let page=page+1
+   done
+   unique_words "$ALL_PROMETHEUS_VERSIONS"
+}
+
+function getDownloadableGrafanaVersions
+{
+   local is_next_page="true"
+   local page=1
+   local ALL_GRAFANA_VERSIONS=""
+   while [ "$is_next_page" == "true" ]; do
+      download_url="${GRAFANA_GITHUB_RELEASES_URL}?page=$page"
+      local PAGE_VERSIONS=$(curl -sL $download_url | grep "/grafana/grafana/tree/v" | sed -e 's|^.*/grafana/grafana/tree/v||' -e 's/".*$//')
+      is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
+      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
+      ALL_GRAFANA_VERSIONS="$ALL_GRAFANA_VERSIONS $PAGE_VERSIONS"
+      let page=page+1
+   done
+   unique_words "$ALL_GRAFANA_VERSIONS"
+}
+
 #
 # Returns the sorted list of the specified list that contains product versions
 # @param versionList
@@ -947,6 +907,9 @@ function sortVersionList
 #    KAFKA_VERSIONS
 #    CONFLUENT_VERSIONS
 #    HADOOP_VERSIONS
+#    PROMETHEUS_VERSIONS
+#    GRAFANA_ENTERPRISE_VERSIONS
+#    GRAFANA_OSS_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
 #
@@ -970,6 +933,9 @@ function determineInstalledProductVersions
    KAFKA_VERSIONS=""
    CONFLUENT_VERSIONS=""
    HADOOP_VERSIONS=""
+   PROMETHEUS_VERSIONS=""
+   GRAFANA_ENTERPRISE_VERSIONS=""
+   GRAFANA_OSS_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
@@ -1066,7 +1032,7 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       REDIS_VERSIONS=$(sortVersionList "$__versions")
-
+      
       # SnappyData
       __versions=""
       for i in snappydata-*; do
@@ -1109,6 +1075,29 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       HADOOP_VERSIONS=$(sortVersionList "$__versions")
+      
+      # Prometheus
+      __versions=""
+      for i in prometheus-*; do
+         __version=${i#prometheus-}
+         __versions="$__versions $__version "
+      done
+      PROMETHEUS_VERSIONS=$(sortVersionList "$__versions")
+
+      # Grafana OSS, Enterprise
+      local gossv genterv
+      for i in grafana-*; do
+         if [[ "$i" == "grafana-"** ]]; then
+            __version=${i#grafana-}
+            if [ "$(grep GNU $i/LICENSE)" != "" ]; then
+               gossv="$gossv $__version"
+            else
+               genterv="$genterv $__version"
+            fi
+         fi
+      done
+      GRAFANA_ENTERPRISE_VERSIONS=$(sortVersionList "$genterv")
+      GRAFANA_OSS_VERSIONS=$(sortVersionList "$gossv")
 
       popd > /dev/null 2>&1
             
@@ -1248,7 +1237,7 @@ if [ "$SIMULATE" == "true" ]; then
    fi
 fi
 
-if [ "$DOWNLOAD_VERSIONS_FILE" != "" ]; then
+if [ "$SAVE_SPECIFIED" == "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" != "" ]; then
    __DIR=$(dirname $DOWNLOAD_VERSIONS_FILE)
    if [ ! -d "$__DIR" ]; then
       echo -e "${CError}ERROR:${CNone} Invalid file path. Directory does not exist. Command aborted."
@@ -1265,13 +1254,13 @@ if [ "$DOWNLOAD_VERSIONS_FILE" != "" ]; then
    echo "   $DOWNLOAD_VERSIONS_FILE"
 fi
 
-if [ "$SCAN_SPECIFIED" != "true" ]; then
+if [ "$SCAN_SPECIFIED" != "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" == "" ]; then
    # Download the cached product versions
-   DOWNLODABLED_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
-   curl -sL -o "$DOWNLODABLED_VERSIONS_FILE" "$DOWNLODABLED_VERSIONS_URL"
+   DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
+   curl -sL -o "$DOWNLOAD_VERSIONS_FILE" "$DOWNLOAD_VERSIONS_URL"
 fi
-if [ -f "$DOWNLODABLED_VERSIONS_FILE" ]; then
-   . "$DOWNLODABLED_VERSIONS_FILE"
+if [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
+   . "$DOWNLOAD_VERSIONS_FILE"
    PADOGRID_DOWNLOAD_VERSIONS=($PADOGRID_DOWNLOAD_VERSIONS)
    PADO_DOWNLOAD_VERSIONS=($PADO_DOWNLOAD_VERSIONS)
    PADODESKTOP_DOWNLOAD_VERSIONS=($PADODESKTOP_DOWNLOAD_VERSIONS)
@@ -1291,6 +1280,8 @@ if [ -f "$DOWNLODABLED_VERSIONS_FILE" ]; then
    CONFLUENT_DOWNLOAD_VERSIONS=$(sortVersionList "$CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS $CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS")
    CONFLUENT_DOWNLOAD_VERSIONS=($CONFLUENT_DOWNLOAD_VERSIONS)
    HADOOP_DOWNLOAD_VERSIONS=($HADOOP_DOWNLOAD_VERSIONS)
+   PROMETHEUS_DOWNLOAD_VERSIONS=($PROMETHEUS_DOWNLOAD_VERSIONS)
+   GRAFANA_DOWNLOAD_VERSIONS=($GRAFANA_DOWNLOAD_VERSIONS)
 else
    #
    # Scan downloadable product versions
@@ -1361,6 +1352,12 @@ else
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
       HADOOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHadoopVersions)"))
    fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
+      PROMETHEUS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePrometheusVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ] || [ "$PRODUCT_ARG" == "grafana-oss" ]; then
+      GRAFANA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGrafanaVersions)"))
+   fi
 
    # Enable the enter key
    if [ "$NO_STTY_SPECIFIED" != "true" ]; then
@@ -1389,6 +1386,8 @@ if [ "$SAVE_SPECIFIED" == "true" ]; then
    echo "CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "HADOOP_DOWNLOAD_VERSIONS=\"${HADOOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PROMETHEUS_DOWNLOAD_VERSIONS=\"${PROMETHEUS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "GRAFANA_DOWNLOAD_VERSIONS=\"${GRAFANA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "Downloadable prodduct versions saved:"
    echo "   + $DOWNLOAD_VERSIONS_FILE"
    exit
@@ -1413,6 +1412,9 @@ SPARK_VERSION=""
 KAFKA_VERSION=""
 CONFLUENT_VERSION=""
 HADOOP_VERSION=""
+PROMETHEUS_VERSION=""
+GRAFANA_ENTERPRISE_VERSION=""
+GRAFANA_OSS_VERSION=""
 
 if [ "$QUIET" == "true" ]; then
    # Set to the latest versions
@@ -1473,6 +1475,9 @@ if [ "$QUIET" == "true" ]; then
    echo "Kafka                $KAFKA_VERSION"
    echo "Kafka Confluent      $CONFLUENT_VERSION"
    echo "Hadoop               $HADOOP_VERSION"
+   echo "Prometheus           $PROMETHEUS_VERSION"
+   echo "Grafana Enterprise   $GRAFANA_ENTERPRISE_VERSION"
+   echo "Grafana OSS          $GRAFANA_OSS_VERSION"
    echo ""
 else
 # Get user inputs
@@ -1867,6 +1872,50 @@ while [ "$REDO" == "true" ]; do
       HADOOP_VERSION=$INSTALL_VERSION
       echo ""
    fi
+   
+   # Prometheus
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
+      PRODUCT_NAME="Prometheus"
+      PRODUCT_DOWNLOAD_VERSIONS=("${PROMETHEUS_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$PROMETHEUS_VERSIONS
+      echo -e "Prometheus ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      PROMETHEUS_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+
+   # Grafana Enterprise
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ]; then
+      PRODUCT_NAME="Grafana Enterprise"
+      PRODUCT_DOWNLOAD_VERSIONS=("${GRAFANA_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$GRAFANA_ENTERPRISE_VERSIONS
+      echo -e "Grafana Enterprise ${CUrl}$GRAFANA_GITHUB_RELEASES_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      GRAFANA_ENTERPRISE_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+
+   # Grafana OSS
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-oss" ]; then
+      PRODUCT_NAME="Grafana OSS"
+      if [ "$GRAFANA_VERSIONS" == "" ]; then
+         PRODUCT_DOWNLOAD_VERSIONS=("${GRAFANA_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$GRAFANA_OSS_VERSIONS
+      fi
+      echo -e "Grafana OSS ${CUrl}$GRAFANA_GITHUB_RELEASES_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      GRAFANA_OSS_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
 
    echo ""
 
@@ -1929,6 +1978,15 @@ while [ "$REDO" == "true" ]; do
    fi
    if [ "$HADOOP_VERSION" != "" ]; then
       echo -e "Hadoop: ${CLightGreen}$HADOOP_VERSION${CNone}"
+   fi
+   if [ "$PROMETHEUS_VERSION" != "" ]; then
+      echo -e "Prometheus: ${CLightGreen}$PROMETHEUS_VERSION${CNone}"
+   fi
+   if [ "$GRAFANA_ENTERPRISE_VERSION" != "" ]; then
+      echo -e "Grafana Enterprise: ${CLightGreen}$GRAFANA_ENTERPRISE_VERSION${CNone}"
+   fi
+   if [ "$GRAFANA_OSS_VERSION" != "" ]; then
+      echo -e "Grafana OSS: ${CLightGreen}$GRAFANA_OSS_VERSION${CNone}"
    fi
    echo ""
 
@@ -2012,6 +2070,16 @@ fi
 #
 # @required HADOOP_RELEASE
 # @required HADOOP_TARBALL
+#
+# @required PROMETHEUS_VERSION
+# @required PROMETHEUS_RELEASE
+# @required PROMETHEUS_TARBALL
+#
+# @required GRAFANA_ENTERPRISE_RELEASE
+# @required GRAFANA_ENTERPRISE_TARBALL
+#
+# @required GRAFANA_OSS_RELEASE
+# @required GRAFANA_OSS_TARBALL
 #
 function installProduct
 {
@@ -2326,7 +2394,6 @@ function installProduct
       # --------------
       # Download Redis
       echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL..."
-      SNAPPY_VDIR="v${REDIS_VERSION%-bin}"
       if [ "$__SIMULATE" == "true" ]; then
          echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL" "https://github.com/redis/redis/archive/refs/tags/$REDIS_VERSION.tar.gz"
       else
@@ -2334,7 +2401,7 @@ function installProduct
       fi
       
       # Install Redis
-      echo "  Installing SnappyData $REDIS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+      echo "  Installing Redis $REDIS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
       if [ "$__SIMULATE" == "true" ]; then
          echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$REDIS_TARBALL"
       else
@@ -2433,7 +2500,7 @@ function installProduct
          fi
       
          # Install Kafka
-         echo "  Installing Kafka $CONFLUENT_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         echo "  Installing Confluent $CONFLUENT_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
          if [ "$__SIMULATE" == "true" ]; then
             echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$CONFLUENT_TARBALL"
          else
@@ -2465,6 +2532,78 @@ function installProduct
             tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$HADOOP_TARBALL"
             echo "  Installed - $HADOOP_TARBALL"
          fi
+      fi
+
+   elif [ "$__PRODUCT" == "prometheus" ]; then 
+      
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$PROMETHEUS_RELEASE" ]; then
+         echo "Already installed - $PROMETHEUS_RELEASE"
+      else
+      # --------------
+      # Download Prometheus
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL" "https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/$PROMETHEUS_TARBALL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL" "https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/$PROMETHEUS_TARBALL"
+      fi
+      
+      # Install Prometheus
+      echo "  Installing Prometheus $PROMETHEUS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL"
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL"
+         echo "  Installed - $PROMETHEUS_TARBALL"
+      fi
+      fi
+
+   elif [ "$__PRODUCT" == "grafana-enterprise" ]; then 
+      
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$GRAFANA_ENTERPRISE_RELEASE" ]; then
+         echo "Already installed - $GRAFANA_ENTERPRISE_RELEASE"
+      else
+      # --------------
+      # Download Grafana
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL" "https://dl.grafana.com/enterprise/release/$GRAFANA_ENTERPRISE_TARBALL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL" "https://dl.grafana.com/enterprise/release/$GRAFANA_ENTERPRISE_TARBALL"
+      fi
+      
+      # Install Grafana
+      echo "  Installing Grafana Eterprise $GRAFANA_ENTERPRISE_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL"
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL"
+         echo "  Installed - $GRAFANA_ENTERPRISE_TARBALL"
+      fi
+      fi
+
+   elif [ "$__PRODUCT" == "grafana-oss" ]; then 
+      
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$GRAFANA_OSS_RELEASE" ]; then
+         echo "Already installed - $GRAFANA_OSS_RELEASE"
+      else
+      # --------------
+      # Download Grafana
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL" "https://dl.grafana.com/oss/release/$GRAFANA_OSS_TARBALL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL" "https://dl.grafana.com/oss/release/$GRAFANA_OSS_TARBALL"
+      fi
+      
+      # Install Grafana
+      echo "  Installing Grafana OSS $GRAFANA_OSS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL"
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL"
+         echo "  Installed - $GRAFANA_OSS_TARBALL"
+      fi
       fi
 
    fi
@@ -2606,6 +2745,36 @@ if [ "$HADOOP_VERSION" != "" ]; then
    HADOOP_TARBALL="hadoop-$HADOOP_VERSION.tar.gz"
    installProduct "hadoop" "$SIMULATE"
 fi
+if [ "$PROMETHEUS_VERSION" != "" ]; then
+   if [ "$HARDWARE_NAME" == "x86_64" ]; then
+      POSTFIX=".$OS_NAME-amd64"
+   else
+      POSTFIX=".$OS_NAME-$HARDWARE_NAME"
+   fi
+   PROMETHEUS_RELEASE="prometheus-$PROMETHEUS_VERSION${POSTFIX}"
+   PROMETHEUS_TARBALL="prometheus-$PROMETHEUS_RELEASE.tar.gz"
+   installProduct "prometheus" "$SIMULATE"
+fi
+if [ "$GRAFANA_ENTERPRISE_VERSION" != "" ]; then
+   if [ "$HARDWARE_NAME" == "x86_64" ]; then
+      POSTFIX=".$OS_NAME-amd64"
+   else
+      POSTFIX=".$OS_NAME-$HARDWARE_NAME"
+   fi
+   GRAFANA_ENTERPRISE_RELEASE="grafana-enterprise-$GRAFANA_ENTERPRISE_VERSION${POSTFIX}"
+   GRAFANA_ENTERPRISE_TARBALL="$GRAFANA_ENTERPRISE_RELEASE.tar.gz"
+   installProduct "grafana-enterprise" "$SIMULATE"
+fi
+if [ "$GRAFANA_OSS_VERSION" != "" ]; then
+   if [ "$HARDWARE_NAME" == "x86_64" ]; then
+      POSTFIX=".$OS_NAME-amd64"
+   else
+      POSTFIX=".$OS_NAME-$HARDWARE_NAME"
+   fi
+   GRAFANA_OSS_RELEASE="grafana-$GRAFANA_OSS_VERSION${POSTFIX}"
+   GRAFANA_OSS_TARBALL="$GRAFANA_OSS_RELEASE.tar.gz"
+   installProduct "grafana-oss" "$SIMULATE"
+fi
 
 # Redis distribution contains source code only. Tell the user how to build.
 if [ "$REDIS_VERSION" != "" ]; then
@@ -2652,6 +2821,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
    KAFKA_HOME=""
    GEMFIRE_HOME=""
    COHERENCE_HOME=""
+   PROMETHEUS_HOME=""
+   GRAFANA_HOME=""
 
    # Set default workspaces home
    PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/myrwe"
@@ -2698,6 +2869,10 @@ if [ "$RWE_EXISTS" == "false" ]; then
        KAFKA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"gemfire"** ]]; then
        GEMFIRE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"prometheus"** ]]; then
+       PROMETHEUS_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"grafana"** ]]; then
+       GRAFANA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
 #     elif [[ "$i" == **"coherence"** ]]; then
 #        COHERENCE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      fi
@@ -2740,8 +2915,14 @@ if [ "$RWE_EXISTS" == "false" ]; then
         PRODUCT_HOME="$SPARK_HOME"
       elif [ "$KAFKA_HOME" != "" ]; then
         PRODUCT_HOME="$KAFKA_HOME"
+      elif [ "$CONFLUENT_HOME" != "" ]; then
+        PRODUCT_HOME="$CONFLUENT_HOME"
       elif [ "$GEMFIRE_HOME" != "" ]; then
         PRODUCT_HOME="$GEMFIRE_HOME"
+      elif [ "$PROMETHEUS_HOME" != "" ]; then
+        PRODUCT_HOME="$PROMETHEUS_HOME"
+      elif [ "$GRAFANA_HOME" != "" ]; then
+        PRODUCT_HOME="$GRAFANA_HOME"
       fi
 
       echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
@@ -2762,6 +2943,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
       echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
       echo "HADDOP_HOME=\"$HADOOP_HOME\"" >> $TMP_ENV_FILE
+      echo "PROMETHEUS_HOME=\"$PROMETHEUS_HOME\"" >> $TMP_ENV_FILE
+      echo "GRAFANA_HOME=\"$GRAFANA_HOME\"" >> $TMP_ENV_FILE
       if [ "$QUIET" == "false" ]; then
          if [ "$PRODUCT_HOME" != "" ]; then
             $__PADOGRID_HOME/bin_sh/create_rwe -rwe myrwe -product "$PRODUCT_HOME" -env $TMP_ENV_FILE 

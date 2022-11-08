@@ -145,6 +145,10 @@ function getProductVersions
    __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
    __SPARK_VERSION=${SPARK_HOME#*spark-}
    __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
+   __KAFKA_VERSION=${KAFKA_HOME#*kafka-}
+   __CONFLUENT_VERSION=${CONFLUENT_HOME#*confluent-}
+   __PROMETHEUS_VERSION=${PROMETHEUS_HOME#*prometheus-}
+   __GRAFANA_VERSION=${HADOOP_HOME#*grafana-}
 }
 
 #
@@ -200,8 +204,17 @@ function getProductVersion
    kafka)
      __PRODUCT_VERSION="$__KAFKA_VERSION"
      ;;
+   confluent)
+     __PRODUCT_VERSION="$__CONFLUENT_VERSION"
+     ;;
    hadoop)
      __PRODUCT_VERSION="$__HADOOP_VERSION"
+     ;;
+   prometheus)
+     __PRODUCT_VERSION="$__PROMETHEUS_VERSION"
+     ;;
+   grafana)
+     __PRODUCT_VERSION="$__GRAFANA_VERSION"
      ;;
    *)
      ;;
@@ -311,9 +324,18 @@ function getProductPath
    kafka)
      __PRODUCT_PATH="$PADOGRID_ENV_BASE_PATH/products/kafka_$__PRODUCT_VERSION"
      ;;
+   confluent)
+     __PRODUCT_PATH="$PADOGRID_ENV_BASE_PATH/products/confluent-$__PRODUCT_VERSION"
+     ;;
    hadoop)
-     __PRODUCT_VERSION="$__HADOOP_VERSION"
+#     __PRODUCT_VERSION="$__HADOOP_VERSION"
      __PRODUCT_PATH="$PADOGRID_ENV_BASE_PATH/products/hadoop-$__PRODUCT_VERSION"
+     ;;
+   prometheus)
+     __PRODUCT_PATH="$PADOGRID_ENV_BASE_PATH/products/prometheus-$__PRODUCT_VERSION"
+     ;;
+   grafana)
+     __PRODUCT_PATH="$PADOGRID_ENV_BASE_PATH/products/grafana-$__PRODUCT_VERSION"
      ;;
    *)
      ;;
@@ -364,11 +386,11 @@ else
       fi
    fi
    echo ""
-   echo "Uninstalling $PRODUCT_PATH..."
+   echo "- Uninstalling $PRODUCT_PATH..."
    rm -rf $PRODUCT_PATH
-   echo "Product uninstalled. Make sure to update the workspaces using the unstalled product by"
-   echo "running the update_products command as follows."
+   echo "  Product uninstalled. Make sure to update the workspaces using the unstalled product by"
+   echo "  running the update_products command as follows."
    echo ""
-   echo "   update_products -product $PRODUCT_ARG"
+   echo "     update_products -product $PRODUCT_ARG"
    echo ""
 fi

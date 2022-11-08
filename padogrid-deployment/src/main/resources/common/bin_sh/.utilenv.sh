@@ -3600,6 +3600,8 @@ function sortVersionList
 #    COHERENCE_VERSIONS
 #    GEMFIRE_VERSIONS
 #    GEODE_VERSIONS
+#    GRAFANA_ENTERPRISE_VERSIONS
+#    GRAFANA_OSS_VERSIONS
 #    HADOOP_VERSIONS
 #    HAZELCAST_DESKTOP_VERSIONS
 #    HAZELCAST_ENTERPRISE_VERSIONS
@@ -3609,6 +3611,7 @@ function sortVersionList
 #    JET_OSS_VERSIONS
 #    JET_MANAGEMENT_CENTER_VERSIONS
 #    KAFKA_VERSIONS
+#    PROMETHEUS_VERSIONS
 #    REDIS_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
@@ -3624,6 +3627,7 @@ function determineInstalledProductVersions
    COHERENCE_VERSIONS=""
    GEMFIRE_VERSIONS=""
    GEODE_VERSIONS=""
+   GRAFANA_VERSIONS=""
    HADOOP_VERSIONS=""
    HAZELCAST_ENTERPRISE_VERSIONS=""
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
@@ -3634,6 +3638,7 @@ function determineInstalledProductVersions
    JET_MANAGEMENT_CENTER_VERSIONS=""
    KAFKA_VERSIONS=""
    CONFLUENT_VERSIONS=""
+   PROMETHEUS_VERSIONS=""
    REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
@@ -3683,7 +3688,7 @@ function determineInstalledProductVersions
       if [ -f "$COHERENCE_HOME/product.xml" ]; then
          COHERENCE_VERSIONS=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
       fi
-      #
+
       # Confluent
       __versions=""
       for i in confluent-*; do
@@ -3707,6 +3712,13 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       GEODE_VERSIONS=$(sortVersionList "$__versions")
+
+      __versions=""
+      for i in grafana-*; do
+         __version=${i#grafana-}
+         __versions="$__versions $__version "
+      done
+      GRAFANA_VERSIONS=$(sortVersionList "$__versions")
 
       # Hadoop
       __versions=""
@@ -3782,6 +3794,14 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       KAFKA_VERSIONS=$(sortVersionList "$__versions")
+
+      # Prometheus
+      __versions=""
+      for i in prometheus-*; do
+         __version=${i#prometheus-}
+         __versions="$__versions $__version "
+      done
+      PROMETHEUS_VERSIONS=$(sortVersionList "$__versions")
 
       # Redis
       __versions=""
