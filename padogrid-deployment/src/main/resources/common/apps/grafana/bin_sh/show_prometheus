@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Display Prometheus status
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESCRIPTION
+   Displays Prometheus status.
+
+OPTIONS
+   -all
+             Displays PIDs of all Prometheus instances"
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+# Exit if config file does not exist
+if [ ! -f "$PROMETHEUS_CONFIG_FILE" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Prometheus configuration file not found. Command aborted."
+   echo >&2 "       $PROMETHEUS_CONFIG_FILE"
+   exit 1
+fi
+
+if [ "$ALL" == "true" ]; then
+   PIDs="$(getAllPrometheusPids)"
+   if [ "$PIDs" != "" ]; then
+      echo "All Prometheus instances."
+      echo "   PIDs: $PIDs"
+   else
+      echo "Prometheus instances not found."
+   fi
+else
+   PID=$(getPrometheusPid "$PROMETHEUS_CONFIG_FILE")
+   if [ "$PID" != "" ]; then
+      echo "Prometheus running."
+      echo "   PID: $PID"
+   else
+      echo "Prometheus not running."
+   fi
+   echo "   LOG: $PROMETHEUS_LOG_FILE"
+fi

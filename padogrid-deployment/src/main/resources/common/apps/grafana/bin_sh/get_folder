@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,24 +22,35 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 EXECUTABLE="`basename $0`"
 
 if [ "$HELP" == "true" ]; then
-   echo "Usage:"
-   echo "   ./$EXECUTABLE [-folder <folder-name>] [-?]"
-   echo ""
-   echo "   Displays all dashboards found in the specfied Grafana folder."
-   echo ""
-   echo "Default: ./$EXECUTABLE -folder $DEFAULT_FOLDER"
-   echo ""
-   exit
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Display the specified Grafana folder information
+
+SYNOPSIS
+   ./$EXECUTABLE [-folder folder_name] [-?]
+
+DESCRIPTION
+   Displays the specified Grafana folder information.
+
+OPTIONS
+   -folder folder_name
+             Folder name. Default: $DEFAULT_FOLDER
+
+DEFAULT
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER
+
+EOF
+exit
 fi
 
 if [ "$FOLDER" == "" ]; then
-   FOLDERS=$DEFAULT_FOLDER
+   FOLDER=$DEFAULT_FOLDER
 fi
 
-__ID=`./get_folder_id -folder $FOLDER`
-if [ "$__ID" == "" ]; then
-   echo "ERROR: Folder not found [$FOLDER]. Command aborted."
-   exit 1
-fi
+__UID=`./get_folder_uid -folder $FOLDER`
 
-curl -sS "$GRAFANA_URL/api/search?folderIds=$__ID" |jq .
+curl -sS $GRAFANA_URL/api/folders/$__UID | jq .

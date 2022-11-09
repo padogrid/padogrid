@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,26 +22,37 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 EXECUTABLE="`basename $0`"
 
 if [ "$HELP" == "true" ]; then
-   echo "Usage:"
-   echo "   ./$EXECUTABLE [-?]"
-   echo ""
-   echo "   Converts all the dashboard files found in the following default export directory:"
-   echo "      $EXPORT_DASHBOARD_DIR"
-   echo ""
-   echo "   and places them in the following default template directory:"
-   echo "      $EXPORT_TEMPLATE_DIR"
-   echo ""
-   echo "   To export dashboards, run the 'export_folder' command."
-   echo ""
-   echo "   To import the templates, place them in the following directory and run the 'import_folder' command:"
-   echo "      $DASHBOARDS_DIR"
-   echo ""
-   echo "Default: ./$EXECUTABLE"
-   echo ""
-   exit
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Convert Grafana dashboard files
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESCRIPTION
+   Converts all the Grafana dashboard files found in the following default export directory:
+      $EXPORT_DASHBOARD_DIR
+
+   and places them in the following default template directory:
+      $EXPORT_TEMPLATE_DIR
+
+   To export dashboards, run the 'export_folder' command.
+
+   To import the templates, place them in the following directory and run the 'import_folder' command:
+      $DASHBOARDS_DIR
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
 fi
 
-if [ ! -d $EXPORT_DASHBOARD_DIR ] || [ "`ls $EXPORT_DASHBOARD_DIR | wc -l`" == "0" ]; then
+if [ ! -d $EXPORT_DASHBOARD_DIR ]; then
    echo ""
    echo "ERROR: Folders have not been exported. Run 'export_folder' to export folders first"
    echo "       before executing this command. Command aborted."
@@ -67,12 +78,12 @@ for EXPORT_FOLDER_DIR in *; do
    # in the template dir.
    pushd $FOLDER_NAME > /dev/null 2>&1
    for file in *; do
-      cat "$file" | jq ".dashboard.annotations.list[].datasource=\"\${DATASOURCE}\" 
-                  | .dashboard.panels[].datasource=\"\${DATASOURCE}\" 
+     `cat "$file" | jq ".dashboard.annotations.list[].datasource=\"\\${DATASOURCE}\" 
+                  | .dashboard.panels[].datasource=\"\\${DATASOURCE}\" 
                   | del(.meta) 
-                  | .folderId=\"\${FOLDER_ID}\" | .overWrite=false 
+                  | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
                   | del(.dashboard.version, .dashboard.uid, .dashboard.id) 
-                  " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file"
+                  " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
    done
    popd > /dev/null 2>&1
   

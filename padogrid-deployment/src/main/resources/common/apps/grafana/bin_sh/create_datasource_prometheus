@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,15 +22,33 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 EXECUTABLE="`basename $0`"
 
 if [ "$HELP" == "true" ]; then
-   echo "Usage:"
-   echo "   ./$EXECUTABLE [-datasource <datasource-name>] [-?]"
-   echo ""
-   echo "   Creates the Prometheus datasource in Grafana."
-   echo "     <datasource-name>  Datasource name."
-   echo ""
-   echo "Default: ./$EXECUTABLE -datasource $DEFAULT_DATASOURCE"
-   echo ""
-   exit
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Create the Prometheus datasource in Grafana
+
+SYNOPSIS
+   /$EXECUTABLE [-datasource datasource_name] [-?]
+
+DESCRIPTION
+   Creates the Prometheus datasource in Grafana.
+
+   Stops all running Geode members by executing 'stop_member' on each
+   member in the cluster. To stop both members and locators, specify
+   the '-all' option.
+
+OPTIONS
+   -datasource datasource_name
+             Datasource name. Default: $DEFAULT_DATASOURCE
+
+DEFAULT
+   ./$EXECUTABLE -datasource $DEFAULT_DATASOURCE
+
+EOF
+exit
 fi
 
 if [ "$DATASOURCE" == "" ]; then

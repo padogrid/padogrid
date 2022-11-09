@@ -142,7 +142,7 @@ NAME
    $EXECUTABLE - Install Padogrid and downloable products
 
 SYNOPSIS
-   $EXECUTABLE [-product] [-quiet] [-simulate] [-scan] [-save file_path] [-?]
+   $EXECUTABLE [-product] [-quiet] [-simulate] [-scan] [-save|-load file_path] [-?]
 
 DESCRIPTION
    Installs PadoGrid and downloadable products. This command downloads one or more selected products
@@ -173,6 +173,9 @@ cat <<EOF
    -save file_path
              Saves the downloadble product versions to the specified file path. If the '-scan' option
              is specified then it saves the scanned product versions.
+
+   -load file_path
+             Loads the downloadable product versions defined in the specified file.
 
    -quiet
              If specified, then it runs in the non-internactive mode. By default, it installs all of
@@ -292,6 +295,16 @@ function containsWord
     echo "$retval"
 }
 
+# Exit if both -save and -load specified
+if [ "$SAVE_SPECIFIED" == "true" ] && [ "$LOAD_SPECIFIED" == "true" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-load' and '-save' are not allowed together. Command aborted."
+   exit 1
+fi
+# Exit if both -scan and -save specified
+if [ "$SCAN_SPECIFIED" == "true" ] && [ "$LOAD_SPECIFIED" == "true" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-scan' and '-load' are not allowed together. Command aborted."
+   exit 1
+fi
 # Exit if invalid product specified
 if [ "$PRODUCT_ARG" != "" ]; then
    if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS" "$PRODUCT_ARG")" == "false" ]; then
@@ -304,8 +317,8 @@ if [ "$PRODUCT_ARG" != "" ]; then
    fi
 fi
 # Exit if invalid save option specified
-DOWNLOAD_VERSIONS_FILE="$SAVE_ARG"
 if [ "$SAVE_SPECIFIED" == "true" ]; then
+   DOWNLOAD_VERSIONS_FILE="$SAVE_ARG"
    if [ "$SAVE_ARG" == "" ] || [[ "$SAVE_ARG" == "-"** ]]; then
       echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid save option: [$SAVE_ARG]. Please enter file name."
       echo >&2 "       Command aborted."
@@ -313,8 +326,8 @@ if [ "$SAVE_SPECIFIED" == "true" ]; then
    fi
 fi
 # Exit if invalid load option specified
-DOWNLOAD_VERSIONS_FILE="$LOAD_ARG"
 if [ "$LOAD_SPECIFIED" == "true" ]; then
+   DOWNLOAD_VERSIONS_FILE="$LOAD_ARG"
    if [ "$LOAD_ARG" == "" ] || [[ "$LOAD_ARG" == "-"** ]]; then
       echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid load option: [$LOAD_ARG]. Please enter file name."
       echo >&2 "       Command aborted."
@@ -324,11 +337,6 @@ if [ "$LOAD_SPECIFIED" == "true" ]; then
       echo >&2 "       Command aborted."
       exit 1
    fi
-fi
-
-if [ "$SAVE_SPECIFIED" == "true" ] && [ "$LOAD_SPECIFIED" == "true" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-load' and '-save' are not allowed together. Command aborted."
-   exit 1
 fi
 
 cat <<EOF
@@ -834,7 +842,8 @@ function getDownloadablePrometheusVersions
    while [ "$is_next_page" == "true" ]; do
       download_url="${PROMETHEUS_DOWNLOAD_URL}?page=$page"
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "/prometheus/prometheus/tree/v" | sed -e 's|^.*/prometheus/prometheus/tree/v||' -e 's/".*$//')
-      is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
+      #is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
+      is_next_page="$([ $page -lt 5 ] && echo "true" || echo "false")"
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       ALL_PROMETHEUS_VERSIONS="$ALL_PROMETHEUS_VERSIONS $PAGE_VERSIONS"
       let page=page+1
@@ -850,7 +859,8 @@ function getDownloadableGrafanaVersions
    while [ "$is_next_page" == "true" ]; do
       download_url="${GRAFANA_GITHUB_RELEASES_URL}?page=$page"
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "/grafana/grafana/tree/v" | sed -e 's|^.*/grafana/grafana/tree/v||' -e 's/".*$//')
-      is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
+      #is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
+      is_next_page="$([ $page -lt 5 ] && echo "true" || echo "false")"
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       ALL_GRAFANA_VERSIONS="$ALL_GRAFANA_VERSIONS $PAGE_VERSIONS"
       let page=page+1
@@ -1220,12 +1230,6 @@ function doUserInput
    fi
 }
 
-# @required PRODUCT_DOWNLOAD_VERSIONS Downloadable product versions
-function saveDownloadableVersions
-{
-   PRODUCT_DOWNLOAD_VERSIONS
-}
-
 # Simulation message
 if [ "$SIMULATE" == "true" ]; then
    echo ""
@@ -1259,7 +1263,7 @@ if [ "$SCAN_SPECIFIED" != "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" == "" ]; then
    DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
    curl -sL -o "$DOWNLOAD_VERSIONS_FILE" "$DOWNLOAD_VERSIONS_URL"
 fi
-if [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
+if [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
    . "$DOWNLOAD_VERSIONS_FILE"
    PADOGRID_DOWNLOAD_VERSIONS=($PADOGRID_DOWNLOAD_VERSIONS)
    PADO_DOWNLOAD_VERSIONS=($PADO_DOWNLOAD_VERSIONS)
@@ -1388,7 +1392,7 @@ if [ "$SAVE_SPECIFIED" == "true" ]; then
    echo "HADOOP_DOWNLOAD_VERSIONS=\"${HADOOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "PROMETHEUS_DOWNLOAD_VERSIONS=\"${PROMETHEUS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "GRAFANA_DOWNLOAD_VERSIONS=\"${GRAFANA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "Downloadable prodduct versions saved:"
+   echo "Downloadable product versions saved:"
    echo "   + $DOWNLOAD_VERSIONS_FILE"
    exit
 fi

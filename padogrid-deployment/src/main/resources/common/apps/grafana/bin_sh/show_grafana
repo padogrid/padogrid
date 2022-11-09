@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,19 +22,46 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 EXECUTABLE="`basename $0`"
 
 if [ "$HELP" == "true" ]; then
-   echo "Usage:"
-   echo "   ./$EXECUTABLE [-datasource <datasource-name>] [-?]"
-   echo ""
-   echo "   Creates the Prometheus datasource in Grafana."
-   echo "     <datasource-name>  Datasource name."
-   echo ""
-   echo "Default: ./$EXECUTABLE -datasource $DEFAULT_DATASOURCE"
-   echo ""
-   exit
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Displays Grafana status
+
+SYNOPSIS
+   ./$EXECUTABLE [-all] [-?]
+
+DESCRIPTION
+   Displays Grafana status.
+
+OPTIONS
+   -all
+             Displays PIDs of all Prometheus instances
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
 fi
 
-if [ "$DATASOURCE" == "" ]; then
-   DATASOURCE=$DEFAULT_DATASOURCE
+if [ "$ALL" == "true" ]; then
+   PIDs="$(getAllGrafanaPids)"
+   if [ "$PIDs" != "" ]; then
+      echo "All Grafana instances."
+      echo "   PIDs: $PIDs"
+   else
+      echo "Grafana instances not found."
+   fi
+else
+   PID=$(getGrafanaPid "$GRAFANA_CONFIG_FILE")
+   if [ "$PID" != "" ]; then
+      echo "Grafana running."
+      echo "   PID: $PID"
+   else
+      echo "Grafana not running."
+   fi
+   echo "   LOG: $LOG_DIR/grafana.log"
 fi
-
-curl -sS -X POST $GRAFANA_URL/api/datasources -H "Content-Type: application/json" -d '{"name": "'"$DATASOURCE"'", "type": "prometheus", "url": "http://'"$PROMETHEUS_URL"'", "access": "proxy", "basicAuth": false, "jsonData": { "httpMethod": "GET", "keepCookies": [] } }' | jq .

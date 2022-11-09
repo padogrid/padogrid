@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,20 +22,52 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 EXECUTABLE="`basename $0`"
 
 if [ "$HELP" == "true" ]; then
-   echo "Usage:"
-   echo "   ./$EXECUTABLE [-folder <folder-name>] [-?]"
-   echo ""
-   echo "   Displays the specified folder information."
-   echo ""
-   echo "Default: ./$EXECUTABLE -folder $DEFAULT_FOLDER"
-   echo ""
-   exit
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Display the ID of the specified Grafana folder
+
+SYNOPSIS
+   ./$EXECUTABLE [-folder folder_name] [-?]
+
+DESCRIPTION
+   Displays the ID of the specified Grafana folder.
+
+OPTIONS
+   -folder folder_name
+             Folder name. Default: $DEFAULT_FOLDER
+
+DEFAULT
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER
+
+EOF
+exit
 fi
 
 if [ "$FOLDER" == "" ]; then
    FOLDER=$DEFAULT_FOLDER
 fi
 
-__UID=`./get_folder_uid -folder $FOLDER`
+TMP_FILE=$TMP_DIR/folders.json
+./get_folders > $TMP_FILE
 
-curl -sS $GRAFANA_URL/api/folders/$__UID | jq .
+
+# Cygwin path conversion
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   TMP_FILE="$(cygpath -wp "$TMP_FILE")"
+fi
+
+ARRAY_LEN=`jq '.|length' $TMP_FILE`
+let LAST_INDEX=ARRAY_LEN-1
+for i in $(seq 0 $LAST_INDEX); do
+   TITLE=`jq '.['$i'].title' $TMP_FILE`
+   TITLE=`trimDoubleQuotes $TITLE`
+   if [ "$TITLE" == "$FOLDER" ]; then
+      __ID=`jq '.['$i'].id' $TMP_FILE`
+      break;
+   fi 
+done;
+echo $__ID
