@@ -228,7 +228,7 @@ To import other folders, specify the `-folder` or `-all` option.
 
 The `padogrid-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test`'s `test_ingestion` and `test_tx` scripts.
 
-For `perf_test1 details, see [perf_test README.md](../perf_test/README.md).
+For `perf_test1` details, see [perf_test README.md](../perf_test/README.md).
 
 ## 6. Exporting Dashboards
 

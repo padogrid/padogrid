@@ -30,7 +30,7 @@ cd_cluster
 vi bash_sh/setenv.sh
 ```
 
-Add the following in the `bin_sh/setenv.sh` file. Note that you also need to configure Prometheus to include the Management Center as one of its targets as described in the [Prometheus](#Prometheus) section.
+Add the following in the `bin_sh/setenv.sh` file. Note that you also need to configure Prometheus to include the Management Center as one of its targets as described in the [5.2. Prometheus](#52-prometheus) section.
 
 ```bash
 # Port number can be arbitrary but the same port number must
@@ -112,8 +112,7 @@ If you have enabled Prometheus for Management Center, then you must also include
 cd_app grafana
 vi etc/prometheus.yml
 ```
-
-Using our example in the [Enabling Prometheus for Management Center](#Enabling-Prometheus-for-Management-Center) section, add `localhost:2222` in the `targets` parameter.
+Using our example in the [3. Enabling Prometheus for Management Center](#3-Enabling-Prometheus-for-Management-Center) section, add `localhost:2222` in the `targets` parameter.
 
 ```yaml
 ...
