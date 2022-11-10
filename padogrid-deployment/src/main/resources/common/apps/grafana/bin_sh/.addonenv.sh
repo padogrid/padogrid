@@ -106,7 +106,7 @@ ETC_DIR="$APP_DIR/etc"
 # Prometheus bootstrap settings
 #
 PROMETHEUS_LOG_FILE="$LOG_DIR/prometheus.log"
-PROMETHEUS_CONFIG_FILE="$APP_DIR/etc/prometheus.yaml"
+PROMETHEUS_CONFIG_FILE="$APP_DIR/etc/prometheus.yml"
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    PROMETHEUS_CONFIG_FILE="$(cygpath -wp "$PROMETHEUS_CONFIG_FILE")"
 fi
