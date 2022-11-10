@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.22-SNAPSHOT
 
-### Release Date: 11/06/22
+### Release Date: 11/09/22
 
 - Added support for Confluent Platform. You can now install Confluent Platform by running `install_padogrid -product confluent`. Confluent and Kafka share the same cluster commands. The `CLUSTER_TYPE` value of `kraft` has been replaced with `kafka` and `confluent`. PadoGrid now supports Kafka, Confluent Community, and Confluent Commertial versions.
 - Updated RWE and workspace commands to properly handle file permissions enforced when multitenancy is enabled.
@@ -16,6 +16,7 @@ https://github.com/padogrid
 - Added bundle support for Kafka and Confluent. See [Kafka Confluent Bundle Catalog](https://github.com/padogrid/catalog-bundles/blob/master/confluent-catalog.md)
 - Added support for viewing Jupyter log files in `show_jupyter`. Use the `-port` option to view the specific server's log file or `-all` to view all active server log files.
 - Added `-simulate` option in `start_mc` to support simulation of the Hazelcast Management Center bootstrap process. As with members, you can now view the Management Center bootstrap details without actually starting it. 
+- Added native support for Prometheus and Grafana. They are now part of the growing list of products supported by PadoGrid. To install them use `install_padogrid` and `update_products`. To start them, first create the `grafana` app and then run `start_prometheus` and `start_grafana` found in the `grafana` app's `bin_sh` directory. For details, please see [Geode Grafana App](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/geode/apps/grafana/README.md) and [Hazelcast Grafana App](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/hazelcast/apps/grafana/README.md).
 
 ---
 
