@@ -244,7 +244,10 @@ public class GroupTest implements Constants
 					break;
 				case map:
 				default:
-					operation.imap = hazelcastInstance.getMap(operation.dsName);
+					// dsName maybe null if sleep operation
+					if (operation.dsName != null) {
+						operation.imap = hazelcastInstance.getMap(operation.dsName);
+					}
 					break;
 				}
 			}
