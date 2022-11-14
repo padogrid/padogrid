@@ -3642,6 +3642,7 @@ function determineInstalledProductVersions
    REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
+   DERBY_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
@@ -3696,6 +3697,14 @@ function determineInstalledProductVersions
          __versions="$__versions $__version "
       done
       CONFLUENT_VERSIONS=$(sortVersionList "$__versions")
+
+      # Derby
+      __versions=""
+      for i in db-derby-*; do
+         __version=${i#db-derby-}
+         __versions="$__versions $__version "
+      done
+      DERBY_VERSIONS=$(sortVersionList "$__versions")
 
       # GemFire
       __versions=""
@@ -4017,6 +4026,9 @@ function getInstalledProducts
   fi
   if [ "$HADOOP_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS hadoop"
+  fi
+  if [ "$DERBY_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS derby"
   fi
   echo "$PRODUCTS"
 }

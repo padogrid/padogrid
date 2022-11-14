@@ -39,6 +39,8 @@ JAVA_OPTS="$JAVA_OPTS -Dorg.redis.addon.redisson.config.file=$REDISSON_CLIENT_CO
 
 # Hibernate
 JAVA_OPTS="$JAVA_OPTS -Dredisson-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dredisson-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-postgresql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dredisson-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-derby.xml"
 
 # Redisson node addresses. List node addresses separated by comma.
 # The default address is redis://localhost:6379.

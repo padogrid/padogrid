@@ -40,6 +40,8 @@ JAVA_OPTS="$JAVA_OPTS -Dorg.kafka.addon.client.consumer.config.file=$KAFKA_CLIEN
 
 # Hibernate
 JAVA_OPTS="$JAVA_OPTS -Dkafka-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-mysql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dkafka-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-postgresql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dkafka-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-derby.xml"
 
 # Kafka broker endpoint (bootstrap-server). The default broker is localhost:9092
 # The default address is localhost:9092.

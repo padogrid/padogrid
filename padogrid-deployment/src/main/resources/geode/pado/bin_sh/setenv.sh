@@ -27,6 +27,7 @@
 #
 #JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-mysql.xml"
 #JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-postgresql.xml"
+#JAVA_OPTS="$JAVA_OPTS -Dgeode-addon.hibernate.config=$CLUSTER_DIR/etc/hibernate.cfg-derby.xml"
 
 #
 # Set RUN_SCRIPT. Absolute path required.

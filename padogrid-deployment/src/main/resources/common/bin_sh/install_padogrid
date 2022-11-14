@@ -57,7 +57,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby"
 
 EXECUTABLE="`basename $0`"
 
@@ -117,6 +117,7 @@ HADOOP_DOWNLOAD_URL="https://archive.apache.org/dist/hadoop/common/"
 PROMETHEUS_DOWNLOAD_URL="https://github.com/prometheus/prometheus/releases"
 GRAFANA_GITHUB_RELEASES_URL="https://github.com/grafana/grafana/releases"
 GRAFANA_DOWNLOAD_URL="https://grafana.com/grafana/download?edition=enterprise&pg=get&plcmt=selfmanaged-box1-cta1${None}"
+DERBY_DOWNLOAD_URL="https://archive.apache.org/dist/db/derby/"
 
 PADOECLIPSE_MANUAL_URL="https://github.com/padogrid/padogrid/wiki/Eclipse"
 
@@ -226,6 +227,7 @@ echo -e "      - Kafka Confluent Platform    ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNo
 echo -e "      - Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
 echo -e "      - Prometheus                  ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
 echo -e "      - Grafana Enterprise/OSS      ${CUrl}$GRAFANA_DOWNLOAD_URL${CNone}"
+echo -e "      - Apache Derby                ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
 
 cat <<EOF
 
@@ -361,6 +363,7 @@ echo -e "[12] Kafka Confluent Platform    ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}
 echo -e "[13] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
 echo -e "[14] Prometheus                  ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
 echo -e "[15] Grafana Enterprise/OSS      ${CUrl}$GRAFANA_DOWNLOAD_URL${CNone}"
+echo -e "[16] Apache  Derby               ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
 
 cat <<EOF
 
@@ -868,6 +871,12 @@ function getDownloadableGrafanaVersions
    unique_words "$ALL_GRAFANA_VERSIONS"
 }
 
+function getDownloadableDerbyVersions
+{
+   local ALL_DERBY_VERSIONS=$(curl -sL $DERBY_DOWNLOAD_URL | grep img | grep db-derby- | grep -v current |  sed -e 's/^.*">//' -e 's/\/.*$//')
+   unique_words "$ALL_DERBY_VERSIONS"
+}
+
 #
 # Returns the sorted list of the specified list that contains product versions
 # @param versionList
@@ -920,6 +929,7 @@ function sortVersionList
 #    PROMETHEUS_VERSIONS
 #    GRAFANA_ENTERPRISE_VERSIONS
 #    GRAFANA_OSS_VERSIONS
+#    DERBY_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
 #
@@ -946,6 +956,7 @@ function determineInstalledProductVersions
    PROMETHEUS_VERSIONS=""
    GRAFANA_ENTERPRISE_VERSIONS=""
    GRAFANA_OSS_VERSIONS=""
+   DERBY_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
@@ -1108,6 +1119,14 @@ function determineInstalledProductVersions
       done
       GRAFANA_ENTERPRISE_VERSIONS=$(sortVersionList "$genterv")
       GRAFANA_OSS_VERSIONS=$(sortVersionList "$gossv")
+
+      # Derby
+      __versions=""
+      for i in db-derby-*; do
+         __version=${i#db-derby-}
+         __versions="$__versions $__version "
+      done
+      DERBY_VERSIONS=$(sortVersionList "$__versions")
 
       popd > /dev/null 2>&1
             
@@ -1286,6 +1305,7 @@ if [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
    HADOOP_DOWNLOAD_VERSIONS=($HADOOP_DOWNLOAD_VERSIONS)
    PROMETHEUS_DOWNLOAD_VERSIONS=($PROMETHEUS_DOWNLOAD_VERSIONS)
    GRAFANA_DOWNLOAD_VERSIONS=($GRAFANA_DOWNLOAD_VERSIONS)
+   DERBY_DOWNLOAD_VERSIONS=($DERBY_DOWNLOAD_VERSIONS)
 else
    #
    # Scan downloadable product versions
@@ -1362,6 +1382,9 @@ else
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ] || [ "$PRODUCT_ARG" == "grafana-oss" ]; then
       GRAFANA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGrafanaVersions)"))
    fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
+      DERBY_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableDerbyVersions)"))
+   fi
 
    # Enable the enter key
    if [ "$NO_STTY_SPECIFIED" != "true" ]; then
@@ -1392,6 +1415,7 @@ if [ "$SAVE_SPECIFIED" == "true" ]; then
    echo "HADOOP_DOWNLOAD_VERSIONS=\"${HADOOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "PROMETHEUS_DOWNLOAD_VERSIONS=\"${PROMETHEUS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "GRAFANA_DOWNLOAD_VERSIONS=\"${GRAFANA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "DERBY_DOWNLOAD_VERSIONS=\"${DERBY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "Downloadable product versions saved:"
    echo "   + $DOWNLOAD_VERSIONS_FILE"
    exit
@@ -1419,6 +1443,7 @@ HADOOP_VERSION=""
 PROMETHEUS_VERSION=""
 GRAFANA_ENTERPRISE_VERSION=""
 GRAFANA_OSS_VERSION=""
+DERBY_VERSION=""
 
 if [ "$QUIET" == "true" ]; then
    # Set to the latest versions
@@ -1458,6 +1483,10 @@ if [ "$QUIET" == "true" ]; then
    CONFLUENT_DIST_VERSION=${CONFLUENT_DOWNLOAD_VERSIONS[0]}
    CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//')
    HADOOP_VERSION=${HADOOP_DOWNLOAD_VERSIONS[0]}
+   PROMETHEUS_VERSION=${PROMETHEUS_DOWNLOAD_VERSIONS[0]}
+   # Install the enterprise version for grafana. Enterprise and OSS have the same installation directory.
+   GRAFANA_ENTERPRISE_VERSION=${GRAFANA_DOWNLOAD_VERSIONS[0]}
+   DERBY_VERSION=${DERBY_DOWNLOAD_VERSIONS[0]}
 
    echo "Installing the latest products versions as follows:"
    echo ""
@@ -1481,7 +1510,7 @@ if [ "$QUIET" == "true" ]; then
    echo "Hadoop               $HADOOP_VERSION"
    echo "Prometheus           $PROMETHEUS_VERSION"
    echo "Grafana Enterprise   $GRAFANA_ENTERPRISE_VERSION"
-   echo "Grafana OSS          $GRAFANA_OSS_VERSION"
+   echo "Derby                $DERBY_VERSION"
    echo ""
 else
 # Get user inputs
@@ -1921,6 +1950,20 @@ while [ "$REDO" == "true" ]; do
       echo ""
    fi
 
+   # Derby
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
+      PRODUCT_NAME="Derby"
+      PRODUCT_DOWNLOAD_VERSIONS=("${DERBY_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$DERBY_VERSIONS
+      echo -e "Derby ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      DERBY_VERSION=$INSTALL_VERSION
+      echo ""
+   fi
+
    echo ""
 
    if [ $INSTALL_COUNT -eq 0 ]; then
@@ -1991,6 +2034,9 @@ while [ "$REDO" == "true" ]; do
    fi
    if [ "$GRAFANA_OSS_VERSION" != "" ]; then
       echo -e "Grafana OSS: ${CLightGreen}$GRAFANA_OSS_VERSION${CNone}"
+   fi
+   if [ "$DERBY_VERSION" != "" ]; then
+      echo -e "Derby: ${CLightGreen}$DERBY_VERSION${CNone}"
    fi
    echo ""
 
@@ -2084,6 +2130,9 @@ fi
 #
 # @required GRAFANA_OSS_RELEASE
 # @required GRAFANA_OSS_TARBALL
+#
+# @required DERBY_VERSION
+# @required DERBY_TARBALL
 #
 function installProduct
 {
@@ -2610,6 +2659,30 @@ function installProduct
       fi
       fi
 
+   elif [ "$__PRODUCT" == "derby" ]; then 
+      
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$DERBY_RELEASE" ]; then
+         echo "Already installed - $DERBY_RELEASE"
+      else
+      # --------------
+      # Download Derby
+      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL" "https://archive.apache.org/dist/db/derby/$DERBY_VERSION/$DERBY_TARBALL"
+      else
+         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL" "https://archive.apache.org/dist/db/derby/$DERBY_VERSION/$DERBY_TARBALL"
+      fi
+      
+      # Install Derby
+      echo "  Installing Apache Derby $DERBY_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+      if [ "$__SIMULATE" == "true" ]; then
+         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL"
+      else
+         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL"
+         echo "  Installed - $DERBY_TARBALL"
+      fi
+      fi
+
    fi
 
 }
@@ -2779,6 +2852,11 @@ if [ "$GRAFANA_OSS_VERSION" != "" ]; then
    GRAFANA_OSS_TARBALL="$GRAFANA_OSS_RELEASE.tar.gz"
    installProduct "grafana-oss" "$SIMULATE"
 fi
+if [ "$DERBY_VERSION" != "" ]; then
+   DERBY_RELEASE="$DERBY_VERSION"
+   DERBY_TARBALL="$DERBY_RELEASE-bin.tar.gz"
+   installProduct "derby" "$SIMULATE"
+fi
 
 # Redis distribution contains source code only. Tell the user how to build.
 if [ "$REDIS_VERSION" != "" ]; then
@@ -2827,6 +2905,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
    COHERENCE_HOME=""
    PROMETHEUS_HOME=""
    GRAFANA_HOME=""
+   DERBY_HOME=""
 
    # Set default workspaces home
    PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/myrwe"
@@ -2877,6 +2956,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
        PROMETHEUS_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"grafana"** ]]; then
        GRAFANA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"derby"** ]]; then
+       DERBY_HOME="$PADOGRID_PRODUCTS_PATH/$i"
 #     elif [[ "$i" == **"coherence"** ]]; then
 #        COHERENCE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      fi
@@ -2927,6 +3008,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
         PRODUCT_HOME="$PROMETHEUS_HOME"
       elif [ "$GRAFANA_HOME" != "" ]; then
         PRODUCT_HOME="$GRAFANA_HOME"
+      elif [ "$DERBY_HOME" != "" ]; then
+        PRODUCT_HOME="$DERBY_HOME"
       fi
 
       echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
@@ -2949,6 +3032,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "HADDOP_HOME=\"$HADOOP_HOME\"" >> $TMP_ENV_FILE
       echo "PROMETHEUS_HOME=\"$PROMETHEUS_HOME\"" >> $TMP_ENV_FILE
       echo "GRAFANA_HOME=\"$GRAFANA_HOME\"" >> $TMP_ENV_FILE
+      echo "DERBY_HOME=\"$DERBY_HOME\"" >> $TMP_ENV_FILE
       if [ "$QUIET" == "false" ]; then
          if [ "$PRODUCT_HOME" != "" ]; then
             $__PADOGRID_HOME/bin_sh/create_rwe -rwe myrwe -product "$PRODUCT_HOME" -env $TMP_ENV_FILE 
