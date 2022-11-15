@@ -229,7 +229,7 @@ else
                   HAZELCAST_VERSION=${file%.jar}
                   break;
                done
-               break;
+               #break;
             fi
          #done
       fi
