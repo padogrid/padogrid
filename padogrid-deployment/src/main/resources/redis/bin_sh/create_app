@@ -117,8 +117,8 @@ if [ "$NAME_ARG" == "" ]; then
    NAME_ARG=$APP
 fi
 
-if [ ! -d "$PADOGRID_HOME/$PRODUCT/apps/$APP" ]; then
-   >&2 echo "ERROR: The specified app does not exist: [$APP]. Command aborted."
+if [ ! -d "$PADOGRID_HOME/$PRODUCT/apps/$APP" ] && [ ! -d "$PADOGRID_HOME/apps/$APP" ]; then
+   >&2 echo -e "${CError}ERROR:${CNone} The specified app does not exist: [$APP]. Command aborted."
    exit 1
 fi
 
@@ -130,31 +130,46 @@ fi
 # Abort if the app dir already exists
 APP_DIR="$APPS_DIR/$NAME_ARG"
 if [ -d "$APP_DIR" ]; then
-   >&2 echo "ERROR: The specified new app name already exists. Command aborted."
+   >&2 echo -e "${CError}ERROR:${CNone}The specified new app name already exists: [$NAME_ARG]. Command aborted."
    exit 1
 fi
 
-# Copy all to the new app dir
-cp -r $PADOGRID_HOME/$PRODUCT/apps/$APP $APP_DIR
+if [[ "$COMMON_APP_LIST" == *"$APP"* ]]; then
 
-# Make bin_sh scripts executables
-if [ -d "$APP_DIR/bin_sh" ]; then
-   chmod 755 $APP_DIR/bin_sh/*
-fi
+   #
+   # Common apps for all products
+   #
+   cp -r $PADOGRID_HOME/apps/$APP $APP_DIR
 
-# Make bin_sh scripts executables
-if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
-   # Set group permissions for workspace owner
-   chmod -R g+rw,o-rwx $APP_DIR
-   if [ -d "$APP_DIR/bin_sh" ]; then
-      chmod -R 770 $APP_DIR/bin_sh
-      chmod 660 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
-   fi
 else
+
+   #
+   # Redis specific apps
+   #
+
+   # Copy all to the new app dir
+   cp -r $PADOGRID_HOME/$PRODUCT/apps/$APP $APP_DIR
+
+   # Make bin_sh scripts executables
    if [ -d "$APP_DIR/bin_sh" ]; then
       chmod 755 $APP_DIR/bin_sh/*
-      chmod 644 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
    fi
+
+   # Make bin_sh scripts executables
+   if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+      # Set group permissions for workspace owner
+      chmod -R g+rw,o-rwx $APP_DIR
+      if [ -d "$APP_DIR/bin_sh" ]; then
+         chmod -R 770 $APP_DIR/bin_sh
+         chmod 660 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+      fi
+   else
+      if [ -d "$APP_DIR/bin_sh" ]; then
+         chmod 755 $APP_DIR/bin_sh/*
+         chmod 644 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+      fi
+   fi
+
 fi
 
 echo ""

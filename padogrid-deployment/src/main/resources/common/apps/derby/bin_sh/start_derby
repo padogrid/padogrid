@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Start Derby DB
+
+SYNOPSIS
+   ./$EXECUTABLE [-h host] [-p port_number] [-noSecurityManager] [-ssl ssl_mode] [-?]
+
+DESCRIPTION
+   Starts Derby DB with the following log file.
+
+      $DERBY_LOG_FILE
+
+   Derby is started in the following working directory.
+
+      $RUN_DIR
+
+   Derby home path (\$DERBY_HOME):
+
+      $DERBY_HOME
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+# Exit if Derby is already running
+PID=$(getDerbyPid "$DERBY_LOG_FILE")
+if [ "$PID" != "" ]; then
+   echo -e "Derby already running: [${CGo}$PID${CNone}]. Command aborted."
+   exit 1
+fi
+
+# Launch Derby in $RUN_DIR
+RUN_DIR="$APP_DIR/run/derby"
+if [ ! -d "$RUN_DIR" ]; then
+   mkdir -p "$RUN_DIR"
+fi
+pushd $RUN_DIR > /dev/null 2>&1
+"$JAVA" "$JAVA_OPTS" -jar "$DERBY_HOME/lib/derbyrun.jar" server start $@ > $DERBY_LOG_FILE 2>&1 &
+PID=$!
+popd > /dev/null 2>&1
+
+# Delay a bit to see if Derby starts
+sleep 1
+ADDRESS_IN_USE="$([ "$(grep 'Address already in use' $DERBY_LOG_FILE)" != "" ] && echo "true" || echo "false")"
+if [ "$ADDRESS_IN_USE" == "true" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Address already in use. See log for details. Command aborted."
+   echo "   LOG: $GRAFANA_LOG_FILE"
+   exit 1
+fi
+PID=$(getDerbyPid "$DERBY_LOG_FILE")
+if [ "$PID" == "" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Derby not started. See log file for details. Command aborted."
+   echo "   LOG: $DERBY_LOG_FILE"
+   exit 1
+fi
+
+echo "Derby started."
+echo -e "   PID: ${CGo}$PID${CNone}"
+echo "   LOG: $LOG_DIR/derby.log"

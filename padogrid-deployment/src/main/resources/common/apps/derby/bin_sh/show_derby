@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Display Derby status
+
+SYNOPSIS
+   ./$EXECUTABLE [-all] [-log] [-?]
+
+DESCRIPTION
+   Displays Derby status.
+
+OPTIONS
+   -all
+             Displays PIDs of all Derby instances.
+
+   -log
+             Displays Derby log using 'tail -f'. This option overrides '-all'.
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+if [ "$LOG_SPECIFIED" == "true" ]; then
+   if [ ! -f "$DERBY_LOG_FILE" ]; then
+      echo -e "${CError}ERROR:${CNone} Derby log does not exist. Command aborted."
+      exit 1
+   fi
+   tail -f "$DERBY_LOG_FILE"
+elif [ "$ALL" == "true" ]; then
+   PIDs="$(getAllDerbyPids)"
+   if [ "$PIDs" != "" ]; then
+      echo "All Derby instances."
+      echo -e "   PIDs: ${CGo}$PIDs${CNone}"
+   else
+      echo "Derby instances not found."
+   fi
+else
+   PID=$(getDerbyPid "$DERBY_LOG_FILE")
+   if [ "$PID" != "" ]; then
+      echo "Derby running."
+      echo -e "   PID: ${CGo}$PID${CNone}"
+   else
+      echo "Derby not running."
+   fi
+   echo "   LOG: $DERBY_LOG_FILE"
+fi

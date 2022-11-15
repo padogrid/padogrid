@@ -355,8 +355,11 @@ DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 # Supported Kubernetes Products
 K8S_PRODUCT_LIST="geode hazelcast jet"
 
-# Supported App Products
-APP_PRODUCT_LIST="coherence gemfire geode hazelcast jet kafka redis"
+# Supported App Products (all cluster products)
+APP_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka redis snappydata spark"
+
+# Common Apps for all products
+COMMON_APP_LIST="derby"
 
 # Pod variables
 if [ -z $POD_BOX_IMAGE ]; then

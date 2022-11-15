@@ -110,4 +110,47 @@ if [ "$PRODUCT_ARG" != "" ]; then
    fi
 fi
 
-echo "$EXECUTABLE not supported for $THIS_PRODUCT in this PadoGrid release. Use '-product' to specify another product."
+if [ "$APP_SPECIFIED" == "false" ]; then
+   APP="derby"
+fi
+if [ "$NAME_ARG" == "" ]; then
+   NAME_ARG=$APP
+fi
+
+if [ ! -d "$PADOGRID_HOME/$PRODUCT/apps/$APP" ] && [ ! -d "$PADOGRID_HOME/apps/$APP" ]; then
+   >&2 echo -e "${CError}ERROR:${CNone} The specified app does not exist. Command aborted."
+   exit 1
+fi
+if [ "$APP" == "padodesktop" ] && [ ! -d "$PADODESKTOP_HOME" ]; then
+   >&2 echo -e "${CError}ERROR:${CNone} Pado Desktop not found. Command aborted."
+   exit 1
+fi
+
+# Create apps dir if it does not exist
+if [ ! -d "$APPS_DIR" ]; then
+   mkdir $APPS_DIR
+fi
+
+# Abort if the app dir already exists
+APP_DIR="$APPS_DIR/$NAME_ARG"
+if [ -d "$APP_DIR" ]; then
+   >&2 echo -e "${CError}ERROR:${CNone}The specified new app name already exists. Command aborted."
+   exit 1
+fi
+
+if [[ "$COMMON_APP_LIST" == *"$APP"* ]]; then
+
+   #
+   # Common apps for all products
+   #
+   cp -r $PADOGRID_HOME/apps/$APP $APP_DIR
+
+else
+
+   #
+   # Hadoop specific apps
+   #
+   
+   echo "App not supported."
+
+fi

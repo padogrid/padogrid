@@ -147,11 +147,7 @@ __padogrid_complete()
          if [ $index -ne 255 ]; then
              product_name="${COMP_WORDS[$index+1]}"
          fi
-         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
-            type_list=$(getAppOptions $product_name)
-         else
-            type_list=`getAddonApps $CLUSTER_TYPE`
-         fi
+         type_list=$(getAppOptions $product_name)
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getApps`
       fi
@@ -918,11 +914,7 @@ __command_complete()
          if [ $index -ne 255 ]; then
              product_name="${COMP_WORDS[$index+1]}"
          fi
-         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
-            type_list=$(getAppOptions $product_name)
-         else
-            type_list=`getAddonApps $CLUSTER_TYPE`
-         fi
+         type_list=$(getAppOptions $product_name)
       elif [ "$command" != "find_padogrid" ]; then
          type_list=`getApps`
       fi

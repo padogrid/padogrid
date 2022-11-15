@@ -585,23 +585,23 @@ function getApps {
 
 #
 # Returns a space-sparated list of supported '-app' options for the 'create_app' command.
-# @param product  Product name. Supported are hazelcast, jet, geode, gemfire, redis
+# @param product  Product name.
 #
 function getAppOptions 
 {
    local __PRODUCT="$1"
    if [ "$__PRODUCT" == "hazelcast" ]; then
-      echo "desktop grafana perf_test"
+      echo "derby desktop grafana perf_test"
    elif [ "$__PRODUCT" == "jet" ]; then
-      echo "desktop jet_demo"
+      echo "derby desktop jet_demo"
    elif [ "$__PRODUCT" == "geode" ] || [ "$__PRODUCT" == "gemfire" ]; then
-      echo "grafana padodesktop perf_test"
+      echo "derby grafana padodesktop perf_test"
    elif [ "$__PRODUCT" == "coherence" ]; then
-      echo "perf_test"
+      echo "derby perf_test"
    elif [ "$__PRODUCT" == "redis" ]; then
-      echo "perf_test"
+      echo "derby perf_test"
    else
-      echo ""
+      echo "derby"
    fi
 }
 
@@ -3323,10 +3323,20 @@ function getWorkspaceInfoList
    else
       local __JAVA_HOME=""
    fi
-
    if [ "$__JAVA_HOME" == "" ]; then
       # Get the RWE's JAVA_HOME
-      __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+      if [ -r "$WORKSPACE_PATH/../setenv.sh" ]; then
+         __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+      else
+         if [ "$JAVA_HOME" != "" ]; then
+            __JAVA_HOME=$JAVA_HOME
+         else
+            local JAVA_EXEC_PATH=$(which java)
+            if [ "$JAVA_EXEC_PATH" != "" ]; then
+               __JAVA_HOME=$(dirname $(dirname $JAVA_EXEC_PATH))
+            fi
+         fi
+      fi
    fi
    local JAVA_VERSION=""
    local JAVA_INFO=""
@@ -3607,6 +3617,7 @@ function sortVersionList
 #    HAZELCAST_ENTERPRISE_VERSIONS
 #    HAZELCAST_OSS_VERSIONS
 #    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+#    JAVA_VERSIONS
 #    JET_ENTERPRISE_VERSIONS
 #    JET_OSS_VERSIONS
 #    JET_MANAGEMENT_CENTER_VERSIONS
@@ -3617,9 +3628,28 @@ function sortVersionList
 #    SPARK_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
+# @param workspaceName Workspace name. If not specified then the current workspace is assumed. Optional.
+# @param rwePath       RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assumed. Optional.
 #
 function determineInstalledProductVersions
 {
+   local WORKSPACE="$1"
+   local RWE_PATH="$2"
+   if [ "$WORKSPACE" == "" ]; then
+      WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      if [ "$WORKSPACE" == "" ]; then
+         return 0
+      fi
+   fi
+   if [ "$RWE_PATH" == "" ]; then
+      RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   fi
+   local WORKSPACE_PATH="$RWE_PATH/$WORKSPACE"
+   if [ ! -d "$WORKSPACE_PATH" ]; then
+      echo ""
+      return 0
+   fi
+
    PADOGRID_VERSIONS=""
    PADO_VERSIONS=""
    PADODEKSTOP_VERSIONS=""
@@ -3632,6 +3662,7 @@ function determineInstalledProductVersions
    HAZELCAST_ENTERPRISE_VERSIONS=""
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
    HAZELCAST_DESKTOP_VERSIONS=""
+   JAVA_VERSIONS=""
    JET_ENTERPRISE_VERSIONS=""
    JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
@@ -3795,6 +3826,36 @@ function determineInstalledProductVersions
          fi
       done
       JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
+
+      # Java - only the one that is set in the workspace
+      # Remove blank lines from grep results. Pattern includes space and tab.
+      # If multi-tenant workspace then the user might not have read access.
+      if [ -r "$WORKSPACE_PATH/setenv.sh" ]; then
+         local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+      else
+         local __JAVA_HOME=""
+      fi
+      if [ "$__JAVA_HOME" == "" ]; then
+         # Get the RWE's JAVA_HOME
+         if [ -r "$WORKSPACE_PATH/../setenv.sh" ]; then
+            __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+         else
+            if [ "$JAVA_HOME" != "" ]; then
+               __JAVA_HOME=$JAVA_HOME
+            else
+               local JAVA_EXEC_PATH=$(which java)
+               if [ "$JAVA_EXEC_PATH" != "" ]; then
+                  __JAVA_HOME=$(dirname $(dirname $JAVA_EXEC_PATH))
+               fi
+            fi
+         fi
+      fi
+      if [ "$__JAVA_HOME" != "" ] && [ -f "$__JAVA_HOME/bin/java" ]; then
+         # Use eval to handle commands with spaces
+         local __COMMAND="\"$__JAVA_HOME/bin/java\" -version 2>&1 | grep version "
+         JAVA_VERSIONS=$(eval $__COMMAND)
+         JAVA_VERSIONS=$(echo $JAVA_VERSIONS |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+      fi
 
       # Kafka
       __versions=""

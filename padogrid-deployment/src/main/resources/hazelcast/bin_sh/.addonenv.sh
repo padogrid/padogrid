@@ -220,7 +220,9 @@ else
          done
       else
          # hazelcast- is not unique. scan 5-10 versions
-         for i in $(seq 5 10); do
+         #for i in $(seq 5 10); do
+         # seq not working due to IFS change?
+            i="5"
             if [ -f "$HAZELCAST_HOME/lib/hazelcast-$i."* ]; then
                for file in "$HAZELCAST_HOME/lib/hazelcast-$i."*; do
                   file=${file##*hazelcast\-}
@@ -229,7 +231,7 @@ else
                done
                break;
             fi
-         done
+         #done
       fi
    fi
    if [ "$HAZELCAST_MC_HOME" != "" ]; then
@@ -310,7 +312,6 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
 else
    export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
 fi
-
 
 #
 # JAVA_OPTS
