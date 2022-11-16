@@ -4115,14 +4115,14 @@ function createProductEnvFile
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.geodeenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.geodeenv.sh
          echo "# Enter Geode/GemFire product specific environment variables and initialization" >> $WORKSPACES_HOME/.geodeenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
          echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "hazelcast" ] || [ "$PRODUCT_NAME" == "jet" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.hazelcastenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.hazelcastenv.sh
          echo "# Enter Hazelcast product specific environment variables and initialization" >> $WORKSPACES_HOME/.hazelcastenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.hazelcastenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
@@ -4142,35 +4142,35 @@ function createProductEnvFile
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.snappydataenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.snappydataenv.sh
          echo "# Enter SnappyData product specific environment variables and initialization" >> $WORKSPACES_HOME/.snappydataenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.snappydataenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.snappydataenv.sh
          echo "#" >> $WORKSPACES_HOME/.snappydataenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "coherence" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.coherenceenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.coherenceenv.sh
          echo "# Enter Coherence product specific environment variables and initialization" >> $WORKSPACES_HOME/.coherenceenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.coherenceenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "#" >> $WORKSPACES_HOME/.coherenceenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "redis" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.redisenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.redisenv.sh
          echo "# Enter Redis product specific environment variables and initialization" >> $WORKSPACES_HOME/.redisenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.redisenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.redisenv.sh
          echo "#" >> $WORKSPACES_HOME/.redisenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "spark" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.sparkenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.sparkenv.sh
          echo "# Enter Spark product specific environment variables and initialization" >> $WORKSPACES_HOME/.sparkenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.sparkenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.sparkenv.sh
          echo "#" >> $WORKSPACES_HOME/.sparkenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "hadoop" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.hadoopenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.hadoopenv.sh
          echo "# Enter Hadoop product specific environment variables and initialization" >> $WORKSPACES_HOME/.hadoopenv.sh
-         echo "# routines here. This file is source in by setenv.sh." >> $WORKSPACES_HOME/.hadoopenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.hadoopenv.sh
          echo "#" >> $WORKSPACES_HOME/.hadoopenv.sh
       fi
    fi
