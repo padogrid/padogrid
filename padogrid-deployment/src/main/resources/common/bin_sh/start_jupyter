@@ -130,11 +130,14 @@ fi
 JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
 
 pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
-jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > $JUPYTER_LOG_FILE 2>&1 &
+nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > $JUPYTER_LOG_FILE 2>&1 &
 popd > /dev/null 2>&1
 
-RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
-RWE_URL="http://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME"
+# Wait a bit for the server to start before extracting the
+# token value from the log file
+sleep 4
+
+RWE_URL=$(getJupyterUrl $IP_ADDRESS $PORT_NUMBER)
 
 echo ""
 echo "Notebook server started."

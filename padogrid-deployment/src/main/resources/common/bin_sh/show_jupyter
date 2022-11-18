@@ -122,5 +122,33 @@ if [ "$PORT_SPECIFIED" == "true" ] || [ "$ALL" == "true" ] || [ "$FULL" == "true
       tail -f $JUPYTER_LOG_FILE
    fi
 else
-   jupyter lab list
+   TMP_FILE=/tmp/$EXECUTABLE.jupyter-list.txt
+   jupyter lab list > $TMP_FILE
+   echo ""
+   cat $TMP_FILE 
+   if [ $(cat $TMP_FILE | wc -l) -gt 1 ]; then
+      echo ""
+      echo "PadoGrid workspace dashboard(s):"
+      while IFS= read -r line; do
+         url=$(echo $line | grep http)
+         if [ "$url" != "" ]; then
+            header=$(echo $url | sed 's/::.*//')
+            http=$(echo $header | sed 's/?token.*$//')
+            if [[ "$header" == *"token"* ]]; then
+               token=$(echo $header | sed 's/^.*token=//')
+            else
+               token=""
+            fi
+            workspaces=$(echo $url | sed 's/.*workspaces/workspaces/')
+            url="${http}lab/$workspaces"
+            if [ "$token" != "" ]; then
+               url="$url/?token=$token"
+            fi
+            echo -e "- ${CUrl}$url${CNone}"
+         fi
+      done < $TMP_FILE
+      unset IFS
+      rm $TMP_FILE
+      echo ""
+   fi
 fi

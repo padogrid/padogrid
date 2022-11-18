@@ -4505,3 +4505,45 @@ function getActiveJupyterPorts
 {
    echo $(ps -wwef |grep jupyter | grep "\-\-port" | grep -v grep | sed 's/^.*\-\-port=//' | awk '{print $1}')
 }
+
+#
+# Returns the JupyterLab URL for the specified RWE.
+#
+# @param ipAddress         IP address. If not specified, then defaults to "0.0.0.0". Optional
+# @param portNumber        Port number. If not specified, then defaults to "8888". Optional.
+# @param rweName RWE name. If not specified, then defaults to the current RWE. Optional.
+#
+function getJupyterUrl
+{
+   local IP_ADDRESS="$1"
+   local PORT_NUMBER="$2"
+   local RWE_NAME="$3"
+
+   if [ "$IP_ADDRESS" == "" ]; then
+      IP_ADDRESS="0.0.0.0"
+   fi
+   if [ "$PORT_NUMBER" == "" ]; then
+      PORT_NUMBER="8888"
+   fi
+   if [ "$RWE_NAME" == "" ]; then
+      RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   fi
+   local JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
+   local header=$(grep "https" $JUPYTER_LOG_FILE | grep $PORT_NUMBER)
+   local URL_PROTOCOL
+   if [ "$header" != "" ]; then
+      URL_PROTOCOL="https"
+   else
+      URL_PROTOCOL="http"
+   fi
+   local RWE_URL="$URL_PROTOCOL://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME"
+   local token
+   if [ "$(grep "http" $JUPYTER_LOG_FILE | grep $PORT_NUMBER | grep "?token=")" != "" ]; then
+      token=$(grep "http" $JUPYTER_LOG_FILE | grep $PORT_NUMBER | sed 's/^.*?token=/?token=/' | uniq)
+   else
+      token=""
+   fi
+   RWE_URL="$URL_PROTOCOL://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME$token"
+
+   echo "$RWE_URL"
+}

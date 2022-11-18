@@ -236,6 +236,7 @@ else
    fi
    if [ "$HAZELCAST_MC_HOME" != "" ]; then
       for file in "$HAZELCAST_MC_HOME/hazelcast-management-center-"*; do
+         HAZELCAST_MC_JAR=$file
          file=${file##*hazelcast\-management\-center\-}
          HAZELCAST_MC_VERSION=${file%.jar}
          break;
@@ -244,6 +245,8 @@ else
 fi
 HAZELCAST_MAJOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[1]'})
 HAZELCAST_MINOR_VERSION_NUMBER=$(echo $HAZELCAST_VERSION | awk '{split($0,a,"."); print a[2]'})
+HAZELCAST_MC_MAJOR_VERSION_NUMBER=$(echo $HAZELCAST_MC_VERSION | awk '{split($0,a,"."); print a[1]'})
+HAZELCAST_MC_MINOR_VERSION_NUMBER=$(echo $HAZELCAST_MC_VERSION | awk '{split($0,a,"."); print a[2]'})
 PRODUCT_VERSION=$HAZELCAST_VERSION
 PRODUCT_MAJOR_VERSION=$HAZELCAST_MAJOR_VERSION_NUMBER
 
