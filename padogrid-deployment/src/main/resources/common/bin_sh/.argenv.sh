@@ -45,6 +45,7 @@ CHECKOUT_ARG=
 WORKSPACE_SPECIFIED=false
 CHECKOUT_SPECIFIED=false
 IMPORT_SPECIFIED=false
+DASHBOARD_SPECIFIED=false
 JAVA_HOME_ARG=
 PATH_ARG=
 JAR_ARG=
@@ -365,6 +366,8 @@ do
          CHECKOUT_SPECIFIED=true
       elif [ "$i" == "-import" ]; then
          IMPORT_SPECIFIED=true
+      elif [ "$i" == "-dashboard" ]; then
+         DASHBOARD_SPECIFIED=true
       elif [ "$i" == "-list" ]; then
          LIST=true
          LIST_SPECIFIED=true

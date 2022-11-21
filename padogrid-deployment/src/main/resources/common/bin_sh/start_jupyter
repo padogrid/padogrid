@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-ip -port -import -?"
+   echo "-ip -port -dashboard -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,14 +41,14 @@ NAME
    $EXECUTABLE - Start Jupyter Notebook server
 
 SYNOPSIS
-   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-import] [-?]
+   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-dashboard] [-?]
 
 NOTES
    Jupyter commands are experimental and subject to change in future releases.
 
 DESCRIPTION
-   Starts Jupyter Notebook server in the current RWE. By default, the Jupyter Notebook server listens
-   on 0.0.0.0. To bind to a specific IP address, use the '-ip' option. 
+   Starts Jupyter Notebook server in the current RWE. By default, the Jupyter Notebook server
+   listens on 0.0.0.0. To bind to a specific IP address, use the '-ip' option. 
 
 OPTIONS
    -ip [ip_address]
@@ -57,8 +57,9 @@ OPTIONS
    -port [port_number]
              The port the notebook server will listen on. Default: 8888
 
-   -import
-             If specified, then it imports the current workspace template.
+   -dashboard
+             If specified, then it imports the dashboard for the current workspace. If this
+             option is not specified, then it imports the JupyterLab's generic dashboard.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -98,7 +99,7 @@ if [[ "$NOTEBOOK_SERVERS" == *"$PORT_NUMBER"* ]]; then
 fi
 
 RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
-if [ "$IMPORT_SPECIFIED" == "true" ]; then
+if [ "$DASHBOARD_SPECIFIED" == "true" ]; then
    WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
    # Determine if the workspace exists - Not used.
