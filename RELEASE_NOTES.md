@@ -4,9 +4,9 @@
 
 https://github.com/padogrid
 
-## Version 0.9.22-SNAPSHOT
+## Version 0.9.22
 
-### Release Date: 11/18/22
+### Release Date: 11/20/22
 
 - Added support for Confluent Platform. You can now install Confluent Platform by running `install_padogrid -product confluent`. Confluent and Kafka share the same cluster commands. The `CLUSTER_TYPE` value of `kraft` has been replaced with `kafka` and `confluent`. PadoGrid now supports Kafka, Confluent Community, and Confluent Commertial versions.
 - Updated RWE and workspace commands to properly handle file permissions enforced when multitenancy is enabled.
@@ -20,6 +20,7 @@ https://github.com/padogrid
 - Added native support for Derby DB. Like Prometheus and Grafana, Derby DB can now be launched as an app. Please see [Derby App](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/common/apps/derby/README.md) for details.
 - Updated `start_mc` to support Hazelcast Management Center 5.2.0+ which now uses Spring bootstrap. You must upgrade to PadoGrid 0.9.22+ for `start_mc` to work with Hazelcast Management Center 5.2.0+.
 - Jupyter commands now display URLs in the proper form supporting both `http` and `https`.
+- Added auto-completion support to Hazelcast 5 commands.
 
 ---
 
