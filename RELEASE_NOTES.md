@@ -29,6 +29,7 @@ https://github.com/padogrid
 - Updated `start_mc` to support Hazelcast Management Center 5.2.0+ which now uses Spring bootstrap. You must upgrade to PadoGrid 0.9.22+ for `start_mc` to work with Hazelcast Management Center 5.2.0+.
 - Jupyter commands now display URLs in the proper form supporting both `http` and `https`.
 - Added auto-completion support to Hazelcast 5 commands.
+- Added JupyterLab in the PadoGrid Docker image. Starting PadoGrid 0.9.22, you can now access PadoGrid workspaces from the browser. Please see the [Docker](https://github.com/padogrid/padogrid/wiki/Docker) section in the manual for details.
 
 ---
 
