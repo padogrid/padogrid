@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-ip -port -dashboard -?"
+   echo "-ip -port -dashboard -default -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Start Jupyter Notebook server
 
 SYNOPSIS
-   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-dashboard] [-?]
+   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-dashboard] [-default] [-?]
 
 NOTES
    Jupyter commands are experimental and subject to change in future releases.
@@ -60,6 +60,12 @@ OPTIONS
    -dashboard
              If specified, then it imports the dashboard for the current workspace. If this
              option is not specified, then it imports the JupyterLab's generic dashboard.
+
+   -default
+             If specified, then it sets the current PadoGrid workspace as the default
+             JupyterLab workspace. The default JupyterLab workspace has no path in the
+             URL, e.g., http://0.0.0.0:8888.
+
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -125,6 +131,16 @@ if [ "$DASHBOARD_SPECIFIED" == "true" ]; then
    # Import the workspace configuration file
    if [ -f "$JUPYTER_WORKSPACE_FILE" ]; then
       jupyter lab workspaces import "$JUPYTER_WORKSPACE_FILE"
+   fi
+
+   # Set default workspace
+   if [ "$DEFAULT_SPECIFIED" == "true" ]; then
+      DEFAULT_WORKSPACE_FILE="$PADOGRID_WORKSPACES_HOME/.jupyter/__default.json"
+      sed -e "s/\${WORKSPACE}/${WORKSPACE_NAME}/g" \
+          -e "s/\${RWE}/default/g" \
+          "$PADOGRID_HOME/etc/jupyter/template-jupyter-workspace.json" \
+          > "$DEFAULT_WORKSPACE_FILE"
+      jupyter lab workspaces import "$DEFAULT_WORKSPACE_FILE"
    fi
 fi
 
