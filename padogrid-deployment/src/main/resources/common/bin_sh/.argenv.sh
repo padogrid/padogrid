@@ -74,6 +74,7 @@ INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
 VERSION_ARG=
 FORCE_SPECIFIED=false
+OVERWRITE_WORKSPACE_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_ARG=
 CLUSTER_SPECIFIED=false
@@ -351,6 +352,8 @@ do
          VERSION_SPECIFIED=true
       elif [ "$i" == "-force" ]; then
          FORCE_SPECIFIED=true
+      elif [ "$i" == "-overwrite-workspace" ]; then
+         OVERWRITE_WORKSPACE_SPECIFIED=true
       elif [ "$i" == "-man" ]; then
          MAN_SPECIFIED=true
       elif [ "$i" == "-fg" ]; then

@@ -4509,15 +4509,19 @@ function getActiveJupyterPorts
 #
 # Returns the JupyterLab URL for the specified RWE.
 #
-# @param ipAddress         IP address. If not specified, then defaults to "0.0.0.0". Optional
+# @param workspaceType     "default" to return the default URL that does not include the
+#                          workspace path, otherwise, returns the workspace URL that
+#                          includes the workspace path. Optional.
+# @param ipAddress         IP address. If not specified, then defaults to "0.0.0.0". Optional.
 # @param portNumber        Port number. If not specified, then defaults to "8888". Optional.
 # @param rweName RWE name. If not specified, then defaults to the current RWE. Optional.
 #
 function getJupyterUrl
 {
-   local IP_ADDRESS="$1"
-   local PORT_NUMBER="$2"
-   local RWE_NAME="$3"
+   local WORKSPACE_TYPE="$1"
+   local IP_ADDRESS="$2"
+   local PORT_NUMBER="$3"
+   local RWE_NAME="$4"
 
    if [ "$IP_ADDRESS" == "" ]; then
       IP_ADDRESS="0.0.0.0"
@@ -4536,14 +4540,19 @@ function getJupyterUrl
    else
       URL_PROTOCOL="http"
    fi
-   local RWE_URL="$URL_PROTOCOL://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME"
    local token
    if [ "$(grep "http" $JUPYTER_LOG_FILE | grep $PORT_NUMBER | grep "?token=")" != "" ]; then
       token=$(grep "http" $JUPYTER_LOG_FILE | grep $PORT_NUMBER | sed 's/^.*?token=/?token=/' | uniq)
    else
       token=""
    fi
-   RWE_URL="$URL_PROTOCOL://$IP_ADDRESS:$PORT_NUMBER/lab/workspaces/$RWE_NAME$token"
+   local URL="$URL_PROTOCOL://$IP_ADDRESS:$PORT_NUMBER"
+   local DEFAULT_URL="$URL$token"
+   local RWE_URL="$URL/lab/workspaces/$RWE_NAME$token"
 
-   echo "$RWE_URL"
+   if [ "$WORKSPACE_TYPE" == "default" ]; then
+      echo "$DEFAULT_URL"
+   else
+      echo "$RWE_URL"
+   fi
 }
