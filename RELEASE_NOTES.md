@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.23-SNAPSHOT
 
-### Release Date: 11/21/22
+### Release Date: 11/26/22
 
-- Initial snapshot.
+- The `install_bundle` command now includes the `-overwrite-workspace` option for overwriting an existing workspace with bundle workspace contents.
 
 ---
 
