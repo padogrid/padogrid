@@ -37,7 +37,7 @@ WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
 __options()
 {
-   echo "-connect -user -rwe -replace -checkout -init -simulate -?"
+   echo "-connect -user -rwe -replace -checkout -init -overwrite-workspace -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -55,7 +55,8 @@ NAME
    $EXECUTABLE - Install the specified bundles in the specified RWE
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-connect https | ssh] [-rwe rwe_name]
+   $EXECUTABLE [-user git_user_name] [-connect https | ssh]
+               [-rwe rwe_name] [-overwrite-workspace]
                [-replace sed_substitution_expression]
                [-checkout] [-simulate] [-?] comma_separted_bundle_names
 
@@ -106,6 +107,10 @@ OPTIONS
              If specified, the '.init_workspace.sh' script in each workspace is sourced in if
              it exists. Some bundles may include '.init_workspace.sh' to initialize their
              respective bundle workspaces.
+
+   -overwrite-workspace
+             If specified, then overwrites the existing workspaces. Without this option,
+             by default, this command aborts the existing workspaces. 
 
    -simulate
              If specified, then it only simulates installations and does NOT perform actual
@@ -160,18 +165,23 @@ fi
 
 # Handle -init
 if [ "$INIT_SPECIFIED" == "true" ]; then
-   INSTALL_BUNDLE_OPTIONS="-init INSTALL_BUNDLE_OPTIONS"
+   INSTALL_BUNDLE_OPTIONS="-init $INSTALL_BUNDLE_OPTIONS"
+fi
+
+# Handle -overwrite-workspace
+if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ]; then
+   INSTALL_BUNDLE_OPTIONS="-overwrite-workspace $INSTALL_BUNDLE_OPTIONS"
 fi
 
 # Handle -connect
 if [ "$CONNECT_ARG" != "" ]; then
-   INSTALL_BUNDLE_OPTIONS="-connect $CONNECT_ARG INSTALL_BUNDLE_OPTIONS"
+   INSTALL_BUNDLE_OPTIONS="-connect $CONNECT_ARG $INSTALL_BUNDLE_OPTIONS"
 fi
 
 # Handle -user
 GITHUB_USER="$USER"
 if [ "$GITHUB_USER" != "" ]; then
-   INSTALL_BUNDLE_OPTIONS="-user $GITHUB_USER"
+   INSTALL_BUNDLE_OPTIONS="-user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS"
 fi
 
 # Handle RWE option
@@ -215,9 +225,9 @@ for BUNDLE in $BUNDLES; do
       WORKSPACE=""
    fi
    if [ "$SIMULATE" == "true" ]; then
-      echo install_bundle -force -connect https -user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
+      echo install_bundle -force $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
    else
-      install_bundle -force -connect https -user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
+      install_bundle -force $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
    fi
 done
 
