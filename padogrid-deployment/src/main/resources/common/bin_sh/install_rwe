@@ -37,7 +37,7 @@ WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
 __options()
 {
-   echo "-user -rwe -replace -checkout -?"
+   echo "-connect -user -rwe -replace -checkout -init -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -55,7 +55,7 @@ NAME
    $EXECUTABLE - Install the specified bundles in the specified RWE
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-rwe rwe_name]
+   $EXECUTABLE [-user git_user_name] [-connect https | ssh] [-rwe rwe_name]
                [-replace sed_substitution_expression]
                [-checkout] [-simulate] [-?] comma_separted_bundle_names
 
@@ -71,6 +71,17 @@ OPTIONS
    -user git_user_name
              Git user name. If specified, then it downloads the specified bundle from user's
              Git repos.
+
+   -connect https | ssh
+             Git connection type. For GitHub, the default is 'https'. To connect to private repos,
+             for 'ssh', you must first deploy your public key, e.g., '~/.ssh/id_rsa.pub', to your
+             repo account, and for 'https', generate a personal access token from the repo account.
+             Please see GitHub or Gitea documentation for details.
+
+             To make 'ssh' default, set GITHUB_PRIVATE_REPO_ENABLED to "true" in the
+             '~/.padogrid/setenv.sh' file as shown below.
+
+             GITHUB_PRIVATE_REPO_ENABLED="true"
 
    -rwe rwe_name
              Name of RWE to which the specified bundles to be installed. It creates the RWE if
@@ -90,6 +101,11 @@ OPTIONS
    -checkout
              If specified, then checks out the bundles so that bundles can be checked in
              using 'git'.
+
+   -init
+             If specified, the '.init_workspace.sh' script in each workspace is sourced in if
+             it exists. Some bundles may include '.init_workspace.sh' to initialize their
+             respective bundle workspaces.
 
    -simulate
              If specified, then it only simulates installations and does NOT perform actual
@@ -135,14 +151,27 @@ if [ "$SIMULATE" == "true" ]; then
    echo ""
 fi
 
-# Handle -user
-GITHUB_USER="$USER"
-
 # Handle -checkout
 if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
    INSTALL_BUNDLE_OPTIONS="-checkout"
 else
    INSTALL_BUNDLE_OPTIONS="-download -workspace"
+fi
+
+# Handle -init
+if [ "$INIT_SPECIFIED" == "true" ]; then
+   INSTALL_BUNDLE_OPTIONS="-init INSTALL_BUNDLE_OPTIONS"
+fi
+
+# Handle -connect
+if [ "$CONNECT_ARG" != "" ]; then
+   INSTALL_BUNDLE_OPTIONS="-connect $CONNECT_ARG INSTALL_BUNDLE_OPTIONS"
+fi
+
+# Handle -user
+GITHUB_USER="$USER"
+if [ "$GITHUB_USER" != "" ]; then
+   INSTALL_BUNDLE_OPTIONS="-user $GITHUB_USER"
 fi
 
 # Handle RWE option
