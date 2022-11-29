@@ -131,7 +131,8 @@ OPTIONS
    -overwrite-workspace
              If specified, then overwrites the existing workspace. This option is meaningful only if
              the '-checkout' or '-download -workspace' option is also specified. Without this option,
-             by default, this command aborts if the workspace already exists.
+             by default, this command aborts if the workspace already exists. Note that it does not
+             overwrite git artifacts.
 
    -init
              If specified, then for bundle workspace installation, the '.init_workspace.sh' script
@@ -725,8 +726,24 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       if [ "$IS_BUNDLE_WORKSPACE" == "true" ]; then
          WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
          if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ]; then
-            cp -r $GIT_DIR/* "$WORKSPACE_PATH/"
+            pushd $"$GIT_DIR" > /dev/null 2>&1 
+            rm -rf $(find . -name ".git*") > /dev/null 2>&1
+            rm -f pom.xml > /dev/null 2>&1
+            rm -f assembly-descriptor.xml > /dev/null 2>&1
+            rm -f README_HEADER.md > /dev/null 2>&1
+            popd > /dev/null 2>&1 
+            INIT_WORKSPACE_EXISTS="false"
+            if [ -f "$GIT_DIR/.init_workspace.sh" ]; then
+               echo -e "${CHighlight}Overwriting current workspace's .init_workspace.sh...${CNone}"
+               INIT_WORKSPACE_EXISTS="true"
+            fi
+            cp -r $GIT_DIR/. "$WORKSPACE_PATH/"
             rm -rf $GIT_DIR
+            if [ "$INIT_SPECIFIED" == "true" ] && [ "$INIT_WORKSPACE_EXISTS" == "true" ] && [ -f "$WORKSPACE_PATH/.init_workspace.sh" ]; then
+               pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
+               . .init_workspace.sh "$WORKSPACE_NAME"
+               popd > /dev/null 2>&1 
+            fi
             echo ""
             echo "Bundle workspace updated. Switch workspace by executing the following command:"
          else
@@ -747,10 +764,10 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
                # Remove build files including git 
                if [ -d $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME ]; then
                   pushd $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME > /dev/null 2>&1 
-                  rm -rf $(find . -name ".git*")
-                  rm -f pom.xml
-                  rm -f assembly-descriptor.xml
-                  rm -f README_HEADER.md
+                  rm -rf $(find . -name ".git*") > /dev/null 2>&1
+                  rm -f pom.xml > /dev/null 2>&1
+                  rm -f assembly-descriptor.xml > /dev/null 2>&1
+                  rm -f README_HEADER.md > /dev/null 2>&1
                   popd > /dev/null 2>&1 
                fi
             fi
