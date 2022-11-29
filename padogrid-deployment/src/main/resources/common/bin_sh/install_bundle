@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -connect -preview -download -checkout -workspace -force -overwrite-workspace -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -checkout -workspace -force -overwrite-workspace -init -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -53,7 +53,7 @@ SYNOPSIS
                   [-connect https | ssh]
                   [-checkout default | workspace_name]
                   [-workspace default | workspace_name]
-                  [-preview] [-download] [-force] [-overwrite-workspace]
+                  [-preview] [-download] [-force] [-overwrite-workspace] [-init]
                   [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
@@ -62,13 +62,12 @@ DESCRIPTION
    conflicting processes before executing this command; otherwise, the running processes
    may result in unpredictable state.
 
-   For online bundles, if the '.init_workspace.sh' script exists in the top directory, then it
-   is sourced in upon completion of bundle installation. The '.init_workspace.sh' script is the
-   entry point for initializing the bundle in a workspace environment; hence, it is sourced 
-   in only if the following options are specified.
+   For online bundles, if the '-init' option is specified and the '.init_workspace.sh' script
+   exists in the top directory, then it is sourced in upon completion of bundle workspace
+   installation. A bundle workspace is installed with the following options.
 
-      install_bundle -checkout
-      install_bundle -workspace -download
+      install_bundle -checkout -init
+      install_bundle -workspace -download -init
 
    If your local environment does not have access to the Internet, then you can install
    the online bundles by manually downloading them. Download the zip files from the
@@ -131,9 +130,13 @@ OPTIONS
              product version can be installed later as needed to run the bundle.
 
    -overwrite-workspace
-             If sepecified, then overwrites the existing workspace. This option is meaningful only if
+             If specified, then overwrites the existing workspace. This option is meaningful only if
              the '-checkout' or '-download -workspace' option is also specified. Without this option,
              by default, this command aborts if the workspace already exists.
+
+   -init
+             If specified, then for bundle workspace installation, the '.init_workspace.sh' script
+             is sourced in if it exists.
 
    -quiet
              Quiet mode. Supresses the interactive prompt.
@@ -550,7 +553,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       fi
       let len=${#propArray[@]}
       if [ $len -eq 0 ]; then
-         echo "Using bundle name to determine installed products..."
+         echo "Using the bundle name to determine installed products..."
       
          #
          # Make sure the bundle can be installed in the current environment.
@@ -731,9 +734,9 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             TEMP_WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/__ws-${WORKSPACE_NAME}
             # Copy the workspace files
             if [ "$PRODUCT_HOME" == "" ]; then
-               create_workspace -quiet -name __ws-${WORKSPACE_NAME} > /dev/null
+               create_workspace -quiet -name __ws-${WORKSPACE_NAME} -headless > /dev/null
             else
-               create_workspace -quiet -name __ws-${WORKSPACE_NAME} -product $PRODUCT_HOME > /dev/null
+               create_workspace -quiet -name __ws-${WORKSPACE_NAME} -product $PRODUCT_HOME -headless > /dev/null
             fi
             rm -rf "$TEMP_WORKSPACE_DIR"/clusters/*
             cp -r "$TEMP_WORKSPACE_DIR"/* "$GIT_DIR"/
@@ -756,7 +759,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             CLUSTERS=$(list_clusters -workspace $WORKSPACE_NAME)
             WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
             createClusterEnv
-            if [ -f "$WORKSPACE_PATH/.init_workspace.sh" ]; then
+            if [ "$INIT_SPECIFIED" == "true" ] && [ -f "$WORKSPACE_PATH/.init_workspace.sh" ]; then
                pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
                . .init_workspace.sh "$WORKSPACE_NAME"
                popd > /dev/null 2>&1 

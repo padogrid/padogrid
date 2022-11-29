@@ -300,6 +300,19 @@ __padogrid_complete()
          type_list=`getRweList`
       fi
       ;;
+
+   -version)
+      if [ "$command" == "install_padogrid" ]; then
+         # If -product specified then get downlodable product versions
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         type_list=$(getDownloadableProductVersions $product_name)
+      fi
+      ;;
       
    -workspace)
       if [ "$command" == "install_bundle" ]; then

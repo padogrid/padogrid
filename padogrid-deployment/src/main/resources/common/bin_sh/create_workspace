@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-name -cluster -product -java -vm -vm-java -vm-padogrid -vm-user -vm-key -quiet -?"
+   echo "-name -cluster -product -java -vm -vm-java -vm-padogrid -vm-user -vm-key -headless -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -50,6 +50,7 @@ SYNOPSIS
                [-vm [comma_separated_host_names]]
                [-vm-user vm_user_name]
                [-vm-key private_key_file_path]
+               [-headless]
                [-quiet] [-?]
 
 DESCRIPTION
@@ -112,10 +113,14 @@ cat <<EOF
               VM user name. All VMs must be accessible via ssh with this user name.
 
    -vm-key private_key_file_path
-              Local private key file path. Some VMs such as AWS EC2 VMs require the '.pem' private
-              key file. If the private key file is required then specify the full path to the
-              private key file in your local file system. It will be copied to the workspace
-              and deployed to the VMs when you execute 'vm_sync' later.
+              Local private key file path. Some VMs such as AWS EC2 VMs require the '.pem'
+              private key file. If the private key file is required then specify the full path
+              to the private key file in your local file system. It will be copied to the
+              workspace and deployed to the VMs when you execute 'vm_sync' later.
+
+   -headless
+              If specified, then it creates the specified workspace without document
+              artifiacts, i.e., README.md, images, etc.
 
    -quiet
               Quiet mode. Supresses the interactive prompts. The options not specified will
@@ -794,8 +799,10 @@ echo "export APPS_DIR=\$PADOGRID_WORKSPACE/apps" >> $WORKSPACE_DIR/.addonenv.sh
 #
 # Copy README.md to the workspace dir
 #
-cp "$PADOGRID_HOME/workspace/README.md"  "$WORKSPACE_DIR/"
-cp -r "$PADOGRID_HOME/workspace/images"  "$WORKSPACE_DIR/"
+if [ "$HEADLESS_SPECIFIED" != "true" ]; then
+   cp "$PADOGRID_HOME/workspace/README.md"  "$WORKSPACE_DIR/"
+   cp -r "$PADOGRID_HOME/workspace/images"  "$WORKSPACE_DIR/"
+fi
 
 #
 # Switch workspace and create cluster. This is done in sub-shell and hence

@@ -4556,3 +4556,43 @@ function getJupyterUrl
       echo "$RWE_URL"
    fi
 }
+
+#
+# Returns downloadable product versions extracted from the cache provided by install_padogrid.
+#
+# @required PADOGRID_ENV_BASE_PATH 
+# @param product Downloadable product name
+#
+function getDownloadableProductVersions
+{
+   local PRODUCT="$1"
+   local cache_file="$PADOGRID_ENV_BASE_PATH/downloads/padogrid_download_versions.sh"
+   if [ "$PRODUCT" == "" ] || [ ! -f "$cache_file" ]; then
+      echo ""
+   else
+      . "$cache_file"
+      case $PRODUCT in
+         confluent) echo "$CONFLUENT_DOWNLOAD_VERSIONS" ;;
+         derby) echo "$DERBY_DOWNLOAD_VERSIONS" ;;
+         hadoop) echo "$HADOOP_DOWNLOAD_VERSIONS" ;;
+         hazelcast-desktop) echo "$HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS" ;;
+         hazelcast-enterprise) echo "$HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS" ;;
+         hazelcast-mc ) echo "$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS" ;;
+         hazelcast-oss) echo "$HAZELCAST_OSS_DOWNLOAD_VERSIONS" ;;
+         geode ) echo "$GEODE_DOWNLOAD_VERSIONS" ;;
+         grafana-enterprise ) echo "$GRAFANA_DOWNLOAD_VERSIONS" ;;
+         grafana-oss ) echo "$GRAFANA_DOWNLOAD_VERSIONS" ;;
+         kafka ) echo "$KAFKA_DOWNLOAD_VERSIONS" ;;
+         pado ) echo "$PADO_DOWNLOAD_VERSIONS" ;;
+         padodesktop ) echo "$PADODESKTOP_DOWNLOAD_VERSIONS" ;;
+         padoeclipse ) echo "$PADOECLIPSE_DOWNLOAD_VERSIONS" ;;
+         padogrid ) echo "$PADOGRID_DOWNLOAD_VERSIONS" ;;
+         padoweb ) echo "$PADOWEB_DOWNLOAD_VERSIONS" ;;
+         prometheus ) echo "$PROMETHEUS_DOWNLOAD_VERSIONS" ;;
+         redis-oss ) echo "$REDIS_DOWNLOAD_VERSIONS" ;;
+         snappydata ) echo "$SNAPPYDATA_DOWNLOAD_VERSIONS" ;;
+         spark ) echo "$SPARK_DOWNLOAD_VERSIONS" ;;
+         *) echo "" ;;
+      esac
+   fi
+}
