@@ -17,6 +17,9 @@
 # ========================================================================
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+
+SLEEP_DELAY=2
+
 if [ -f "$SCRIPT_DIR/.addonenv.sh" ] && [ -f "$SCRIPT_DIR/.argenv.sh" ]; then
    . $SCRIPT_DIR/.addonenv.sh
    IS_STANDALONE_SCRIPT="false"
@@ -31,6 +34,8 @@ else
    SAVE_ARG=""
    LOAD_SPECIFIED="false"
    LOAD_ARG=""
+   SCAN_SPECIFIED="false"
+   SCAN_ARG=""
    PREV=""
    for i in "$@"; do
       case $i in
@@ -39,7 +44,9 @@ else
          -no-stty ) NO_STTY_SPECIFIED="true";;
          -scan ) SCAN_SPECIFIED="true";;
          -save ) SAVE_SPECIFIED="true";;
-         -file ) LOAD_SPECIFIED="true";;
+         -load ) LOAD_SPECIFIED="true";;
+         -delay ) SCAN_SPECIFIED="true";;
+         -version ) VERSION_SPECIFIED="true";;
          -?) HELP="true";;
          * ) 
             if [ "$PREV" == "-product" ]; then
@@ -48,6 +55,10 @@ else
                SAVE_ARG="$i";
             elif [ "$PREV" == "-load" ]; then
                LOAD_ARG="$i";
+            elif [ "$PREV" == "-scan" ]; then
+               SCAN_ARG="$i";
+            elif [ "$PREV" == "-version" ]; then
+               VERSION_ARG="$i";
             else
                echo "Invalid option: [$i]. Command aborted."
                exit 1
@@ -128,7 +139,7 @@ PADOGRID_WORKSPACES_PATH="$PADOGRID_ENV_BASE_PATH/workspaces"
 
 __options()
 {
-   echo "-product -quiet -simulate -save -load -scan -?"
+   echo "-product -version -quiet -simulate -save -load -scan -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -143,7 +154,10 @@ NAME
    $EXECUTABLE - Install Padogrid and downloable products
 
 SYNOPSIS
-   $EXECUTABLE [-product] [-quiet] [-simulate] [-scan] [-save|-load file_path] [-?]
+   $EXECUTABLE [-product product_name] [-version product_version]
+                    [-scan [scan_delay_in_seconds]]
+                    [-save|-load file_path]
+                    [-quiet] [-simulate] [-?]
 
 DESCRIPTION
    Installs PadoGrid and downloadable products. This command downloads one or more selected products
@@ -162,14 +176,20 @@ for i in $DOWNLOADABLE_PRODUCTS; do
 done
 cat <<EOF
 
+   -version product_version
+             Product version to install. The product version number must exactly match the version
+             number conventions used by PadoGrid.
+
    -simulate
              If specified, then it only simulates the download steps by printing the 'curl' commands.
 
-   -scan
-             If specified, then it scans all downlodable product versions. This may take over a minute
-             to complete. By default, if this option is specified, then it uses the the cached product
-             versions downloaded from the PadoGrid site. The cached product versions are updated
-             nightly.
+   -scan [scan_delay_in_seconds]
+             If specified, then it scans the product download sites to gather product versions. This
+             may take over a minute to complete. Specify scan_delay_in_seconds to delay between
+             GitHub URL scans to prevent the GitHub rate meter from rejecting repetive URL
+             scans. By default, if this option is not specified, then it uses the the cached product
+             versions downloaded from the PadoGrid site. The cached product versions are updated nightly.
+             Default: $SLEEP_DELAY seconds
 
    -save file_path
              Saves the downloadble product versions to the specified file path. If the '-scan' option
@@ -258,6 +278,11 @@ echo -e "      - Amazon Corretto OpenJDK ${CUrl}https://aws.amazon.com/corretto$
 cat <<EOF
 
 NOTES
+   - Derby distributions have the following Java version dependencies.
+     - Java 17+ - 10.16.x.x
+     - Java 9+ - 10.15.x.x
+     - Java 8+ - 10.14.x.x, 10.13.x.x
+
    - Jet Management Center installation is no longer supported. Install Hazelcast Management Center
      instead. It supports both IMDG and Jet.
 
@@ -338,6 +363,13 @@ if [ "$LOAD_SPECIFIED" == "true" ]; then
       echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid file: [$DOWNLOAD_VERSIONS_FILE]. Please enter a valid file name."
       echo >&2 "       Command aborted."
       exit 1
+   fi
+fi
+
+# Use the default scan delay if SCAN_ARG is not a number
+if [ "$SCAN_ARG" != "" ]; then
+   if [ -n "$SCAN_ARG" ] && [ "$SCAN_ARG" -eq "$SCAN_ARG" ] 2>/dev/null; then
+      SLEEP_DELAY=$SCAN_ARG
    fi
 fi
 
@@ -514,6 +546,8 @@ function getDownloadablePadogridVersions
          ALL_PADOGRID_VERSIONS="$ALL_PADOGRID_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_PADOGRID_VERSIONS"
 }
@@ -543,6 +577,8 @@ function getDownloadablePadoVersions
          ALL_PADO_VERSIONS="$ALL_PADO_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_PADO_VERSIONS"
 }
@@ -557,7 +593,7 @@ function getDownloadablePadowebVersions
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -sL $download_url | grep "padoweb_" | grep '\.tar\.gz' | sed -e 's/.*padogrid_//' | grep "\/padoweb_.*" | sed -e 's/\.tar\.gz.*//')
+         local assets_urls=$(curl -s $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
          if [ "$assets_urls" == "" ]; then
             is_next_page="false"
          else
@@ -572,6 +608,8 @@ function getDownloadablePadowebVersions
          ALL_PADOWEB_VERSIONS="$ALL_PADOWEB_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_PADOWEB_VERSIONS"
 }
@@ -601,6 +639,8 @@ function getDownloadablePadodesktopVersions
          ALL_PADODESKTOP_VERSIONS="$ALL_PADODESKTOP_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_PADODESKTOP_VERSIONS"
 }
@@ -630,6 +670,8 @@ function getDownloadablePadoEclipseVersions
          ALL_PADOECLIPSE_VERSIONS="$ALL_PADOECLIPSE_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_PADOECLIPSE_VERSIONS"
 }
@@ -690,6 +732,8 @@ function getDownloadableHazelcastDesktopVersions
          ALL_HAZELCAST_DESKTOP_VERSIONS="$ALL_HAZELCAST_DESKTOP_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_HAZELCAST_DESKTOP_VERSIONS"
 }
@@ -725,6 +769,8 @@ function getDownloadableJetOssVersions
          ALL_JET_OSS_VERSIONS="$ALL_JET_OSS_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_JET_OSS_VERSIONS"
 }
@@ -757,6 +803,8 @@ function getDownloadableRedisVersions
          ALL_REDIS_VERSIONS="$ALL_REDIS_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_REDIS_VERSIONS"
 }
@@ -786,6 +834,9 @@ function getDownloadableSnappyDataVersions
          ALL_SNAPPYDATA_VERSIONS="$ALL_SNAPPYDATA_VERSIONS $PAGE_VERSIONS"
       fi
       let page=page+1
+
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_SNAPPYDATA_VERSIONS"
 }
@@ -846,10 +897,12 @@ function getDownloadablePrometheusVersions
       download_url="${PROMETHEUS_DOWNLOAD_URL}?page=$page"
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "/prometheus/prometheus/tree/v" | sed -e 's|^.*/prometheus/prometheus/tree/v||' -e 's/".*$//')
       #is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
-      is_next_page="$([ $page -lt 5 ] && echo "true" || echo "false")"
+      is_next_page="$([ $page -lt 2 ] && echo "true" || echo "false")"
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       ALL_PROMETHEUS_VERSIONS="$ALL_PROMETHEUS_VERSIONS $PAGE_VERSIONS"
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_PROMETHEUS_VERSIONS"
 }
@@ -863,10 +916,12 @@ function getDownloadableGrafanaVersions
       download_url="${GRAFANA_GITHUB_RELEASES_URL}?page=$page"
       local PAGE_VERSIONS=$(curl -sL $download_url | grep "/grafana/grafana/tree/v" | sed -e 's|^.*/grafana/grafana/tree/v||' -e 's/".*$//')
       #is_next_page="$([ "$PAGE_VERSIONS" != "" ] && echo "true" || echo "false")"
-      is_next_page="$([ $page -lt 5 ] && echo "true" || echo "false")"
+      is_next_page="$([ $page -lt 2 ] && echo "true" || echo "false")"
       PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
       ALL_GRAFANA_VERSIONS="$ALL_GRAFANA_VERSIONS $PAGE_VERSIONS"
       let page=page+1
+      # Wait a bit to reset the GitHub rate meter
+      sleep $SLEEP_DELAY
    done
    unique_words "$ALL_GRAFANA_VERSIONS"
 }
@@ -1445,7 +1500,100 @@ GRAFANA_ENTERPRISE_VERSION=""
 GRAFANA_OSS_VERSION=""
 DERBY_VERSION=""
 
-if [ "$QUIET" == "true" ]; then
+if [ "$VERSION_SPECIFIED" == "true" ]; then
+
+   INSTALL_COUNT=1
+   case $PRODUCT_ARG in
+      confluent )
+         DOWNLOAD_VERSIONS=( "${CONFLUENT_DOWNLOAD_VERSIONS[@]}" )
+         CONFLUENT_DIST_VERSION=$VERSION_ARG
+         CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//') ;;
+      derby )
+         DOWNLOAD_VERSIONS=( "${DERBY_DOWNLOAD_VERSIONS[@]}" )
+         DERBY_VERSION=$VERSION_ARG ;;
+      hadoop )
+         DOWNLOAD_VERSIONS=( "${HADOOP_DOWNLOAD_VERSIONS[@]}" )
+         HADOOP_VERSION=$VERSION_ARG ;;
+      hazelcast-desktop )
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_DESKTOP_VERSION=$VERSION_ARG ;;
+      hazelcast-enterprise ) 
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_ENTERPRISE_VERSION=$VERSION_ARG ;;
+      hazelcast-mc )
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_MANAGEMENT_CENTER_VERSION=$VERSION_ARG ;;
+      hazelcast-oss )
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_OSS_VERSION=$VERSION_ARG ;;
+      geode )
+         DOWNLOAD_VERSIONS=( "${GEODE_DOWNLOAD_VERSIONS[@]}" )
+         GEODE_VERSION=$VERSION_ARG ;;
+      grafana-enterprise )
+         DOWNLOAD_VERSIONS=( "${GRAFANA_DOWNLOAD_VERSIONS[@]}" )
+         GRAFANA_ENTERPRISE_VERSION=$VERSION_ARG ;;
+      grafana-oss )
+         DOWNLOAD_VERSIONS=( "${GRAFANA_DOWNLOAD_VERSIONS[@]}" )
+         GRAFANA_OSS_VERSION=$VERSION_ARG ;;
+      kafka )
+         DOWNLOAD_VERSIONS=( "${KAFKA_DOWNLOAD_VERSIONS[@]}" )
+         KAFKA_VERSION=$VERSION_ARG
+         KAFKA_SCALA_VERSIONS_ARRAY=($(getScalaKafkaVersions "$KAFKA_VERSION"))
+         # Pick the last one (newer version of scala)
+         KAFKA_DIST_VERSION=${KAFKA_SCALA_VERSIONS_ARRAY[${#KAFKA_SCALA_VERSIONS_ARRAY[@]}-1]}
+         ;;
+      pado )
+         DOWNLOAD_VERSIONS=( "${PADO_DOWNLOAD_VERSIONS[@]}" )
+         PADO_VERSION=$VERSION_ARG ;;
+      padodesktop )
+         DOWNLOAD_VERSIONS=( "${PADODESKTOP_DOWNLOAD_VERSIONS[@]}" )
+         PADODESKTOP_VERSION=$VERSION_ARG ;;
+      padoeclipse )
+         DOWNLOAD_VERSIONS=( "${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}" )
+         PADOECLIPSE_VERSION=$VERSION_ARG ;;
+      padogrid )
+         DOWNLOAD_VERSIONS=( "${PADOGRID_DOWNLOAD_VERSIONS[@]}" )
+         PADOGRID_VERSION=$VERSION_ARG ;;
+      padoweb )
+         DOWNLOAD_VERSIONS=( "${PADOWEB_DOWNLOAD_VERSIONS[@]}" )
+         PADOWEB_VERSION=$VERSION_ARG ;;
+      prometheus )
+         DOWNLOAD_VERSIONS=( "${PROMETHEUS_DOWNLOAD_VERSIONS[@]}" )
+         PROMETHEUS_VERSION=$VERSION_ARG ;;
+      redis-oss )
+         DOWNLOAD_VERSIONS=( "${REDIS_DOWNLOAD_VERSIONS[@]}" )
+         REDIS_VERSION=$VERSION_ARG ;;
+      snappydata )
+         DOWNLOAD_VERSIONS=( "${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}" )
+         SNAPPYDATA_VERSION=$VERSION_ARG ;;
+      spark )
+         DOWNLOAD_VERSIONS=( "${SPARK_DOWNLOAD_VERSIONS[@]}" )
+         SPARK_VERSION=$VERSION_ARG
+         SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop ;;
+      *) ;;
+   esac
+
+   found="false"
+   for i in ${DOWNLOAD_VERSIONS[@]}; do
+      if [ "$i" == "$VERSION_ARG" ]; then
+         found="true"
+      fi
+   done
+
+   if [ "$found" == "false" ]; then
+      echo ""
+      echo "Downloadable product versions: [$PRODUCT_ARG]"
+      index=0
+      for i in ${DOWNLOAD_VERSIONS[@]}; do
+         echo "[$index] $i"
+         let index=index+1
+      done
+      echo ""
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Product version not found [$VERSION_ARG]. Command aborted."
+      exit 1
+   fi
+
+elif [ "$QUIET" == "true" ]; then
    # Set to the latest versions
    PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[0]}
    if [[ "$PADOGRID_VERSION" == *"SNAPSHOT" ]]; then
@@ -1842,7 +1990,7 @@ while [ "$REDO" == "true" ]; do
          __INSTALLED="false"
          while [ "$__LOOP" == "true" ]; do
             __INDEX=0
-            echo -e "Kafka distributions ${CUrl}${KAFKA_DOWNLOAD_URL}/$KAFKA_VERSION/${CNone}"
+            echo -e "Kafka distributions ${CUrl}${KAFKA_DOWNLOAD_URL}$KAFKA_VERSION/${CNone}"
             for i in ${KAFKA_SCALA_VERSIONS_ARRAY[@]}; do
                __INSTALLED="false"
                for j in ${INSTALLED_VERSIONS[@]}; do
@@ -2047,7 +2195,7 @@ while [ "$REDO" == "true" ]; do
       case $INPUT in
          [Cc]* ) REDO=false; INNER_LOOP=false;;
          [Rr]* ) REDO=true; INNER_LOOP=false;;
-            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+         [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
       esac
    done
 
@@ -2829,7 +2977,7 @@ if [ "$PROMETHEUS_VERSION" != "" ]; then
       POSTFIX=".$OS_NAME-$HARDWARE_NAME"
    fi
    PROMETHEUS_RELEASE="prometheus-$PROMETHEUS_VERSION${POSTFIX}"
-   PROMETHEUS_TARBALL="prometheus-$PROMETHEUS_RELEASE.tar.gz"
+   PROMETHEUS_TARBALL="$PROMETHEUS_RELEASE.tar.gz"
    installProduct "prometheus" "$SIMULATE"
 fi
 if [ "$GRAFANA_ENTERPRISE_VERSION" != "" ]; then

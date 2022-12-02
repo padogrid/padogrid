@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -300,6 +300,19 @@ __padogrid_complete()
          type_list=`getRweList`
       fi
       ;;
+
+   -version)
+      if [ "$command" == "install_padogrid" ]; then
+         # If -product specified then get downlodable product versions
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         type_list=$(getDownloadableProductVersions $product_name)
+      fi
+      ;;
       
    -workspace)
       if [ "$command" == "install_bundle" ]; then
@@ -444,6 +457,10 @@ __padogrid_complete()
    -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
       is_path="true"
      ;;
+
+   -scan)
+      type_list=3
+      ;;
 
    *)
       if [ "$command" == "cp_sub" ] || [ "$command" == "tools" ]; then
@@ -1170,6 +1187,11 @@ __command_complete()
    -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
      is_path="true"
      ;;
+
+   -scan)
+      type_list=3
+      ;;
+
    *)
       if [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
          is_path="true"

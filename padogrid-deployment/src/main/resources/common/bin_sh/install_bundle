@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # ========================================================================
-# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -connect -preview -download -checkout -workspace -force -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -checkout -workspace -replace -force -overwrite-workspace -init -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -53,7 +53,8 @@ SYNOPSIS
                   [-connect https | ssh]
                   [-checkout default | workspace_name]
                   [-workspace default | workspace_name]
-                  [-preview] [-download] [-force]
+                  [-replace sed_substitution_expression]
+                  [-preview] [-download] [-force] [-overwrite-workspace] [-init]
                   [-quiet] [-?] bundle_file_path
 
 DESCRIPTION
@@ -62,13 +63,12 @@ DESCRIPTION
    conflicting processes before executing this command; otherwise, the running processes
    may result in unpredictable state.
 
-   For online bundles, if the '.init_workspace.sh' script exists in the top directory, then it
-   is sourced in upon completion of bundle installation. The '.init_workspace.sh' script is the
-   entry point for initializing the bundle in a workspace environment; hence, it is sourced 
-   in only if the following options are specified.
+   For online bundles, if the '-init' option is specified and the '.init_workspace.sh' script
+   exists in the top directory, then it is sourced in upon completion of bundle workspace
+   installation. A bundle workspace is installed with the following options.
 
-      install_bundle -checkout
-      install_bundle -workspace -download
+      install_bundle -checkout -init
+      install_bundle -workspace -download -init
 
    If your local environment does not have access to the Internet, then you can install
    the online bundles by manually downloading them. Download the zip files from the
@@ -86,11 +86,10 @@ OPTIONS
              Git branch to download. If not specified then the default branch is downloaded.
 
    -connect https | ssh
-             Git connection type. For GitHub, the default is 'https'. For Gitea, only 'ssh'
-             is supported and this option is ignored. To connect to private repos, for 'ssh', you
-             must first deploy your public key, e.g., '~/.ssh/id_rsa.pub', to your repo account, and
-             for 'https', generate a personal access token from the repo account. Please see
-             GitHub documentation for details.
+             Git connection type. For GitHub, the default is 'https'. To connect to private repos,
+             for 'ssh', you must first deploy your public key, e.g., '~/.ssh/id_rsa.pub', to your
+             repo account, and for 'https', generate a personal access token from the repo account.
+             Please see GitHub or Gitea documentation for details.
 
              To make 'ssh' default, set GITHUB_PRIVATE_REPO_ENABLED to "true" in the
              '~/.padogrid/setenv.sh' file as shown below.
@@ -117,26 +116,49 @@ OPTIONS
              If this option is specified then it installs the bundle in the specified workspace.
              If workspace_name is 'default' or unspecified then the bundle name is used as the workspace
              name. The new workspace it creates clones the same configuration as the current workspace. 
-             If the '-download' option is also specified, then it checks out the bundle from the repo.
 
    -all
              Installs all bundles as workspace bundles. This option should be used in a new empty RWE
              to avoid workspace conflicts. It only applies to '-checkout' and '-download -workspace'.
              'workspace_name' and 'bundle_file_path' are ignored. See examples below.
 
+   -replace "sed_substitution_expression"
+             A 'sed' expression for substituting workspace names. This option allows renaming of
+             the long bundle names with more appropriate workspace names. It has the format of
+             '/from_exp/to_exp/' which translates to "sed 's/from_exp/to_exp/'". For example,
+             the following removes the prefix 'bundle-' from workspace names.
+
+             -replace "/bundle-//"
+
+             If spaces are in the substitition expression then the entire expression  must be
+             in double quotes.
+
+             This option is allowed only if the '-all' option is specified.
+
    -force
              If specified, then it overrides the product version check step and installs the 
              specified bundle. Normally, '$EXECUTABLE' aborts if the current workspace is
              is not configured with the required product version by the bundle. This option
-             is useful if you are only interested in viewing the bundle contents. A required
+             is useful if you are only interested in viewing the bundle contents. The required
              product version can be installed later as needed to run the bundle.
+
+   -overwrite-workspace
+             If specified, then overwrites the existing workspace. This option is meaningful only if
+             the '-checkout' or '-download -workspace' option is also specified. Without this option,
+             by default, this command aborts if the workspace already exists. Note that it does not
+             overwrite git artifacts.
+
+   -init
+             If specified, then for bundle workspace installation, the '.init_workspace.sh' script
+             is sourced in if it exists.
 
    -quiet
              Quiet mode. Supresses the interactive prompt.
 
    bundle_file_path
-              Bundle file path if local or bundle name if download. If the bundle file name ends with the .zip extension,
-              then it assumes the bundle file was downloaded from the repo and installs the bundle accordingly.
+              Bundle file path if local or bundle name if download. If the bundle file name ends with
+              the .zip extension, then it assumes the bundle file was downloaded from the repo and
+              installs the bundle accordingly.
 
 DEFAULT
    $EXECUTABLE -user padogrid -githost github
@@ -146,15 +168,39 @@ EXAMPLES
       $EXECUTABLE
 
    To preview a remote bundle:
-      $EXECUTABLE -download -preview bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
+      $EXECUTABLE -download -preview bundle-none-imdg-benchmark-tests
 
    To install a remote bundle:
-      $EXECUTABLE -download bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
+      $EXECUTABLE -download bundle-none-imdg-benchmark-tests
 
    To install a remote bundle as a workspace:
-      $EXECUTABLE -download -workspace bundle-coherence-14-app-perf_test_wan-cluster-ln-ny
+      $EXECUTABLE -download -workspace bundle-none-imdg-benchmark-tests
 
-   To install remote bundles as workspaces:
+   To overwrite an existing workspace:
+      $EXECUTABLE -download -workspace myws bundle-none-imdg-benchmark-tests
+
+   To install all remote bundles as workspaces:
+      $EXECUTABLE -all -download -workspace
+
+   To check out a remote bundle as a workspace:
+      $EXECUTABLE -checkout bundle-none-imdg-benchmark-tests
+
+   To check out all bundles as workspaces:
+      $EXECUTABLE -all -checkout
+
+   To install a downloaded zip file.
+      $EXECUTABLE bundle-hazelcast-4n5-cluster-session-master.zip
+      $EXECUTABLE -workspace bundle-hazelcast-4n5-cluster-session-master.zip
+      $EXECUTABLE -workspace mysession bundle-hazelcast-4n5-cluster-session-master.zip
+      
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+FILES
+   $PADOGRID_WORKSPACE/bundles
+             The current workspace bundles directory where locally generated bundles are stored.
+
+   To install all remote bundles as workspaces:
       $EXECUTABLE -all -download -workspace
 
    To check out a remote bundle as a workspace:
@@ -169,6 +215,7 @@ EXAMPLES
       $EXECUTABLE -workspace mysession bundle-hazelcast-4n5-cluster-session-master.zip
       
 EOF
+fi
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 FILES
@@ -194,24 +241,57 @@ fi
 
 BUNDLE_FILE_PATH="$LAST_ARG"
 
-# A workaround to .argenv.sh parser limiation
-#if [ "$BUNDLE_FILE_PATH" == "-all" ]; then
-#   ALL_SPECIFIED="true"
-#fi
-#if [ "$BUNDLE_FILE_PATH" == "-checkout" ]; then
-#   CHECKOUT_SPECIFIED="true"
-#fi
-#if [ "$BUNDLE_FILE_PATH" == "-workspace" ]; then
-#   WORKSPACE_SPECIFIED="true"
-#fi
+# Set WORKSPACE_NAME. (due to the arg parser limitations, we need to do this here)
+if [ "$CHECKOUT_ARG" == "" ] || [[ "$CHECKOUT_ARG" == "-"* ]] || [ "$CHECKOUT_ARG" == "$BUNDLE_FILE_PATH" ]; then
+   if [ "$CHECKOUT_ARG" == "-download" ]; then
+      DOWNLOAD="true"
+   elif [ "$CHECKOUT_ARG" == "-preview" ]; then
+      PREVIEW="true"
+   fi
+   WORKSPACE_NAME="default"
+else
+   WORKSPACE_NAME=$CHECKOUT_ARG
+fi
+if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
+   DOWNLOAD="true"
+fi
+if [ "$WORKSPACE_NAME" == "" ] || [ "$WORKSPACE_NAME" == "default" ]; then
+   if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]] || [ "$WORKSPACE_ARG" == "$BUNDLE_FILE_PATH" ]; then
+      if [ "$WORKSPACE_ARG" == "-download" ]; then
+         DOWNLOAD="true"
+      elif [ "$WORKSPACE_ARG" == "-preview" ]; then
+         PREVIEW="true"
+      fi
+      WORKSPACE_NAME="default"
+   else
+      WORKSPACE_NAME=$WORKSPACE_ARG
+   fi
+fi
 
-#echo debug: BUNDLE_FILE_PATH=$BUNDLE_FILE_PATH
-#echo dbug: ALL_SPECIFIED=$ALL_SPECIFIED
-#echo dbug: CHECKOUT_SPECIFIED=$CHECKOUT_SPECIFIED
-#echo dbug: DOWNLOAD=$DOWNLOAD
-#echo dbug: WORKSPACE_SPECIFIED=$WORKSPACE_SPECIFIED
-#echo dbug: FORCE_SPECIFIED=$FORCE_SPECIFIED
+# Exit if both -replace and workspace name specified
+if [ "$REPLACE_ARG" != "" ] && [ "$CHECKOUT_ARG" != "" ] &&  [ "$CHECKOUT_ARG" != "$BUNDLE_FILE_PATH" ]; then
+  echo -e "${CLightRed}ERROR:${CNone} '-replace' and workspace name are not allowed together. Command aborted."
+  exit 1
+fi
+if [ "$REPLACE_ARG" != "" ] && [ "$WORKSPACE_ARG" != "" ] &&  [ "$WORKSPACE_ARG" != "$BUNDLE_FILE_PATH" ]; then
+  echo -e "${CLightRed}ERROR:${CNone} '-replace' and workspace name are not allowed together. Command aborted."
+  exit 1
+fi
 
+# Exit if -replace expression is invalid
+SED_SUB_EXPRESSION="$REPLACE_ARG"
+if [ "$SED_SUB_EXPRESSION" != "" ]; then
+   if [[ "$SED_SUB_EXPRESSION" != "/"* ]] || [[ "$SED_SUB_EXPRESSION" != *"/" ]]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid sed substitution expression: [$SED_SUB_EXPRESSION]. Must begin and end with '/'. Command aborted."
+      exit 2
+   fi
+   WORKSPACE_NAME=$(echo $BUNDLE_FILE_PATH | sed "s$SED_SUB_EXPRESSION")
+fi
+
+
+#
+# Handle -all:w
+#
 OPTIONS_BY=""
 OPTIONS="$@" 
 if [ "$ALL_SPECIFIED" == "true" ]; then
@@ -219,6 +299,7 @@ if [ "$ALL_SPECIFIED" == "true" ]; then
      echo -e "${CLightRed}ERROR:${CNone} Invalid options. Bundle name not allowed with '-all'. Command aborted."
      exit 1
   fi
+
   if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
      OPTIONS_BY="-checkout"
   else
@@ -256,6 +337,9 @@ if [ "$ALL_SPECIFIED" == "true" ]; then
   exit
 fi
 
+#
+# Handle non-all
+#
 DOWNLOADED_BUNDLE_FILE_SPECIFIED=false
 if [[ $BUNDLE_FILE_PATH == *.zip ]]; then
    DOWNLOADED_BUNDLE_FILE_SPECIFIED=true
@@ -309,13 +393,21 @@ function isProductExist
 function getProductKeyValue
 {
    local bundleName=$1
-   local product=${bundleName#bundle-}
-   product=${product%%-*}
-   version=${bundleName#bundle-$product-}
-   version=${version#training-}
-   version=${version%%-*}
-   version=${version/n/,} 
-   echo "$product=$version"
+   if [[ "$bundleName" != "bundle-"* ]]; then
+      echo ""
+   else
+      local product=${bundleName#bundle-}
+      product=${product%%-*}
+      version=${bundleName#bundle-$product-}
+      version=${version#training-}
+      version=${version%%-*}
+      if [ "$version" == "bundle" ]; then
+         echo "$product="
+      else
+         version=${version/n/,} 
+         echo "$product=$version"
+      fi
+   fi
 }
 
 #
@@ -341,6 +433,16 @@ function createClusterEnv
     done
 }
 
+if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ] && [ "$CHECKOUT_SPECIFIED" == "true" ]; then
+   echo -e >&2 "${CLightRed}ERROR:${CNone} '-overwrite-workspace' and '-checkout' are not allowed together. Command aborted."
+   exit 1
+fi
+
+IS_BUNDLE_WORKSPACE="false"
+if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+   IS_BUNDLE_WORKSPACE="true"
+fi
+
 if [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" ]; then
    if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
       echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-checkout' not allowed with a zip file. Command aborted."
@@ -357,51 +459,32 @@ if [ "$CHECKOUT_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "true" ]; 
    exit 1
 fi
 
-# Set arguments. (due to the arg parser limitations, we need to do this here)
-if [ "$CHECKOUT_ARG" == "" ] || [[ "$CHECKOUT_ARG" == "-"* ]] || [ "$WORKSPACE_ARG" == "$BUNDLE_FILE_PATH" ]; then
-   if [ "$CHECKOUT_ARG" == "-download" ]; then
-      DOWNLOAD="true"
-   elif [ "$CHECKOUT_ARG" == "-preview" ]; then
-      PREVIEW="true"
-   fi
-   WORKSPACE_NAME="default"
-else
-   WORKSPACE_NAME=$CHECKOUT_ARG
-fi
-if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
-   DOWNLOAD="true"
-fi
-if [ "$WORKSPACE_NAME" == "" ] || [ "$WORKSPACE_NAME" == "default" ]; then
-   if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]] || [ "$WORKSPACE_ARG" == "$BUNDLE_FILE_PATH" ]; then
-      if [ "$WORKSPACE_ARG" == "-download" ]; then
-         DOWNLOAD="true"
-      elif [ "$WORKSPACE_ARG" == "-preview" ]; then
-         PREVIEW="true"
-      fi
-      WORKSPACE_NAME="default"
-   else
-      WORKSPACE_NAME=$WORKSPACE_ARG
-   fi
-fi
-
+# Set arguments
 if [ "$USER" == "" ]; then
    GITHUB_USER="padogrid"
 else
    GITHUB_USER="$USER"
 fi
+
 if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" ]; then
    IS_DOWNLOAD="true"
    REPO_NAME=""
-   if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+   if [ "$IS_BUNDLE_WORKSPACE" == "true" ]; then
       if [ "$WORKSPACE_NAME" != "default" ]; then
          REPO_NAME="$WORKSPACE_NAME"
       else
          REPO_NAME="$BUNDLE_NAME"
       fi
       GIT_DIR="$PADOGRID_WORKSPACES_HOME/$REPO_NAME"
-      if [ "$QUIET" == "false" ] && [ -d "$GIT_DIR" ]; then
-         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace already exists. Command aborted."
+      if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "false" ] && [ -d "$GIT_DIR" ]; then
+         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace already exists: [$REPO_NAME]. Command aborted."
          exit 1
+      elif [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ]; then
+         if [ -d "$GIT_DIR/.git" ] ; then
+            echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace is already checked out. Overwriting checked-out"
+            echo -e >&2 "       workspaces is not permitted. Command aborted."
+            exit 1
+         fi
       fi
    else
       GIT_DIR=$PADOGRID_WORKSPACE/bundles/$BUNDLE_NAME
@@ -423,8 +506,8 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       done
    fi
    if [ "$IS_DOWNLOAD" == "true" ]; then
-      if [ "$CHECKOUT_SPECIFIED" == "false" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
-         if [ -d $GIT_DIR ]; then
+      if [ "$IS_BUNDLE_WORKSPACE" == "false" ]; then
+         if [ -d "$GIT_DIR" ]; then
             rm -rf $GIT_DIR
          fi
       fi
@@ -457,7 +540,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
                fi
             done
 
-            if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+            if [ "$IS_BUNDLE_WORKSPACE" == "true" ]; then
                if [ "$WORKSPACE_NAME" == "default" ]; then
                   mv $BUNDLE_NAME $PADOGRID_WORKSPACES_HOME/
                else
@@ -489,7 +572,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
 
       # Use the bundle name as the workspace name if it is not specified.
       if [ "$WORKSPACE_NAME" == "default" ]; then
-         if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+         if [ "$IS_BUNDLE_WORKSPACE" == "true" ]; then
             WORKSPACE_NAME=$BUNDLE_NAME
          fi
       fi
@@ -503,7 +586,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       fi
       let len=${#propArray[@]}
       if [ $len -eq 0 ]; then
-         echo "Using bundle name to determine installed products..."
+         echo "Using the bundle name to determine installed products..."
       
          #
          # Make sure the bundle can be installed in the current environment.
@@ -635,11 +718,19 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          done
          popd > /dev/null 2>&1 
       else
-         if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-            pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1 
-            echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME
-            git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME> /dev/null 2>&1
-            popd > /dev/null 2>&1 
+         if [ "$IS_BUNDLE_WORKSPACE" == "true" ]; then
+            if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ]; then
+               pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
+               echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
+               git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git > /dev/null 2>&1
+               popd > /dev/null 2>&1
+               GIT_DIR=$PADOGRID_WORKSPACE/bundles/$BUNDLE_NAME
+            else
+               pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1 
+               echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME
+               git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git $REPO_NAME> /dev/null 2>&1
+               popd > /dev/null 2>&1 
+            fi
          else
             pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
             echo git clone $GITHUB_USER_HOME/${BUNDLE_FILE_PATH}.git 
@@ -660,48 +751,73 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             git checkout $BRANCH
          fi
          git pull
-         if [ "$CHECKOUT_SPECIFIED" == "false" ] && [ "$WORKSPACE_SPECIFIED" == "false" ]; then
+         if [ "$IS_BUNDLE_WORKSPACE" == "false" ]; then
             mvn package
          fi
          popd > /dev/null 2>&1 
       fi
-      if [ "$CHECKOUT_SPECIFIED" == "true" ] || [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-         TEMP_WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/__ws-${WORKSPACE_NAME}
-         # Copy the workspace files
-         if [ "$PRODUCT_HOME" == "" ]; then
-            create_workspace -quiet -name __ws-${WORKSPACE_NAME} > /dev/null
-         else
-            create_workspace -quiet -name __ws-${WORKSPACE_NAME} -product $PRODUCT_HOME > /dev/null
-         fi
-         rm -rf "$TEMP_WORKSPACE_DIR"/clusters/*
-         cp -r "$TEMP_WORKSPACE_DIR"/* "$GIT_DIR"/
-         cp "$TEMP_WORKSPACE_DIR"/.addonenv.sh "$GIT_DIR"/
-         sed -e "s/__ws-${WORKSPACE_NAME}/${WORKSPACE_NAME}/" "$TEMP_WORKSPACE_DIR/vmenv.sh" > "$GIT_DIR/vmenv.sh"
-         rm -rf "$TEMP_WORKSPACE_DIR"
-
-         if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
-            # Remove build files including git
-            if [ -d $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME ]; then
-               pushd $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME > /dev/null 2>&1 
-               rm -rf $(find . -name ".git*")
-               rm -f pom.xml
-               rm -f assembly-descriptor.xml
-               rm -f README_HEADER.md
+      if [ "$IS_BUNDLE_WORKSPACE" == "true" ]; then
+         WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
+         if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ]; then
+            pushd $"$GIT_DIR" > /dev/null 2>&1 
+            rm -rf $(find . -name ".git*") > /dev/null 2>&1
+            rm -f pom.xml > /dev/null 2>&1
+            rm -f assembly-descriptor.xml > /dev/null 2>&1
+            rm -f README_HEADER.md > /dev/null 2>&1
+            popd > /dev/null 2>&1 
+            INIT_WORKSPACE_EXISTS="false"
+            if [ -f "$GIT_DIR/.init_workspace.sh" ]; then
+               echo -e "${CHighlight}Overwriting current workspace's .init_workspace.sh...${CNone}"
+               INIT_WORKSPACE_EXISTS="true"
+            fi
+            cp -r $GIT_DIR/. "$WORKSPACE_PATH/"
+            rm -rf $GIT_DIR
+            if [ "$INIT_SPECIFIED" == "true" ] && [ "$INIT_WORKSPACE_EXISTS" == "true" ] && [ -f "$WORKSPACE_PATH/.init_workspace.sh" ]; then
+               pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
+               . .init_workspace.sh "$WORKSPACE_NAME"
                popd > /dev/null 2>&1 
             fi
+            echo ""
+            echo "Bundle workspace updated. Switch workspace by executing the following command:"
+         else
+            TEMP_WORKSPACE_DIR=$PADOGRID_WORKSPACES_HOME/__ws-${WORKSPACE_NAME}
+            # Copy the workspace files
+            if [ "$PRODUCT_HOME" == "" ]; then
+               create_workspace -quiet -name __ws-${WORKSPACE_NAME} -headless > /dev/null
+            else
+               create_workspace -quiet -name __ws-${WORKSPACE_NAME} -product $PRODUCT_HOME -headless > /dev/null
+            fi
+            rm -rf "$TEMP_WORKSPACE_DIR"/clusters/*
+            cp -r "$TEMP_WORKSPACE_DIR"/* "$GIT_DIR"/
+            cp "$TEMP_WORKSPACE_DIR"/.addonenv.sh "$GIT_DIR"/
+            sed -e "s/__ws-${WORKSPACE_NAME}/${WORKSPACE_NAME}/" "$TEMP_WORKSPACE_DIR/vmenv.sh" > "$GIT_DIR/vmenv.sh"
+            rm -rf "$TEMP_WORKSPACE_DIR"
+
+            if [ "$WORKSPACE_SPECIFIED" == "true" ]; then
+               # Remove build files including git 
+               if [ -d $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME ]; then
+                  pushd $PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME > /dev/null 2>&1 
+                  rm -rf $(find . -name ".git*") > /dev/null 2>&1
+                  rm -f pom.xml > /dev/null 2>&1
+                  rm -f assembly-descriptor.xml > /dev/null 2>&1
+                  rm -f README_HEADER.md > /dev/null 2>&1
+                  popd > /dev/null 2>&1 
+               fi
+            fi
+
+            CLUSTERS=$(list_clusters -workspace $WORKSPACE_NAME)
+            WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
+            createClusterEnv
+            if [ "$INIT_SPECIFIED" == "true" ] && [ -f "$WORKSPACE_PATH/.init_workspace.sh" ]; then
+               pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
+               . .init_workspace.sh "$WORKSPACE_NAME"
+               popd > /dev/null 2>&1 
+            fi
+
+            echo ""
+            echo "Bundle workspace created. Switch workspace by executing the following command:"
          fi
 
-         CLUSTERS=$(list_clusters -workspace $WORKSPACE_NAME)
-         WORKSPACE_PATH=$PADOGRID_WORKSPACES_HOME/$WORKSPACE_NAME
-         createClusterEnv
-         if [ -f "$WORKSPACE_PATH/.init_workspace.sh" ]; then
-            pushd $"$WORKSPACE_PATH" > /dev/null 2>&1 
-            . .init_workspace.sh "$WORKSPACE_NAME"
-            popd > /dev/null 2>&1 
-         fi
-
-         echo ""
-         echo "Bundle workspace created. Switch workspace by executing the following command:"
          echo -e "   ${CLightGreen}switch_workspace $REPO_NAME ${CNone}"
          echo ""
          exit

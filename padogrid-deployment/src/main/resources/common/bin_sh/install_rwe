@@ -37,7 +37,7 @@ WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
 __options()
 {
-   echo "-user -rwe -replace -checkout -?"
+   echo "-connect -user -rwe -replace -checkout -init -overwrite-workspace -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -55,7 +55,8 @@ NAME
    $EXECUTABLE - Install the specified bundles in the specified RWE
 
 SYNOPSIS
-   $EXECUTABLE [-user git_user_name] [-rwe rwe_name]
+   $EXECUTABLE [-user git_user_name] [-connect https | ssh]
+               [-rwe rwe_name] [-overwrite-workspace]
                [-replace sed_substitution_expression]
                [-checkout] [-simulate] [-?] comma_separted_bundle_names
 
@@ -71,6 +72,17 @@ OPTIONS
    -user git_user_name
              Git user name. If specified, then it downloads the specified bundle from user's
              Git repos.
+
+   -connect https | ssh
+             Git connection type. For GitHub, the default is 'https'. To connect to private repos,
+             for 'ssh', you must first deploy your public key, e.g., '~/.ssh/id_rsa.pub', to your
+             repo account, and for 'https', generate a personal access token from the repo account.
+             Please see GitHub or Gitea documentation for details.
+
+             To make 'ssh' default, set GITHUB_PRIVATE_REPO_ENABLED to "true" in the
+             '~/.padogrid/setenv.sh' file as shown below.
+
+             GITHUB_PRIVATE_REPO_ENABLED="true"
 
    -rwe rwe_name
              Name of RWE to which the specified bundles to be installed. It creates the RWE if
@@ -90,6 +102,16 @@ OPTIONS
    -checkout
              If specified, then checks out the bundles so that bundles can be checked in
              using 'git'.
+
+   -init
+             If specified, the '.init_workspace.sh' script in each workspace is sourced in if
+             it exists. Some bundles may include '.init_workspace.sh' to initialize their
+             respective bundle workspaces.
+
+   -overwrite-workspace
+             If specified, then overwrites the existing workspaces. Without this option,
+             by default, this command aborts the existing workspaces. Note that it does not
+             overwrite git artifacts.
 
    -simulate
              If specified, then it only simulates installations and does NOT perform actual
@@ -124,7 +146,7 @@ fi
 SED_SUB_EXPRESSION="$REPLACE_ARG"
 if [ "$SED_SUB_EXPRESSION" != "" ]; then
    if [[ "$SED_SUB_EXPRESSION" != "/"* ]] || [[ "$SED_SUB_EXPRESSION" != *"/" ]]; then
-      echo -e >&2 "${CError}ERROR:${CNone} Invalid sed substitituion expression: [$SED_SUB_EXPRESSION]. Must begin and end with '/'. Command aborted."
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid sed substitution expression: [$SED_SUB_EXPRESSION]. Must begin and end with '/'. Command aborted."
       exit 2
    fi
 fi
@@ -135,14 +157,32 @@ if [ "$SIMULATE" == "true" ]; then
    echo ""
 fi
 
-# Handle -user
-GITHUB_USER="$USER"
-
 # Handle -checkout
 if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
    INSTALL_BUNDLE_OPTIONS="-checkout"
 else
    INSTALL_BUNDLE_OPTIONS="-download -workspace"
+fi
+
+# Handle -init
+if [ "$INIT_SPECIFIED" == "true" ]; then
+   INSTALL_BUNDLE_OPTIONS="-init $INSTALL_BUNDLE_OPTIONS"
+fi
+
+# Handle -overwrite-workspace
+if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ]; then
+   INSTALL_BUNDLE_OPTIONS="-overwrite-workspace $INSTALL_BUNDLE_OPTIONS"
+fi
+
+# Handle -connect
+if [ "$CONNECT_ARG" != "" ]; then
+   INSTALL_BUNDLE_OPTIONS="-connect $CONNECT_ARG $INSTALL_BUNDLE_OPTIONS"
+fi
+
+# Handle -user
+GITHUB_USER="$USER"
+if [ "$GITHUB_USER" != "" ]; then
+   INSTALL_BUNDLE_OPTIONS="-user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS"
 fi
 
 # Handle RWE option
@@ -186,9 +226,9 @@ for BUNDLE in $BUNDLES; do
       WORKSPACE=""
    fi
    if [ "$SIMULATE" == "true" ]; then
-      echo install_bundle -force -connect https -user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
+      echo install_bundle -force $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
    else
-      install_bundle -force -connect https -user $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
+      install_bundle -force $GITHUB_USER $INSTALL_BUNDLE_OPTIONS $WORKSPACE $BUNDLE
    fi
 done
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020,2021 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-ip -port -dashboard -?"
+   echo "-ip -port -dashboard -default -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Start Jupyter Notebook server
 
 SYNOPSIS
-   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-dashboard] [-?]
+   $EXECUTABLE [-ip [ip_address]] [-port port_number] [-dashboard] [-default] [-?]
 
 NOTES
    Jupyter commands are experimental and subject to change in future releases.
@@ -60,6 +60,12 @@ OPTIONS
    -dashboard
              If specified, then it imports the dashboard for the current workspace. If this
              option is not specified, then it imports the JupyterLab's generic dashboard.
+
+   -default
+             If specified, then it sets the current PadoGrid workspace as the default
+             JupyterLab workspace. The default JupyterLab workspace has no path in the
+             URL, e.g., http://0.0.0.0:8888.
+
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -126,6 +132,16 @@ if [ "$DASHBOARD_SPECIFIED" == "true" ]; then
    if [ -f "$JUPYTER_WORKSPACE_FILE" ]; then
       jupyter lab workspaces import "$JUPYTER_WORKSPACE_FILE"
    fi
+
+   # Set default workspace
+   if [ "$DEFAULT_SPECIFIED" == "true" ]; then
+      DEFAULT_WORKSPACE_FILE="$PADOGRID_WORKSPACES_HOME/.jupyter/__default.json"
+      sed -e "s/\${WORKSPACE}/${WORKSPACE_NAME}/g" \
+          -e "s/\${RWE}/default/g" \
+          "$PADOGRID_HOME/etc/jupyter/template-jupyter-workspace.json" \
+          > "$DEFAULT_WORKSPACE_FILE"
+      jupyter lab workspaces import "$DEFAULT_WORKSPACE_FILE"
+   fi
 fi
 
 JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
@@ -138,9 +154,13 @@ popd > /dev/null 2>&1
 # token value from the log file
 sleep 4
 
-RWE_URL=$(getJupyterUrl $IP_ADDRESS $PORT_NUMBER)
+RWE_URL=$(getJupyterUrl "workspace" $IP_ADDRESS $PORT_NUMBER)
 
 echo ""
-echo "Notebook server started."
-echo -e "   ${CUrl}$RWE_URL${CNone}"
+echo "Jupyter server started."
+echo -e "   Workspace: ${CUrl}$RWE_URL${CNone}"
+if [ "$DEFAULT_SPECIFIED" == "true" ]; then
+   DEFAULT_URL=$(getJupyterUrl "default" $IP_ADDRESS $PORT_NUMBER)
+   echo -e "     Default: ${CUrl}$DEFAULT_URL${CNone}"
+fi
 echo ""

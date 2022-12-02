@@ -46,6 +46,7 @@ WORKSPACE_SPECIFIED=false
 CHECKOUT_SPECIFIED=false
 IMPORT_SPECIFIED=false
 DASHBOARD_SPECIFIED=false
+DEFAULT_SPECIFIED=false
 JAVA_HOME_ARG=
 PATH_ARG=
 JAR_ARG=
@@ -73,6 +74,8 @@ INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
 VERSION_ARG=
 FORCE_SPECIFIED=false
+HEADLESS_SPECIFIED=false
+OVERWRITE_WORKSPACE_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_ARG=
 CLUSTER_SPECIFIED=false
@@ -145,6 +148,7 @@ SAVE_ARG=
 SAVE_SPECIFIED=false
 LOAD_ARG=
 LOAD_SPECIFIED=false
+SCAN_ARG=
 SCAN_SPECIFIED=false
 OSS=false
 RHEL=false
@@ -339,6 +343,8 @@ do
          SAVE_ARG=$i
       elif [ "$PREV" == "-load" ]; then
          LOAD_ARG=$i
+      elif [ "$PREV" == "-scan" ]; then
+         SCAN_ARG=$i
       fi
 
    else
@@ -350,6 +356,10 @@ do
          VERSION_SPECIFIED=true
       elif [ "$i" == "-force" ]; then
          FORCE_SPECIFIED=true
+      elif [ "$i" == "-headless" ]; then
+         HEADLESS_SPECIFIED="true"
+      elif [ "$i" == "-overwrite-workspace" ]; then
+         OVERWRITE_WORKSPACE_SPECIFIED=true
       elif [ "$i" == "-man" ]; then
          MAN_SPECIFIED=true
       elif [ "$i" == "-fg" ]; then
@@ -368,6 +378,8 @@ do
          IMPORT_SPECIFIED=true
       elif [ "$i" == "-dashboard" ]; then
          DASHBOARD_SPECIFIED=true
+      elif [ "$i" == "-default" ]; then
+         DEFAULT_SPECIFIED=true
       elif [ "$i" == "-list" ]; then
          LIST=true
          LIST_SPECIFIED=true
