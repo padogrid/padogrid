@@ -8,6 +8,7 @@ https://github.com/padogrid
 
 ### Release Date: 12/02/22
 
+- Enhanced several commands to ease bundle installations particularly in containers.
 - The `install_bundle` command now includes the `-overwrite-workspace` option for overwriting an existing workspace with bundle workspace contents.
 - `create_workspace` now includes a workspace `README.md` file, which serves as your workspace document. Its content should be replaced with your workspace descriptions.
 - Added `install_padogrid -version` for installing a specific product version.
