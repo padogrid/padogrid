@@ -6,11 +6,12 @@ https://github.com/padogrid
 
 ## Version 0.9.23-SNAPSHOT
 
-### Release Date: 11/29/22
+### Release Date: 12/02/22
 
 - The `install_bundle` command now includes the `-overwrite-workspace` option for overwriting an existing workspace with bundle workspace contents.
 - `create_workspace` now includes a workspace `README.md` file, which serves as your workspace document. Its content should be replaced with your workspace descriptions.
 - Added `install_padogrid -version` for installing a specific product version.
+- Added `install_padogrid -scan [scan_delay_in_seconds]` to delay between URL scans to prevent the GitHub rate meter from rejecting repetitive calls.
 - Added `create_workspace -headless` for excluding workspace header artifacts.
 - `install_bundle` now requires the `-init` option to trigger the `.init_workspace.sh` script.
 - Added the `-init`, `-overwrite-workspace` options to `install_rwe` and `install_bundle`. The `-init` option initializes bundle workspaces and the `-overwrite-workspace` overwrites existing workspaces.
