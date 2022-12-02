@@ -148,6 +148,7 @@ SAVE_ARG=
 SAVE_SPECIFIED=false
 LOAD_ARG=
 LOAD_SPECIFIED=false
+SCAN_ARG=
 SCAN_SPECIFIED=false
 OSS=false
 RHEL=false
@@ -342,6 +343,8 @@ do
          SAVE_ARG=$i
       elif [ "$PREV" == "-load" ]; then
          LOAD_ARG=$i
+      elif [ "$PREV" == "-scan" ]; then
+         SCAN_ARG=$i
       fi
 
    else

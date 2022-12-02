@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -connect -preview -download -checkout -workspace -force -overwrite-workspace -init -quiet -?"
+   echo "-user -githost -branch -connect -preview -download -checkout -workspace -replace -force -overwrite-workspace -init -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -53,6 +53,7 @@ SYNOPSIS
                   [-connect https | ssh]
                   [-checkout default | workspace_name]
                   [-workspace default | workspace_name]
+                  [-replace sed_substitution_expression]
                   [-preview] [-download] [-force] [-overwrite-workspace] [-init]
                   [-quiet] [-?] bundle_file_path
 
@@ -120,6 +121,19 @@ OPTIONS
              Installs all bundles as workspace bundles. This option should be used in a new empty RWE
              to avoid workspace conflicts. It only applies to '-checkout' and '-download -workspace'.
              'workspace_name' and 'bundle_file_path' are ignored. See examples below.
+
+   -replace "sed_substitution_expression"
+             A 'sed' expression for substituting workspace names. This option allows renaming of
+             the long bundle names with more appropriate workspace names. It has the format of
+             '/from_exp/to_exp/' which translates to "sed 's/from_exp/to_exp/'". For example,
+             the following removes the prefix 'bundle-' from workspace names.
+
+             -replace "/bundle-//"
+
+             If spaces are in the substitition expression then the entire expression  must be
+             in double quotes.
+
+             This option is allowed only if the '-all' option is specified.
 
    -force
              If specified, then it overrides the product version check step and installs the 
@@ -227,24 +241,57 @@ fi
 
 BUNDLE_FILE_PATH="$LAST_ARG"
 
-# A workaround to .argenv.sh parser limiation
-#if [ "$BUNDLE_FILE_PATH" == "-all" ]; then
-#   ALL_SPECIFIED="true"
-#fi
-#if [ "$BUNDLE_FILE_PATH" == "-checkout" ]; then
-#   CHECKOUT_SPECIFIED="true"
-#fi
-#if [ "$BUNDLE_FILE_PATH" == "-workspace" ]; then
-#   WORKSPACE_SPECIFIED="true"
-#fi
+# Set WORKSPACE_NAME. (due to the arg parser limitations, we need to do this here)
+if [ "$CHECKOUT_ARG" == "" ] || [[ "$CHECKOUT_ARG" == "-"* ]] || [ "$CHECKOUT_ARG" == "$BUNDLE_FILE_PATH" ]; then
+   if [ "$CHECKOUT_ARG" == "-download" ]; then
+      DOWNLOAD="true"
+   elif [ "$CHECKOUT_ARG" == "-preview" ]; then
+      PREVIEW="true"
+   fi
+   WORKSPACE_NAME="default"
+else
+   WORKSPACE_NAME=$CHECKOUT_ARG
+fi
+if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
+   DOWNLOAD="true"
+fi
+if [ "$WORKSPACE_NAME" == "" ] || [ "$WORKSPACE_NAME" == "default" ]; then
+   if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]] || [ "$WORKSPACE_ARG" == "$BUNDLE_FILE_PATH" ]; then
+      if [ "$WORKSPACE_ARG" == "-download" ]; then
+         DOWNLOAD="true"
+      elif [ "$WORKSPACE_ARG" == "-preview" ]; then
+         PREVIEW="true"
+      fi
+      WORKSPACE_NAME="default"
+   else
+      WORKSPACE_NAME=$WORKSPACE_ARG
+   fi
+fi
 
-#echo debug: BUNDLE_FILE_PATH=$BUNDLE_FILE_PATH
-#echo dbug: ALL_SPECIFIED=$ALL_SPECIFIED
-#echo dbug: CHECKOUT_SPECIFIED=$CHECKOUT_SPECIFIED
-#echo dbug: DOWNLOAD=$DOWNLOAD
-#echo dbug: WORKSPACE_SPECIFIED=$WORKSPACE_SPECIFIED
-#echo dbug: FORCE_SPECIFIED=$FORCE_SPECIFIED
+# Exit if both -replace and workspace name specified
+if [ "$REPLACE_ARG" != "" ] && [ "$CHECKOUT_ARG" != "" ] &&  [ "$CHECKOUT_ARG" != "$BUNDLE_FILE_PATH" ]; then
+  echo -e "${CLightRed}ERROR:${CNone} '-replace' and workspace name are not allowed together. Command aborted."
+  exit 1
+fi
+if [ "$REPLACE_ARG" != "" ] && [ "$WORKSPACE_ARG" != "" ] &&  [ "$WORKSPACE_ARG" != "$BUNDLE_FILE_PATH" ]; then
+  echo -e "${CLightRed}ERROR:${CNone} '-replace' and workspace name are not allowed together. Command aborted."
+  exit 1
+fi
 
+# Exit if -replace expression is invalid
+SED_SUB_EXPRESSION="$REPLACE_ARG"
+if [ "$SED_SUB_EXPRESSION" != "" ]; then
+   if [[ "$SED_SUB_EXPRESSION" != "/"* ]] || [[ "$SED_SUB_EXPRESSION" != *"/" ]]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid sed substitution expression: [$SED_SUB_EXPRESSION]. Must begin and end with '/'. Command aborted."
+      exit 2
+   fi
+   WORKSPACE_NAME=$(echo $BUNDLE_FILE_PATH | sed "s$SED_SUB_EXPRESSION")
+fi
+
+
+#
+# Handle -all:w
+#
 OPTIONS_BY=""
 OPTIONS="$@" 
 if [ "$ALL_SPECIFIED" == "true" ]; then
@@ -252,6 +299,7 @@ if [ "$ALL_SPECIFIED" == "true" ]; then
      echo -e "${CLightRed}ERROR:${CNone} Invalid options. Bundle name not allowed with '-all'. Command aborted."
      exit 1
   fi
+
   if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
      OPTIONS_BY="-checkout"
   else
@@ -289,6 +337,9 @@ if [ "$ALL_SPECIFIED" == "true" ]; then
   exit
 fi
 
+#
+# Handle non-all
+#
 DOWNLOADED_BUNDLE_FILE_SPECIFIED=false
 if [[ $BUNDLE_FILE_PATH == *.zip ]]; then
    DOWNLOADED_BUNDLE_FILE_SPECIFIED=true
@@ -342,13 +393,21 @@ function isProductExist
 function getProductKeyValue
 {
    local bundleName=$1
-   local product=${bundleName#bundle-}
-   product=${product%%-*}
-   version=${bundleName#bundle-$product-}
-   version=${version#training-}
-   version=${version%%-*}
-   version=${version/n/,} 
-   echo "$product=$version"
+   if [[ "$bundleName" != "bundle-"* ]]; then
+      echo ""
+   else
+      local product=${bundleName#bundle-}
+      product=${product%%-*}
+      version=${bundleName#bundle-$product-}
+      version=${version#training-}
+      version=${version%%-*}
+      if [ "$version" == "bundle" ]; then
+         echo "$product="
+      else
+         version=${version/n/,} 
+         echo "$product=$version"
+      fi
+   fi
 }
 
 #
@@ -400,33 +459,7 @@ if [ "$CHECKOUT_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "true" ]; 
    exit 1
 fi
 
-# Set arguments. (due to the arg parser limitations, we need to do this here)
-if [ "$CHECKOUT_ARG" == "" ] || [[ "$CHECKOUT_ARG" == "-"* ]] || [ "$WORKSPACE_ARG" == "$BUNDLE_FILE_PATH" ]; then
-   if [ "$CHECKOUT_ARG" == "-download" ]; then
-      DOWNLOAD="true"
-   elif [ "$CHECKOUT_ARG" == "-preview" ]; then
-      PREVIEW="true"
-   fi
-   WORKSPACE_NAME="default"
-else
-   WORKSPACE_NAME=$CHECKOUT_ARG
-fi
-if [ "$CHECKOUT_SPECIFIED" == "true" ]; then
-   DOWNLOAD="true"
-fi
-if [ "$WORKSPACE_NAME" == "" ] || [ "$WORKSPACE_NAME" == "default" ]; then
-   if [ "$WORKSPACE_ARG" == "" ] || [[ "$WORKSPACE_ARG" == "-"* ]] || [ "$WORKSPACE_ARG" == "$BUNDLE_FILE_PATH" ]; then
-      if [ "$WORKSPACE_ARG" == "-download" ]; then
-         DOWNLOAD="true"
-      elif [ "$WORKSPACE_ARG" == "-preview" ]; then
-         PREVIEW="true"
-      fi
-      WORKSPACE_NAME="default"
-   else
-      WORKSPACE_NAME=$WORKSPACE_ARG
-   fi
-fi
-
+# Set arguments
 if [ "$USER" == "" ]; then
    GITHUB_USER="padogrid"
 else
@@ -444,7 +477,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
       fi
       GIT_DIR="$PADOGRID_WORKSPACES_HOME/$REPO_NAME"
       if [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "false" ] && [ -d "$GIT_DIR" ]; then
-         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace already exists. Command aborted."
+         echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace already exists: [$REPO_NAME]. Command aborted."
          exit 1
       elif [ "$OVERWRITE_WORKSPACE_SPECIFIED" == "true" ]; then
          if [ -d "$GIT_DIR/.git" ] ; then

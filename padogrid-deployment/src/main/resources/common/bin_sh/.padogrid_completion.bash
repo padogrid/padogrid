@@ -458,6 +458,10 @@ __padogrid_complete()
       is_path="true"
      ;;
 
+   -scan)
+      type_list=3
+      ;;
+
    *)
       if [ "$command" == "cp_sub" ] || [ "$command" == "tools" ]; then
          if [ $len -gt 3 ]; then
@@ -1183,6 +1187,11 @@ __command_complete()
    -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
      is_path="true"
      ;;
+
+   -scan)
+      type_list=3
+      ;;
+
    *)
       if [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
          is_path="true"
