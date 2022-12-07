@@ -83,11 +83,6 @@ elif [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
    fi
 fi
 
-# If the base path is not writable then set it to the default PadoGrid base path.
-if [ ! -w "$PADOGRID_ENV_BASE_PATH" ]; then
-   PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
-fi
-
 #
 # NOTE: To make this command independent, some of the functions defined in the file are duplicated
 #       from the .utilenv.sh and .argenv.sh files.
@@ -322,6 +317,11 @@ function containsWord
     echo "$retval"
 }
 
+# Exit if the user lacks download permissions
+if [ ! -w "$PADOGRID_PRODUCTS_PATH" ]; then
+   echo -e "${CError}ERROR:${CNone} Product installation denied. You do not have write permissions. Command aborted."
+   exit 1
+fi
 # Exit if both -save and -load specified
 if [ "$SAVE_SPECIFIED" == "true" ] && [ "$LOAD_SPECIFIED" == "true" ]; then
    echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-load' and '-save' are not allowed together. Command aborted."
