@@ -875,7 +875,7 @@ function getDownloadableConfluentVersions
       local MAJOR_VERSION=$(echo $i | awk -F. '{printf "%s", $1}')
       # KRaft supported startingetDownloadableConfluentVersionsg 7.0
       if [ $MAJOR_VERSION -ge 6 ]; then
-         local versions=$(curl -sL ${CONFLUENT_DOWNLOAD_URL}$i/ | grep "confluent-.*.tar.gz<" | sed -e 's/.*>confluent/confluent/' -e 's/.tar.gz.*//')
+         local versions=$(curl -sL ${CONFLUENT_DOWNLOAD_URL}$i/ | grep "confluent-.*.tar.gz<" | grep -v zOS | sed -e 's/.*>confluent/confluent/' -e 's/.tar.gz.*//')
          ALL_CONFLUENT_VERSIONS="$ALL_CONFLUENT_VERSIONS $versions"
       fi
    done
@@ -1334,6 +1334,9 @@ fi
 
 if [ "$SCAN_SPECIFIED" != "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" == "" ]; then
    # Download the cached product versions
+   if [ ! -d $PADOGRID_DOWNLOADS_PATH ]; then
+      PADOGRID_DOWNLOADS_PATH=/tmp
+   fi
    DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
    curl -sL -o "$DOWNLOAD_VERSIONS_FILE" "$DOWNLOAD_VERSIONS_URL"
 fi
@@ -1361,6 +1364,10 @@ if [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
    PROMETHEUS_DOWNLOAD_VERSIONS=($PROMETHEUS_DOWNLOAD_VERSIONS)
    GRAFANA_DOWNLOAD_VERSIONS=($GRAFANA_DOWNLOAD_VERSIONS)
    DERBY_DOWNLOAD_VERSIONS=($DERBY_DOWNLOAD_VERSIONS)
+
+   if [ "$(dirname $DOWNLOAD_VERSIONS_FILE)" = "/tmp" ]; then
+      rm $DOWNLOAD_VERSIONS_FILE
+   fi
 else
    #
    # Scan downloadable product versions
@@ -2973,6 +2980,8 @@ fi
 if [ "$PROMETHEUS_VERSION" != "" ]; then
    if [ "$HARDWARE_NAME" == "x86_64" ]; then
       POSTFIX=".$OS_NAME-amd64"
+   elif [ "$HARDWARE_NAME" == "aarch64" ]; then
+      POSTFIX=".$OS_NAME-arm64"
    else
       POSTFIX=".$OS_NAME-$HARDWARE_NAME"
    fi
@@ -2983,6 +2992,8 @@ fi
 if [ "$GRAFANA_ENTERPRISE_VERSION" != "" ]; then
    if [ "$HARDWARE_NAME" == "x86_64" ]; then
       POSTFIX=".$OS_NAME-amd64"
+   elif [ "$HARDWARE_NAME" == "aarch64" ]; then
+      POSTFIX=".$OS_NAME-arm64"
    else
       POSTFIX=".$OS_NAME-$HARDWARE_NAME"
    fi
@@ -2993,6 +3004,8 @@ fi
 if [ "$GRAFANA_OSS_VERSION" != "" ]; then
    if [ "$HARDWARE_NAME" == "x86_64" ]; then
       POSTFIX=".$OS_NAME-amd64"
+   elif [ "$HARDWARE_NAME" == "aarch64" ]; then
+      POSTFIX=".$OS_NAME-arm64"
    else
       POSTFIX=".$OS_NAME-$HARDWARE_NAME"
    fi

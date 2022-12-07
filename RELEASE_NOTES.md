@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.24-SNAPSHOT
 
-### Release Date: 12/02/22
+### Release Date: 12/06/22
 
-- Initial snapshot.
+- Fixed `install_padogrid` to download the correct versions of ARM64 for Grafana and Prometheus. 
 
 ---
 
