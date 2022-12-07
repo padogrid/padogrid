@@ -10,6 +10,7 @@ https://github.com/padogrid
 
 - Fixed `install_padogrid` to download the correct versions of ARM64 for Grafana and Prometheus. 
 - Fixed `install_padogrid -quiet -product` options to override product scanning with the cached product versions during the initial installation time.
+- Added logic in `install_padogrid` to exit if the user does not have write permission.
 
 ---
 
