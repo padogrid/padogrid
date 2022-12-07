@@ -1334,8 +1334,8 @@ fi
 
 if [ "$SCAN_SPECIFIED" != "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" == "" ]; then
    # Download the cached product versions
-   if [ ! -d $PADOGRID_DOWNLOADS_PATH ]; then
-      PADOGRID_DOWNLOADS_PATH=/tmp
+   if [ ! -d "$PADOGRID_DOWNLOADS_PATH" ]; then
+      mkdir -p "$PADOGRID_DOWNLOADS_PATH"
    fi
    DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
    curl -sL -o "$DOWNLOAD_VERSIONS_FILE" "$DOWNLOAD_VERSIONS_URL"
@@ -1364,10 +1364,6 @@ if [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
    PROMETHEUS_DOWNLOAD_VERSIONS=($PROMETHEUS_DOWNLOAD_VERSIONS)
    GRAFANA_DOWNLOAD_VERSIONS=($GRAFANA_DOWNLOAD_VERSIONS)
    DERBY_DOWNLOAD_VERSIONS=($DERBY_DOWNLOAD_VERSIONS)
-
-   if [ "$(dirname $DOWNLOAD_VERSIONS_FILE)" = "/tmp" ]; then
-      rm $DOWNLOAD_VERSIONS_FILE
-   fi
 else
    #
    # Scan downloadable product versions
