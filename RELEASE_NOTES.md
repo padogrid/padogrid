@@ -6,11 +6,12 @@ https://github.com/padogrid
 
 ## Version 0.9.24-SNAPSHOT
 
-### Release Date: 12/07/22
+### Release Date: 12/08/22
 
 - Fixed `install_padogrid` to download the correct versions of ARM64 for Grafana and Prometheus. 
 - Fixed `install_padogrid -quiet -product` options to override product scanning with the cached product versions during the initial installation time.
 - Added logic in `install_padogrid` to exit if the user does not have write permission.
+- Fixed Geode log4j2 issues by replacing its `log4j2.properties` with Hazelcast's.
 
 ---
 
