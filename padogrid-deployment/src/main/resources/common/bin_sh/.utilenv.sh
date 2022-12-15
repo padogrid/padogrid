@@ -4008,6 +4008,88 @@ function determineProduct
 }
 
 #
+# Sets the following environment variables with the current versions extracted
+# from their corresponding *_HOME environment variables.
+#
+# __PADOGRID_VERSION
+# __PADO_VERSION
+# __PADODESKTOP_VERSION
+# __PADOWEB_VERSION
+# __COHERENCE_VERSION
+# __DERBY_VERSION
+# __JAVA_VERSION
+# __GEMFIRE_VERSION
+# __GRAFANA_VERSION
+# __GRAFANA_VERSION
+# __HAZELCAST_DESKTOP_VERSION
+# __HADOOP_VERSION
+# __HAZELCAST_ENTERPRISE_VERSION
+# __HAZELCAST_MC_VERSION=${HAZELCAST_MC_HOME#*hazelcast-management-center-}
+# __HAZELCAST_OSS_VERSION=${HAZELCAST_HOME#*hazelcast-}
+# __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
+# __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
+# __JET_MC_VERSION
+# __KAFKA_VERSION
+# __CONFLUENT_VERSION
+# __PROMETHEUS_VERSION
+# __REDIS_VERSION
+# __SNAPPYDATA_VERSION
+# __SPARK_VERSION
+# 
+# @required *_HOME Product home environment variables ending with _HOME.
+#
+function getCurrentProductVersions
+{
+   __PADOGRID_VERSION=${PADOGRID_HOME#*padogrid_}
+   __PADO_VERSION=${PADO_HOME#*pado_}
+   __PADODESKTOP_VERSION=${PADODESKTOP_HOME#*pado-desktop_}
+   __PADOWEB_VERSION=${PADOWEB_HOME#*padoweb_}
+   if [ -f "$COHERENCE_HOME/product.xml" ]; then
+       __COHERENCE_VERSION=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+   fi
+   __DERBY_VERSION=${DERBY_HOME#*db-derby-}
+   __JAVA_VERSION=$JAVA_VERSION
+   __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
+   __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
+   __GRAFANA_VERSION=${GRAFANA_HOME#*grafana-}
+   __HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_HOME##*hazelcast-desktop_}
+   __HADOOP_VERSION=${HADOOP_HOME#*hadoop-}
+   if [[ "$HAZELCAST_HOME" == *"hazelcast-enterprise"* ]]; then
+      __HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_HOME#*hazelcast-enterprise-}
+   else
+      __HAZELCAST_ENTERPRISE_VERSION=""
+   fi
+   if [[ "$HAZELCAST_MC_HOME" == *"management-center" ]] && [ -d "$HAZELCAST_MC_HOME" ]; then
+      for i in $HAZELCAST_MC_HOME/*.jar; do
+         if [[ "$i" == *"hazelcast-management-center"* ]]; then
+            __HAZELCAST_MC_VERSION=${i#*hazelcast-management-center-}
+            __HAZELCAST_MC_VERSION=${__HAZELCAST_MC_VERSION%.jar}
+            break; fi
+      done
+   else
+      __HAZELCAST_MC_VERSION=${HAZELCAST_MC_HOME#*hazelcast-management-center-}
+   fi
+   if [ "$__HAZELCAST_ENTERPRISE_VERSION" == "" ]; then
+      __HAZELCAST_OSS_VERSION=${HAZELCAST_HOME#*hazelcast-}
+   else
+      __HAZELCAST_OSS_VERSION=""
+   fi
+   __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
+   __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
+   if [[ "$JET_MC_HOME" == *"4.2021"* ]]; then
+      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-management-center-}
+   else
+      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-jet-management-center-}
+   fi
+   __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
+   __CONFLUENT_VERSION=${CONFLUENT_HOME#*confluent-}
+   __PROMETHEUS_VERSION=${PROMETHEUS_HOME#*prometheus-}
+   __REDIS_VERSION=${REDIS_HOME#*redis-}
+   __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
+   __SPARK_VERSION=${SPARK_HOME#*spark-}
+}
+
+#
 # Determines the product by examining cluster files. The following environment variables
 # are set after invoking this function.
 #   PRODUCT         geode, hazelcast, snappydata, coherence, redis, spark, hadoop

@@ -208,10 +208,12 @@ done
 LAST_TIMESTAMP_TRAP=0
 trap 'cleanExit "$EXECUTABLE" "vm" "false"' INT
 
+THIS_VM_HOSTNAME=`hostname`
+
 TMP_RWE_SETENV_FILE="/tmp/padogrid-$EXECUTABLE-vm-rwe_setenv.sh"
 TMP_SETENV_FILE="/tmp/padogrid-$EXECUTABLE-vm-setenv.sh"
 TMP_VM_SYNC_TARBALL_FILE="/tmp/padogrid-$EXECUTABLE-vm-vm_sync.tar.gz"
-TMP_ADDONEVN_FILE="/tmp/padogrid-$EXECUTABLE-vm-.addonenv.sh"
+TMP_ADDONENV_FILE="/tmp/padogrid-$EXECUTABLE-vm-.addonenv.sh"
 
 # Replace '~' with the VM home path in 'vmenv.sh'
 VM_HOME=""
@@ -228,6 +230,7 @@ VM_JAVA_HOME=$(echo $VM_JAVA_HOME | sed -e "s|\~|$VM_HOME|")
 PADOGRID_COMMAND="[ -d "$VM_PADOGRID_HOME" ] && echo true || echo false"
 JAVA_COMMAND="[ -d "$VM_JAVA_HOME" ] && echo true || echo false"
 INSTALL_PADOGRID_HOST_LIST=""
+INSTALL_JAVA_HOST_LIST=""
 SETENV_DOWNLOADED="false"
 for VM_HOST in $__VM_HOSTS; do
    # padogrid
@@ -235,8 +238,12 @@ for VM_HOST in $__VM_HOSTS; do
    if [[ "$PADOGRID_EXISTS" == *"false" ]]; then
       INSTALL_PADOGRID_HOST_LIST="$INSTALL_PADOGRID_HOST_LIST $VM_HOST"
    fi
-   if [ "$SETENV_DOWNLOADED" == "false" ]; then
-      # Download the first setenv.sh. We'll use this later to update the VMs that do not have it.
+   # java - for user info only
+   JAVA_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$JAVA_COMMAND")
+   if [[ "$JAVA_EXISTS" == *"false" ]]; then
+      INSTALL_JAVA_HOST_LIST="$INSTALL_JAVA_HOST_LIST $VM_HOST"
+   fi
+   if [ "$SETENV_DOWNLOADED" == "false" ]; then # Download the first setenv.sh. We'll use this later to update the VMs that do not have it.
       # That could happen if new VMs were added or there were network issues.
       if [ "$SIMULATE" == "true" ]; then
         echo "scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE > /dev/null 2>&1"
@@ -273,46 +280,12 @@ if [ "$INSTALL_PADOGRID_HOST_LIST" != "" ]; then
    done
 fi
 
-# Set first VM's installed products in arrays
-__VM_HOST_FIRST=$(echo $__VM_HOSTS | sed 's/ .*//')
-declare -A vm_installed_product_array
-declare -A vm_installed_product_home_array
-getVmProductArray $__VM_HOST_FIRST vm_installed_product_array vm_installed_product_home_array
-VM_INSTALLED_PRODUCTS=${!vm_installed_product_array[@]}
-VM_INSTALLED_PRODUCTS="$(echo $(printf '%s\n' $VM_INSTALLED_PRODUCTS|sort -u))"
-VM_INSTALLED_PRODUCT_HOMES=${!vm_installed_product_home_array[@]}
-VM_INSTALLED_PRODUCT_HOMES="$(echo $(printf '%s\n' $VM_INSTALLED_PRODUCT_HOMES|sort -u))"
-VM_PADOGRID_PRODUCTS_PATH="$VM_PADOGRID_ENV_BASE_PATH/products"
-
 # Prepare rwe and workspace setenv.sh files for VMs
 THIS_VM_HOSTNAME=`hostname`
 ABS_PATH="$PADOGRID_WORKSPACE"
 INITENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/initenv.sh" ] && echo true || echo false"
 ADDONENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh" ] && echo true || echo false"
 SETENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/setenv.sh" ] && echo true || echo false"
-if [ "SETENV_DOWNLOADED" != "true" ]; then
-   cp $PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE
-   cp $PADOGRID_WORKSPACE/setenv.sh $TMP_SETENV_FILE
-   # Reset all exported variables
-   EXPORT_HOME_LIST_RWE=$(grep "export .*HOME=" $TMP_RWE_SETENV_FILE | sed -e 's/^.*export //' -e 's/HOME=.*/HOME/')
-   for i in $EXPORT_HOME_LIST_RWE; do
-      sed -i$__SED_BACKUP -e "s/export $i=.*$/#export $i="\"\""/" -e 's/##/#/' $TMP_RWE_SETENV_FILE
-   done
-   sed -i$__SED_BACKUP -e 's|^.*export PADOGRID_HOME=.*$|   export PADOGRID_HOME='\"${VM_PADOGRID_HOME}\"'|' $TMP_RWE_SETENV_FILE
-   EXPORT_HOME_LIST_WORKSPACE=$(grep "export .*HOME=" $TMP_SETENV_FILE | sed -e 's/^.*export //' -e 's/HOME=.*/HOME/')
-   for i in $EXPORT_HOME_LIST_WORKSPACE; do
-      sed -i$__SED_BACKUP -e "s/export $i=.*$/#export $i="\"\""/" -e 's/##/#/' $TMP_SETENV_FILE
-   done
-   sed -i$__SED_BACKUP -e 's|^.*export PADOGRID_HOME=.*$|   export PADOGRID_HOME='\"${VM_PADOGRID_HOME}\"'|' $TMP_SETENV_FILE
-
-   # Create VM workspace setenv.sh
-   for VM_PRODUCT_HOME_VAR in $VM_INSTALLED_PRODUCT_HOMES; do
-      VM_PRODUCT_HOME_DIR_NAME="${vm_installed_product_home_array[$VM_PRODUCT_HOME_VAR]}"
-      VM_PRODUCT_HOME_PATH="$VM_PADOGRID_PRODUCTS_PATH/$VM_PRODUCT_HOME_DIR_NAME"
-      sed -i$__SED_BACKUP -e "s|^.*export $VM_PRODUCT_HOME_VAR=.*$|   export $VM_PRODUCT_HOME_VAR="\"${VM_PRODUCT_HOME_PATH}\""|" $TMP_RWE_SETENV_FILE
-      sed -i$__SED_BACKUP -e "s|^.*export $VM_PRODUCT_HOME_VAR=.*$|   export $VM_PRODUCT_HOME_VAR="\"${VM_PRODUCT_HOME_PATH}\""|" $TMP_SETENV_FILE
-   done
-fi
 
 # Set the found private key in 'setenv.sh'
 if [ -f "$VM_PRIVATE_KEY_FILE" ]; then
@@ -339,6 +312,7 @@ fi
 echo ""
 echo "Workspace sync: $WORKSPACE_NAME"
 pushd $ABS_PATH > /dev/null 2>&1
+tar czf $TMP_VM_SYNC_TARBALL_FILE .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
 tar czf $TMP_VM_SYNC_TARBALL_FILE .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
 popd > /dev/null 2>&1
 for VM_HOST in $__VM_HOSTS; do
@@ -381,11 +355,11 @@ for VM_HOST in $__VM_HOSTS; do
       scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/initenv.sh
    fi
    if [[ "$ADDONENV_EXISTS" == *"false" ]]; then
-      cp $PADOGRID_WORKSPACES_HOME/.addonenv.sh $TMP_ADDONEVN_FILE
+      cp $PADOGRID_WORKSPACES_HOME/.addonenv.sh $TMP_ADDONENV_FILE
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONEVN_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
+         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
       else
-         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONEVN_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
+         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
       fi
    fi
    if [ "$RWE_SPECIFIED" == "true" ] || [[ "$SETENV_EXISTS" == *"false" ]]; then
@@ -434,59 +408,49 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
-echo ""
-echo "The following products are installed in the VMs. Make sure you have installed and"
-echo "configured all the required products before starting the cluster."
-echo ""
-for VM_PRODUCT_HOME_VAR in $VM_INSTALLED_PRODUCT_HOMES; do
-   echo "   ${vm_installed_product_home_array[$VM_PRODUCT_HOME_VAR]}"
+
+# Install missing products in each VM
+determineInstalledProductVersions
+getCurrentProductVersions
+for VM_HOST in $__VM_HOSTS; do
+   if [ "$SIMULATE" == "true" ]; then
+      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND"
+   else
+      PADOGRID_INIT_IN_BASHRC=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND")
+   fi
+   if [ "$PADOGRID_INIT_IN_BASHRC" == "" ]; then
+      if [ "$SIMULATE" == "true" ]; then
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
+      else
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
+      fi
+   fi
 done
-echo ""
-echo "To install a product, run 'vm_install -product <product_distribution_file>'."
-echo ""
 
 # Determine and display all VMs that do not have Java and the current cluster
 # product installed.
-if [[ "$VM_INSTALLED_PRODUCTS" != *"java"* ]]; then
+
+if [ "$INSTALL_JAVA_HOST_LIST" != "" ]; then
    JAVA_DIR_NAME=$(basename $VM_JAVA_HOME)
    echo "------------------------------------------------------------------------------------------"
    echo -e "${CBrownOrange}WARNING:${CNone}"
-   echo "   JDK is not installed in the VMs. The workspace will not be operational until you"
-   echo "   have installed JDK."
+   echo "   JDK is not installed in the following VMs. If the workspace requires Java, then it may"
+   echo "   not be operational until it is installed."
    echo ""
-   echo "To install Java in the VMs, download the correct version of JDK and execute 'vm_install'."
-   echo "------------------------------------------------------------------------------------------"
-fi
-
-if [[ "$VM_INSTALLED_PRODUCTS" != *"$PRODUCT_NAME"* ]]; then
-   echo "------------------------------------------------------------------------------------------"
-   echo -e "${CBrownOrange}WARNING:${CNone}"
-   echo "   The cluster product [$PRODUCT_NAME] is not installed in the VMs. The workspace will"
-   echo "   not be operational until you have installed the product."
+   for i in $INSTALL_JAVA_HOST_LIST; do
+      echo "   $i"
+   done
+   echo "   $INSTALL_JAVA_HOST_LIST"
    echo ""
-   echo "To install the product in the VMs, download the correct version of the product and"
-   echo "execute 'vm_install'."
+   echo "JAVA_HOME for the VMs are currently set as follows in this workspace's 'vmenv.sh'."
+   echo ""
+   echo "   VM_JAVA_HOME=$VM_JAVA_HOME"
+   echo ""
+   echo "- To install Java in the PadoGrid products directory, download the correct version of JDK"
+   echo "  and execute 'vm_install'."
+   echo ""
+   echo "- To install Java outside of PadoGrid products directory, use 'vm_exec'".
    echo "------------------------------------------------------------------------------------------"
-else
-   # Check if the cluster product home is set in 'setenv.sh'
-   PRODUCT_NAME=$(getProductName $PRODUCT $CLUSTER_TYPE)
-   PRODUCT_HOME_VAR=$(getProductHome $PRODUCT_NAME)
-   line=$(grep "export .*$PRODUCT_HOME_VAR" $TMP_SETENV_FILE)
-   commented_line=$(echo $line | grep "^.*#")
-   if [ "$commented_line" == "" ]; then
-      VALUE=$(echo $line | sed -e "s/^.*$PRODUCT_HOME_VAR=//" -e "s/\"//g")
-      echo "------------------------------------------------------------------------------------------"
-      echo -e "${CGo}INFO:${CNone}"
-      echo "The cluster product [$PRODUCT_NAME] is configured with the following installation:"
-      echo "   $PRODUCT_HOME_VAR=$VALUE"
-      echo "------------------------------------------------------------------------------------------"
-   else   
-      echo "------------------------------------------------------------------------------------------"
-      echo -e "${CBrownOrange}WARNING:${CNone}"
-      echo "   The cluster product [$PRODUCT_NAME] is installed in the VMs but it is not set"
-      echo "   in the workspace's 'setenv.sh' file. Please set it with 'vm_install'."
-      echo "------------------------------------------------------------------------------------------"
-   fi
 fi
 
 echo ""

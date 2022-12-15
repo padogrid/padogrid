@@ -88,6 +88,8 @@ MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
 REMOTE=
 REMOTE_SPECIFIED=false
+RAW_SPECIFIED=false
+ACTIVE_SPECIFIED=false
 PRODUCT_CLUSTER=
 PRODUCT_CLUSTER_SPECIFIED=false
 MIRROR_SPECIFIED=false
@@ -482,6 +484,10 @@ do
          MIRROR_SPECIFIED=true
       elif [ "$i" == "-remote" ]; then
          REMOTE_SPECIFIED=true
+      elif [ "$i" == "-raw" ]; then
+         RAW_SPECIFIED=true
+      elif [ "$i" == "-active" ]; then
+         ACTIVE_SPECIFIED=true
       elif [ "$i" == "-product-cluster" ]; then
          PRODUCT_CLUSTER_SPECIFIED=true
       elif [ "$i" == "-standalone" ]; then
