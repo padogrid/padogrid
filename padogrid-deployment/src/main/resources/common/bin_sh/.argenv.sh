@@ -87,6 +87,7 @@ CLUSTER_TYPE_ARG=
 REPLICAS=1
 ARG_ARG=
 FG_SPECIFIED=false
+BG_SPECIFIED=false
 MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
 REMOTE=
@@ -371,6 +372,8 @@ do
          MAN_SPECIFIED=true
       elif [ "$i" == "-fg" ]; then
          FG_SPECIFIED=true
+      elif [ "$i" == "-bg" ]; then
+         BG_SPECIFIED=true
       elif [ "$i" == "-simulate" ]; then
          SIMULATE=true
       elif [ "$i" == "-preview" ]; then

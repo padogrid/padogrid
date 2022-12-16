@@ -15,6 +15,7 @@ https://github.com/padogrid
 - Overhauled `vm_*` commands to leverage the `install_padogrid` command for enabling version-based product deployment.
 - Added `vm_show_products` for displaying installed and active products in workspace VMs.
 - `start_jupyter` now starts in the foreground to handle the JupyterLab's `Ctrl-C` issue. You can start it in the background by appending `&`, which will preserve `Ctrl-C`. Prior to this change, `Ctrl-C` did not get propagated to child processes impacting blocking commands such as `tail -f` which required a combination of `Ctrl-Z` and `kill` to terminate.
+- Added the `-bg` option in 'vm_exec` for executing remote comamnds in the background. This option is analogous to the `-f` option in `ssh`.
 
 ---
 

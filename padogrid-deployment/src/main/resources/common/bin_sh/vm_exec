@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -vm -all -simulate -?"
+   echo "-cluster -vm -all -bg -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -42,7 +42,7 @@ NAME
                  by default in padogrid environment
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-all] [-simulate] "commands" [-?]
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-all] [-bg] [-simulate] "commands" [-?]
 
    Executes the specified commands in all the workspace VMs defined by the VM_HOSTS
    environment variable in the workspace 'setenv.sh' file. To execute only in the
@@ -69,6 +69,11 @@ OPTIONS
    -all
              Execute the command on all VMs including this VM. If not specified
              then the command will not execute on this VM.
+
+   -bg
+             Requests ssh to go to background just before command execution. This option is
+             analogous to '-f' in ssh. Specify this option to run the remote command in the
+             background. Note that '&' is not required.
 
    -simulate
              Print the remote commands but do not execute.
@@ -158,7 +163,7 @@ for i in $*; do
        if [ -z $CLUSTER_SPECIFIED ]; then
           COMMAND="$COMMAND $i"
        fi
-   elif [[ "$i" != "-cluster" ]]  && [[ "$i" != "-vm" ]]  && [[ "$i" != "-all" ]] && [[ "$i" != "-simulate" ]]; then
+   elif [[ "$i" != "-cluster" ]]  && [[ "$i" != "-vm" ]]  && [[ "$i" != "-all" ]] && [[ "$i" != "-bg" ]] && [[ "$i" != "-simulate" ]]; then
       if [ "$PREV_VAL" != "-vm" ]; then
          COMMAND="$COMMAND $i"
       fi
@@ -185,6 +190,11 @@ else
    VM_KEY="-i $KEY_FILE"
 fi
 THIS_VM_HOSTNAME=`hostname`
+if [ "$BG_SPECIFIED" == "true" ]; then
+   SSH_OPTIONS="-f"
+else
+   SSH_OPTIONS=""
+fi
 for VM_HOST in $__VM_HOSTS; do
      HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
      if [ "$ALL" != "true" ] && [ "$HOST_NAME" == "$THIS_VM_HOSTNAME" ]; then
@@ -193,9 +203,9 @@ for VM_HOST in $__VM_HOSTS; do
 
      echo "---------- $VM_HOST ----------"
      if [ "$SIMULATE" == "true" ]; then
-         echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND"
+         echo "ssh -q -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND"
      else
-        ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND
+        ssh -q -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND
      fi
      echo ""
 done
