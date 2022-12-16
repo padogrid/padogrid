@@ -38,7 +38,7 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Start Jupyter Notebook server
+   $EXECUTABLE - Start a Jupyter server
 
 SYNOPSIS
    $EXECUTABLE [-ip [ip_address]] [-port port_number] [-dashboard] [-default] [-?]
@@ -47,8 +47,17 @@ NOTES
    Jupyter commands are experimental and subject to change in future releases.
 
 DESCRIPTION
-   Starts Jupyter Notebook server in the current RWE. By default, the Jupyter Notebook server
-   listens on 0.0.0.0. To bind to a specific IP address, use the '-ip' option. 
+   Starts a Jupyter server in the current RWE.
+   
+   Tis command starts a Jupyter server in the foreground due to the known Ctrl-C
+   issue of Jupyter servers failing to pass Ctrl-C to child processes if they were
+   started by scripts in the background. Ctrl-C is preserved, however, if this
+   command is started in the background.
+   
+   To start the Jupyter server in the background, add '&' at the end of the command. 
+   
+   By default, the Jupyter Notebook server listens on 0.0.0.0. To bind to a specific
+   IP address, use the '-ip' option. 
 
 OPTIONS
    -ip [ip_address]
@@ -147,7 +156,7 @@ fi
 JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
 
 pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
-nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > $JUPYTER_LOG_FILE 2>&1 &
+nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > $JUPYTER_LOG_FILE 2>&1
 popd > /dev/null 2>&1
 
 # Wait a bit for the server to start before extracting the
