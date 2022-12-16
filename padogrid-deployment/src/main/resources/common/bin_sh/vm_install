@@ -20,10 +20,13 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 . $SCRIPT_DIR/.addonenv.sh
 
 EXECUTABLE="`basename $0`"
+PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+DOWNLOADS_DIR=$PADOGRID_ENV_BASE_PATH/downloads
+PRODUCTS_DIR=$PADOGRID_ENV_BASE_PATH/products
 
 __options()
 {
-   echo "-product -vm -simulate -?"
+   echo "-product -version -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -50,7 +53,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-vm comma_separated_hosts]
-               [-product product_distribution_file]
+               -product product_name [-version product_version] | -file product_distribution_file
                [-simulate] [-?]
 
 DESCRIPTION
@@ -75,8 +78,9 @@ OPTIONS
               A comma separated list of VM hosts or addresses. If the list contains spaces
              then enclosed it in quotes.
 
-   -product product_distribution_file
-              A distribution file, e.g., apache-geode-1.15.0.tgz, hazelcast-5.1.3.tar.gz, etc.
+   -file product_distribution_file
+              A distribution file path in the local file system, e.g., apache-geode-1.15.0.tgz,
+              hazelcast-5.1.3.tar.gz, etc.
 
    -simulate
              Print the remote commands but do not execute.
@@ -85,7 +89,7 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -cluster $CLUSTER file_path
+   $EXECUTABLE -cluster $CLUSTER -product product_distribution_file
 
 FILES
    $PADOGRID_WORKSPACE/setenv.sh
@@ -100,9 +104,27 @@ EOF
    exit
 fi
 
-if [ "$PRODUCT_ARG" == "" ]; then
-   echo >&2 "ERROR: Must specify '-product'. Command aborted."
+if [ "$FILE_SPECIFIED" == "true" ] && [ "$PRODUCT_SPECIFIED" == "true" ]; then
+   echo >&2 "ERROR: Invalid options. Only one of '-file' or '-product' is allowed. Command aborted."
    exit 1
+fi
+if [ "$FILE_SPECIFIED" == "true" ] && [ "$FILE_ARG" == "" ]; then
+   echo >&2 "ERROR: '-file' requires file path. Command aborted."
+   exit 1
+fi
+if [ "$VERSION_SPECIFIED" == "true" ] && [ "$VERSION_ARG" == "" ]; then
+   echo >&2 "ERROR: '-version' requires product version. Command aborted."
+   exit 1
+fi
+
+PRODUCT=$PRODUCT_ARG
+PRODUCT_VERSION=$VERSION_ARG
+if [ "$PRODUCT" != "" ] && [ "$VERSION_SPECIFIED" == "false" ]; then
+   PRODUCT_VERSION=$(getCurrentProductVersion $PRODUCT)
+   if [ "$PRODUCT_VERSION" == "" ]; then
+      echo >&2 "ERROR: Unable to determine the specifed product version: [$PRODUCT]. Please specify '-version'. Command aborted."
+      exit 1
+   fi
 fi
 
 # Available only on VM workspaces
@@ -191,7 +213,9 @@ for VM_HOST in $__VM_HOSTS; do
 done
 
 #
-# Installs the product defined by the following variables
+# Installs the product defined by the following variables. It uses the first
+# VM that has the product file as the base VM for installing the product
+# to the remaining VMs.
 #
 # @required VM_PRODUCT_HOME_NOT_FOUND_LIST
 # @required VM_PRODUCT_HOME
@@ -270,6 +294,16 @@ function installProduct
       done
       echo "Remote installation complete: $VM_PRODUCT_HOME_PATH"
    fi
+}
+
+#
+# Updates setenv.sh files of all VMs with the specified VM product home path.
+#
+# @param vmProductHomePath Product home path for all VMs.
+#
+function updateVmSetenv
+{
+   local VM_PRODUCT_HOME_PATH="$1"
 
    # Update product home in workspace setenv.sh
    if [ "$VM_PRODUCT_HOME_PATH" != "" ]; then
@@ -304,33 +338,121 @@ function installProduct
    fi
 }
 
-# Install product
+#
+# Returns the product directory name for the specified product index
+#
+# @param product        Downloadable product name
+# @param productVersion Product version
+#
+# @return Returns the product directory name
+#
+function getProductDirName
+{
+  local PRODUCT="$1"
+  local VERSION="$2"
+  local DIR_NAME=""
+  case $PRODUCT in
+    padogrid ) DIR_NAME="padogrid_$VERSION";;
+    pado ) DIR_NAME="pado_$VERSION";;
+    padodesktop ) DIR_NAME="pado-desktop_$VERSION";;
+    padoweb ) DIR_NAME="padoweb_$VERSION";;
+    gemfire ) DIR_NAME="pivotal-gemfire-$VERSION";;
+    geode ) DIR_NAME="apache-geode-$VERSION";;
+    hazelcast-enterprise ) DIR_NAME="hazelcast-enterprise-$VERSION";;
+    hazelcast-oss ) DIR_NAME="hazelcast-$VERSION";;
+    hazelcast-mc ) DIR_NAME="hazelcast-management-center-$VERSION";;
+    hazelcast-desktop ) DIR_NAME="hazelcast-desktop_$VERSION";;
+    jet-enterprise ) DIR_NAME="hazelcast-jet-enterprise-$VERSION";;
+    jet-oss ) DIR_NAME="hazelcast-jet-$VERSION";;
+    redis ) DIR_NAME="redis-$VERSION";;
+    snappydata ) DIR_NAME="snappydata-$VERSION";;
+    spark ) DIR_NAME="spark-$VERSION";;
+    kafka ) DIR_NAME="kafka_$VERSION";;
+    confluent ) DIR_NAME="confluent-$VERSION";;
+    hadoop ) DIR_NAME="hadoop-$VERSION";;
+    prometheus ) DIR_NAME="prometheus-$VERSION";;
+    grafana-enterprise|grafana-oss) DIR_NAME="grafana-$VERSION";;
+    derby ) DIR_NAME="db-derby-$VERSION";;
+  esac
+  echo $DIR_NAME
+}
 
-# Arguments to installProduct function
-PRODUCT_PATH=$PRODUCT_ARG
+if [ "$FILE_SPECIFIED" == "true" ]; then
 
-# Determine all the VMs that do not have the product installed
-VM_PADOGRID_ENV_BASE_PATH=$(dirname $(dirname $VM_PADOGRID_WORKSPACES_HOME))
-VM_PRODUCT_DIR_NAME=$(tar tzvf $PRODUCT_PATH | tail -n 1 | sed -e 's/.* //' -e 's/\/.*//')
-VM_PRODUCT_HOME_PATH="$VM_PADOGRID_ENV_BASE_PATH/products/$VM_PRODUCT_DIR_NAME"
-VM_PRODUCT_HOME_COMMAND="[ -d $VM_PRODUCT_HOME_PATH ] && echo true || echo false"
-VM_PRODUCT_HOME_NOT_FOUND_LIST=""
-for VM_HOST in $__VM_HOSTS; do
-   VM_PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$VM_PRODUCT_HOME_COMMAND")
-   if [[ "$VM_PRODUCT_HOME_EXISTS" == *"false" ]]; then
-      VM_PRODUCT_HOME_NOT_FOUND_LIST="$VM_PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
+   # Install product using file
+
+   # Arguments to installProduct function
+   PRODUCT_PATH=$FILE_ARG
+
+   # Determine all the VMs that do not have the product installed
+   VM_PADOGRID_ENV_BASE_PATH=$(dirname $(dirname $VM_PADOGRID_WORKSPACES_HOME))
+   VM_PRODUCT_DIR_NAME=$(tar tzvf $PRODUCT_PATH | tail -n 1 | sed -e 's/.* //' -e 's/\/.*//')
+   VM_PRODUCT_HOME_PATH="$VM_PADOGRID_ENV_BASE_PATH/products/$VM_PRODUCT_DIR_NAME"
+   VM_PRODUCT_HOME_COMMAND="[ -d $VM_PRODUCT_HOME_PATH ] && echo true || echo false"
+   VM_PRODUCT_HOME_NOT_FOUND_LIST=""
+   for VM_HOST in $__VM_HOSTS; do
+      VM_PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$VM_PRODUCT_HOME_COMMAND")
+      if [[ "$VM_PRODUCT_HOME_EXISTS" == *"false" ]]; then
+         VM_PRODUCT_HOME_NOT_FOUND_LIST="$VM_PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
+      fi
+   done
+
+   echo ""
+
+   REMOTE_VM_KEY=""
+   if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      PRIVATE_KEY_FILE_NAME=$(basename $VM_PRIVATE_KEY_FILE)
+      REMOTE_VM_KEY="-i $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME"
    fi
-done
 
-echo ""
+   installProduct
+   updateVmSetenv $VM_PRODUCT_HOME_PATH
+   
+else
 
-REMOTE_VM_KEY=""
-if [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
-   PRIVATE_KEY_FILE_NAME=$(basename $VM_PRIVATE_KEY_FILE)
-   REMOTE_VM_KEY="-i $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME"
+   # Install product using install_padogrid
+
+   PRODUCT=$PRODUCT_ARG
+   product=""
+   COMMAND="vm_show_products -raw"
+   for VM_HOST in $__VM_HOSTS; do
+      vm_products=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
+      found="false"
+      count=0
+      for i in $vm_products; do
+         if [ $count -eq 0 ]; then
+            product=$i
+         fi
+         if [ "$product" == "$PRODUCT" ]; then
+            if [ "$i" == ";" ]; then
+               break;
+            elif [[ "$i" == "_"* ]]; then
+               i=${i:1} 
+            fi
+            if [ "$i" == "$PRODUCT_VERSION" ]; then
+               found="true"
+               break;
+            fi
+         fi
+         let count=count+1
+         if [ "$i" == ";" ]; then
+            count=0
+         fi
+      done
+      if [ "$found" != "true" ]; then
+         echo "   Installing $PRODUCT:$PRODUCT_VERSION on $VM_HOST..."
+         if [ "$SIMULATE" == "true" ]; then
+            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "install_padogrid -quiet -product $PRODUCT -version $PRODUCT_VERSION"
+         else
+            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "install_padogrid -quiet -product $PRODUCT -version $PRODUCT_VERSION"
+         fi
+      fi
+   done
+
+   DIR_NAME=$(getProductDirName $PRODUCT $PRODUCT_VERSION)
+   VM_PRODUCT_HOME_PATH="$PRODUCTS_DIR/$DIR_NAME"
+   updateVmSetenv $VM_PRODUCT_HOME_PATH
 fi
-
-installProduct
 
 echo "Run 'vm_test' to check installation and configuration status."
 if [ "$SIMULATE" == "true" ]; then

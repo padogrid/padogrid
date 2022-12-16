@@ -36,6 +36,7 @@ OS_NAME=`echo "$OS_NAME"|awk '{print toupper($0)}'`
 # Determine arguments
 #
 LAST_ARG=
+PRODUCT_SPECIFIED=false
 PRODUCT_ARG=
 ENV_ARG=
 RWE_ARG=
@@ -49,6 +50,8 @@ DASHBOARD_SPECIFIED=false
 DEFAULT_SPECIFIED=false
 JAVA_HOME_ARG=
 PATH_ARG=
+FILE_SPECIFIED=false
+FILE_ARG=
 JAR_ARG=
 CLASSPATH_ARG=
 JET_ARG=
@@ -207,6 +210,8 @@ do
          JAVA_HOME_ARG=$i
       elif [ "$PREV" == "-path" ]; then
          PATH_ARG=$i
+      elif [ "$PREV" == "-file" ]; then
+         FILE_ARG=$i
       elif [ "$PREV" == "-jar" ]; then
          JAR_ARG=$i
       elif [ "$PREV" == "-classpath" ]; then
@@ -496,6 +501,10 @@ do
          TREE=true
       elif [ "$i" == "-overwrite" ]; then
          OVERWRITE=true
+      elif [ "$i" == "-product" ]; then
+         PRODUCT_SPECIFIED=true
+      elif [ "$i" == "-file" ]; then
+         FILE_SPECIFIED=true
       fi
    fi
    PREV=$i

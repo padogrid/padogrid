@@ -208,6 +208,7 @@ done
 LAST_TIMESTAMP_TRAP=0
 trap 'cleanExit "$EXECUTABLE" "vm" "false"' INT
 
+PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
 THIS_VM_HOSTNAME=`hostname`
 
 TMP_RWE_SETENV_FILE="/tmp/padogrid-$EXECUTABLE-vm-rwe_setenv.sh"
@@ -243,7 +244,9 @@ for VM_HOST in $__VM_HOSTS; do
    if [[ "$JAVA_EXISTS" == *"false" ]]; then
       INSTALL_JAVA_HOST_LIST="$INSTALL_JAVA_HOST_LIST $VM_HOST"
    fi
-   if [ "$SETENV_DOWNLOADED" == "false" ]; then # Download the first setenv.sh. We'll use this later to update the VMs that do not have it.
+
+   # Download the first VM's setenv.sh files. We'll use these later to update the remaining VMs.
+   if [ "$SETENV_DOWNLOADED" == "false" ]; then
       # That could happen if new VMs were added or there were network issues.
       if [ "$SIMULATE" == "true" ]; then
         echo "scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE > /dev/null 2>&1"
@@ -257,25 +260,31 @@ for VM_HOST in $__VM_HOSTS; do
       fi
    fi
 done
+
+# Install PadoGrid on VMs that do not have it installed
 if [ "$INSTALL_PADOGRID_HOST_LIST" != "" ]; then
    ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
    TAR_BALL_GZ_NAME=padogrid-$EXECUTABLE-vm-$ROOT_DIR_NAME.tar.gz
-   TMP_TAR_BALL_GZ_PATH=/tmp/$TAR_BALL_GZ_NAME
    VM_PADOGRID_HOME_PARENT_DIR="$(dirname "$VM_PADOGRID_HOME")"
-   pushd $PADOGRID_HOME/.. > /dev/null 2>&1
-   tar czf $TMP_TAR_BALL_GZ_PATH $ROOT_DIR_NAME
-   popd > /dev/null 2>&1
+
+   # Create padogrid tar ball if it does not exist in the downloads directory
+   PADOGRID_TARBALL_GZ_PATH="$PADOGRID_ENV_BASE_PATH/downloads/$TAR_BALL_GZ_NAME"
+   if [ ! -f "$PADOGRID_TARBALL_GZ_PATH" ]; then
+      pushd $PADOGRID_HOME/.. > /dev/null 2>&1
+      tar czf $PADOGRID_TARBALL_GZ_PATH $ROOT_DIR_NAME
+      popd > /dev/null 2>&1
+   fi
 
    for VM_HOST in $INSTALL_PADOGRID_HOST_LIST; do
       echo "Deploying $ROOT_DIR_NAME to $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
          echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$TMP_TAR_BALL_GZ_PATH
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $TMP_TAR_BALL_GZ_PATH; rm $TMP_TAR_BALL_GZ_PATH"
+         echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_TARBALL_GZ_PATH $VM_USER@$VM_HOST:$PADOGRID_TARBALL_GZ_PATH
+         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $PADOGRID_TARBALL_GZ_PATH"
       else
          ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$TMP_TAR_BALL_GZ_PATH
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $TMP_TAR_BALL_GZ_PATH; rm $TMP_TAR_BALL_GZ_PATH"
+         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_TARBALL_GZ_PATH $VM_USER@$VM_HOST:$PADOGRID_TARBALL_GZ_PATH
+         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $PADOGRID_TARBALL_GZ_PATH"
       fi
    done
 fi
@@ -312,7 +321,6 @@ fi
 echo ""
 echo "Workspace sync: $WORKSPACE_NAME"
 pushd $ABS_PATH > /dev/null 2>&1
-tar czf $TMP_VM_SYNC_TARBALL_FILE .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
 tar czf $TMP_VM_SYNC_TARBALL_FILE .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
 popd > /dev/null 2>&1
 for VM_HOST in $__VM_HOSTS; do
@@ -389,7 +397,7 @@ for VM_HOST in $__VM_HOSTS; do
 done
 echo ""
 
-# Update .bashrc
+# Update .bashrc if needed
 echo "Updating remote (VM) '.bashrc' if needed..."
 BASHRC_COMMAND="grep initenv.sh ~/.bashrc"
 INIT_COMMAND="\"echo . ${VM_PADOGRID_WORKSPACES_HOME}/initenv.sh -quiet >> ~/.bashrc\""
@@ -400,6 +408,7 @@ for VM_HOST in $__VM_HOSTS; do
       PADOGRID_INIT_IN_BASHRC=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND")
    fi
    if [ "$PADOGRID_INIT_IN_BASHRC" == "" ]; then
+      echo "   Updating $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
          echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
       else
@@ -408,28 +417,7 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
-
-# Install missing products in each VM
-determineInstalledProductVersions
-getCurrentProductVersions
-for VM_HOST in $__VM_HOSTS; do
-   if [ "$SIMULATE" == "true" ]; then
-      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND"
-   else
-      PADOGRID_INIT_IN_BASHRC=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND")
-   fi
-   if [ "$PADOGRID_INIT_IN_BASHRC" == "" ]; then
-      if [ "$SIMULATE" == "true" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
-      else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
-      fi
-   fi
-done
-
-# Determine and display all VMs that do not have Java and the current cluster
-# product installed.
-
+# Display all VMs that do not have Java not installed
 if [ "$INSTALL_JAVA_HOST_LIST" != "" ]; then
    JAVA_DIR_NAME=$(basename $VM_JAVA_HOME)
    echo "------------------------------------------------------------------------------------------"

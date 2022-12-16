@@ -278,7 +278,7 @@ __padogrid_complete()
          type_list="$K8S_PRODUCT_LIST"
       elif [ "$command" == "create_app" ]; then
          type_list="$APP_PRODUCT_LIST"
-      elif [ "$command" == "install_padogrid" ]; then
+      elif [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "uninstall_product" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
@@ -302,7 +302,7 @@ __padogrid_complete()
       ;;
 
    -version)
-      if [ "$command" == "install_padogrid" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -997,7 +997,7 @@ __command_complete()
          type_list="$K8S_PRODUCT_LIST"
       elif [ "$command" == "create_app" ]; then
          type_list="$APP_PRODUCT_LIST"
-      elif [ "$command" == "install_padogrid" ]; then
+      elif [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "uninstall_product" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
@@ -1014,6 +1014,18 @@ __command_complete()
    -rwe)
       if [ "$command" != "find_padogrid" ]; then
          type_list=`getRweList`
+      fi
+      ;;
+   -version)
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
+         # If -product specified then get downlodable product versions
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         type_list=$(getDownloadableProductVersions $product_name)
       fi
       ;;
    -workspace)

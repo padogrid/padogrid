@@ -4090,6 +4090,45 @@ function getCurrentProductVersions
 }
 
 #
+# Returns the current (active) product version.
+#
+# @param product        Downloadable product name
+#
+function getCurrentProductVersion
+{
+   local PRODUCT=$1
+   if [ "$PRODUCT" == "" ]; then
+      return 0
+   fi
+   getCurrentProductVersions 
+   case $PRODUCT in
+    padogrid ) echo $__PADOGRID_VERSION;;
+    pado ) echo $__PADO_VERSION;;
+    padodesktop ) echo $__PADODESKTOP_VERSION;;
+    padoweb ) echo $__PADOWEB_VERSION;;
+    gemfire ) echo $__GEMFIRE_VERSION;;
+    geode ) echo $__GEODE_VERSION;;
+    hazelcast-enterprise ) echo $__HAZELCAST_ENTERPRISE_VERSION;;
+    hazelcast-oss ) echo $__HAZELCAST_OSS_VERSION;;
+    hazelcast-mc ) echo $__HAZELCAST_MC_VERSION;;
+    hazelcast-desktop ) echo $__HAZELCAST_DESKTOP_VERSION;;
+    jet-enterprise ) echo $__JET_ENTERPRISE_VERSION;;
+    jet-oss ) echo $__JET_OSS_VERSION;;
+    redis ) echo $__REDIS_VERSION;;
+    snappydata ) echo $__SNAPPYDATA_VERSION;;
+    spark ) echo $__SPARK_VERSION;;
+    kafka ) echo $__KAFKA_VERSION;;
+    confluent ) echo $__CONFLUENT_VERSION;;
+    hadoop ) echo $__HADOOP_VERSION;;
+    prometheus ) echo $__PROMETHEUS_VERSION;;
+    grafana-enterprise|grafana-oss) echo $__GRAFANA_VERSION;;
+    derby ) echo $__DERBY_VERSION;;
+    java ) echo $__JAVA_VERSION;;
+    coherence) echo $__COHERENCE_VERSION;;
+   esac
+}
+
+#
 # Determines the product by examining cluster files. The following environment variables
 # are set after invoking this function.
 #   PRODUCT         geode, hazelcast, snappydata, coherence, redis, spark, hadoop

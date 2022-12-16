@@ -257,7 +257,7 @@ HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
 -Dhazelcast.health.monitoring.threshold.memory.percentage=70 \
 -Dhazelcast.health.monitoring.threshold.cpu.percentage=70"
 
-# Disagnostics logging
+# Diagnostics logging
 DEFAULT_DIAGNOSTICS_ENABLED="true"
 if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -eq 3 ]; then
    DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
