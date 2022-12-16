@@ -44,18 +44,20 @@ SYNOPSIS
    $EXECUTABLE [-ip [ip_address]] [-port port_number] [-?]
 
 DESCRIPTION
-   Opens the current RWE JupyterLab workspace. It starts a Jupyter Notebook server if it is not
-   running. If a Jupyter Notebook server is already running, then the '-ip' '-port' options are
-   ignored.
+   Opens JupyterLab in the browser. You must first run the Jupyter Notebook server by
+   executing 'start_jupyter' preferrably with the '-dashboard' option in the background
+   as follows.
+
+   start_jupyter -dashboard &
 
 OPTIONS
    -ip [ip_address]
-             The IP address the notebook server will listen on.  If ip_address is not 
-             specified then 0.0.0.0 is assigned. This option is ignored if the
-             notebook server is already running. Default: 0.0.0.0
+             The IP address the notebook server listens on. If ip_address is not 
+             specified then 0.0.0.0 is assigned. This option is used only for displaying
+             the JupyterLab URL. Default: 0.0.0.0
 
    -port [port_number]
-             The port the notebook server will listen on. Default: 8888
+             The port the notebook server listens on. Default: 8888
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -93,7 +95,8 @@ JUPYTER_SERVERS=$(jupyter lab list | grep -v "Currently" | grep $PORT_NUMBER)
 
 # Start the notebook server if is not running
 if [ "$JUPYTER_SERVERS" == "" ]; then
-   start_jupyter -dashboard $@
+   echo >&2 -e "${CLightRed}ERROR:${CNone} Jupyter server not running on port: [$PORT_NUMBER]. Plese run 'start_jupyter -dashboard &'. Command aborted."
+   exit 1
 fi
 RWE_URL=$(getJupyterUrl "workspace" $IP_ADDRESS $PORT_NUMBER)
 
@@ -105,14 +108,21 @@ elif [[ -n "$IS_WSL" || -n "$WSL_DISTRO_NAME" ]]; then
    cmd.exe /C start $RWE_URL > /dev/null 2>&1
 else
    BROWSER_OPEN_PATH=$(which xdg-open 2> /dev/null)
-   if [ "$BROWSER_OPEN_PATH" == "" ]; then
-      echo >&2 "ERROR: Unable to find the executable to open the default browser. Please install 'xdg-open'."
-      echo >&2 "       Command aborted."
-      exit 1
-   else
+   if [ "$BROWSER_OPEN_PATH" != "" ]; then
       eval "$BROWSER_OPEN_PATH" $RWE_URL
    fi
 fi
+echo ""
+echo -e "Workspace: ${CUrl}$RWE_URL${CNone}"
+
+# Check log for the default URL enablement
+JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
+DEFAULT_SPECIFIED="$(grep "default-enabled=" $JUPYTER_LOG_FILE | sed 's/default-enabled=//')"
+if [ "$DEFAULT_SPECIFIED" == "true" ]; then
+   DEFAULT_URL=$(getJupyterUrl "default" $IP_ADDRESS $PORT_NUMBER)
+   echo -e "  Default: ${CUrl}$DEFAULT_URL${CNone}"
+fi
+echo ""
 echo "The workspace in the Jupyter terminals may be incorrect due to JupyterLab limitations. Switch"
 echo "into the current workspace by running the following command in each Jupyter terminal."
 echo ""

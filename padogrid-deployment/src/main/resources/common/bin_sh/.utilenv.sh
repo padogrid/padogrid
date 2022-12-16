@@ -4663,7 +4663,7 @@ function getJupyterUrl
    fi
    local token
    if [ "$(grep "http" $JUPYTER_LOG_FILE | grep $PORT_NUMBER | grep "?token=")" != "" ]; then
-      token=$(grep "http" $JUPYTER_LOG_FILE | grep $PORT_NUMBER | sed 's/^.*?token=/?token=/' | uniq)
+      token=$(grep "http" $JUPYTER_LOG_FILE | grep -v HTTPServerRequest | grep $PORT_NUMBER | sed 's/^.*?token=/?token=/' | uniq)
    else
       token=""
    fi

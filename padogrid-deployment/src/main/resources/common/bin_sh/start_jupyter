@@ -114,6 +114,7 @@ if [[ "$NOTEBOOK_SERVERS" == *"$PORT_NUMBER"* ]]; then
 fi
 
 RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
 if [ "$DASHBOARD_SPECIFIED" == "true" ]; then
    WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
@@ -153,23 +154,22 @@ if [ "$DASHBOARD_SPECIFIED" == "true" ]; then
    fi
 fi
 
-JUPYTER_LOG_FILE=$HOME/.padogrid/workspaces/$RWE_NAME/jupyterlab-$PORT_NUMBER.log
+echo ""
+echo "$EXECUTABLE: Starting Jupyter server..."
+echo "$EXECUTABLE: This command will block unless started in the background."
 
+echo "*********************************************************************" > $JUPYTER_LOG_FILE
+echo "PadoGrid" >> $JUPYTER_LOG_FILE
+echo "--------" >> $JUPYTER_LOG_FILE
+echo "Copyright 2020-2022 Netcrest Technologies, LLC. All rights reserved." >> $JUPYTER_LOG_FILE
+echo "" >> $JUPYTER_LOG_FILE
+echo "Date: `date`" >> $JUPYTER_LOG_FILE
+echo "" >> $JUPYTER_LOG_FILE
+echo "Properties:" >> $JUPYTER_LOG_FILE
+echo "dashboard-enabled=$DASHBOARD_SPECIFIED" >> $JUPYTER_LOG_FILE
+echo "default-enabled=$DEFAULT_SPECIFIED" >> $JUPYTER_LOG_FILE
+echo "*********************************************************************" >> $JUPYTER_LOG_FILE
+echo "" >> $JUPYTER_LOG_FILE
 pushd $PADOGRID_WORKSPACES_HOME > /dev/null 2>&1
-nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' > $JUPYTER_LOG_FILE 2>&1
+nohup jupyter lab --no-browser --port=$PORT_NUMBER --ip=$IP_ADDRESS --LabApp.terminado_settings='{"shell_command": ["/bin/bash"]}' >> $JUPYTER_LOG_FILE 2>&1
 popd > /dev/null 2>&1
-
-# Wait a bit for the server to start before extracting the
-# token value from the log file
-sleep 4
-
-RWE_URL=$(getJupyterUrl "workspace" $IP_ADDRESS $PORT_NUMBER)
-
-echo ""
-echo "Jupyter server started."
-echo -e "   Workspace: ${CUrl}$RWE_URL${CNone}"
-if [ "$DEFAULT_SPECIFIED" == "true" ]; then
-   DEFAULT_URL=$(getJupyterUrl "default" $IP_ADDRESS $PORT_NUMBER)
-   echo -e "     Default: ${CUrl}$DEFAULT_URL${CNone}"
-fi
-echo ""
