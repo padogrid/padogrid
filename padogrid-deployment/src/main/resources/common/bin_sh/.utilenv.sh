@@ -3630,11 +3630,13 @@ function sortVersionList
 # @required PADOGRID_ENV_BASE_PATH 
 # @param workspaceName Workspace name. If not specified then the current workspace is assumed. Optional.
 # @param rwePath       RWE path. If not specified then PADOGRID_WORKSPACES_HOME is assumed. Optional.
+# @param productName   Product name. Only the specified product is determined. Optional.
 #
 function determineInstalledProductVersions
 {
    local WORKSPACE="$1"
    local RWE_PATH="$2"
+   local PRODUCT="$3"
    if [ "$WORKSPACE" == "" ]; then
       WORKSPACE=$(basename $PADOGRID_WORKSPACE)
       if [ "$WORKSPACE" == "" ]; then
@@ -3652,7 +3654,7 @@ function determineInstalledProductVersions
 
    PADOGRID_VERSIONS=""
    PADO_VERSIONS=""
-   PADODEKSTOP_VERSIONS=""
+   PADODESKTOP_VERSIONS=""
    PADOWEB_VERSIONS=""
    COHERENCE_VERSIONS=""
    GEMFIRE_VERSIONS=""
@@ -3675,229 +3677,265 @@ function determineInstalledProductVersions
    SPARK_VERSIONS=""
    DERBY_VERSIONS=""
 
+   local __versions
+   local henterv hmanv hdesktopv jenterv jmanv jossv hossv
+
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
 
       # To prevent wildcard not expanding in a for-loop if files do not exist
       shopt -s nullglob
 
-      local __versions
-      local henterv hmanv hdesktopv jenterv jmanv jossv hossv
 
       # PadoGrid
-      __versions=""
-      for i in padogrid_*; do
-         __version=${i#padogrid_}
-         __versions="$__versions $__version "
-      done
-      PADOGRID_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "padogrid" ]; then
+         __versions=""
+         for i in padogrid_*; do
+            __version=${i#padogrid_}
+            __versions="$__versions $__version "
+         done
+         PADOGRID_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Pado
-      __versions=""
-      for i in pado_*; do
-         __version=${i#pado_}
-         __versions="$__versions $__version "
-      done
-      PADO_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "pado" ]; then
+         __versions=""
+         for i in pado_*; do
+            __version=${i#pado_}
+            __versions="$__versions $__version "
+         done
+         PADO_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # PadoDesktop
-      __versions=""
-      for i in pado-desktop_*; do
-         __version=${i#pado-desktop_}
-         __versions="$__versions $__version "
-      done
-      PADODEKSTOP_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "padodesktop" ]; then
+         __versions=""
+         for i in pado-desktop_*; do
+            __version=${i#pado-desktop_}
+            __versions="$__versions $__version "
+         done
+         PADODESKTOP_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # PadoWeb
-      __versions=""
-      for i in padoweb_*; do
-         __version=${i#padoweb_}
-         __versions="$__versions $__version "
-      done
-      PADOWEB_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "padoweb" ]; then
+         __versions=""
+         for i in padoweb_*; do
+            __version=${i#padoweb_}
+            __versions="$__versions $__version "
+         done
+         PADOWEB_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Coherence - Set the current version. Determining Coherence versions requires setting up a custom environment.
-      if [ -f "$COHERENCE_HOME/product.xml" ]; then
-         COHERENCE_VERSIONS=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "coherence" ]; then
+         if [ -f "$COHERENCE_HOME/product.xml" ]; then
+            COHERENCE_VERSIONS=$(grep "version value" "$COHERENCE_HOME/product.xml" | sed -e 's/^.*="//' -e 's/".*//')
+         fi
       fi
 
       # Confluent
-      __versions=""
-      for i in confluent-*; do
-         __version=${i#confluent-}
-         __versions="$__versions $__version "
-      done
-      CONFLUENT_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "confluent" ]; then
+         __versions=""
+         for i in confluent-*; do
+            __version=${i#confluent-}
+            __versions="$__versions $__version "
+         done
+         CONFLUENT_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Derby
-      __versions=""
-      for i in db-derby-*; do
-         __version=${i#db-derby-}
-         __versions="$__versions $__version "
-      done
-      DERBY_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "derby" ]; then
+         __versions=""
+         for i in db-derby-*; do
+            __version=${i#db-derby-}
+            __versions="$__versions $__version "
+         done
+         DERBY_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # GemFire
-      __versions=""
-      for i in pivotal-gemfire-*; do
-         __version=${i#pivotal-gemfire-}
-         __versions="$__versions $__version "
-      done
-      GEMFIRE_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "gemfire" ]; then
+         __versions=""
+         for i in pivotal-gemfire-*; do
+            __version=${i#pivotal-gemfire-}
+            __versions="$__versions $__version "
+         done
+         GEMFIRE_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Geode
-      __versions=""
-      for i in apache-geode-*; do
-         __version=${i#apache-geode-}
-         __versions="$__versions $__version "
-      done
-      GEODE_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "geode" ]; then
+         __versions=""
+         for i in apache-geode-*; do
+            __version=${i#apache-geode-}
+            __versions="$__versions $__version "
+         done
+         GEODE_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
-      __versions=""
-      for i in grafana-*; do
-         __version=${i#grafana-}
-         __versions="$__versions $__version "
-      done
-      GRAFANA_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "grafana" ]; then
+         __versions=""
+         for i in grafana-*; do
+            __version=${i#grafana-}
+            __versions="$__versions $__version "
+         done
+         GRAFANA_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Hadoop
-      __versions=""
-      for i in hadoop-*; do
-         __version=${i#hadoop-}
-         __versions="$__versions $__version "
-      done
-      HADOOP_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "hadoop" ]; then
+         __versions=""
+         for i in hadoop-*; do
+            __version=${i#hadoop-}
+            __versions="$__versions $__version "
+         done
+         HADOOP_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
-      local hossv henterv hmanv jossv jenterv jmanv
-      for i in hazelcast-*; do
-         if [[ "$i" == "hazelcast-enterprise-"** ]]; then
-            __version=${i#hazelcast-enterprise-}
-            henterv="$henterv $__version"
-            # Get man center version included in the hazelcast distribution
-            for j in $i/management-center/*.jar; do
-               if [[ "$j" == *"hazelcast-management-center"* ]]; then
-                  local mcv=${j#*hazelcast-management-center-}
-                  hmanv="$hmanv ${mcv%.jar}"
-                  break;
-               fi
-             done
-         elif [[ "$i" == "hazelcast-management-center-"** ]]; then
-            __version=${i#hazelcast-management-center-}
-            hmanv="$hmanv $__version"
-         elif [[ "$i" == "hazelcast-desktop_"** ]]; then
-            __version=${i#hazelcast-desktop_}
-            hdesktopv="$hdesktopv $__version"
-         elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
-            __version=${i#hazelcast-jet-enterprise-}
-            jenterv="$jenterv $__version"
-         elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
-            __version=${i#hazelcast-jet-management-center-}
-            jmanv="$jmanv $__version"
-         elif [[ "$i" == "hazelcast-jet-"** ]]; then
-            __version=${i#hazelcast-jet-}
-            jossv="$jossv $__version"
-         elif [[ "$i" == "hazelcast-"** ]]; then
-            __version=${i#hazelcast-}
-            hossv="$hossv $__version"
-            # Get man center version included in the hazelcast distribution
-            for j in $i/*.jar; do
-               if [[ "$j" == *"hazelcast-management-center"* ]]; then
-                  local mcv=${j#*hazelcast-management-center-}
-                  hmanv="$hmanv ${mcv%.jar}"
-                  break;
-               fi
-             done
-         fi
-      done
+      if [ "$PRODUCT" == "" ] || [[ "$PRODUCT" == "hazelcast"* ]] || [[ "$PRODUCT" == "jet"* ]]; then
+         local hossv henterv hmanv jossv jenterv jmanv
+         for i in hazelcast-*; do
+            if [[ "$i" == "hazelcast-enterprise-"** ]]; then
+               __version=${i#hazelcast-enterprise-}
+               henterv="$henterv $__version"
+               # Get man center version included in the hazelcast distribution
+               for j in $i/management-center/*.jar; do
+                  if [[ "$j" == *"hazelcast-management-center"* ]]; then
+                     local mcv=${j#*hazelcast-management-center-}
+                     hmanv="$hmanv ${mcv%.jar}"
+                     break;
+                  fi
+                done
+            elif [[ "$i" == "hazelcast-management-center-"** ]]; then
+               __version=${i#hazelcast-management-center-}
+               hmanv="$hmanv $__version"
+            elif [[ "$i" == "hazelcast-desktop_"** ]]; then
+               __version=${i#hazelcast-desktop_}
+               hdesktopv="$hdesktopv $__version"
+            elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
+               __version=${i#hazelcast-jet-enterprise-}
+               jenterv="$jenterv $__version"
+            elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
+               __version=${i#hazelcast-jet-management-center-}
+               jmanv="$jmanv $__version"
+            elif [[ "$i" == "hazelcast-jet-"** ]]; then
+               __version=${i#hazelcast-jet-}
+               jossv="$jossv $__version"
+            elif [[ "$i" == "hazelcast-"** ]]; then
+               __version=${i#hazelcast-}
+               hossv="$hossv $__version"
+               # Get man center version included in the hazelcast distribution
+               for j in $i/*.jar; do
+                  if [[ "$j" == *"hazelcast-management-center"* ]]; then
+                     local mcv=${j#*hazelcast-management-center-}
+                     hmanv="$hmanv ${mcv%.jar}"
+                     break;
+                  fi
+                done
+            fi
+         done
+         hmanv=$(unique_words "$hmanv")
+         HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
+         HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
+         HAZELCAST_DESKTOP_VERSIONS=$(sortVersionList "$hdesktopv")
+         JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
+         JET_OSS_VERSIONS=$(sortVersionList "$jossv")
+         HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
 
-      hmanv=$(unique_words "$hmanv")
-      HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
-      HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
-      HAZELCAST_DESKTOP_VERSIONS=$(sortVersionList "$hdesktopv")
-      JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
-      JET_OSS_VERSIONS=$(sortVersionList "$jossv")
-      HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
-
-      # Hazelcast/Jet  management center merged starting 4.2021.02
-      for i in ${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}; do
-         if [[ "$i" == "4.2021"* ]]; then
-            jmanv="$i $jmanv"
-         fi
-      done
-      JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
+         # Hazelcast/Jet  management center merged starting 4.2021.02
+         for i in ${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}; do
+            if [[ "$i" == "4.2021"* ]]; then
+               jmanv="$i $jmanv"
+            fi
+         done
+         JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
+      fi
 
       # Java - only the one that is set in the workspace
       # Remove blank lines from grep results. Pattern includes space and tab.
       # If multi-tenant workspace then the user might not have read access.
-      if [ -r "$WORKSPACE_PATH/setenv.sh" ]; then
-         local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
-      else
-         local __JAVA_HOME=""
-      fi
-      if [ "$__JAVA_HOME" == "" ]; then
-         # Get the RWE's JAVA_HOME
-         if [ -r "$WORKSPACE_PATH/../setenv.sh" ]; then
-            __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "java" ]; then
+         if [ -r "$WORKSPACE_PATH/setenv.sh" ]; then
+            local __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
          else
-            if [ "$JAVA_HOME" != "" ]; then
-               __JAVA_HOME=$JAVA_HOME
+            local __JAVA_HOME=""
+         fi
+         if [ "$__JAVA_HOME" == "" ]; then
+            # Get the RWE's JAVA_HOME
+            if [ -r "$WORKSPACE_PATH/../setenv.sh" ]; then
+               __JAVA_HOME=$(grep "export JAVA_HOME=" "$WORKSPACE_PATH/../setenv.sh" | sed -e 's/#.*$//' -e '/^[ 	]*$/d' -e 's/.*=//' -e 's/"//g')
             else
-               local JAVA_EXEC_PATH=$(which java)
-               if [ "$JAVA_EXEC_PATH" != "" ]; then
-                  __JAVA_HOME=$(dirname $(dirname $JAVA_EXEC_PATH))
+               if [ "$JAVA_HOME" != "" ]; then
+                  __JAVA_HOME=$JAVA_HOME
+               else
+                  local JAVA_EXEC_PATH=$(which java)
+                  if [ "$JAVA_EXEC_PATH" != "" ]; then
+                     __JAVA_HOME=$(dirname $(dirname $JAVA_EXEC_PATH))
+                  fi
                fi
             fi
          fi
-      fi
-      if [ "$__JAVA_HOME" != "" ] && [ -f "$__JAVA_HOME/bin/java" ]; then
-         # Use eval to handle commands with spaces
-         local __COMMAND="\"$__JAVA_HOME/bin/java\" -version 2>&1 | grep version "
-         JAVA_VERSIONS=$(eval $__COMMAND)
-         JAVA_VERSIONS=$(echo $JAVA_VERSIONS |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+         if [ "$__JAVA_HOME" != "" ] && [ -f "$__JAVA_HOME/bin/java" ]; then
+            # Use eval to handle commands with spaces
+            local __COMMAND="\"$__JAVA_HOME/bin/java\" -version 2>&1 | grep version "
+            JAVA_VERSIONS=$(eval $__COMMAND)
+            JAVA_VERSIONS=$(echo $JAVA_VERSIONS |  sed -e 's/.*version//' -e 's/"//g' -e 's/ //g')
+         fi
       fi
 
       # Kafka
-      __versions=""
-      for i in kafka_*; do
-         __version=${i#kafka_}
-         __versions="$__versions $__version "
-      done
-      KAFKA_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "kafka" ]; then
+         __versions=""
+         for i in kafka_*; do
+            __version=${i#kafka_}
+            __versions="$__versions $__version "
+         done
+         KAFKA_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Prometheus
-      __versions=""
-      for i in prometheus-*; do
-         __version=${i#prometheus-}
-         __versions="$__versions $__version "
-      done
-      PROMETHEUS_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "prometheus" ]; then
+         __versions=""
+         for i in prometheus-*; do
+            __version=${i#prometheus-}
+            __versions="$__versions $__version "
+         done
+         PROMETHEUS_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Redis
-      __versions=""
-      for i in redis-*; do
-         __version=${i#redis-}
-         __versions="$__versions $__version "
-      done
-      REDIS_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "redis-oss" ]; then
+         __versions=""
+         for i in redis-*; do
+            __version=${i#redis-}
+            __versions="$__versions $__version "
+         done
+         REDIS_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # SnappyData
-      __versions=""
-      for i in snappydata-*; do
-         __version=${i#snappydata-}
-         #__version=${__version%-bin}
-         __versions="$__versions $__version "
-      done
-      SNAPPYDATA_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "snappydata" ]; then
+         __versions=""
+         for i in snappydata-*; do
+            __version=${i#snappydata-}
+            #__version=${__version%-bin}
+            __versions="$__versions $__version "
+         done
+         SNAPPYDATA_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Spark
-      __versions=""
-      for i in spark-*; do
-         __version=${i#spark-}
-         __version=${__version%-bin}
-         __versions="$__versions $__version "
-      done
-      SPARK_VERSIONS=$(sortVersionList "$__versions")
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "spark" ]; then
+         __versions=""
+         for i in spark-*; do
+            __version=${i#spark-}
+            __version=${__version%-bin}
+            __versions="$__versions $__version "
+         done
+         SPARK_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       popd > /dev/null 2>&1
             
@@ -4126,6 +4164,50 @@ function getCurrentProductVersion
     java ) echo $__JAVA_VERSION;;
     coherence) echo $__COHERENCE_VERSION;;
    esac
+}
+
+#
+# Returns a space-separated list of installed product versions
+#
+# @param product        Downloadable product name
+#
+function getInstalledProductVersions
+{
+   local PRODUCT=$1
+   if [ "$PRODUCT" == "" ]; then
+      return 0
+   fi
+   WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   determineInstalledProductVersions "$WORKSPACE" "$RWE_PATH" "$PRODUCT"
+
+   local VERSIONS=""
+   case $PRODUCT in
+    padogrid ) VERSIONS=("${PADOGRID_VERSIONS[@]}");;
+    pado ) VERSIONS=("${PADO_VERSIONS[@]}");;
+    padodesktop ) VERSIONS=("${PADODESKTOP_VERSIONS[@]}");;
+    padoweb ) VERSIONS=("${PADOWEB_VERSIONS[@]}");;
+    gemfire ) VERSIONS=("${GEMFIRE_VERSIONS[@]}");;
+    geode ) VERSIONS=("${GEODE_VERSIONS[@]}");;
+    hazelcast-enterprise ) VERSIONS=("${HAZELCAST_ENTERPRISE_VERSIONS[@]}");;
+    hazelcast-oss ) VERSIONS=("${HAZELCAST_OSS_VERSIONS[@]}");;
+    hazelcast-mc ) VERSIONS=("${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}");;
+    hazelcast-desktop ) VERSIONS=("${HAZELCAST_DESKTOP_VERSIONS[@]}");;
+    jet-enterprise ) VERSIONS=("${JET_ENTERPRISE_VERSIONS[@]}");;
+    jet-oss ) VERSIONS=("${JET_OSS_VERSIONS[@]}");;
+    redis-oss ) VERSIONS=("${REDIS_VERSIONS[@]}");;
+    snappydata ) VERSIONS=("${SNAPPYDATA_VERSIONS[@]}");;
+    spark ) VERSIONS=("${SPARK_VERSIONS[@]}");;
+    kafka ) VERSIONS=("${KAFKA_VERSIONS[@]}");;
+    confluent ) VERSIONS=("${CONFLUENT_VERSIONS[@]}");;
+    hadoop ) VERSIONS=("${HADOOP_VERSIONS[@]}");;
+    prometheus ) VERSIONS=("${PROMETHEUS_VERSIONS[@]}");;
+    grafana) VERSIONS=("${GRAFANA_VERSIONS[@]}");;
+    derby ) VERSIONS=("${DERBY_VERSIONS[@]}");;
+    java ) VERSIONS=("${JAVA_VERSIONS[@]}");;
+    coherence) VERSIONS=("${COHERENCE_VERSIONS[@]}");;
+   esac
+   echo "$VERSIONS"
 }
 
 #

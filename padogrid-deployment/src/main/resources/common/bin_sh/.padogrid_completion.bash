@@ -302,7 +302,7 @@ __padogrid_complete()
       ;;
 
    -version)
-      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_products" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -310,7 +310,11 @@ __padogrid_complete()
          if [ $index -ne 255 ]; then
              product_name="${COMP_WORDS[$index+1]}"
          fi
-         type_list=$(getDownloadableProductVersions $product_name)
+         if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
+            type_list=$(getDownloadableProductVersions $product_name)
+         elif [ "$command" == "update_products" ]; then
+            type_list=$(getInstalledProductVersions $product_name)
+         fi
       fi
       ;;
       
@@ -1017,7 +1021,7 @@ __command_complete()
       fi
       ;;
    -version)
-      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_products" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -1025,7 +1029,11 @@ __command_complete()
          if [ $index -ne 255 ]; then
              product_name="${COMP_WORDS[$index+1]}"
          fi
-         type_list=$(getDownloadableProductVersions $product_name)
+         if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
+            type_list=$(getDownloadableProductVersions $product_name)
+         elif [ "$command" == "update_products" ]; then
+            type_list=$(getInstalledProductVersions $product_name)
+         fi
       fi
       ;;
    -workspace)
