@@ -156,17 +156,25 @@ if [ "$VM_USER" == "" ]; then
    VM_USER=$DEFAULT_USER
 fi
 
-# Set the first private key file found in the workspace directory if exists
-if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
-   if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
-      for i in $PADOGRID_WORKSPACE/*.pem; do
-         VM_PRIVATE_KEY_FILE=$i
-         break
-      done
-   fi
-fi
 KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
 if [ "$KEY_FILE" == "" ]; then 
+   # Set the first private key file found in the workspace directory if exists
+   __VM_PRIVATE_KEY_FILE_FOUND="false"
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+         for i in $PADOGRID_WORKSPACE/*.pem; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
+         for i in $PADOGRID_WORKSPACE/*.key; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      fi
+   fi
    KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
 if [ ! -f "$KEY_FILE" ]; then

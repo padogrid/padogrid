@@ -287,34 +287,6 @@ function getVmNameNodeName
 }
 
 #
-# Returns merged comma-separated list of VM namenode and member hosts
-# @required  CLUSTERS_DIR  Cluster directory path.
-# @required  CLUSTER       Cluster name.
-#
-function getAllMergedVmHosts
-{
-   local VM_NAMENODE_HOSTS=$(getClusterProperty "vm.namenode.hosts")
-   local VM_HOSTS=$(getClusterProperty "vm.hosts")
-   if [ "$VM_NAMENODE_HOSTS" != "" ]; then
-      # Replace , with space
-      __VM_NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      for i in $__VM_NAMENODE_HOSTS; do
-         found=false
-         for j in $__VM_HOSTS; do
-            if [ "$i" == "$j" ]; then
-               found=true
-            fi
-	 done
-	 if [ "$found" == "false" ]; then
-            VM_HOSTS="$VM_HOSTS,$i"
-         fi
-      done
-   fi
-   echo $VM_HOSTS
-}
-
-#
 # Returns a list of all namenode directory names.
 # @required RUN_DIR        Cluster run directory.
 # @required NAMENODE_PREFIX NameNode name prefix

@@ -298,34 +298,6 @@ function getVmLocatorName
 }
 
 #
-# Returns merged comma-separated list of VM locator and member hosts
-# @required  CLUSTERS_DIR  Cluster directory path.
-# @required  CLUSTER       Cluster name.
-#
-function getAllMergedVmHosts
-{
-   local VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
-   local VM_HOSTS=$(getClusterProperty "vm.hosts")
-   if [ "$VM_LOCATOR_HOSTS" != "" ]; then
-      # Replace , with space
-      __VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      for i in $__VM_LOCATOR_HOSTS; do
-         found=false
-         for j in $__VM_HOSTS; do
-            if [ "$i" == "$j" ]; then
-               found=true
-            fi
-	 done
-	 if [ "$found" == "false" ]; then
-            VM_HOSTS="$VM_HOSTS,$i"
-         fi
-      done
-   fi
-   echo $VM_HOSTS
-}
-
-#
 # Returns a list of all locator directory names.
 # @required RUN_DIR        Cluster run directory.
 # @required LOCATOR_PREFIX  Locator name prefix

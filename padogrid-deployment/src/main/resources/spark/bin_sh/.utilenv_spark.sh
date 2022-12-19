@@ -278,34 +278,6 @@ function getVmMasterName
 }
 
 #
-# Returns merged comma-separated list of VM master and member hosts
-# @required  CLUSTERS_DIR  Cluster directory path.
-# @required  CLUSTER       Cluster name.
-#
-function getAllMergedVmHosts
-{
-   local VM_MASTER_HOSTS=$(getClusterProperty "vm.master.hosts")
-   local VM_HOSTS=$(getClusterProperty "vm.hosts")
-   if [ "$VM_MASTER_HOSTS" != "" ]; then
-      # Replace , with space
-      __VM_MASTER_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      for i in $__VM_MASTER_HOSTS; do
-         found=false
-         for j in $__VM_HOSTS; do
-            if [ "$i" == "$j" ]; then
-               found=true
-            fi
-	 done
-	 if [ "$found" == "false" ]; then
-            VM_HOSTS="$VM_HOSTS,$i"
-         fi
-      done
-   fi
-   echo $VM_HOSTS
-}
-
-#
 # Returns a list of all master directory names.
 # @required RUN_DIR        Cluster run directory.
 # @required MASTER_PREFIX Master name prefix
