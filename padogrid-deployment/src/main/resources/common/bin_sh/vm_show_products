@@ -121,56 +121,60 @@ fi
 
 WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-if [ "VM_USER" == "" ]; then
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-fi
-
-if [ "$KEY" == "" ]; then
+VM_USER=`getVmUser`
+__VM_PRIVATE_KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+KEY_FILE=$__VM_PRIVATE_KEY_FILE
+if [ "$KEY_FILE" == "" ]; then
    # Set the first private key file found in the workspace directory if exists
-   __VM_PRIVATE_KEY_FILE_FOUND="false"
    if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
       if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
          for i in $PADOGRID_WORKSPACE/*.pem; do
-            VM_PRIVATE_KEY_FILE=$i
-            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            KEY_FILE=$i
             break
          done
       elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
          for i in $PADOGRID_WORKSPACE/*.key; do
-            VM_PRIVATE_KEY_FILE=$i
-            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            KEY_FILE=$i
             break
          done
       fi
    fi
-   KEY=`getClusterProperty "vm.privateKeyFile"`
 fi
-if [ "$KEY" == "" ]; then 
-   KEY="$VM_PRIVATE_KEY_FILE"
+if [ "$KEY_FILE" == "" ]; then 
+   KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
+# Replace '~' with the VM home path
+KEY_FILE=$(echo $KEY_FILE | sed "s|\~|$HOME|")
 VM_KEY=""
-if [ "$KEY" != "" ]; then 
-   if [ ! -f "$KEY" ]; then
-      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
       echo >&2 "       Command aborted."
       exit 1
    fi
-   VM_KEY="-i $KEY"
+   VM_KEY="-i $KEY_FILE"
+fi
+
+VM_KEY=""
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+   VM_KEY="-i $KEY_FILE"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
-for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
-   EXIT_CODE=$?
-   if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "${CError}ERROR:${CNone} $VM_HOST - $REPLY"
-      echo "       Command aborted."
-      exit 1
-   fi
-done
+#for VM_HOST in $__VM_HOSTS; do
+#   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
+#   EXIT_CODE=$?
+#   if [ "$EXIT_CODE" != "0" ]; then
+#      echo -e "${CError}ERROR:${CNone} $VM_HOST - $REPLY"
+#      echo "       Command aborted."
+#      exit 1
+#   fi
+#done
 
 # Show each VM
 if [ "$RAW_SPECIFIED" != "true" ] && [ "$REMOTE_SPECIFIED" != "true" ]; then
@@ -179,34 +183,60 @@ if [ "$RAW_SPECIFIED" != "true" ] && [ "$REMOTE_SPECIFIED" != "true" ]; then
    else
       COMMAND="vm_show_products -remote"
    fi
-   for VM_HOST in $__VM_HOSTS; do
-      vm_products=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
-      total=0
-      for i in $vm_products; do
-         if [ "$i" == ";" ]; then
-           let total=total+1
-         fi
-      done
-      delimiter_count=0
-      echo "$VM_HOST"
-      for i in $vm_products; do
-         if [ "$i" == ";" ]; then
-            let delimiter_count=delimiter_count+1
-            if [ $delimiter_count -eq $total ]; then
-               echo -e "$TLel $line"
-            else
-               echo -e "$TTee $line"
+   if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+      # If private hosts are reachable then execute from here.
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+
+      for VM_HOST in $__VM_HOSTS; do
+         vm_products=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
+         total=0
+         for i in $vm_products; do
+            if [ "$i" == ";" ]; then
+              let total=total+1
             fi
-            line=""
-         else
-            if [[ "$i" == "_"* ]]; then
-               line="$line ${CGo}${i:1}${CNone}"
+         done
+         delimiter_count=0
+         echo "$VM_HOST"
+         for i in $vm_products; do
+            if [ "$i" == ";" ]; then
+               let delimiter_count=delimiter_count+1
+               if [ $delimiter_count -eq $total ]; then
+                  echo -e "$TLel $line"
+               else
+                  echo -e "$TTee $line"
+               fi
+               line=""
             else
-               line="$line $i"
+               if [[ "$i" == "_"* ]]; then
+                  line="$line ${CGo}${i:1}${CNone}"
+               else
+                  line="$line $i"
+               fi
             fi
-         fi
+         done
       done
-   done
+   else
+      VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+      if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+         echo -e "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+         echo "       Command aborted."
+         exit 1
+      fi
+
+      # If private hosts are not reachable then use a public host as a proxy to execute this command.
+      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+         break;
+      done
+   fi
    exit 0
 fi
 
@@ -247,6 +277,37 @@ function printProductVersions
    done
    echo "$LINE ;"
 }
+
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then sync the first public host and then
+   # use that public as a proxy to execute this command.
+
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo "       Command aborted."
+      exit 1
+   fi
+
+   # Sync the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   __VM_HOSTS=$VM_HOST
+
+   # Use the public host a proxy to sync the rest of hosts
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+
+   # Clean tmp files and exit
+   cleanExit "$EXECUTABLE" "vm" "true"
+   exit
+fi
 
 determineInstalledProductVersions
 getCurrentProductVersions

@@ -26,7 +26,7 @@ PRODUCTS_DIR=$PADOGRID_ENV_BASE_PATH/products
 
 __options()
 {
-   echo "-file -product -version -vm -simulate -?"
+   echo "-cluster -file -product -version -vm -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -52,12 +52,11 @@ NAME
    $EXECUTABLE - Install the specified product on the remote VMs
 
 SYNOPSIS
-   $EXECUTABLE [-vm comma_separated_hosts]
-               -product product_name [-version product_version] | -file product_distribution_file
-               [-simulate] [-?]
+   $EXECUTABLE -product product_name [-version product_version] | -file product_distribution_file
+              [-vm comma_separated_hosts] [-cluster cluster_name] [-simulate] [-?]
 
 DESCRIPTION
-   Installs the specified product distribtion on all the VMs defined by the VM_HOSTS
+   Installs the specified product distribution on all the VMs defined by the VM_HOSTS
    environment variable in the workspace's 'setenv.sh' file. To install only on the
    cluster VMs, specify the cluster with the '-cluster' option. To install on a select
    list of VMs, specify the VM list with the '-vm' option.
@@ -104,6 +103,12 @@ EOF
    exit
 fi
 
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   echo "In simulation mode [$EXECUTABLE]..."
+   echo ""
+fi
+
 if [ "$FILE_SPECIFIED" == "true" ] && [ "$PRODUCT_SPECIFIED" == "true" ]; then
    echo >&2 "ERROR: Invalid options. Only one of '-file' or '-product' is allowed. Command aborted."
    exit 1
@@ -117,12 +122,12 @@ if [ "$VERSION_SPECIFIED" == "true" ] && [ "$VERSION_ARG" == "" ]; then
    exit 1
 fi
 
-PRODUCT=$PRODUCT_ARG
+__PRODUCT=$PRODUCT_ARG
 PRODUCT_VERSION=$VERSION_ARG
-if [ "$PRODUCT" != "" ] && [ "$VERSION_SPECIFIED" == "false" ]; then
-   PRODUCT_VERSION=$(getCurrentProductVersion $PRODUCT)
+if [ "$__PRODUCT" != "" ] && [ "$VERSION_SPECIFIED" == "false" ]; then
+   PRODUCT_VERSION=$(getCurrentProductVersion $__PRODUCT)
    if [ "$PRODUCT_VERSION" == "" ]; then
-      echo >&2 "ERROR: Unable to determine the specifed product version: [$PRODUCT]. Please specify '-version'. Command aborted."
+      echo >&2 "ERROR: Unable to determine the specifed product version: [$__PRODUCT]. Please specify '-version'. Command aborted."
       exit 1
    fi
 fi
@@ -180,15 +185,10 @@ else
    fi
 fi
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+VM_USER=`getVmUser`
 
-if [ "$KEY" == "" ]; then
-   KEY=`getClusterProperty "vm.privateKeyFile"`
-fi
-if [ "$KEY" == "" ]; then 
+KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" == "" ]; then
    # Set the first private key file found in the workspace directory if exists
    __VM_PRIVATE_KEY_FILE_FOUND="false"
    if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
@@ -206,28 +206,54 @@ if [ "$KEY" == "" ]; then
          done
       fi
    fi
-   KEY="$VM_PRIVATE_KEY_FILE"
+   # Replace '~' with the VM home path
+   KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
+fi
+if [ "$KEY_FILE" == "" ]; then 
+   KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
 VM_KEY=""
-if [ "$KEY" != "" ]; then 
-   if [ ! -f "$KEY" ]; then
-      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
       echo >&2 "       Command aborted."
       exit 1
    fi
-   VM_KEY="-i $KEY"
+   VM_KEY="-i $KEY_FILE"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
-for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
-   EXIT_CODE=$?
-   if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+#for VM_HOST in $__VM_HOSTS; do
+#   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
+#   EXIT_CODE=$?
+#   if [ "$EXIT_CODE" != "0" ]; then
+#      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+#      echo "       Command aborted."
+#      exit 1
+#   fi
+#done
+
+IS_PUBLIC_HOST="false"
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then sync the first public host and then
+   # use that public host as a proxy to execute this command.
+   echo "Scanning public VM... Please wait."
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
       echo "       Command aborted."
       exit 1
    fi
-done
+
+   # Use the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   __VM_HOSTS=$VM_HOST
+   IS_PUBLIC_HOST="true"
+fi
 
 #
 # Installs the product defined by the following variables. It uses the first
@@ -241,7 +267,7 @@ done
 #
 function installProduct
 {
-   if [ "$VM_PRODUCT_HOME_NOT_FOUND_LIST" == "" ]; then
+   if [ "$IS_PUBLIC_HOST" == "false" ] && "$VM_PRODUCT_HOME_NOT_FOUND_LIST" == "" ]; then
       echo "Product already installed on all VMs."
    else
 
@@ -252,20 +278,20 @@ function installProduct
       fi
 
       local __PRODUCT_DIST_FILE_NAME=$(basename $PRODUCT_PATH)
-      local __PRODUCT_PARENT_PATH="$(dirname $VM_PRODUCT_HOME_PATH)"
-      local __PRODUCT_DOWNLOADS_PATH="$(dirname $__PRODUCT_PARENT_PATH)/downloads"
-      local __PRODUCT_FILE_PATH="$__PRODUCT_DOWNLOADS_PATH/$__PRODUCT_DIST_FILE_NAME"
-      local __PRODUCT_COMMAND="[ -f $__PRODUCT_DOWNLOADS_PATH/$__PRODUCT_DIST_FILE_NAME ] && echo true || echo false"
+      local __VM_PRODUCT_PARENT_PATH="$(dirname $VM_PRODUCT_HOME_PATH)"
+      local __VM_PRODUCT_DOWNLOADS_PATH="$(dirname $__VM_PRODUCT_PARENT_PATH)/downloads"
+      local __VM_PRODUCT_FILE_PATH="$__VM_PRODUCT_DOWNLOADS_PATH/$__PRODUCT_DIST_FILE_NAME"
+      local __PRODUCT_COMMAND="[ -f $__VM_PRODUCT_DOWNLOADS_PATH/$__PRODUCT_DIST_FILE_NAME ] && echo true || echo false"
 
       echo "          Local Source: $PRODUCT_PATH"
-      echo "         Remote Target: $__PRODUCT_FILE_PATH"
+      echo "         Remote Target: $__VM_PRODUCT_FILE_PATH"
       echo "   Remote Product Home: $VM_PRODUCT_HOME_PATH"
       echo ""
 
       # Determine the first VM that has product distribution file
       BASE_VM=""
       for VM_HOST in $__VM_HOSTS; do
-         __PRODUCT_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$__PRODUCT_COMMAND")
+         __PRODUCT_EXISTS=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$__PRODUCT_COMMAND")
          if [ "$__PRODUCT_EXISTS" == "true" ]; then
             BASE_VM=$VM_HOST
             break
@@ -280,11 +306,11 @@ function installProduct
          done
          # Upload to the base VM
          if [ "$SIMULATE" == "true" ]; then
-            echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
-            echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:$__PRODUCT_DOWNLOADS_PATH
+            echo ssh -n $VM_KEY $VM_USER@$BASE_VM -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__VM_PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__VM_PRODUCT_DOWNLOADS_PATH"
+            echo scp -q -r -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:$__VM_PRODUCT_DOWNLOADS_PATH
          else
-            ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
-            scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:$__PRODUCT_DOWNLOADS_PATH
+            ssh -n $VM_KEY $VM_USER@$BASE_VM -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__VM_PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__VM_PRODUCT_DOWNLOADS_PATH"
+            scp -q -r -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PRODUCT_PATH $VM_USER@$BASE_VM:$__VM_PRODUCT_DOWNLOADS_PATH
          fi
       fi
 
@@ -293,20 +319,20 @@ function installProduct
          if [ "$VM_HOST" != "$BASE_VM" ]; then
             # Copy from the base VM
             if [ "$SIMULATE" == "true" ]; then
-               echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
-               echo ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY $__PRODUCT_FILE_PATH $VM_USER@$VM_HOST:$__PRODUCT_FILE_PATH"
+               echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__VM_PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__VM_PRODUCT_DOWNLOADS_PATH"
+               echo ssh -n $VM_KEY $VM_USER@$BASE_VM -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY $__VM_PRODUCT_FILE_PATH $VM_USER@$VM_HOST:$__VM_PRODUCT_FILE_PATH"
             else
-               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__PRODUCT_DOWNLOADS_PATH"
-               ssh -q -n $VM_KEY $VM_USER@$BASE_VM -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY $__PRODUCT_FILE_PATH $VM_USER@$VM_HOST:$__PRODUCT_FILE_PATH"
+               ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__VM_PRODUCT_DOWNLOADS_PATH ] && mkdir -p $__VM_PRODUCT_DOWNLOADS_PATH"
+               ssh -n $VM_KEY $VM_USER@$BASE_VM -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $REMOTE_VM_KEY $__VM_PRODUCT_FILE_PATH $VM_USER@$VM_HOST:$__VM_PRODUCT_FILE_PATH"
             fi
          fi
          # Install
          if [ "$SIMULATE" == "true" ]; then
-            echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT [ ! -d $__PRODUCT_PARENT_PATH ] && mkdir -p $__PRODUCT_PARENT_PATH"
-            echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT tar -C $__PRODUCT_PARENT_PATH/ -xzf $__PRODUCT_FILE_PATH"
+            echo "ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT [ ! -d $__VM_PRODUCT_PARENT_PATH ] && mkdir -p $__VM_PRODUCT_PARENT_PATH"
+            echo "ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT tar -C $__VM_PRODUCT_PARENT_PATH/ -xzf $__VM_PRODUCT_FILE_PATH"
          else
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__PRODUCT_PARENT_PATH ] && mkdir -p $__PRODUCT_PARENT_PATH"
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__PRODUCT_PARENT_PATH/ -xzf $__PRODUCT_FILE_PATH"
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d $__VM_PRODUCT_PARENT_PATH ] && mkdir -p $__VM_PRODUCT_PARENT_PATH"
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $__VM_PRODUCT_PARENT_PATH/ -xzf $__VM_PRODUCT_FILE_PATH"
          fi
       done
       echo "Remote installation complete: $VM_PRODUCT_HOME_PATH"
@@ -329,9 +355,9 @@ function updateVmSetenv
       echo "Updating VM $__VM_PRODUCT_HOME..."
       for VM_HOST in $__VM_HOSTS; do
          if [ "$SIMULATE" == "true" ]; then
-            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|^.*export $__VM_PRODUCT_HOME=.*$|   export $__VM_PRODUCT_HOME="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/setenv.sh"
+            echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|^.*export $__VM_PRODUCT_HOME=.*$|   export $__VM_PRODUCT_HOME="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/setenv.sh"
          else
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|^.*export $__VM_PRODUCT_HOME=.*$|   export $__VM_PRODUCT_HOME="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/setenv.sh"
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|^.*export $__VM_PRODUCT_HOME=.*$|   export $__VM_PRODUCT_HOME="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/setenv.sh"
          fi
       done
 
@@ -346,9 +372,9 @@ function updateVmSetenv
          # remote vmenv.sh
          for VM_HOST in $__VM_HOSTS; do
             if [ "$SIMULATE" == "true" ]; then
-               echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/vmenv.sh"
+               echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/vmenv.sh"
             else
-               ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/vmenv.sh"
+               ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "sed -i -e 's|VM_${__VM_PRODUCT_HOME}=.*$|VM_${__VM_PRODUCT_HOME}="\"${VM_PRODUCT_HOME_PATH}\""|' $VM_PADOGRID_WORKSPACE/vmenv.sh"
             fi
          done
       fi
@@ -396,7 +422,6 @@ function getProductDirName
 }
 
 if [ "$FILE_SPECIFIED" == "true" ]; then
-
    # Install product using file
 
    # Arguments to installProduct function
@@ -409,7 +434,7 @@ if [ "$FILE_SPECIFIED" == "true" ]; then
    VM_PRODUCT_HOME_COMMAND="[ -d $VM_PRODUCT_HOME_PATH ] && echo true || echo false"
    VM_PRODUCT_HOME_NOT_FOUND_LIST=""
    for VM_HOST in $__VM_HOSTS; do
-      VM_PRODUCT_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$VM_PRODUCT_HOME_COMMAND")
+      VM_PRODUCT_HOME_EXISTS=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$VM_PRODUCT_HOME_COMMAND")
       if [[ "$VM_PRODUCT_HOME_EXISTS" == *"false" ]]; then
          VM_PRODUCT_HOME_NOT_FOUND_LIST="$VM_PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
       fi
@@ -429,19 +454,17 @@ if [ "$FILE_SPECIFIED" == "true" ]; then
 else
 
    # Install product using install_padogrid
-
-   PRODUCT=$PRODUCT_ARG
    product=""
    COMMAND="vm_show_products -raw"
    for VM_HOST in $__VM_HOSTS; do
-      vm_products=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
+      vm_products=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
       found="false"
       count=0
       for i in $vm_products; do
          if [ $count -eq 0 ]; then
             product=$i
          fi
-         if [ "$product" == "$PRODUCT" ]; then
+         if [ "$product" == "$__PRODUCT" ]; then
             if [ "$i" == ";" ]; then
                break;
             elif [[ "$i" == "_"* ]]; then
@@ -458,18 +481,60 @@ else
          fi
       done
       if [ "$found" != "true" ]; then
-         echo "   Installing $PRODUCT:$PRODUCT_VERSION on $VM_HOST..."
+         echo "   Installing $__PRODUCT:$PRODUCT_VERSION on $VM_HOST..."
          if [ "$SIMULATE" == "true" ]; then
-            echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "install_padogrid -quiet -product $PRODUCT -version $PRODUCT_VERSION"
+            echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "install_padogrid -quiet -product $__PRODUCT -version $PRODUCT_VERSION"
          else
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "install_padogrid -quiet -product $PRODUCT -version $PRODUCT_VERSION"
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "install_padogrid -quiet -product $__PRODUCT -version $PRODUCT_VERSION"
          fi
       fi
    done
 
-   DIR_NAME=$(getProductDirName $PRODUCT $PRODUCT_VERSION)
-   VM_PRODUCT_HOME_PATH="$PRODUCTS_DIR/$DIR_NAME"
+   PRODUCT_DIR_NAME=$(getProductDirName $__PRODUCT $PRODUCT_VERSION)
+   VM_PRODUCTS_DIR="$VM_PADOGRID_ENV_BASE_PATH/products"
+   VM_PRODUCT_HOME_PATH="$VM_PRODUCTS_DIR/$PRODUCT_DIR_NAME"
    updateVmSetenv $VM_PRODUCT_HOME_PATH
+fi
+
+if [ "$IS_PUBLIC_HOST" == "true" ]; then
+   # Use the public host a proxy to sync the rest of hosts
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+   if [ "$FILE_SPECIFIED" == "true" ]; then
+      PRODUCT_PATH=""
+      args=""
+      found="false"
+      for i in "$@"; do
+         if [ "$found" = "true" ]; then
+            PRODUCT_PATH="$i"
+            __PRODUCT_DIST_FILE_NAME=$(basename $PRODUCT_PATH)
+            __VM_PRODUCT_PARENT_PATH="$(dirname $VM_PRODUCT_HOME_PATH)"
+            __VM_PRODUCT_DOWNLOADS_PATH="$(dirname $__VM_PRODUCT_PARENT_PATH)/downloads"
+            __VM_PRODUCT_FILE_PATH="$__VM_PRODUCT_DOWNLOADS_PATH/$__PRODUCT_DIST_FILE_NAME"
+            args="$args $__VM_PRODUCT_FILE_PATH"
+            found="false"
+         else
+            case $i in
+               -file) found="true" ;;
+            esac
+            args="$args $i"
+         fi
+      done
+   fi
+   if [ "$SIMULATE" == "true" ]; then
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $args"
+      if [ "$SIMULATE" == "true" ]; then
+         echo ""
+         echo "Simulation complete."
+      fi
+      echo ""
+   else
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $args"
+   fi
+   exit
 fi
 
 echo "Run 'vm_test' to check installation and configuration status."

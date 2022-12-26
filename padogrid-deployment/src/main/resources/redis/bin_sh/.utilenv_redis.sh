@@ -31,7 +31,7 @@ function getRedisVmMemberPid
 {
    local __HOST=$1
    local __MEMBER_PORT="$2"
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server | grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
+   members=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server | grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
    echo $pid
 }
 
@@ -158,7 +158,7 @@ function getRedisMemberPid
 
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
      __MEMBER_PORT=$__MEMBER_START_PORT
-      pid=$(ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server |grep $__MEMBER_PORT | grep -v grep")
+      pid=$(ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server |grep $__MEMBER_PORT | grep -v grep")
       pid=$(echo $pid | awk '{print $1}')
    else
       if [ "$POD" != "local" ]; then

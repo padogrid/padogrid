@@ -124,8 +124,6 @@ if [ "$VM_ENABLED" == "true" ]; then
       fi
    fi
 
-   # Replace , with space
-   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    DEFAULT_USER=$(whoami)
    VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
    VM_KEY=`getClusterProperty "vm.privateKeyFile"`
@@ -135,24 +133,45 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "$VM_KEY" != "" ]; then 
       VM_KEY="-i $VM_KEY"
    fi
-   MEMBER_NUM=1
-   for VM_HOST in $__VM_HOSTS; do
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
-      if [ "$POD" != "local" ]; then
-         let MEMBER_NUM=MEMBER_NUM+1
-      fi
-   done
 
-   if [ "$ALL" == "true" ]; then
-      # Locators
-      __LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+   if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+      # If private hosts are reachable then execute from here.
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
       MEMBER_NUM=1
-      for VM_HOST in $__LOCATOR_HOSTS; do
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_locator -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         if [ "$POD" != "local" ]; then
+            let MEMBER_NUM=MEMBER_NUM+1
+         fi
       done
-      if [ "$POD" != "local" ]; then
-         let MEMBER_NUM=MEMBER_NUM+1
+
+      if [ "$ALL" == "true" ]; then
+         # Locators
+         __LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+         MEMBER_NUM=1
+         for VM_HOST in $__LOCATOR_HOSTS; do
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_locator -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         done
+         if [ "$POD" != "local" ]; then
+            let MEMBER_NUM=MEMBER_NUM+1
+         fi
       fi
+   else
+      # If private hosts are not reachable then use a public host as a proxy to execute this command.
+      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+      VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+         break;
+      done
    fi
    exit
 fi

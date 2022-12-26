@@ -394,6 +394,23 @@ function isValidWorkspace
 }
 
 #
+# Returns VM user defined by the cluster property "vm.user". If "vm.user" is not
+# defined then returns the workspace VM_USER value. If VM_USER is not defined then
+# return the whoami user.
+#
+function getVmUser
+{
+   local __VM_USER=`getClusterProperty "vm.user"`
+   if [ "$__VM_USER" == "" ]; then
+      __VM_USER=$VM_USER
+   fi
+   if [ "$__VM_USER" == "" ]; then
+      __VM_USER=$(whoami)
+   fi
+   echo "$__VM_USER"
+}
+
+#
 # Returns a comma separated list of VM hosts of the specified workspace. Returns an empty
 # string if the workspace does not exist.
 # @param    workspaceName    Workspace name
@@ -902,7 +919,7 @@ function getVmMemberName
    if [ "$__HOST" == "" ]; then
       __HOSTNAME=`hostname`
    else
-      __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+      __HOSTNAME=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
       __HOSTNAME=$__HOSTNAME
    fi
    if [ "$__HOSTNAME" == "" ]; then
@@ -934,9 +951,9 @@ function getMemberPid
    __IS_GUEST_OS_NODE=`isGuestOs $NODE_LOCAL`
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
      if [ "$ __RWE" == "" ]; then
-        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+        members=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
      else
-        members=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+        members=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
      fi
    else
       if [ "$ __RWE" == "" ]; then
@@ -982,9 +999,9 @@ function getVmMemberPid
    local __RWE=$4
 
    if [ "$ __RWE" == "" ]; then
-      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+      members=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep " | awk '{print $1}'`
+      members=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep " | awk '{print $1}'`
    fi
    spids=""
    for j in $members; do
@@ -1251,6 +1268,29 @@ function setClusterProperty
 {
    __PROPERTIES_FILE="$CLUSTERS_DIR/$CLUSTER/etc/cluster.properties"
    `setProperty "$__PROPERTIES_FILE" $1 $2`
+}
+
+
+#
+# Removes the specified vm host from the 'vm.hosts' property.
+# @required  CLUSTER Cluster name.
+# @param     vmHost  VM host name or IP address.
+#
+function removeVmHost
+{
+   local __VM_HOSTS=$(getClusterProperty "vm.hosts")
+   local VM_HOSTS=""
+   for VM_HOST in $__VM_HOSTS; do
+      if [ "$VM_HOST" != "$REMOTE" ]; then
+         if [ "$VM_HOSTS" != "" ]; then
+            VM_HOSTS="${VM_HOSTS}," 
+         fi
+         VM_HOSTS="${VM_HOSTS}${VM_HOST}" 
+      fi
+   done
+   if [ $VM_HOSTS != "" ]; then
+      setClusterProperty "vm.hosts" $VM_HOSTS
+   fi
 }
 
 #
@@ -3435,6 +3475,35 @@ function getAllMergedVmHosts
 }
 
 #
+# Returns "true" if the current cluster's private host is reachable from the local
+# host; otherwise, "false". The first host in the 'vm.hosts' property is used as
+# a private host to attempt to connect.
+# 
+# @param vmUser  VM user name.
+# @param vmKey   VM key in the format of "-i key_file_path"
+#
+function isVmPrivateHostReachable
+{
+   local VM_USER="$1"
+   local VM_KEY="$2"
+   local VM_HOSTS=`getClusterProperty "vm.hosts"`
+   # Replace , with space
+   VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+   VM_PUBLIC_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+   local IS_REACHABLE="false"
+
+   for VM_HOST in $VM_HOSTS; do
+      local REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo true" 2>&1)
+      EXIT_CODE=$?
+      if [ "$EXIT_CODE" == "0" ] && [ "$REPLY" == "true" ]; then
+         IS_REACHABLE="true" 
+      fi
+      break;
+   done
+   echo "$IS_REACHABLE"
+}
+
+#
 # Pretty-prints the specified CLASSPATH
 #
 # @required OS_NAME  OS name
@@ -4712,7 +4781,7 @@ function getVmProductArray
    local VM_PADOGRID_PRODUCTS_PATH="$VM_PADOGRID_ENV_BASE_PATH/products"
    local VM_INSTALLED_PRODUCTS=""
    local PRODUCT_HOME_VAR
-   local PRODUCT_DIR_NAME_LIST=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ls $VM_PADOGRID_PRODUCTS_PATH")
+   local PRODUCT_DIR_NAME_LIST=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ls $VM_PADOGRID_PRODUCTS_PATH")
    for i in $PRODUCT_DIR_NAME_LIST; do
       local VM_PRODUCT=$(getProductName $i)
       local PRODUCT_HOME_VAR=$(getProductHome $VM_PRODUCT)

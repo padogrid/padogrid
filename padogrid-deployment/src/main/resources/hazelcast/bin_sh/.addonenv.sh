@@ -259,7 +259,7 @@ HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
 
 # Diagnostics logging
 DEFAULT_DIAGNOSTICS_ENABLED="true"
-if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -eq 3 ]; then
+if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" != "" ] && [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -eq 3 ]; then
    DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
 -Dhazelcast.diagnostics.metric.level=Debug"
 else
@@ -357,7 +357,7 @@ if [ "$HAZELCAST_VERSION" != "" ]; then
          __CLASSPATH="$__CLASSPATH:$JET_HOME/lib/hazelcast-jet-${HAZELCAST_VERSION}.jar"
       fi
    else
-      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+      if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" != "" ] && [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
          __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib:$HAZELCAST_HOME/lib/*:$HAZELCAST_HOME/bin/user-lib/*"
       elif [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
          __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-enterprise-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/bin/user-lib/*"

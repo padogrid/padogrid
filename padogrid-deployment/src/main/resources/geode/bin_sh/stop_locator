@@ -99,8 +99,6 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          fi
       fi
 
-      # Replace , with space
-      __VM_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
       DEFAULT_USER=$(whoami)
       VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
       VM_KEY=`getClusterProperty "vm.privateKeyFile"`
@@ -111,22 +109,43 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          VM_KEY="-i $VM_KEY"
       fi
 
-      # Determine the host
-      __LOCATOR_NUMBER=0
-      __FOUND="false"
-      
-      for VM_HOST in $__VM_HOSTS; do
-         let __LOCATOR_NUMBER=__LOCATOR_NUMBER+1
-         if [ $__LOCATOR_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
-            __FOUND="true"
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_locator -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
-            break;
+      if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+         # If private hosts are reachable then execute from here.
+
+         # Replace , with space
+         __VM_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
+
+         # Determine the host
+         __LOCATOR_NUMBER=0
+         __FOUND="false"
+         
+         for VM_HOST in $__VM_HOSTS; do
+            let __LOCATOR_NUMBER=__LOCATOR_NUMBER+1
+            if [ $__LOCATOR_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+               __FOUND="true"
+               ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_locator -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num 1"
+               break;
+            fi
+         done
+         FIRST_NUMBER=1
+         LAST_NUMBER=$__LOCATOR_NUMBER
+         if [ "$__FOUND" == "false" ]; then
+            echo "ERROR: Invalid locator number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
          fi
-      done
-      FIRST_NUMBER=1
-      LAST_NUMBER=$__LOCATOR_NUMBER
-      if [ "$__FOUND" == "false" ]; then
-         echo "ERROR: Invalid locator number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+      else
+         # If private hosts are not reachable then use a public host as a proxy to execute this command.
+         #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+         #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+         RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+         WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+         VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+         # Replace , with space
+         __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+         for VM_HOST in $__VM_HOSTS; do
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+            break;
+         done
       fi
       exit
    fi
@@ -158,7 +177,7 @@ if [ "$POD" != "local" ]; then
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
    if [ "$REMOTE_SPECIFIED" == "false" ]; then
-      ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*;"
+      ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*;"
       exit
    fi
    REMOTE_SPECIFIED="false"

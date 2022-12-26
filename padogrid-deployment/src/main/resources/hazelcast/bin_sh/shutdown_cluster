@@ -265,8 +265,6 @@ if [ "$VM_ENABLED" == "true" ]; then
       fi
    fi
 
-   # Replace , with space
-   VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    DEFAULT_USER=$(whoami)
    VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
    VM_KEY=`getClusterProperty "vm.privateKeyFile"`
@@ -275,7 +273,29 @@ if [ "$VM_ENABLED" == "true" ]; then
    elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
       VM_KEY="-i $VM_PRIVATE_KEY_FILE"
    fi
-   getVmActiveMember
+
+   if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+      # If private hosts are reachable then execute from here.
+      # Replace , with space
+      VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      getVmActiveMember
+   else
+      # If private hosts are not reachable then use a public host as a proxy to execute this command.
+      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+      VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+         break;
+      done
+      exit
+   fi
+
 else
    getActiveMember
 fi

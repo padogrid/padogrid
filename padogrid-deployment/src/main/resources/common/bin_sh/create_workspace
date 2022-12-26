@@ -230,6 +230,9 @@ if [ "$QUIET" == "true" ]; then
    VM_HOSTS="$VM_HOSTS_ARG"
    # Remove all spaces from VM_HOSTS
    VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/ //g")
+   VM_PUBLIC_HOSTS="$VM_PUBLIC_HOSTS_ARG"
+   # Remove all spaces from VM_PUBLIC_HOSTS
+   VM_PUBLIC_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/ //g")
    VM_USER=$VM_USER_ARG
    VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE_ARG
 
@@ -263,6 +266,7 @@ if [ "$QUIET" == "true" ]; then
    echo "   VM_PADOGRID_WORKSPACES_HOME: $VM_PADOGRID_WORKSPACES_HOME"
    echo "         VM_PADOGRID_WORKSPACE: $VM_PADOGRID_WORKSPACE"
    echo "                      VM_HOSTS: $VM_HOSTS"
+   echo "               VM_PUBLIC_HOSTS: $VM_PUBLIC_HOSTS"
    echo "                       VM_USER: $VM_USER"
    echo "           VM_PRIVATE_KEY_FILE: $VM_PRIVATE_KEY_FILE"
    fi
@@ -285,6 +289,7 @@ else
    VM_PADOGRID_WORKSPACES_HOME="$VM_WORKSPACES_HOME_ARG"
    VM_PADOGRID_WORKSPACE="$VM_WORKSPACE_ARG"
    VM_HOSTS="$VM_HOSTS_ARG"
+   VM_PUBLIC_HOSTS="$VM_PUBLIC_HOSTS_ARG"
    VM_USER=""
    VM_PRIVATE_KEY_FILE=""
    REDO=true
@@ -485,6 +490,18 @@ else
          # Remove spaces
          VM_HOSTS=${VM_HOSTS//[[:space:]]/}
 
+         # VM_PUBLIC_HOSTS
+         echo "Enter VM public host names or IP addresses separated by comma."
+         echo "[$VM_PUBLIC_HOSTS]:"
+         read -p "" INPUT
+         # trim string
+         INPUT=`echo "$INPUT" | xargs`
+         if [ "$INPUT" != "" ]; then
+            VM_PUBLIC_HOSTS=$INPUT
+         fi
+         # Remove spaces
+         VM_PUBLIC_HOSTS=${VM_PUBLIC_HOSTS//[[:space:]]/}
+
          # VM_USER
          echo "Enter VM user name."
          read -p "[$VM_USER]: " INPUT
@@ -526,6 +543,7 @@ else
          VM_PRIVATE_KEY_FILE=$__VM_PRIVATE_KEY_FILE
       else # VM_ENABLED==false
          VM_HOSTS=""
+         VM_PUBLIC_HOSTS=""
          VM_USER=""
          VM_PRIVATE_KEY_FILE=""
       fi
@@ -558,6 +576,7 @@ else
       echo "   VM_PADOGRID_WORKSPACES_HOME: $VM_PADOGRID_WORKSPACES_HOME"
       echo "         VM_PADOGRID_WORKSPACE: $VM_PADOGRID_WORKSPACE"
       echo "                      VM_HOSTS: $VM_HOSTS"
+      echo "               VM_PUBLIC_HOSTS: $VM_PUBLIC_HOSTS"
       echo "                       VM_USER: $VM_USER"
       echo "           VM_PRIVATE_KEY_FILE: $VM_PRIVATE_KEY_FILE"
       fi
@@ -758,25 +777,39 @@ echo "#CLASSPATH=" >> $WORKSPACE_DIR/setenv.sh
 echo "#" > $WORKSPACE_DIR/vmenv.sh
 echo "# Remote VM environment variables" >> $WORKSPACE_DIR/vmenv.sh
 echo "#" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# Set true to enable remote commands, false to disable remote commands." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_ENABLED=\"$VM_ENABLED\"" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# Enter a comma-separated VM host names with NO spaces. If VM_ENABLED is true then" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM_HOSTS must be set, otherwise, VM_HOSTS and other VM_ variables are ignored." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_HOSTS=\"$VM_HOSTS\"" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
+echo "# Enter a comma-separated VM host names with NO spaces. VM_PUBLIC_HOSTS is" >> $WORKSPACE_DIR/vmenv.sh
+echo "# required if VM_HOSTS has private hosts that cannot be reached from the" >> $WORKSPACE_DIR/vmenv.sh
+echo "# machine where PadoGrid is executed. The order of hosts in this list must" >> $WORKSPACE_DIR/vmenv.sh
+echo "# match VM_HOSTS." >> $WORKSPACE_DIR/vmenv.sh
+echo "VM_PUBLIC_HOSTS=\"$VM_PUBLIC_HOSTS\"" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM user name." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_USER=\"$VM_USER\"" >> $WORKSPACE_DIR/vmenv.sh
 echo "" >> $WORKSPACE_DIR/vmenv.sh
+echo "# ---" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM hosts may have installation paths dfferent from the local paths." >> $WORKSPACE_DIR/vmenv.sh
+echo "# ---" >> $WORKSPACE_DIR/vmenv.sh
 echo "" >> $WORKSPACE_DIR/vmenv.sh
-
 echo "# VM PadoGrid base path." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_PADOGRID_ENV_BASE_PATH=\"$VM_PADOGRID_ENV_BASE_PATH\"" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM JDK home directory path." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_JAVA_HOME=\"$VM_JAVA_HOME\"" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM PadoGrid home path." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_PADOGRID_HOME=\"$VM_PADOGRID_HOME\"" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM RWE path." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_PADOGRID_WORKSPACES_HOME=\"$VM_PADOGRID_WORKSPACES_HOME\"" >> $WORKSPACE_DIR/vmenv.sh
+echo "" >> $WORKSPACE_DIR/vmenv.sh
 echo "# VM Workspace path." >> $WORKSPACE_DIR/vmenv.sh
 echo "VM_PADOGRID_WORKSPACE=\"\$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE\"" >> $WORKSPACE_DIR/vmenv.sh
 

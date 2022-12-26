@@ -149,55 +149,50 @@ fi
 
 WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-if [ "$VM_USER" == "" ]; then
-   VM_USER=$DEFAULT_USER
-fi
-
-KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
-if [ "$KEY_FILE" == "" ]; then 
+VM_USER=`getVmUser`
+__VM_PRIVATE_KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+KEY_FILE=$__VM_PRIVATE_KEY_FILE
+if [ "$KEY_FILE" == "" ]; then
    # Set the first private key file found in the workspace directory if exists
-   __VM_PRIVATE_KEY_FILE_FOUND="false"
    if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
       if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
          for i in $PADOGRID_WORKSPACE/*.pem; do
-            VM_PRIVATE_KEY_FILE=$i
-            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            KEY_FILE=$i
             break
          done
       elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
          for i in $PADOGRID_WORKSPACE/*.key; do
-            VM_PRIVATE_KEY_FILE=$i
-            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            KEY_FILE=$i
             break
          done
       fi
    fi
+fi
+if [ "$KEY_FILE" == "" ]; then 
    KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-if [ ! -f "$KEY_FILE" ]; then
-   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
-   echo >&2 "       Command aborted."
-   exit 1
-fi
-if [ "$KEY_FILE" == "" ]; then
-   VM_KEY=""
-else
+# Replace '~' with the VM home path
+KEY_FILE=$(echo $KEY_FILE | sed "s|\~|$HOME|")
+VM_KEY=""
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
    VM_KEY="-i $KEY_FILE"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
-for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
-   EXIT_CODE=$?
-   if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "ERROR: $VM_HOST - ${CError}Failed${CNone} ($REPLY)"
-      echo "       Command aborted."
-      exit 1
-   fi
-done
+#for VM_HOST in $__VM_HOSTS; do
+#   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
+#   EXIT_CODE=$?
+#   if [ "$EXIT_CODE" != "0" ]; then
+#      echo -e "ERROR: $VM_HOST - ${CError}Failed${CNone} ($REPLY)"
+#      echo "       Command aborted."
+#      exit 1
+#   fi
+#done
 
 if [ "$VM_ENABLED" == "true" ]; then
    ISSUES_FOUND="false"
@@ -213,6 +208,7 @@ Workspace: $WORKSPACE
 Environment:
                   VM_ENABLED=$VM_ENABLED
                     VM_HOSTS=$VM_HOSTS
+             VM_PUBLIC_HOSTS=$VM_PUBLIC_HOSTS
                      VM_USER=$VM_USER
          VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE
    VM_PADOGRID_ENV_BASE_PATH=$VM_PADOGRID_ENV_BASE_PATH
@@ -221,6 +217,29 @@ Environment:
        VM_PADOGRID_WORKSPACE=$VM_PADOGRID_WORKSPACE
 ------------------------------------------------------------------------------------------
 EOF
+
+IS_PUBLIC_HOST="false"
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then test the first public host and then
+   # use that public as a proxy to execute this command.
+
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo "       Command aborted."
+      exit 1
+   fi
+
+   # Use the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   __VM_HOSTS=$VM_HOST
+
+   IS_PUBLIC_HOST="true"
+fi
 
 # Check ssh sessions
 NETWORK_ISSUES_VM_HOSTS=""
@@ -243,7 +262,7 @@ SOFTWARE_ISSUES_FOUND="false"
 COMMAND="vm_show_products -raw -active"
 echo "Determining active products... Please wait."
 for VM_HOST in $__VM_HOSTS; do
-   vm_products=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
+   vm_products=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
    if [ "$vm_products" == "" ]; then
       PADOGRID_HOME_NOT_FOUND_LIST="$PADOGRID_HOME_NOT_FOUND_LIST $VM_HOST"
       JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
@@ -302,8 +321,7 @@ done
 # Display cluster info
 __VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 __VM_HOSTS_CLUSTER=`getClusterProperty "vm.hosts"`
-__VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-__VM_PRIVATE_KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+
 cat <<EOF
 ------------------------------------------------------------------------------------------
 Cluster: $CLUSTER
@@ -356,19 +374,26 @@ fi
 
 # Check if the cluster has been deployed
 CLUSTER_NOT_FOUND_LIST=""
-# Replace , with space
-__VM_HOSTS=$(echo "$__VM_HOSTS_CLUSTER" | sed "s/,/ /g")
 if [ "$NETWORK_ISSUES_VM_HOSTS" == "" ]; then
    CLUSTER_COMMAND="if [ -d "$VM_PADOGRID_WORKSPACE/clusters/$CLUSTER" ]; then echo true; else echo false; fi"
    for VM_HOST in $__VM_HOSTS; do
-      CLUSTER_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$CLUSTER_COMMAND")
+      CLUSTER_EXISTS=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$CLUSTER_COMMAND")
       if [[ "$CLUSTER_EXISTS" == *"false" ]]; then
-	 CLUSTER_NOT_FOUND_LIST="$CLUSTER_NOT_FOUND_LIST $VM_HOST"
-	 CLUSTER_ISSUES_FOUND=true
+          CLUSTER_NOT_FOUND_LIST="$CLUSTER_NOT_FOUND_LIST $VM_HOST"
+          CLUSTER_ISSUES_FOUND=true
       fi
    done
 fi
 echo "------------------------------------------------------------------------------------------"
+
+if [ "$IS_PUBLIC_HOST" == "true" ]; then
+   # Use the public host a proxy to sync the rest of hosts
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+fi
 
 # Summary
 echo "------------------------------------------------------------------------------------------"

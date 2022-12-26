@@ -31,14 +31,6 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
-#
-# Determeint $TAR_BALL_PATH
-#
-ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
-TOP_DIR="$(dirname "$BASE_DIR")"
-TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
-TAR_BALL_GZ_PATH=$PADOGRID_WORKSPACE/bundles/$TAR_BALL_GZ_NAME
-
 if [ "$HELP" == "true" ]; then
 cat <<EOF
 
@@ -160,18 +152,17 @@ else
    fi
 fi
 
-echo "----------------------------------------------------------------"
-echo "WORKSPACE: $PADOGRID_WORKSPACE"
-echo "Deploying padogrid to the following VM hosts:"
-echo "    $VM_HOSTS"
-echo "----------------------------------------------------------------"
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "Deploying padogrid to the following VM hosts:"
+   echo "    $VM_HOSTS"
+   echo "----------------------------------------------------------------"
+fi
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+VM_USER=`getVmUser`
 KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
-if [ "$KEY_FILE" == "" ]; then 
+if [ "$KEY_FILE" == "" ]; then
    # Set the first private key file found in the workspace directory if exists
    __VM_PRIVATE_KEY_FILE_FOUND="false"
    if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
@@ -189,33 +180,59 @@ if [ "$KEY_FILE" == "" ]; then
          done
       fi
    fi
+   # Replace '~' with the VM home path
+   KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
+fi
+if [ "$KEY_FILE" == "" ]; then 
    KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-if [ ! -f "$KEY_FILE" ]; then
-   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
-   echo >&2 "       Command aborted."
-   exit 1
-fi
-if [ "$KEY_FILE" == "" ]; then
-   VM_KEY=""
-else
+VM_KEY=""
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
    VM_KEY="-i $KEY_FILE"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
-for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
-   EXIT_CODE=$?
-   if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+#for VM_HOST in $__VM_HOSTS; do
+#   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
+#   EXIT_CODE=$?
+#   if [ "$EXIT_CODE" != "0" ]; then
+#      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+#      echo "       Command aborted."
+#      exit 1
+#   fi
+#done
+
+# Simulation runs in the quiet mode
+if [ "$SIMULATE" == "true" ]; then
+   QUIET=$SIMULATE
+fi
+
+IS_PUBLIC_HOST="false"
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   echo "Scanning VMs... Please wait."
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then deploy to the first public host and then
+   # use that public as a proxy to execute this command.
+   echo "Scanning public VM... Please wait."
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
       echo "       Command aborted."
       exit 1
    fi
-done
 
-# Simulation runs in the quite mode
-if [ "$SIMULATE" == "true" ]; then
-   QUIET=$SIMULATE
+   # Use the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   __VM_HOSTS=$VM_HOST
+   IS_PUBLIC_HOST="true"
 fi
 
 # Find all existing and new hosts
@@ -226,11 +243,11 @@ COMMAND="if [ -d "$VM_PADOGRID_HOME" ]; then echo true; else echo false; fi"
 EXISTING_HOST_COUNT=0
 NEW_HOST_COUNT=0
 for VM_HOST in $__VM_HOSTS; do
-   HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   HOST_NAME=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$HOST_NAME" == "$THIS_VM_HOSTNAME" ]; then
       continue
    fi
-   DIR_EXISTS=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND`
+   DIR_EXISTS=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND`
    if [ "$DIR_EXISTS" == "true" ]; then
       EXISTING_HOSTS="$EXISTING_HOSTS $VM_HOST"
       let EXISTING_HOST_COUNT=EXISTING_HOST_COUNT+1
@@ -240,16 +257,20 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
-echo ""
-echo "padogrid installation found in the following host(s):"
-echo "   $EXISTING_HOSTS"
-echo ""
-echo "padogrid not found in the following host(s):"
-echo "   $NEW_HOSTS"
-echo ""
+if [ "$EXISTING_HOSTS" != "" ]; then
+   echo ""
+   echo "padogrid installation found in the following host(s):"
+   echo "   $EXISTING_HOSTS"
+fi
+
+if [ "$NEW_HOSTS" != "" ]; then
+   echo ""
+   echo "padogrid installation not found in the following host(s):"
+   echo "   $NEW_HOSTS"
+fi
 DEPLOYMENT_HOST_COUNT=$NEW_HOST_COUNT
 INPUT=
-if [ "$QUIET" == "false" ]; then
+if [ "$QUIET" == "false" ] && [ "$OVERWRITE" != "true" ]; then
    if [ "$EXISTING_HOSTS" != "" ]; then
       echo "Do you want to overwrite the existing installations?"
       echo "('overwrite' + Enter to overwrite the installations, other keys to continue.)"
@@ -260,7 +281,6 @@ if [ "$QUIET" == "false" ]; then
    OVERWRITE="false"
    if [ "$INPUT" == "overwrite" ]; then
       OVERWRITE="true"
-      let DEPLOYMENT_HOST_COUNT=DEPLOYMENT_HOST_COUNT+EXISTING_HOST_COUNT
       echo "This installation will be deployed to both existing and new hosts."
    else
       echo "Existing installations will be skipped."
@@ -277,37 +297,48 @@ if [ "$QUIET" == "false" ]; then
    fi
 fi
 
-if [ $DEPLOYMENT_HOST_COUNT -eq 0 ]; then
-   echo "No qualified hosts found. Command aborted." 
-   echo ""
-   exit
+if [ "$OVERWRITE" == "true" ]; then
+   let DEPLOYMENT_HOST_COUNT=DEPLOYMENT_HOST_COUNT+EXISTING_HOST_COUNT
+fi
+
+if [ "$IS_PUBLIC_HOST" != "true" ]; then
+   if [ $DEPLOYMENT_HOST_COUNT -eq 0 ]; then
+      exit
+   fi
 fi
 
 echo "Total deployment host count: $DEPLOYMENT_HOST_COUNT"
-echo "Creating a tar ball..."
+
+DOWNLOADS_DIR="$PADOGRID_ENV_BASE_PATH/downloads"
 ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
 TAR_BALL_NAME=$ROOT_DIR_NAME.tar
+TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+TAR_BALL_GZ_PATH="$DOWNLOADS_DIR/$TAR_BALL_GZ_NAME"
 TAR_BALL_PATH=$PADOGRID_WORKSPACE/bundles/$TAR_BALL_NAME
 VM_PADOGRID_HOME_PARENT_DIR="$(dirname "$VM_PADOGRID_HOME")"
 
+echo "Creating a tar ball: [$TAR_BALL_GZ_PATH]..."
 if [ "$SIMULATE" != "true" ]; then
-   pushd $PADOGRID_HOME/.. 
+   pushd $PADOGRID_HOME/..  > /dev/null 2>&1
    tar czf $TAR_BALL_GZ_PATH $ROOT_DIR_NAME
-   popd
+   popd > /dev/null 2>&1
 fi
+
+ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
+VM_PADOGRID_TARBALL_GZ_PATH="$VM_PADOGRID_ENV_BASE_PATH/downloads/$TAR_BALL_GZ_NAME"
 
 if [ "$NEW_HOSTS" != "" ]; then
    echo "New Hosts:"
    for VM_HOST in $NEW_HOSTS; do
       echo "   Deploying to $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
       fi
    done
 fi
@@ -317,17 +348,37 @@ if [ "$EXISTING_HOSTS" != "" ] && [ "$OVERWRITE" == "true" ] ; then
    for VM_HOST in $EXISTING_HOSTS; do
       echo "   Deploying to $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         echo ssh -q -n $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
+         echo ssh -n $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
       else
-         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:/tmp
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf /tmp/$TAR_BALL_GZ_NAME; rm /tmp/$TAR_BALL_GZ_NAME"
+         scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
       fi
    done
 fi
-echo ""
-if [ "$SIMULATE" == "true" ]; then
-   echo "Simulation deployment complete."
-else
-   echo "Deployment complete."
+
+if [ "$IS_PUBLIC_HOST" == "true" ]; then
+   # Use the public host a proxy to sync the rest of hosts
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   if [ "$OVERWRITE" == "true" ]; then
+      COMMAND_OPTS="-overwrite"
+   fi
+   if [ "$SIMULATE" == "true" ]; then
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER $@"
+   else
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER $@"
+   fi
+fi
+
+
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   echo ""
+   if [ "$SIMULATE" == "true" ]; then
+      echo "Simulation deployment complete."
+   else
+      echo "Deployment complete."
+   fi
 fi

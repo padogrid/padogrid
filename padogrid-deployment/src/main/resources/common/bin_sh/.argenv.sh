@@ -99,6 +99,7 @@ PRODUCT_CLUSTER_SPECIFIED=false
 MIRROR_SPECIFIED=false
 VM_SPECIFIED=false
 VM_HOSTS_ARG=
+VM_PUBLIC_HOSTS_ARG=
 VM_JAVA_HOME_ARG=
 VM_PADOGRID_BASE_ARG=
 VM_PADOGRID_HOME_ARG=
@@ -296,6 +297,10 @@ do
       elif [ "$PREV" == "-vm" ]; then
          if [[ "$i" != "-"* ]]; then
             VM_HOSTS_ARG=$i
+         fi
+      elif [ "$PREV" == "-vm-public" ]; then
+         if [[ "$i" != "-"* ]]; then
+            VM_PUBLIC_HOSTS_ARG=$i
          fi
       elif [ "$PREV" == "-vm-java" ]; then
          VM_JAVA_HOME_ARG=$i

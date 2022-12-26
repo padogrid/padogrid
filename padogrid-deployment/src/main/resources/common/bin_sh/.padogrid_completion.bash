@@ -489,7 +489,7 @@ __padogrid_complete()
           type_list=$(__cd_complete_arg "apps" 2)
       elif [ "$command" == "cd_k8s" ]; then
           type_list=$(__cd_complete_arg "k8s" 2)
-      elif [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
+      elif [[ "$command" == "vm_deploy_bundle" || "$command" == "vm_copy" ]] &&  [[ "$cur_word" != "-"* ]]; then
          is_path="true"
       else
          if [ "$command" == "-version" ]; then
@@ -1213,7 +1213,7 @@ __command_complete()
       ;;
 
    *)
-      if [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
+      if [[ "$command" == "vm_deploy_bundle" || "$command" == "vm_copy" ]] &&  [[ "$cur_word" != "-"* ]]; then
          is_path="true"
       else
          # Command options

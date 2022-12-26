@@ -262,14 +262,14 @@ if [ "$VM_ENABLED" == "true" ]; then
    # Replace , with space
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    for VM_HOST in $__VM_HOSTS; do
-      HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+      HOSTNAME=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
       if [ "$HOSTNAME" == "" ]; then
          echo "Invalid host [$VM_HOST]"
          continue
       elif [ "$HOSTNAME" == "$THIS_VM_HOSTNAME" ]; then
          continue
       fi
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm -rf $VM_PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "rm -rf $VM_PADOGRID_WORKSPACE/clusters/$CLUSTER"
    done
 fi
 
