@@ -3481,18 +3481,28 @@ function getAllMergedVmHosts
 # 
 # @param vmUser  VM user name.
 # @param vmKey   VM key in the format of "-i key_file_path"
+# @param vmHosts A comma separated list of VM hosts. If unspecified then defaults to
+#                'vm.hosts' in cluster.properties or VM_HOSTS defined in the workspace
+#                'setenv.sh'. Optional.
 #
 function isVmPrivateHostReachable
 {
    local VM_USER="$1"
    local VM_KEY="$2"
-   local VM_HOSTS=`getClusterProperty "vm.hosts"`
-   # Replace , with space
-   VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-   VM_PUBLIC_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
-   local IS_REACHABLE="false"
+   local __VM_HOSTS="$3"
 
-   for VM_HOST in $VM_HOSTS; do
+   if [ "$__VM_HOSTS" == "" ]; then
+      __VM_HOSTS=`getClusterProperty "vm.hosts"`
+      if [ "$__VM_HOSTS" == "" ]; then
+         __VM_HOSTS=$VM_HOSTS
+      fi
+   fi
+   # Replace , with space
+   __VM_HOSTS=$(echo "$__VM_HOSTS" | sed "s/,/ /g")
+
+   local IS_REACHABLE="false"
+   local VM_HOST
+   for VM_HOST in $__VM_HOSTS; do
       local REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo true" 2>&1)
       EXIT_CODE=$?
       if [ "$EXIT_CODE" == "0" ] && [ "$REPLY" == "true" ]; then

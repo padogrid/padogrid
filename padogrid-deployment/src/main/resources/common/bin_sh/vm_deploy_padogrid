@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -vm -overwrite -simulate -quiet -?"
+   echo "-cluster -vm -vm-key -overwrite -simulate -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,8 @@ NAME
    $EXECUTABLE - Deploy the padogrid distribution to VMs
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-simulate] [-quiet] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts]
+                      [-vm-key private_key_file_path] [-simulate] [-quiet] [-?]
 
 DESCRIPTION
    Deploys the padogrid distribution to all the VMs defined by the VM_HOSTS
@@ -67,6 +68,11 @@ OPTIONS
    -vm comma_separated_hosts
              A comma separated list of VM hosts or addresses. If the list contains spaces
              then enclosed it in quotes.
+
+   -vm-key private_key_file_path
+             Local private key file path. If specified, then it overrides the private key
+             file specified in the workspace 'setenv.sh' and cluster 'cluster.properties'
+             files.
 
    -overwrite
              If specified, then overwrites the existing VMs.
@@ -99,13 +105,23 @@ EOF
    exit
 fi
 
-# Available only on VM workspaces
-if [ "$VM_ENABLED" != "true" ]; then
-   echo "----------------------------------------------------------------"
-   echo "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "    ERROR: The workspace is not a VM workspace. Command aborted."
-   echo "----------------------------------------------------------------"
-   exit 1 
+if [ "$VM_PRIVATE_KEY_FILE_ARG" != "" ]; then
+   if [ ! -f "$VM_PRIVATE_KEY_FILE_ARG" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo -e >&2 "    ${CError}ERROR:${CNone} File not found: [$VM_PRIVATE_KEY_FILE_ARG]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1 
+   fi
+else
+   # Available only on VM workspaces if -vm is not specified
+   if [ "$VM_ENABLED" != "true" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo -e >&2 "    ${CError}ERROR:${CNone} The workspace is not a VM workspace. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1 
+   fi
 fi
 
 # If the -vm option is specified then it overrides all other options
@@ -115,7 +131,7 @@ if [ "$VM_SPECIFIED" == "true" ]; then
    else
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo >&2 "ERROR: Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
       echo "----------------------------------------------------------------"
       exit 1
    fi
@@ -125,7 +141,7 @@ else
       if [ "`isClusterExist "$CLUSTER"`" == "false" ]; then 
          echo "----------------------------------------------------------------"
          echo "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo >&2 "ERROR: Cluster does not exist [$CLUSTER]. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Cluster does not exist [$CLUSTER]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
       fi
@@ -133,7 +149,7 @@ else
       if [ "$VM_ENABLED" == "false" ]; then
          echo "----------------------------------------------------------------"
          echo "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+         echo -e >&2 " ${CError}ERROR:${CNone}Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
          echo >&2 "       in the 'etc/cluster.properties' file."
          echo "----------------------------------------------------------------"
          exit 1
@@ -143,7 +159,7 @@ else
          if [ "$VM_HOSTS" == "" ]; then
             echo "----------------------------------------------------------------"
             echo "WORKSPACE: $PADOGRID_WORKSPACE"
-            echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
+            echo -e >&2 "    ${CError}ERROR:${CNone} The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
             echo >&2 "           file. Command aborted."
             echo "----------------------------------------------------------------"
             exit 1
@@ -161,30 +177,37 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
 fi
 
 VM_USER=`getVmUser`
-KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
-if [ "$KEY_FILE" == "" ]; then
-   # Set the first private key file found in the workspace directory if exists
-   __VM_PRIVATE_KEY_FILE_FOUND="false"
-   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
-      if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
-         for i in $PADOGRID_WORKSPACE/*.pem; do
-            VM_PRIVATE_KEY_FILE=$i
-            __VM_PRIVATE_KEY_FILE_FOUND="true"
-            break
-         done
-      elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
-         for i in $PADOGRID_WORKSPACE/*.key; do
-            VM_PRIVATE_KEY_FILE=$i
-            __VM_PRIVATE_KEY_FILE_FOUND="true"
-            break
-         done
+
+KEY_FILE=""
+if [ "$VM_PRIVATE_KEY_FILE_ARG" != "" ]; then
+   KEY_FILE=$VM_PRIVATE_KEY_FILE_ARG
+   VM_KEY="-i $KEY_FILE"
+else
+   KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$KEY_FILE" == "" ]; then
+      # Set the first private key file found in the workspace directory if exists
+      __VM_PRIVATE_KEY_FILE_FOUND="false"
+      if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+         if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+            for i in $PADOGRID_WORKSPACE/*.pem; do
+               VM_PRIVATE_KEY_FILE=$i
+               __VM_PRIVATE_KEY_FILE_FOUND="true"
+               break
+            done
+         elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
+            for i in $PADOGRID_WORKSPACE/*.key; do
+               VM_PRIVATE_KEY_FILE=$i
+               __VM_PRIVATE_KEY_FILE_FOUND="true"
+               break
+            done
+         fi
       fi
+      # Replace '~' with the VM home path
+      KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
    fi
-   # Replace '~' with the VM home path
-   KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
-fi
-if [ "$KEY_FILE" == "" ]; then 
-   KEY_FILE="$VM_PRIVATE_KEY_FILE"
+   if [ "$KEY_FILE" == "" ]; then 
+      KEY_FILE="$VM_PRIVATE_KEY_FILE"
+   fi
 fi
 VM_KEY=""
 if [ "$KEY_FILE" != "" ]; then 
@@ -213,19 +236,19 @@ if [ "$SIMULATE" == "true" ]; then
 fi
 
 IS_PUBLIC_HOST="false"
-if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY" "$VM_HOSTS")" == "true" ]; then
    echo "Scanning VMs... Please wait."
    # If private hosts are reachable then execute from here.
    # Replace , with space
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
 else
    # If private hosts are not reachable then deploy to the first public host and then
-   # use that public as a proxy to execute this command.
+   # use that public host as a proxy to execute this command.
    echo "Scanning public VM... Please wait."
    VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
    if [ "$VM_PUBLIC_HOSTS" == "" ]; then
-      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
-      echo "       Command aborted."
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties'."
+      echo >&2 "       Command aborted."
       exit 1
    fi
 
@@ -246,12 +269,12 @@ NEW_PADOGRID_BASE_HOST_COUNT=0
 NEW_PADOGRID_HOST_COUNT=0
 THIS_VM_HOSTNAME=`hostname`
 for VM_HOST in $__VM_HOSTS; do
-   REPLY=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname && echo \\$HOME"`
+   REPLY=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname && cd && pwd"`
    index=0
    HOST_NAME=""
    VM_HOME=""
    for i in $REPLY; do
-      case $i in
+      case $index in
          0) HOST_NAME=$i;;
          1) VM_HOME=$i;;
       esac
@@ -424,16 +447,41 @@ if [ "$IS_PUBLIC_HOST" == "true" ]; then
    #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
    RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
    WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   COMMAND_OPTS="-quiet"
    if [ "$OVERWRITE" == "true" ]; then
-      COMMAND_OPTS="-overwrite"
+      COMMAND_OPTS="$COMMAND_OPTS -overwrite"
    fi
+
+   # Upload key file
+   args="$@"
+   KEY_FILE_NAME=$(basename "$KEY_FILE")
+   # Remove remote key file so that we can overwrite it (due to 400)
+   COMMAND="if [ ! -d "$VM_HOME/.padogrid" ]; then mkdir $VM_HOME/.padogrid; else rm -f $VM_HOME/.padogrid/$KEY_FILE_NAME > /dev/null 2>&1; fi"
    if [ "$SIMULATE" == "true" ]; then
-      #echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER $@"
-      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote $@"
-      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote $@"
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
+      echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $KEY_FILE $VM_USER@$VM_HOST:$VM_HOME/.padogrid/$KEY_FILE_NAME
    else
-      #ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER $@"
-      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote $@"
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
+      scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $KEY_FILE $VM_USER@$VM_HOST:$VM_HOME/.padogrid/$KEY_FILE_NAME
+   fi
+   if [ "$VM_PRIVATE_KEY_FILE_ARG" != "" ]; then
+      args=$(echo $args | sed "s|$VM_PRIVATE_KEY_FILE_ARG|$VM_HOME/.padogrid/$KEY_FILE_NAME|g")
+   else
+      args="$args -vm-key $VM_HOME/.padogrid/$KEY_FILE_NAME"
+   fi
+   if [ "$VM_HOSTS_ARG" != "" ]; then
+      args=$(echo $args | sed "s|$VM_HOSTS_ARG|$VM_HOSTS/.padogrid/$KEY_FILE_NAME|g")
+   else
+      args="$args -vm $VM_HOSTS"
+   fi
+
+   # Run proxy VM
+   if [ "$SIMULATE" == "true" ]; then
+      #echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER $args"
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote $args"
+   else
+      #ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER $args"
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote $args"
    fi
 fi
 
