@@ -156,8 +156,9 @@ fi
 #
 # Reconstruct command
 #
-COMMAND=
-PREV_VAL=
+COMMAND_OPTS=""
+COMMAND=""
+PREV_VAL=""
 for i in $*; do
    if [[ "$i" == "${CLUSTER}" ]]; then
        if [ -z $CLUSTER_SPECIFIED ]; then
@@ -167,6 +168,8 @@ for i in $*; do
       if [ "$PREV_VAL" != "-vm" ]; then
          COMMAND="$COMMAND $i"
       fi
+   else
+      COMMAND_OPTS="$COMMAND_OPTS $i"
    fi
    PREV_VAL=$i
 done
@@ -217,8 +220,8 @@ else
    # use that public host as a proxy to execute this command.
    VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
    if [ "$VM_PUBLIC_HOSTS" == "" ]; then
-      echo -e "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
-      echo "       Command aborted."
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo >&2 "       Command aborted."
       exit 1
    fi
    #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
@@ -228,7 +231,12 @@ else
    VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
 
    # Execute on public vm
-   ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -all $@"
+  if [ "$SIMULATE" == "true" ]; then
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -all $COMMAND_OPTS \"$COMMAND\""
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -all $COMMAND_OPTS \"$COMMAND\""
+  else
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -all $COMMAND_OPTS \"$COMMAND\""
+  fi
    exit
 fi
 
@@ -246,9 +254,9 @@ for VM_HOST in $__VM_HOSTS; do
 
      echo "---------- $VM_HOST ----------"
      if [ "$SIMULATE" == "true" ]; then
-         echo "ssh -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND"
+        echo ssh -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
      else
-        ssh -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND
+        ssh -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
      fi
      echo ""
 done

@@ -497,7 +497,7 @@ else
 fi
 
 if [ "$IS_PUBLIC_HOST" == "true" ]; then
-   # Use the public host a proxy to sync the rest of hosts
+   # Use the public host as a proxy to sync the rest of hosts
    #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
    #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
    RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
@@ -523,6 +523,8 @@ if [ "$IS_PUBLIC_HOST" == "true" ]; then
             args="$args $i"
          fi
       done
+   else
+      args="$@"
    fi
    if [ "$SIMULATE" == "true" ]; then
       echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $args"

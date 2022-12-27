@@ -67,7 +67,8 @@ OPTIONS
 
    -vm comma_separated_hosts
              A comma separated list of VM hosts or addresses. If the list contains spaces
-             then enclosed it in quotes.
+             then enclose it in quotes. This list overrides both cluster and workspace
+             VMs.
 
    -vm-key private_key_file_path
              Local private key file path. If specified, then it overrides the private key
@@ -320,23 +321,40 @@ done
 
 if [ "$EXISTING_PADOGRID_BASE_HOSTS" != "" ]; then
    echo ""
-   echo "padogrid base found in the following host(s):"
+   if [ "$IS_PUBLIC_HOST" == "true" ]; then
+      echo "padogrid base found in the following public host. It will be used as a proxy."
+   else
+      echo "padogrid base found in the following host(s):"
+   fi
    echo "   $EXISTING_PADOGRID_BASE_HOSTS"
 fi
 if [ "$NEW_PADOGRID_BASE_HOSTS" != "" ]; then
    echo ""
-   echo "padogrid base not found in the following host(s):"
+   if [ "$IS_PUBLIC_HOST" == "true" ]; then
+      echo "padogrid base not found in the following public host. It will be used as a proxy."
+   else
+      echo "padogrid base not found in the following host(s):"
+   fi
    echo "   $NEW_PADOGRID_BASE_HOSTS"
 fi
 
 if [ "$EXISTING_PADOGRID_HOSTS" != "" ]; then
    echo ""
-   echo "padogrid installation found in the following host(s):"
+   if [ "$IS_PUBLIC_HOST" == "true" ]; then
+      echo "padogrid installation found in the following public host. It will be used as a proxy."
+   else
+      echo "padogrid installation found in the following host(s):"
+   fi
    echo "   $EXISTING_PADOGRID_HOSTS"
 fi
 if [ "$NEW_PADOGRID_HOSTS" != "" ]; then
    echo ""
-   echo "padogrid installation not found in the following host(s):"
+   if [ "$IS_PUBLIC_HOST" == "true" ]; then
+      echo "padogrid installation not found in the following public host. It will be used as a proxy."
+   else
+      echo "padogrid installation not found in the following host(s):"
+   fi
+
    echo "   $NEW_PADOGRID_HOSTS"
 fi
 let DEPLOYMENT_HOST_COUNT=NEW_PADOGRID_BASE_HOST_COUNT+NEW_PADOGRID_HOST_COUNT
@@ -374,6 +392,14 @@ fi
 
 if [ "$IS_PUBLIC_HOST" != "true" ]; then
    if [ $DEPLOYMENT_HOST_COUNT -eq 0 ]; then
+      if [ "$REMOTE_SPECIFIED" == "true" ]; then
+         # Remove the uploaded key file
+         if [ "$VM_PRIVATE_KEY_FILE_ARG" != "" ]; then
+            if [ -f "$VM_PRIVATE_KEY_FILE_ARG" ]; then
+               rm -f "$VM_PRIVATE_KEY_FILE_ARG"
+            fi
+         fi
+      fi
       exit
    fi
 fi
@@ -442,7 +468,7 @@ if [ "$EXISTING_PADOGRID_HOSTS" != "" ] && [ "$OVERWRITE" == "true" ] ; then
 fi
 
 if [ "$IS_PUBLIC_HOST" == "true" ]; then
-   # Use the public host a proxy to sync the rest of hosts
+   # Use the public host as a proxy to sync the rest of hosts
    #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
    #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
    RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
@@ -455,22 +481,24 @@ if [ "$IS_PUBLIC_HOST" == "true" ]; then
    # Upload key file
    args="$@"
    KEY_FILE_NAME=$(basename "$KEY_FILE")
+   VM_KEY_FILE_NAME="$RWE_NAME-$WORKSPACE-$KEY_FILE_NAME"
+   VM_KEY_FILE_PATH="$VM_HOME/.padogrid/$VM_KEY_FILE_NAME"
    # Remove remote key file so that we can overwrite it (due to 400)
-   COMMAND="if [ ! -d "$VM_HOME/.padogrid" ]; then mkdir $VM_HOME/.padogrid; else rm -f $VM_HOME/.padogrid/$KEY_FILE_NAME > /dev/null 2>&1; fi"
+   COMMAND="[ -f "$VM_KEY_FILE_PATH" ] && rm -f $VM_KEY_FILE_PATH"
    if [ "$SIMULATE" == "true" ]; then
       echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
-      echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $KEY_FILE $VM_USER@$VM_HOST:$VM_HOME/.padogrid/$KEY_FILE_NAME
+      echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $KEY_FILE $VM_USER@$VM_HOST:$VM_KEY_FILE_PATH
    else
       ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
-      scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $KEY_FILE $VM_USER@$VM_HOST:$VM_HOME/.padogrid/$KEY_FILE_NAME
+      scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $KEY_FILE $VM_USER@$VM_HOST:$VM_KEY_FILE_PATH
    fi
    if [ "$VM_PRIVATE_KEY_FILE_ARG" != "" ]; then
-      args=$(echo $args | sed "s|$VM_PRIVATE_KEY_FILE_ARG|$VM_HOME/.padogrid/$KEY_FILE_NAME|g")
+      args=$(echo $args | sed "s|$VM_PRIVATE_KEY_FILE_ARG|$VM_KEY_FILE_PATH|g")
    else
-      args="$args -vm-key $VM_HOME/.padogrid/$KEY_FILE_NAME"
+      args="$args -vm-key $VM_KEY_FILE_PATH"
    fi
    if [ "$VM_HOSTS_ARG" != "" ]; then
-      args=$(echo $args | sed "s|$VM_HOSTS_ARG|$VM_HOSTS/.padogrid/$KEY_FILE_NAME|g")
+      args=$(echo $args | sed "s|$VM_HOSTS_ARG|$VM_HOSTS|g")
    else
       args="$args -vm $VM_HOSTS"
    fi
@@ -486,7 +514,14 @@ if [ "$IS_PUBLIC_HOST" == "true" ]; then
 fi
 
 
-if [ "$REMOTE_SPECIFIED" == "false" ]; then
+if [ "$REMOTE_SPECIFIED" == "true" ]; then
+   # Remove the uploaded key file
+   if [ "$VM_PRIVATE_KEY_FILE_ARG" != "" ]; then
+      if [ -f "$VM_PRIVATE_KEY_FILE_ARG" ]; then
+         rm -f "$VM_PRIVATE_KEY_FILE_ARG"
+      fi
+   fi
+else
    echo ""
    if [ "$SIMULATE" == "true" ]; then
       echo "Simulation deployment complete."
