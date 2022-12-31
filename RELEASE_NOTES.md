@@ -18,6 +18,7 @@ https://github.com/padogrid
 - Added the `-bg` option in 'vm_exec` for executing remote comamnds in the background. This option is analogous to the `-f` option in `ssh`.
 - `update_products` now includes the `-version` option for updating product versions in non-interactive mode. 
 - Refactored VM rountines to be more consistent throughout all products. 
+- Added support for OCI (Oracle Cloud Infrastructure). See [PadoGrid on OCI Compute](https://github.com/padogrid/padogrid/wiki/PadoGrid-on-OCI-Compute) for details.
 
 ---
 
