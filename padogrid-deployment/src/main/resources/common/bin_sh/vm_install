@@ -421,6 +421,11 @@ function getProductDirName
   echo $DIR_NAME
 }
 
+#RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+#WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
 if [ "$FILE_SPECIFIED" == "true" ]; then
    # Install product using file
 
@@ -455,7 +460,7 @@ else
 
    # Install product using install_padogrid
    product=""
-   COMMAND="vm_show_products -raw"
+   COMMAND="switch_rwe $RWE_NAME/$WORKSPACE > /dev/null 2>&1 && vm_show_products -raw"
    for VM_HOST in $__VM_HOSTS; do
       vm_products=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
       found="false"
@@ -498,11 +503,6 @@ fi
 
 if [ "$IS_PUBLIC_HOST" == "true" ]; then
    # Use the public host as a proxy to sync the rest of hosts
-   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
-   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
-   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
-   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
-
    if [ "$FILE_SPECIFIED" == "true" ]; then
       PRODUCT_PATH=""
       args=""

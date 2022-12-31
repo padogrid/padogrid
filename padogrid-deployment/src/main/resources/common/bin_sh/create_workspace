@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-name -cluster -product -java -vm -vm-java -vm-padogrid -vm-user -vm-key -headless -quiet -?"
+   echo "-name -cluster -product -java -vm -vm-public -vm-java -vm-padogrid -vm-user -vm-key -headless -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -48,6 +48,7 @@ SYNOPSIS
                [-vm-padogrid vm_padogrid_base_path]
                [-vm-java vm_JAVA_HOME]
                [-vm [comma_separated_host_names]]
+               [-vm-public comma_separated_public_host_names]
                [-vm-user vm_user_name]
                [-vm-key private_key_file_path]
                [-headless]
@@ -108,6 +109,19 @@ cat <<EOF
               option is specified alone without a list of host names, then the workspace is
               still VM enabled. The VM hosts can be modified or entered in the workspace
               'vmenv.sh' file after the workspace has been created.
+
+   -vm-public comma_separated_public_host_names
+              A comma separated list of VM public host names (or IP addresses). If the list
+              contains spaces then enclosed it in quotes. The first host in the list is used as
+              a proxy host when executing 'vm_*' commands. If you do not have access to the private
+              hosts specified by the '-vm' option from your machine then you can specify this option
+              to indirectly access the private hosts, provided that the proxy host has access to the
+              private hosts. A public host list is typically but not necessarily an ordered list of
+              public IP addresses of the private hosts defined by the '-vm" option. This list can be
+              a partial list as only the first public host in the list is used as a proxy host.
+              Having a complete list may be useful when creating VM clusters since the public hosts
+              are by default bound to client connections. VM public hosts can be modified or entered
+              in the workspace 'vmenv.sh' file after the workspace has been created.
 
    -vm-user vm_user_name
               VM user name. All VMs must be accessible via ssh with this user name.
@@ -239,7 +253,7 @@ if [ "$QUIET" == "true" ]; then
    if [ "$VM_PADOGRID_ENV_BASE_PATH" == "" ]; then
       VM_PADOGRID_ENV_BASE_PATH='~/Padogrid'
    fi
-   if [ "$VM_JAVA_HOME" == "" ]; then
+   if [ "$VM_JAVA_HOME" == "" ] && [ "$JAVA_HOME" != "" ]; then
       JAVA_DIR_NAME=$(basename $JAVA_HOME)
       VM_JAVA_HOME="$VM_PADOGRID_ENV_BASE_PATH/products/$JAVA_DIR_NAME"
    fi
@@ -464,7 +478,7 @@ else
             VM_PADOGRID_ENV_BASE_PATH=$INPUT
          fi
 
-         if [ "$VM_JAVA_HOME" == "" ]; then
+         if [ "$VM_JAVA_HOME" == "" ] && [ "$JAVA_HOME" != "" ]; then
             JAVA_DIR_NAME="$(basename $JAVA_HOME)"
             VM_JAVA_HOME="$VM_PADOGRID_ENV_BASE_PATH/products/$JAVA_DIR_NAME"
          fi
@@ -550,7 +564,7 @@ else
       if [ "$VM_PADOGRID_ENV_BASE_PATH" == "" ]; then
          VM_PADOGRID_ENV_BASE_PATH='~/Padogrid'
       fi
-      if [ "$VM_JAVA_HOME" == "" ]; then
+      if [ "$VM_JAVA_HOME" == "" ] && [ "$JAVA_HOME" != "" ]; then
          JAVA_DIR_NAME=$(basename $JAVA_HOME)
          VM_JAVA_HOME="\$VM_PADOGRID_ENV_BASE_PATH/products/$JAVA_DIR_NAME"
       fi

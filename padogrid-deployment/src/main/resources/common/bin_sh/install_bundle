@@ -485,6 +485,11 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             echo -e >&2 "       workspaces is not permitted. Command aborted."
             exit 1
          fi
+         # If the workspace directory does not exist then explicitly disable overwrite. This needs
+         # to be done here due to the conflicting overwrite logic later in this script.
+         if [ ! -d "$GIT_DIR" ]; then
+            OVERWRITE_WORKSPACE_SPECIFIED="false"
+         fi
       fi
    else
       GIT_DIR=$PADOGRID_WORKSPACE/bundles/$BUNDLE_NAME

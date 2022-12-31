@@ -396,7 +396,7 @@ function isValidWorkspace
 #
 # Returns VM user defined by the cluster property "vm.user". If "vm.user" is not
 # defined then returns the workspace VM_USER value. If VM_USER is not defined then
-# return the whoami user.
+# returns the whoami user.
 #
 function getVmUser
 {
@@ -979,7 +979,7 @@ function getMemberPid
 }
 
 #
-# Returns the member PID of VM if it is running. Empty value otherwise.
+# Returns the member PID of VM if it is running; an Empty value, otherwise.
 # This function is for clusters running on VMs whereas the getMemberPid
 # is for pods running on the same machine.
 # @required VM_USER        VM ssh user name

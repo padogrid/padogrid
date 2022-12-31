@@ -178,10 +178,14 @@ fi
 
 # Show each VM
 if [ "$RAW_SPECIFIED" != "true" ] && [ "$REMOTE_SPECIFIED" != "true" ]; then
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+   COMMAND="switch_rwe $RWE_NAME/$WORKSPACE > /dev/null 2>&1 && vm_show_products -remote"
    if [ "$ACTIVE_SPECIFIED" == "true" ]; then
-      COMMAND="vm_show_products -remote -active"
-   else
-      COMMAND="vm_show_products -remote"
+      COMMAND="$COMMAND -active"
    fi
    if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
       # If private hosts are reachable then execute from here.
@@ -225,11 +229,6 @@ if [ "$RAW_SPECIFIED" != "true" ] && [ "$REMOTE_SPECIFIED" != "true" ]; then
       fi
 
       # If private hosts are not reachable then use a public host as a proxy to execute this command.
-      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
-      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
-      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
-      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
-
       # Replace , with space
       __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
       for VM_HOST in $__VM_HOSTS; do

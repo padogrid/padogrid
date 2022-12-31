@@ -27,11 +27,11 @@
 # @param    host           VM host name or address
 # @param    port           Port number
 #
-function getRedisVmMemberPid
+function getVmRedisMemberPid
 {
-   local __HOST=$1
+   local __HOST="$1"
    local __MEMBER_PORT="$2"
-   members=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server | grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
+   local pid=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server | grep $__MEMBER_PORT | grep -v grep | awk '{print \\$1}'"`
    echo $pid
 }
 
@@ -69,7 +69,7 @@ function getRedisActiveMemberCount
       let MEMBER_PORT=MEMBER_START_PORT
       for VM_HOST in ${VM_HOSTS}; do
          let MEMBER_COUNT=MEMBER_COUNT+1
-         pid=`getRedisVmMemberPid $VM_HOST $MEMBER_PORT`
+         pid=`getVmRedisMemberPid $VM_HOST $MEMBER_PORT`
          if [ "$pid" != "" ]; then
              let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
          fi
