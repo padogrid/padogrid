@@ -1,6 +1,6 @@
 # PadoGrid Release Notes
 
-©2020-2022 Netcrest Technologies, LLC. All rights reserved.
+©2020-2023 Netcrest Technologies, LLC. All rights reserved.
 
 https://github.com/padogrid
 

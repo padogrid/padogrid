@@ -167,6 +167,19 @@ docker run -it --rm padogrid/padogrid /bin/bash
 podman run -it --rm padogrid/padogrid /bin/bash
 ```
 
+Beginning version 0.9.23, PadoGrid containers include JupyterLab. To start JupyterLab, start the container in the background as follows.
+
+```bash
+# docker
+docker run --name padogrid --rm -d -p 8888:8888 -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
+
+# podman
+podman run --name padogrid --rm -d -p 8888:8888 -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
+```
+
+- PadoGrid URL: https://0.0.0.0:8888
+- Password: `padogrid`
+
 If you are logged in the container and your container version is 0.9.9 and older, then you must intialize Padogrid as follows. Versions 0.9.10 and later do not require this step.
 
 ```bash
