@@ -157,14 +157,8 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
    fi
 
-   DEFAULT_USER=$(whoami)
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
-      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
 
    # If pod cluster, then source in the pod env vars to set the VM specific variables
    OS_ENV=`getOsEnv`

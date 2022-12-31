@@ -133,15 +133,8 @@ if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       exit 1
    fi
 
-   DEFAULT_USER=$(whoami)
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-   if [ "$VM_KEY" == "" ]; then 
-      VM_KEY="$VM_PRIVATE_KEY_FILE"
-   fi
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
 
    # If pod cluster, then source in the pod env vars to set the VM specific variables
    OS_ENV=`getOsEnv`
@@ -214,11 +207,8 @@ locator)
    if [ "$POD" != "local" ]; then
       if [ "$VM_ENABLED" == "true" ]; then
          LOCATOR_PREFIX="${CLUSTER}-locator"
-         VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-         VM_KEY=$VM_PRIVATE_KEY_FILE
-         if [ "$VM_KEY" != "" ]; then 
-            VM_KEY="-i $VM_KEY"
-         fi
+         VM_USER=`getVmUser`
+         VM_KEY=`getVmKeyArg`
          LOCATOR=$(getVmLocatorName `hostname`)
       else
          PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`

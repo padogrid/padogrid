@@ -411,6 +411,22 @@ function getVmUser
 }
 
 #
+# Returns VM key argument in the format of '-i key_file'. The VM key is extracted from the cluster
+# property "vm.privateKeyFile" if it is defined, otherwise, VM_PRIVATE_KEY_FILE is returned.
+# If VM key is not defined at all, then it returns an empty string.
+#
+function getVmKeyArg
+{
+   local VM_KEY=`getClusterProperty "vm.privateKeyFile"`
+   if [ "$VM_KEY" != "" ]; then
+      VM_KEY="-i $VM_KEY"
+   elif [ "$VM_PRIVATE_KEY_FILE" != "" ]; then
+      VM_KEY="-i $VM_PRIVATE_KEY_FILE"
+   fi
+   echo "$VM_KEY"
+}
+
+#
 # Returns a comma separated list of VM hosts of the specified workspace. Returns an empty
 # string if the workspace does not exist.
 # @param    workspaceName    Workspace name

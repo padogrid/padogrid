@@ -99,16 +99,8 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          fi
       fi
 
-      DEFAULT_USER=$(whoami)
-      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-      if [ "$VM_KEY" == "" ]; then 
-         VM_KEY="$VM_PRIVATE_KEY_FILE"
-      fi
-      if [ "$VM_KEY" != "" ]; then 
-         VM_KEY="-i $VM_KEY"
-      fi
-
+      VM_USER=`getVmUser`
+      VM_KEY=`getVmKeyArg`
       if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
          # If private hosts are reachable then execute from here.
 
@@ -185,11 +177,8 @@ fi
 
 if [ "$POD" != "local" ] && [ "$VM_ENABLED" == "true" ]; then
    NODE_LOCAL=`hostname`
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=$VM_PRIVATE_KEY_FILE
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
    LOCATOR=$(getVmLocatorName `hostname`)
 else
    NODE_LOCAL="${PRIMARY_NODE_NAME}.local"

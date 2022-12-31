@@ -112,16 +112,8 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          fi
       fi
 
-      DEFAULT_USER=$(whoami)
-      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-      if [ "$VM_KEY" == "" ]; then 
-         VM_KEY="$VM_PRIVATE_KEY_FILE"
-      fi
-      if [ "$VM_KEY" != "" ]; then 
-         VM_KEY="-i $VM_KEY"
-      fi
-
+      VM_USER=`getVmUser`
+      VM_KEY=`getVmKeyArg`
       if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
          # If private hosts are reachable then execute from here.
 
@@ -176,11 +168,8 @@ fi
 # For pod clusters. If non-pod, the following variables are ignored.
 if [ "$POD" != "local" ] && [ "$VM_ENABLED" == "true" ]; then
    LOCATOR_NUMBER=1
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=$VM_PRIVATE_KEY_FILE
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
    getVmLocatorName `hostname`
    LOCATOR=$(getVmLocatorName `hostname`)
 else

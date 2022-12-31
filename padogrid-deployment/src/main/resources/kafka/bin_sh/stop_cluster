@@ -112,15 +112,8 @@ if [ "$VM_ENABLED" == "true" ]; then
 
    # Replace , with space
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-   DEFAULT_USER=$(whoami)
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-   if [ "$VM_KEY" == "" ]; then
-      VM_KEY="$VM_PRIVATE_KEY_FILE"
-   fi
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
    MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
       ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"

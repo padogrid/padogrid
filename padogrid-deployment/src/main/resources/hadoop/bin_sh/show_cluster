@@ -872,15 +872,8 @@ if [ "$VM_ENABLED" == "true" ]; then
    # Replace , with space
    VM_NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
    VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-   DEFAULT_USER=$(whoami)
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-   if [ "$VM_KEY" == "" ]; then
-      VM_KEY="$VM_PRIVATE_KEY_FILE"
-   fi
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
   
    if [ "$LONG" == "false" ]; then
       # Short display (single)

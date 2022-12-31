@@ -132,15 +132,8 @@ if [ "$VM_ENABLED" == "true" ]; then
 
    # Start locators
    __LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
-   DEFAULT_USER=$(whoami)
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-   if [ "$VM_KEY" == "" ]; then
-      VM_KEY="$VM_PRIVATE_KEY_FILE"
-   fi
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
    # Locator count
    LOCATOR_COUNT=0
    for VM_HOST in $__LOCATOR_HOSTS; do
