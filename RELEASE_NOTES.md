@@ -1,10 +1,28 @@
 # PadoGrid Release Notes
 
-©2020-2022 Netcrest Technologies, LLC. All rights reserved.
+©2020-2023 Netcrest Technologies, LLC. All rights reserved.
 
 https://github.com/padogrid
 
-## Version 0.9.23-SNAPSHOT
+## Version 0.9.24-SNAPSHOT
+
+### Release Date: 12/31/22
+
+- Fixed `install_padogrid` to download the correct versions of ARM64 for Grafana and Prometheus. 
+- Fixed `install_padogrid -quiet -product` options to override product scanning with the cached product versions during the initial installation time.
+- Added logic in `install_padogrid` to exit if the user does not have write permission.
+- Fixed Geode `log4j2` issues by replacing its `log4j2.properties` with Hazelcast's.
+- Overhauled `vm_*` commands to leverage the `install_padogrid` command for enabling version-based product deployment.
+- Added `vm_show_products` for displaying installed and active products in workspace VMs.
+- `start_jupyter` now starts in the foreground to handle the JupyterLab's `Ctrl-C` issue. You can start it in the background by appending `&`, which will preserve `Ctrl-C`. Prior to this change, `Ctrl-C` did not get propagated to child processes impacting blocking commands such as `tail -f` which required a combination of `Ctrl-Z` and `kill` to terminate.
+- Added the `-bg` option in 'vm_exec` for executing remote comamnds in the background. This option is analogous to the `-f` option in `ssh`.
+- `update_products` now includes the `-version` option for updating product versions in non-interactive mode. 
+- Refactored VM rountines to be more consistent throughout all products. 
+- Added support for OCI (Oracle Cloud Infrastructure). See [PadoGrid on OCI Compute](https://github.com/padogrid/padogrid/wiki/PadoGrid-on-OCI-Compute) for details.
+
+---
+
+## Version 0.9.23
 
 ### Release Date: 12/02/22
 

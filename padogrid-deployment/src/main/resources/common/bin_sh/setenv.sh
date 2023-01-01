@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -246,7 +246,7 @@ DEFAULT_PROMETHEUS_START_PORT=8291
 #
 # SSH connect timeout in seconds.
 #
-SSH_CONNECT_TIMEOUT=2
+SSH_CONNECT_TIMEOUT=3
 
 #
 # The max number of members per cluster. The port number ranges are determined by this value.

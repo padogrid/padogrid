@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,14 +30,6 @@ if [ "$OPTIONS" == "true" ]; then
    __options
    exit
 fi
-
-#
-# Determeint $TAR_BALL_PATH
-#
-ROOT_DIR_NAME=$(basename $BASE_DIR)
-TOP_DIR="$(dirname "$BASE_DIR")"
-TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
-TAR_BALL_GZ_PATH=$BASE_DIR/bundles/$TAR_BALL_GZ_NAME
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -107,19 +99,19 @@ fi
 if [ "$VM_ENABLED" != "true" ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo "    ERROR: The workspace is not a VM workspace. Command aborted."
+   echo -e >&2 "    ${CError}ERROR:${CNone} The workspace is not a VM workspace. Command aborted."
    echo "----------------------------------------------------------------"
    exit 1 
 fi
 
 # If the -vm option is specified then it overrides all other options
 if [ "$VM_SPECIFIED" == "true" ]; then
-   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [ "${VM_HOSTS_ARG:0:1}" != "-" ]; then
       VM_HOSTS=$VM_HOSTS_ARG
    else
       echo "----------------------------------------------------------------"
       echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo >&2 "ERROR: Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid value for -vm [$VM_HOSTS_ARG]. Command aborted."
       echo "----------------------------------------------------------------"
       exit 1
    fi
@@ -129,7 +121,7 @@ else
       if [ "`isClusterExist "$CLUSTER"`" == "false" ]; then 
          echo "----------------------------------------------------------------"
          echo "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo >&2 "ERROR: Cluster does not exist [$CLUSTER]. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Cluster does not exist [$CLUSTER]. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
       fi
@@ -137,7 +129,7 @@ else
       if [ "$VM_ENABLED" == "false" ]; then
          echo "----------------------------------------------------------------"
          echo "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+         echo -e >&2 "${CError}ERROR:${CNone} Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
          echo >&2 "       in the 'etc/cluster.properties' file."
          echo "----------------------------------------------------------------"
          exit 1
@@ -147,7 +139,7 @@ else
          if [ "$VM_HOSTS" == "" ]; then
             echo "----------------------------------------------------------------"
             echo "WORKSPACE: $PADOGRID_WORKSPACE"
-            echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
+            echo -e >&2 "    ${CError}ERROR:${CNone} The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
             echo >&2 "           file. Command aborted."
             echo "----------------------------------------------------------------"
             exit 1
@@ -158,65 +150,106 @@ fi
 
 WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-
-# Set the first private key file found in the workspace directory if exists
-__VM_PRIVATE_KEY_FILE_FOUND="false"
-if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
-   if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
-      for i in $PADOGRID_WORKSPACE/*.pem; do
-         VM_PRIVATE_KEY_FILE=$i
-         __VM_PRIVATE_KEY_FILE_FOUND="true"
-         break
-      done
+VM_USER=`getVmUser`
+KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" == "" ]; then
+   # Set the first private key file found in the workspace directory if exists
+   __VM_PRIVATE_KEY_FILE_FOUND="false"
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+         for i in $PADOGRID_WORKSPACE/*.pem; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
+         for i in $PADOGRID_WORKSPACE/*.key; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      fi
    fi
+   # Replace '~' with the VM home path
+   KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
 fi
-if [ "$KEY" == "" ]; then
-   KEY=`getClusterProperty "vm.privateKeyFile"`
-fi
-if [ "$KEY" == "" ]; then 
-   KEY="$VM_PRIVATE_KEY_FILE"
+if [ "$KEY_FILE" == "" ]; then 
+   KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
 VM_KEY=""
-if [ "$KEY" != "" ]; then 
-   if [ ! -f "$KEY" ]; then
-      echo >&2 "ERROR: Specified private key does not exist [$KEY]."
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
       echo >&2 "       Command aborted."
       exit 1
    fi
-   VM_KEY="-i $KEY"
+   VM_KEY="-i $KEY_FILE"
 fi
 
 echo ""
-echo "Scanning VMs... Please wait."
 
 # Fail fast: Exit if any of the hosts is not reachable
-for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
-   EXIT_CODE=$?
-   if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
-      echo "       Command aborted."
+#for VM_HOST in $__VM_HOSTS; do
+#   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
+#   EXIT_CODE=$?
+#   if [ "$EXIT_CODE" != "0" ]; then
+#      echo -e >&2 "${CError}ERROR:${CNone} $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+#      echo "       Command aborted."
+#      exit 1
+#   fi
+#done
+
+IS_PUBLIC_HOST="false"
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   echo "Scanning VMs... Please wait."
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then sync the first public host and then
+   # use that public host as a proxy to execute this command.
+   echo "Scanning public VM... Please wait."
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo >&2 "       Command aborted."
       exit 1
    fi
-done
+
+   # Use the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   __VM_HOSTS=$VM_HOST
+   IS_PUBLIC_HOST="true"
+fi
 
 # Trap Ctrl-C
 LAST_TIMESTAMP_TRAP=0
 trap 'cleanExit "$EXECUTABLE" "vm" "false"' INT
 
+PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
+THIS_VM_HOSTNAME=`hostname`
+
+#TMP_RWE_SETENV_FILE="$PADOGRID_WORKSPACE/tmp/padogrid-$EXECUTABLE-vm-rwe_setenv.sh"
+#TMP_SETENV_FILE="$PADOGRID_WORKSPACE/tmp/padogrid-$EXECUTABLE-vm-setenv.sh"
+#TMP_VM_SYNC_TARBALL_FILE="$PADOGRID_WORKSPACE/tmp/padogrid-$EXECUTABLE-vm-vm_sync.tar.gz"
+#TMP_ADDONENV_FILE="$PADOGRID_WORKSPACE/tmp/padogrid-$EXECUTABLE-vm-.addonenv.sh"
+#VM_TMP_VM_SYNC_TARBALL_FILE="/tmp/padogrid-$EXECUTABLE-vm-vm_sync.tar.gz"
+
 TMP_RWE_SETENV_FILE="/tmp/padogrid-$EXECUTABLE-vm-rwe_setenv.sh"
 TMP_SETENV_FILE="/tmp/padogrid-$EXECUTABLE-vm-setenv.sh"
 TMP_VM_SYNC_TARBALL_FILE="/tmp/padogrid-$EXECUTABLE-vm-vm_sync.tar.gz"
-TMP_ADDONEVN_FILE="/tmp/padogrid-$EXECUTABLE-vm-.addonenv.sh"
+TMP_ADDONENV_FILE="/tmp/padogrid-$EXECUTABLE-vm-.addonenv.sh"
+
+# Clean up tmp
+#if [ ! -d "$PADOGRID_WORKSPACE/tmp" ]; then
+#   mkdir -p "$PADOGRID_WORKSPACE/tmp"
+#fi
+rm $TMP_RWE_SETENV_FILE $TMP_SETENV_FILE $TMP_VM_SYNC_TARBALL_FILE $TMP_ADDONENV_FILE > /dev/null 2>&1
 
 # Replace '~' with the VM home path in 'vmenv.sh'
 VM_HOME=""
 for VM_HOST in $__VM_HOSTS; do
-   VM_HOME=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "cd && pwd")
+   VM_HOME=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "cd && pwd")
    break;
 done
 sed -i$__SED_BACKUP -e "s|\~|$VM_HOME|" "$PADOGRID_WORKSPACE/vmenv.sh"
@@ -225,80 +258,148 @@ VM_PADOGRID_WORKSPACES_HOME=$(echo $VM_PADOGRID_WORKSPACES_HOME | sed -e "s|\~|$
 VM_JAVA_HOME=$(echo $VM_JAVA_HOME | sed -e "s|\~|$VM_HOME|")
 
 # Check if we need to deploy padogrid to any of the VMs
+PADOGRID_BASE_COMMAND="[ -d "$VM_PADOGRID_ENV_BASE_PATH" ] && echo true || echo false"
 PADOGRID_COMMAND="[ -d "$VM_PADOGRID_HOME" ] && echo true || echo false"
 JAVA_COMMAND="[ -d "$VM_JAVA_HOME" ] && echo true || echo false"
+RWE_SETENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/setenv.sh" ] && echo true || echo false"
+WORKSPACE_SETENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACE/setenv.sh" ] && echo true || echo false"
+
+INSTALL_PADOGRID_BASE_HOST_LIST=""
 INSTALL_PADOGRID_HOST_LIST=""
+INSTALL_JAVA_HOST_LIST=""
 SETENV_DOWNLOADED="false"
 for VM_HOST in $__VM_HOSTS; do
-   # padogrid
-   PADOGRID_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$PADOGRID_COMMAND")
-   if [[ "$PADOGRID_EXISTS" == *"false" ]]; then
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$PADOGRID_BASE_COMMAND; $PADOGRID_COMMAND; $JAVA_COMMAND; $RWE_SETENV_COMMAND; $WORKSPACE_SETENV_COMMAND")
+   index=0
+   for i in $REPLY; do
+      case $index in
+         0) PADOGRID_BASE_EXISTS="$i" ;;
+         1) PADOGRID_EXISTS="$i" ;;
+         2) JAVA_EXISTS="$i" ;;
+         3) RWE_SETENV_EXISTS="$i" ;;
+         4) WORKSPACE_SETENV_EXISTS="$i" ;;
+      esac
+      let index=index+1
+   done
+   # padogrid base
+   if [[ "$PADOGRID_BASE_EXISTS" == *"false" ]]; then
+      INSTALL_PADOGRID_BASE_HOST_LIST="$INSTALL_PADOGRID_BASE_HOST_LIST $VM_HOST"
+   elif [[ "$PADOGRID_EXISTS" == *"false" ]]; then
+      # padogrid - set this only if padgrid base exists
       INSTALL_PADOGRID_HOST_LIST="$INSTALL_PADOGRID_HOST_LIST $VM_HOST"
    fi
-   if [ "$SETENV_DOWNLOADED" == "false" ]; then
-      # Download the first setenv.sh. We'll use this later to update the VMs that do not have it.
-      # That could happen if new VMs were added or there were network issues.
-      if [ "$SIMULATE" == "true" ]; then
-        echo "scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE > /dev/null 2>&1"
-        echo "scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh $TMP_SETENV_FILE > /dev/null 2>&1"
-      else
-         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE > /dev/null 2>&1
-         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh $TMP_SETENV_FILE > /dev/null 2>&1
+   # java - for user info only
+   if [[ "$JAVA_EXISTS" == *"false" ]]; then
+      INSTALL_JAVA_HOST_LIST="$INSTALL_JAVA_HOST_LIST $VM_HOST"
+   fi
+
+   # Download the first VM's setenv.sh files. We'll use these later to update the remaining VMs.
+   if [ "$SETENV_DOWNLOADED" == "false" ]; then 
+      if [ "$RWE_SETENV_EXISTS" == "true" ]; then
+         if [ "$SIMULATE" == "true" ]; then
+           echo "scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE > /dev/null 2>&1"
+         else
+            scp -q -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE > /dev/null 2>&1
+         fi
+      fi
+      if [ "$WORKSPACE_SETENV_EXISTS" == "true" ]; then
+         if [ "$SIMULATE" == "true" ]; then
+           echo "scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh $TMP_SETENV_FILE > /dev/null 2>&1"
+         else
+            scp -q -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh $TMP_SETENV_FILE > /dev/null 2>&1
+         fi
       fi
       if [ -f $TMP_RWE_SETENV_FILE ] && [ -f $TMP_SETENV_FILE ]; then
          SETENV_DOWNLOADED="true"
       fi
    fi
 done
-if [ "$INSTALL_PADOGRID_HOST_LIST" != "" ]; then
-   ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
-   TAR_BALL_GZ_NAME=padogrid-$EXECUTABLE-vm-$ROOT_DIR_NAME.tar.gz
-   TMP_TAR_BALL_GZ_PATH=/tmp/$TAR_BALL_GZ_NAME
-   VM_PADOGRID_HOME_PARENT_DIR="$(dirname "$VM_PADOGRID_HOME")"
-   pushd $PADOGRID_HOME/.. > /dev/null 2>&1
-   tar czf $TMP_TAR_BALL_GZ_PATH $ROOT_DIR_NAME
-   popd > /dev/null 2>&1
 
-   for VM_HOST in $INSTALL_PADOGRID_HOST_LIST; do
-      echo "Deploying $ROOT_DIR_NAME to $VM_HOST..."
+# Install the PadoGrid base on VMs that do not have it installed
+if [ "$INSTALL_PADOGRID_BASE_HOST_LIST" != "" ]; then
+   ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
+   TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+   PADOGRID_TARBALL_GZ_PATH="$PADOGRID_ENV_BASE_PATH/downloads/$TAR_BALL_GZ_NAME"
+   VM_PADOGRID_HOME_PARENT_DIR="$(dirname "$VM_PADOGRID_HOME")"
+   VM_PADOGRID_TARBALL_GZ_PATH="$VM_PADOGRID_ENV_BASE_PATH/downloads/$TAR_BALL_GZ_NAME"
+
+   # Create padogrid tar ball if it does not exist in the downloads directory
+   if [ ! -f "$PADOGRID_TARBALL_GZ_PATH" ]; then
+      pushd $PADOGRID_HOME/.. > /dev/null 2>&1
+      tar czf $PADOGRID_TARBALL_GZ_PATH $ROOT_DIR_NAME
+      popd > /dev/null 2>&1
+   fi
+
+   # Upload and execute install_padogrid 
+   for VM_HOST in $INSTALL_PADOGRID_BASE_HOST_LIST; do
       if [ "$SIMULATE" == "true" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$TMP_TAR_BALL_GZ_PATH
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $TMP_TAR_BALL_GZ_PATH; rm $TMP_TAR_BALL_GZ_PATH"
+         echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY `which install_padogrid` "$PADOGRID_TARBALL_GZ_PATH" $VM_USER@$VM_HOST:/tmp/
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "/tmp/install_padogrid -file /tmp/$TAR_BALL_GZ_NAME && rm /tmp/install_padogrid && mv /tmp/$PADOGRID_TARBALL_GZ_PATH $VM_PADOGRID_ENV_BASE_PATH/downloads/"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
-         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_TAR_BALL_GZ_PATH $VM_USER@$VM_HOST:$TMP_TAR_BALL_GZ_PATH
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $TMP_TAR_BALL_GZ_PATH; rm $TMP_TAR_BALL_GZ_PATH"
+         scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY `which install_padogrid` "$PADOGRID_TARBALL_GZ_PATH" $VM_USER@$VM_HOST:/tmp/
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "/tmp/install_padogrid -file /tmp/$TAR_BALL_GZ_NAME && rm /tmp/install_padogrid && mv /tmp/$TAR_BALL_GZ_NAME $VM_PADOGRID_ENV_BASE_PATH/downloads/"
       fi
    done
 fi
 
-# Set first VM's installed products in arrays
-__VM_HOST_FIRST=$(echo $__VM_HOSTS | sed 's/ .*//')
-declare -A vm_installed_product_array
-declare -A vm_installed_product_home_array
-getVmProductArray $__VM_HOST_FIRST vm_installed_product_array vm_installed_product_home_array
-VM_INSTALLED_PRODUCTS=${!vm_installed_product_array[@]}
-VM_INSTALLED_PRODUCTS="$(echo $(printf '%s\n' $VM_INSTALLED_PRODUCTS|sort -u))"
-VM_INSTALLED_PRODUCT_HOMES=${!vm_installed_product_home_array[@]}
-VM_INSTALLED_PRODUCT_HOMES="$(echo $(printf '%s\n' $VM_INSTALLED_PRODUCT_HOMES|sort -u))"
-VM_PADOGRID_PRODUCTS_PATH="$VM_PADOGRID_ENV_BASE_PATH/products"
+# Install PadoGrid on VMs that do not have it installed
+if [ "$INSTALL_PADOGRID_HOST_LIST" != "" ]; then
+   ROOT_DIR_NAME=$(basename $PADOGRID_HOME)
+   TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
+   PADOGRID_TARBALL_GZ_PATH="$PADOGRID_ENV_BASE_PATH/downloads/$TAR_BALL_GZ_NAME"
+   VM_PADOGRID_HOME_PARENT_DIR="$(dirname "$VM_PADOGRID_HOME")"
+   VM_PADOGRID_TARBALL_GZ_PATH="$VM_PADOGRID_ENV_BASE_PATH/downloads/$TAR_BALL_GZ_NAME"
+
+   # Create padogrid tar ball if it does not exist in the downloads directory
+   if [ ! -f "$PADOGRID_TARBALL_GZ_PATH" ]; then
+      pushd $PADOGRID_HOME/.. > /dev/null 2>&1
+      tar czf $PADOGRID_TARBALL_GZ_PATH $ROOT_DIR_NAME
+      popd > /dev/null 2>&1
+   fi
+
+   for VM_HOST in $INSTALL_PADOGRID_HOST_LIST; do
+      echo "Deploying $ROOT_DIR_NAME to $VM_HOST..."
+      if [ "$SIMULATE" == "true" ]; then
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_TARBALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
+      else
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
+         scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_TARBALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
+      fi
+   done
+fi
 
 # Prepare rwe and workspace setenv.sh files for VMs
 THIS_VM_HOSTNAME=`hostname`
 ABS_PATH="$PADOGRID_WORKSPACE"
 INITENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/initenv.sh" ] && echo true || echo false"
 ADDONENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh" ] && echo true || echo false"
-SETENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/setenv.sh" ] && echo true || echo false"
-if [ "SETENV_DOWNLOADED" != "true" ]; then
+RWE_SETENV_COMMAND="[ -f "$VM_PADOGRID_WORKSPACES_HOME/setenv.sh" ] && echo true || echo false"
+
+# Create RWE setenv.sh file if downloading it from the first VM failed earlier
+if [ ! -f "$TMP_RWE_SETENV_FILE" ]; then
    cp $PADOGRID_WORKSPACES_HOME/setenv.sh $TMP_RWE_SETENV_FILE
-   cp $PADOGRID_WORKSPACE/setenv.sh $TMP_SETENV_FILE
    # Reset all exported variables
    EXPORT_HOME_LIST_RWE=$(grep "export .*HOME=" $TMP_RWE_SETENV_FILE | sed -e 's/^.*export //' -e 's/HOME=.*/HOME/')
    for i in $EXPORT_HOME_LIST_RWE; do
       sed -i$__SED_BACKUP -e "s/export $i=.*$/#export $i="\"\""/" -e 's/##/#/' $TMP_RWE_SETENV_FILE
    done
    sed -i$__SED_BACKUP -e 's|^.*export PADOGRID_HOME=.*$|   export PADOGRID_HOME='\"${VM_PADOGRID_HOME}\"'|' $TMP_RWE_SETENV_FILE
+
+   # Create VM workspace setenv.sh
+   for VM_PRODUCT_HOME_VAR in $VM_INSTALLED_PRODUCT_HOMES; do
+      VM_PRODUCT_HOME_DIR_NAME="${vm_installed_product_home_array[$VM_PRODUCT_HOME_VAR]}"
+      VM_PRODUCT_HOME_PATH="$VM_PADOGRID_PRODUCTS_PATH/$VM_PRODUCT_HOME_DIR_NAME"
+      sed -i$__SED_BACKUP -e "s|^.*export $VM_PRODUCT_HOME_VAR=.*$|   export $VM_PRODUCT_HOME_VAR="\"${VM_PRODUCT_HOME_PATH}\""|" $TMP_RWE_SETENV_FILE
+   done 
+fi
+
+# Create workspace setenv.sh file if downloading it from the first VM failed earlier
+if [ ! -f "$TMP_SETENV_FILE" ]; then
+   cp $PADOGRID_WORKSPACE/setenv.sh $TMP_SETENV_FILE
+   # Reset all exported variables
    EXPORT_HOME_LIST_WORKSPACE=$(grep "export .*HOME=" $TMP_SETENV_FILE | sed -e 's/^.*export //' -e 's/HOME=.*/HOME/')
    for i in $EXPORT_HOME_LIST_WORKSPACE; do
       sed -i$__SED_BACKUP -e "s/export $i=.*$/#export $i="\"\""/" -e 's/##/#/' $TMP_SETENV_FILE
@@ -309,7 +410,6 @@ if [ "SETENV_DOWNLOADED" != "true" ]; then
    for VM_PRODUCT_HOME_VAR in $VM_INSTALLED_PRODUCT_HOMES; do
       VM_PRODUCT_HOME_DIR_NAME="${vm_installed_product_home_array[$VM_PRODUCT_HOME_VAR]}"
       VM_PRODUCT_HOME_PATH="$VM_PADOGRID_PRODUCTS_PATH/$VM_PRODUCT_HOME_DIR_NAME"
-      sed -i$__SED_BACKUP -e "s|^.*export $VM_PRODUCT_HOME_VAR=.*$|   export $VM_PRODUCT_HOME_VAR="\"${VM_PRODUCT_HOME_PATH}\""|" $TMP_RWE_SETENV_FILE
       sed -i$__SED_BACKUP -e "s|^.*export $VM_PRODUCT_HOME_VAR=.*$|   export $VM_PRODUCT_HOME_VAR="\"${VM_PRODUCT_HOME_PATH}\""|" $TMP_SETENV_FILE
    done
 fi
@@ -320,7 +420,7 @@ if [ -f "$VM_PRIVATE_KEY_FILE" ]; then
 else
    PRIVATE_KEY_FILE_NAME=""
 fi
-if [ "$__VM_PRIVATE_KEY_FILE_FOUND" == "true" ]; then
+if [ "$PRIVATE_KEY_FILE_NAME" != "" ]; then
    if [ "$SIMULATE" == "true" ]; then
       echo sed -i$__SED_BACKUP -e "s|VM_PRIVATE_KEY_FILE=.*$|VM_PRIVATE_KEY_FILE=\"$VM_PRIVATE_KEY_FILE\"|" -e "s|^.*#.*VM_PRIVATE_KEY_FILE|VM_PRIVATE_KEY_FILE|" "$PADOGRID_WORKSPACE/setenv.sh"
       echo sed -i$__SED_BACKUP -e "s|VM_PRIVATE_KEY_FILE=.*$|VM_PRIVATE_KEY_FILE=\"$REMOTE_PRIVATE_KEY_FILE\"|" -e "s|^.*#.*VM_PRIVATE_KEY_FILE|VM_PRIVATE_KEY_FILE|" "$TMP_SETENV_FILE"
@@ -342,7 +442,7 @@ pushd $ABS_PATH > /dev/null 2>&1
 tar czf $TMP_VM_SYNC_TARBALL_FILE .addonenv.sh *.sh $PRIVATE_KEY_FILE_NAME apps clusters lib plugins
 popd > /dev/null 2>&1
 for VM_HOST in $__VM_HOSTS; do
-   HOSTNAME=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname")
+   HOSTNAME=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname")
    if [ "$HOSTNAME" == "" ]; then
       echo "Invalid host [$VM_HOST]"
       continue
@@ -352,141 +452,117 @@ for VM_HOST in $__VM_HOSTS; do
 
    echo "   Synchronizing $VM_HOST..."
    if [ "$SIMULATE" == "true" ]; then
-      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE"
-      echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_VM_SYNC_TARBALL_FILE $VM_USER@$VM_HOST:$TMP_VM_SYNC_TARBALL_FILE
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE"
+      echo scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_VM_SYNC_TARBALL_FILE $VM_USER@$VM_HOST:$TMP_VM_SYNC_TARBALL_FILE
       if [ "$PRIVATE_KEY_FILE_NAME" == "" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
       else
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
       fi
-      echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh
+      echo scp -q -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh
    else
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE"
-      scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_VM_SYNC_TARBALL_FILE $VM_USER@$VM_HOST:$TMP_VM_SYNC_TARBALL_FILE
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE"
+      scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_VM_SYNC_TARBALL_FILE $VM_USER@$VM_HOST:$TMP_VM_SYNC_TARBALL_FILE
       # private key file permissions must be changed to 400
       if [ "$PRIVATE_KEY_FILE_NAME" == "" ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
+         ssh -o LogLevel=error -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
       fi
-      scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh
+      scp -q -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh
    fi
 
    # Configure the rwe directory if not configured already
-   INITENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$INITENV_COMMAND")
-   ADDONENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$ADDONENV_COMMAND")
-   SETENV_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$SETENV_COMMAND")
+   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$INITENV_COMMAND; $ADDONENV_COMMAND; $RWE_SETENV_COMMAND")
+   index=0
+   for i in $REPLY; do
+      case $index in
+         0) INITENV_EXISTS="$i" ;;
+         1) ADDONENV_EXISTS="$i" ;;
+         2) RWE_SETENV_EXISTS="$i" ;;
+      esac
+      let index=index+1
+   done
 
    if [[ "$INITENV_EXISTS" == *"false" ]]; then
-      scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/initenv.sh
+      scp -q -r -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/initenv.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/initenv.sh
    fi
    if [[ "$ADDONENV_EXISTS" == *"false" ]]; then
-      cp $PADOGRID_WORKSPACES_HOME/.addonenv.sh $TMP_ADDONEVN_FILE
+      cp $PADOGRID_WORKSPACES_HOME/.addonenv.sh $TMP_ADDONENV_FILE
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONEVN_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
+         echo scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
       else
-         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONEVN_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
+         scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_ADDONENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/.addonenv.sh
       fi
    fi
-   if [ "$RWE_SPECIFIED" == "true" ] || [[ "$SETENV_EXISTS" == *"false" ]]; then
+   if [ "$RWE_SPECIFIED" == "true" ] || [[ "$RWE_SETENV_EXISTS" == *"false" ]]; then
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_RWE_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
+         echo scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_RWE_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       else
-         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_RWE_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
+         scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_RWE_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/setenv.sh
       fi
    fi
    if [ "$RWE_SPECIFIED" == "true" ]; then
       if [ "$SIMULATE" == "true" ]; then
-         echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/.*env.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+         echo scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/.*env.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
       else
-         scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/.*env.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
+         scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_WORKSPACES_HOME/.*env.sh $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACES_HOME/
       fi
    fi
    # Update workspace metadata
    RWE=$(basename $PADOGRID_WORKSPACES_HOME)
    VM_RWE=$(basename $VM_PADOGRID_WORKSPACES_HOME)
    if [ "$SIMULATE" == "true" ]; then
-      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d ~/.padogrid/workspaces/$RWE ] && mkdir -p ~/.padogrid/workspaces/$VM_RWE"
-      echo scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $HOME/.padogrid/workspaces/$RWE/$WORKSPACE $VM_USER@$VM_HOST:~/.padogrid/workspaces/$VM_RWE/
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d ~/.padogrid/workspaces/$RWE ] && mkdir -p ~/.padogrid/workspaces/$VM_RWE"
+      echo scp -q -r -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $HOME/.padogrid/workspaces/$RWE/$WORKSPACE $VM_USER@$VM_HOST:~/.padogrid/workspaces/$VM_RWE/
    else
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d ~/.padogrid/workspaces/$RWE ] && mkdir -p ~/.padogrid/workspaces/$VM_RWE"
-      scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $HOME/.padogrid/workspaces/$RWE/$WORKSPACE $VM_USER@$VM_HOST:~/.padogrid/workspaces/$VM_RWE/
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "[ ! -d ~/.padogrid/workspaces/$RWE ] && mkdir -p ~/.padogrid/workspaces/$VM_RWE"
+      scp -q -r -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $HOME/.padogrid/workspaces/$RWE/$WORKSPACE $VM_USER@$VM_HOST:~/.padogrid/workspaces/$VM_RWE/
    fi
 done
 echo ""
 
-# Update .bashrc
+# Update .bashrc if needed
 echo "Updating remote (VM) '.bashrc' if needed..."
 BASHRC_COMMAND="grep initenv.sh ~/.bashrc"
 INIT_COMMAND="\"echo . ${VM_PADOGRID_WORKSPACES_HOME}/initenv.sh -quiet >> ~/.bashrc\""
 for VM_HOST in $__VM_HOSTS; do
    if [ "$SIMULATE" == "true" ]; then
-      echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND"
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND"
    else
-      PADOGRID_INIT_IN_BASHRC=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND")
+      PADOGRID_INIT_IN_BASHRC=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$BASHRC_COMMAND")
    fi
    if [ "$PADOGRID_INIT_IN_BASHRC" == "" ]; then
+      echo "   Updating $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "\"$INIT_COMMAND\""
       fi
    fi
 done
 
-echo ""
-echo "The following products are installed in the VMs. Make sure you have installed and"
-echo "configured all the required products before starting the cluster."
-echo ""
-for VM_PRODUCT_HOME_VAR in $VM_INSTALLED_PRODUCT_HOMES; do
-   echo "   ${vm_installed_product_home_array[$VM_PRODUCT_HOME_VAR]}"
-done
-echo ""
-echo "To install a product, run 'vm_install -product <product_distribution_file>'."
-echo ""
-
-# Determine and display all VMs that do not have Java and the current cluster
-# product installed.
-if [[ "$VM_INSTALLED_PRODUCTS" != *"java"* ]]; then
+# Display all VMs that do not have Java not installed
+if [ "$INSTALL_JAVA_HOST_LIST" != "" ]; then
    JAVA_DIR_NAME=$(basename $VM_JAVA_HOME)
    echo "------------------------------------------------------------------------------------------"
    echo -e "${CBrownOrange}WARNING:${CNone}"
-   echo "   JDK is not installed in the VMs. The workspace will not be operational until you"
-   echo "   have installed JDK."
+   echo "   JDK is not installed in the following VMs. If the workspace requires Java, then it may"
+   echo "   not be operational until it is installed."
    echo ""
-   echo "To install Java in the VMs, download the correct version of JDK and execute 'vm_install'."
-   echo "------------------------------------------------------------------------------------------"
-fi
-
-if [[ "$VM_INSTALLED_PRODUCTS" != *"$PRODUCT_NAME"* ]]; then
-   echo "------------------------------------------------------------------------------------------"
-   echo -e "${CBrownOrange}WARNING:${CNone}"
-   echo "   The cluster product [$PRODUCT_NAME] is not installed in the VMs. The workspace will"
-   echo "   not be operational until you have installed the product."
+   for i in $INSTALL_JAVA_HOST_LIST; do
+      echo "   $i"
+   done
    echo ""
-   echo "To install the product in the VMs, download the correct version of the product and"
-   echo "execute 'vm_install'."
+   echo "JAVA_HOME for the VMs are currently set as follows in this workspace's 'vmenv.sh'."
+   echo ""
+   echo "   VM_JAVA_HOME=$VM_JAVA_HOME"
+   echo ""
+   echo "- To install Java in the PadoGrid products directory, download the correct version of JDK"
+   echo "  and execute 'vm_install'."
+   echo ""
+   echo "- To install Java outside of PadoGrid products directory, use 'vm_exec'".
    echo "------------------------------------------------------------------------------------------"
-else
-   # Check if the cluster product home is set in 'setenv.sh'
-   PRODUCT_NAME=$(getProductName $PRODUCT $CLUSTER_TYPE)
-   PRODUCT_HOME_VAR=$(getProductHome $PRODUCT_NAME)
-   line=$(grep "export .*$PRODUCT_HOME_VAR" $TMP_SETENV_FILE)
-   commented_line=$(echo $line | grep "^.*#")
-   if [ "$commented_line" == "" ]; then
-      VALUE=$(echo $line | sed -e "s/^.*$PRODUCT_HOME_VAR=//" -e "s/\"//g")
-      echo "------------------------------------------------------------------------------------------"
-      echo -e "${CGo}INFO:${CNone}"
-      echo "The cluster product [$PRODUCT_NAME] is configured with the following installation:"
-      echo "   $PRODUCT_HOME_VAR=$VALUE"
-      echo "------------------------------------------------------------------------------------------"
-   else   
-      echo "------------------------------------------------------------------------------------------"
-      echo -e "${CBrownOrange}WARNING:${CNone}"
-      echo "   The cluster product [$PRODUCT_NAME] is installed in the VMs but it is not set"
-      echo "   in the workspace's 'setenv.sh' file. Please set it with 'vm_install'."
-      echo "------------------------------------------------------------------------------------------"
-   fi
 fi
 
 echo ""
@@ -494,6 +570,15 @@ echo -e "${CLightGreen}Workspace sync complete.${CNone}"
 echo ""
 if [ "$SIMULATE" == "true" ]; then
    echo "Simulation complete."
+fi
+
+if [ "$IS_PUBLIC_HOST" == "true" ]; then
+   # Use the public host as a proxy to sync the rest of hosts
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
 fi
 
 # Clean tmp files and exit

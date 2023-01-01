@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -484,6 +484,11 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             echo -e >&2 "${CLightRed}ERROR:${CNone} The specified bundle workspace is already checked out. Overwriting checked-out"
             echo -e >&2 "       workspaces is not permitted. Command aborted."
             exit 1
+         fi
+         # If the workspace directory does not exist then explicitly disable overwrite. This needs
+         # to be done here due to the conflicting overwrite logic later in this script.
+         if [ ! -d "$GIT_DIR" ]; then
+            OVERWRITE_WORKSPACE_SPECIFIED="false"
          fi
       fi
    else

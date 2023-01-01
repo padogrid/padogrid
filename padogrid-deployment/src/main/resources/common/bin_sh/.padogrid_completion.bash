@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -278,7 +278,7 @@ __padogrid_complete()
          type_list="$K8S_PRODUCT_LIST"
       elif [ "$command" == "create_app" ]; then
          type_list="$APP_PRODUCT_LIST"
-      elif [ "$command" == "install_padogrid" ]; then
+      elif [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "uninstall_product" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
@@ -302,7 +302,7 @@ __padogrid_complete()
       ;;
 
    -version)
-      if [ "$command" == "install_padogrid" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_products" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -310,7 +310,11 @@ __padogrid_complete()
          if [ $index -ne 255 ]; then
              product_name="${COMP_WORDS[$index+1]}"
          fi
-         type_list=$(getDownloadableProductVersions $product_name)
+         if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
+            type_list=$(getDownloadableProductVersions $product_name)
+         elif [ "$command" == "update_products" ]; then
+            type_list=$(getInstalledProductVersions $product_name)
+         fi
       fi
       ;;
       
@@ -454,7 +458,7 @@ __padogrid_complete()
       type_list="$(whoami)"
       ;;
 
-   -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -file | -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
       is_path="true"
      ;;
 
@@ -485,7 +489,7 @@ __padogrid_complete()
           type_list=$(__cd_complete_arg "apps" 2)
       elif [ "$command" == "cd_k8s" ]; then
           type_list=$(__cd_complete_arg "k8s" 2)
-      elif [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
+      elif [[ "$command" == "vm_deploy_bundle" || "$command" == "vm_copy" ]] &&  [[ "$cur_word" != "-"* ]]; then
          is_path="true"
       else
          if [ "$command" == "-version" ]; then
@@ -997,7 +1001,7 @@ __command_complete()
          type_list="$K8S_PRODUCT_LIST"
       elif [ "$command" == "create_app" ]; then
          type_list="$APP_PRODUCT_LIST"
-      elif [ "$command" == "install_padogrid" ]; then
+      elif [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
       elif [ "$command" == "uninstall_product" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
@@ -1014,6 +1018,22 @@ __command_complete()
    -rwe)
       if [ "$command" != "find_padogrid" ]; then
          type_list=`getRweList`
+      fi
+      ;;
+   -version)
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_products" ]; then
+         # If -product specified then get downlodable product versions
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
+            type_list=$(getDownloadableProductVersions $product_name)
+         elif [ "$command" == "update_products" ]; then
+            type_list=$(getInstalledProductVersions $product_name)
+         fi
       fi
       ;;
    -workspace)
@@ -1184,7 +1204,7 @@ __command_complete()
       type_list="$(whoami)"
       ;;
 
-   -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -file | -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
      is_path="true"
      ;;
 
@@ -1193,7 +1213,7 @@ __command_complete()
       ;;
 
    *)
-      if [ "$command" == "vm_copy" ] && [[ "$cur_word" != "-"* ]]; then
+      if [[ "$command" == "vm_deploy_bundle" || "$command" == "vm_copy" ]] &&  [[ "$cur_word" != "-"* ]]; then
          is_path="true"
       else
          # Command options

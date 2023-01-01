@@ -1,5 +1,5 @@
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,11 +27,11 @@
 # @param    host           VM host name or address
 # @param    port           Port number
 #
-function getRedisVmMemberPid
+function getVmRedisMemberPid
 {
-   local __HOST=$1
+   local __HOST="$1"
    local __MEMBER_PORT="$2"
-   members=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server | grep $__MEMBER_PORT | grep -v grep | awk '{print $1}'"`
+   local pid=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server | grep $__MEMBER_PORT | grep -v grep | awk '{print \\$1}'"`
    echo $pid
 }
 
@@ -69,7 +69,7 @@ function getRedisActiveMemberCount
       let MEMBER_PORT=MEMBER_START_PORT
       for VM_HOST in ${VM_HOSTS}; do
          let MEMBER_COUNT=MEMBER_COUNT+1
-         pid=`getRedisVmMemberPid $VM_HOST $MEMBER_PORT`
+         pid=`getVmRedisMemberPid $VM_HOST $MEMBER_PORT`
          if [ "$pid" != "" ]; then
              let MEMBER_RUNNING_COUNT=MEMBER_RUNNING_COUNT+1
          fi
@@ -158,7 +158,7 @@ function getRedisMemberPid
 
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
      __MEMBER_PORT=$__MEMBER_START_PORT
-      pid=$(ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server |grep $__MEMBER_PORT | grep -v grep")
+      pid=$(ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep redis-server |grep $__MEMBER_PORT | grep -v grep")
       pid=$(echo $pid | awk '{print $1}')
    else
       if [ "$POD" != "local" ]; then

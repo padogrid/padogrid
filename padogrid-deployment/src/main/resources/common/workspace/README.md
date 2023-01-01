@@ -44,7 +44,7 @@ PadoGrid automatically creates a JupyterLab dashboard for the current workspace.
 
 ## Using PadoGrid
 
-PadoGrid provides a unified set of commands to drive popular data grid products such as *GemFire*, *Geode*, *Hazelcast, Jet*, *Redis*, *SnappyData*, *Coherence*, *Kafka*, *Confluent*, *Hadoop*, *Spart*, etc. along with monitoring tools such as *Promtheus* and *Grafana*, and integrated support for IDEs such as *JupyterLab* and *Visual Code*. The `padogrid` man page provides a complete list of commands.
+PadoGrid provides a unified set of commands to drive popular data grid products such as *GemFire*, *Geode*, *Hazelcast, Jet*, *Redis*, *SnappyData*, *Coherence*, *Kafka*, *Confluent*, *Hadoop*, *Spark*, etc. along with monitoring tools such as *Promtheus* and *Grafana*, and integrated support for IDEs such as *JupyterLab* and *Visual Code*. The `padogrid` man page provides a complete list of commands.
 
 ![Terminal:](images/terminal.png) `man padogrid`
 

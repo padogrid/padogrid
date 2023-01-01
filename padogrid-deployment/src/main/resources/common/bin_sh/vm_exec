@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -vm -all -simulate -?"
+   echo "-cluster -vm -all -bg -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -42,7 +42,7 @@ NAME
                  by default in padogrid environment
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-all] [-simulate] "commands" [-?]
+   $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-all] [-bg] [-simulate] "commands" [-?]
 
    Executes the specified commands in all the workspace VMs defined by the VM_HOSTS
    environment variable in the workspace 'setenv.sh' file. To execute only in the
@@ -69,6 +69,11 @@ OPTIONS
    -all
              Execute the command on all VMs including this VM. If not specified
              then the command will not execute on this VM.
+
+   -bg
+             Requests ssh to go to background just before command execution. This option is
+             analogous to '-f' in ssh. Specify this option to run the remote command in the
+             background. Note that '&' is not required.
 
    -simulate
              Print the remote commands but do not execute.
@@ -106,7 +111,7 @@ fi
 
 # If the -vm option is specified then it overrides all other options
 if [ "$VM_SPECIFIED" == "true" ]; then
-   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [ "${VM_HOSTS_ARG:0:1}" != "-" ]; then
       VM_HOSTS=$VM_HOSTS_ARG
    else
       echo "----------------------------------------------------------------"
@@ -151,51 +156,107 @@ fi
 #
 # Reconstruct command
 #
-COMMAND=
-PREV_VAL=
+COMMAND_OPTS=""
+COMMAND=""
+PREV_VAL=""
 for i in $*; do
    if [[ "$i" == "${CLUSTER}" ]]; then
        if [ -z $CLUSTER_SPECIFIED ]; then
           COMMAND="$COMMAND $i"
        fi
-   elif [[ "$i" != "-cluster" ]]  && [[ "$i" != "-vm" ]]  && [[ "$i" != "-all" ]] && [[ "$i" != "-simulate" ]]; then
+   elif [[ "$i" != "-cluster" ]]  && [[ "$i" != "-vm" ]]  && [[ "$i" != "-all" ]] && [[ "$i" != "-bg" ]] && [[ "$i" != "-simulate" ]]; then
       if [ "$PREV_VAL" != "-vm" ]; then
          COMMAND="$COMMAND $i"
       fi
+   else
+      COMMAND_OPTS="$COMMAND_OPTS $i"
    fi
    PREV_VAL=$i
 done
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+VM_USER=`getVmUser`
+
 KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" == "" ]; then
+   # Set the first private key file found in the workspace directory if exists
+   __VM_PRIVATE_KEY_FILE_FOUND="false"
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+         for i in $PADOGRID_WORKSPACE/*.pem; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
+         for i in $PADOGRID_WORKSPACE/*.key; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      fi
+   fi
+   # Replace '~' with the VM home path
+   KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
+fi
 if [ "$KEY_FILE" == "" ]; then 
    KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-if [ ! -f "$KEY_FILE" ]; then
-   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
-   echo >&2 "       Command aborted."
-   exit 1
-fi
-if [ "$KEY_FILE" == "" ]; then
-   VM_KEY=""
-else
+VM_KEY=""
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
    VM_KEY="-i $KEY_FILE"
 fi
+
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then copy to the first public host and then
+   # use that public host as a proxy to execute this command.
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+
+   # Execute on public vm
+  if [ "$SIMULATE" == "true" ]; then
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -all $COMMAND_OPTS \"$COMMAND\""
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -all $COMMAND_OPTS \"$COMMAND\""
+  else
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -all $COMMAND_OPTS \"$COMMAND\""
+  fi
+   exit
+fi
+
 THIS_VM_HOSTNAME=`hostname`
+if [ "$BG_SPECIFIED" == "true" ]; then
+   SSH_OPTIONS="-f"
+else
+   SSH_OPTIONS=""
+fi
 for VM_HOST in $__VM_HOSTS; do
-     HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+     HOST_NAME=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
      if [ "$ALL" != "true" ] && [ "$HOST_NAME" == "$THIS_VM_HOSTNAME" ]; then
         continue
      fi
 
      echo "---------- $VM_HOST ----------"
      if [ "$SIMULATE" == "true" ]; then
-         echo "ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND"
+        echo ssh -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
      else
-        ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND
+        ssh -n $SSH_OPTIONS $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND"
      fi
      echo ""
 done

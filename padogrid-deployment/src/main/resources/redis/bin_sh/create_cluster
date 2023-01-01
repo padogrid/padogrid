@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -226,6 +226,10 @@ function writeCluster()
    # Replace all spaces from host lists
    VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/ //g")
    echo "vm.hosts=$VM_HOSTS" >> $ETC_DIR/cluster.properties
+   echo "# A comma-separated VM host names with NO spaces. VM_PUBLIC_HOSTS is" >> $ETC_DIR/cluster.properties
+   echo "# required if VM_HOSTS has private hosts that cannot be reached from the" >> $ETC_DIR/cluster.properties
+   echo "# machine where PadoGrid will be executed." >> $ETC_DIR/cluster.properties
+   echo "vm.public.hosts=$VM_PUBLIC_HOSTS" >> $ETC_DIR/cluster.properties
    echo "# SSH user name. If not specified then defaults to the shell login session user name." >> $ETC_DIR/cluster.properties
    echo "vm.user=$VM_USER" >> $ETC_DIR/cluster.properties
    echo "# Optional private key file path. You may use the private key file for AWS EC2, for example. " >> $ETC_DIR/cluster.properties
@@ -240,10 +244,19 @@ function writeCluster()
    if [ "$VM_ENABLED" == "true" ]; then
       echo "# Individual VM host settings: vm.<host>.*" >> $ETC_DIR/cluster.properties
       __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      __VM_PUBLIC_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      __VM_PUBLIC_HOSTS_ARRAY=($__VM_PUBLIC_HOSTS)
+      index=0
       for VM_HOST in $__VM_HOSTS; do
+         VM_PUBLIC_HOST=${__VM_PUBLIC_HOSTS_ARRAY[$index]}
+         if [ "$VM_PUBLIC_HOST" == "" ]; then
+            VM_PUBLIC_HOST=$VM_HOST
+         fi
          echo "#vm.${VM_HOST}.bindAddress=${VM_HOST}" >> $ETC_DIR/cluster.properties
-         echo "vm.${VM_HOST}.hostnameForClients=${VM_HOST}" >> $ETC_DIR/cluster.properties
+         echo "vm.${VM_HOST}.hostnameForClients=${VM_PUBLIC_HOST}" >> $ETC_DIR/cluster.properties
          echo "vm.${VM_HOST}.redundancyZone=" >> $ETC_DIR/cluster.properties
+         echo "" >> $ETC_DIR/cluster.properties
+         let index=index+1
       done
    fi
 

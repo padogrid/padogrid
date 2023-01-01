@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -105,7 +105,7 @@ fi
 
 # If the -vm option is specified then it overrides all other options
 if [ "$VM_SPECIFIED" == "true" ]; then
-   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [ "${VM_HOSTS_ARG:0:1}" != "-" ]; then
       VM_HOSTS=$VM_HOSTS_ARG
    else
       echo "----------------------------------------------------------------"
@@ -149,47 +149,50 @@ fi
 
 WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-if [ "$VM_USER" == "" ]; then
-   VM_USER=$DEFAULT_USER
-fi
-
-# Set the first private key file found in the workspace directory if exists
-if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
-   if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
-      for i in $PADOGRID_WORKSPACE/*.pem; do
-         VM_PRIVATE_KEY_FILE=$i
-         break
-      done
+VM_USER=`getVmUser`
+__VM_PRIVATE_KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+KEY_FILE=$__VM_PRIVATE_KEY_FILE
+if [ "$KEY_FILE" == "" ]; then
+   # Set the first private key file found in the workspace directory if exists
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+         for i in $PADOGRID_WORKSPACE/*.pem; do
+            KEY_FILE=$i
+            break
+         done
+      elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
+         for i in $PADOGRID_WORKSPACE/*.key; do
+            KEY_FILE=$i
+            break
+         done
+      fi
    fi
 fi
-KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
 if [ "$KEY_FILE" == "" ]; then 
    KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-if [ ! -f "$KEY_FILE" ]; then
-   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
-   echo >&2 "       Command aborted."
-   exit 1
-fi
-if [ "$KEY_FILE" == "" ]; then
-   VM_KEY=""
-else
+# Replace '~' with the VM home path
+KEY_FILE=$(echo $KEY_FILE | sed "s|\~|$HOME|")
+VM_KEY=""
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
    VM_KEY="-i $KEY_FILE"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
-for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
-   EXIT_CODE=$?
-   if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "ERROR: $VM_HOST - ${CError}Failed${CNone} ($REPLY)"
-      echo "       Command aborted."
-      exit 1
-   fi
-done
+#for VM_HOST in $__VM_HOSTS; do
+#   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
+#   EXIT_CODE=$?
+#   if [ "$EXIT_CODE" != "0" ]; then
+#      echo -e "ERROR: $VM_HOST - ${CError}Failed${CNone} ($REPLY)"
+#      echo "       Command aborted."
+#      exit 1
+#   fi
+#done
 
 if [ "$VM_ENABLED" == "true" ]; then
    ISSUES_FOUND="false"
@@ -205,6 +208,7 @@ Workspace: $WORKSPACE
 Environment:
                   VM_ENABLED=$VM_ENABLED
                     VM_HOSTS=$VM_HOSTS
+             VM_PUBLIC_HOSTS=$VM_PUBLIC_HOSTS
                      VM_USER=$VM_USER
          VM_PRIVATE_KEY_FILE=$VM_PRIVATE_KEY_FILE
    VM_PADOGRID_ENV_BASE_PATH=$VM_PADOGRID_ENV_BASE_PATH
@@ -213,6 +217,28 @@ Environment:
        VM_PADOGRID_WORKSPACE=$VM_PADOGRID_WORKSPACE
 ------------------------------------------------------------------------------------------
 EOF
+
+IS_PUBLIC_HOST="false"
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then test the first public host and then
+   # use that public host as a proxy to execute this command.
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+
+   # Use the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   __VM_HOSTS=$VM_HOST
+
+   IS_PUBLIC_HOST="true"
+fi
 
 # Check ssh sessions
 NETWORK_ISSUES_VM_HOSTS=""
@@ -231,118 +257,74 @@ for VM_HOST in $__VM_HOSTS; do
 done
 echo "------------------------------------------------------------------------------------------"
 
-# Determine and display all VMs that do not have Java and the current cluster installed.
-PRODUCT_NAME=$(getProductName $PRODUCT $CLUSTER_TYPE)
-PRODUCT_HOME_VAR=$(getProductHome $PRODUCT_NAME)
-#   line=$(grep "export .*$PRODUCT_HOME_VAR" $TMP_SETENV_FILE)
-#   commented_line=$(echo $line | grep "^.*#")
 SOFTWARE_ISSUES_FOUND="false"
-PADOGRID_HOME_COMMAND="[ -d "$VM_PADOGRID_HOME" ] && echo true || echo false"
-JAVA_HOME_COMMAND="[ -d "$VM_JAVA_HOME" ] && echo true || echo false"
-PRODUCT_HOME_COMMAND="grep \"export .*$PRODUCT_HOME_VAR\" $VM_PADOGRID_WORKSPACE/setenv.sh"
-ADDON_NOT_FOUND_LIST=""
-PADOGRID_HOME_NOT_FOUND_LIST=""
-JAVA_HOME_NOT_FOUND_LIST=""
-PRODUCT_HOME_NOT_FOUND_LIST=""
-echo "Determining installed products... Please wait."
+#RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+#WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+COMMAND="switch_rwe $RWE_NAME/$WORKSPACE > /dev/null 2>&1 && vm_show_products -raw -active"
+echo "Determining active products... Please wait."
 for VM_HOST in $__VM_HOSTS; do
-   PADOGRID_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$PADOGRID_HOME_COMMAND")
-   JAVA_HOME_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$JAVA_HOME_COMMAND")
-   line=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$PRODUCT_HOME_COMMAND")
-   if [ "$line" != "" ]; then
-      commented_line=$(echo $line | grep "^.*#")
-      PRODUCT_HOME_EXISTS=$([ "$commented_line" == "" ] && echo "true" || echo "false" )
-   else
-      PRODUCT_HOME_EXISTS="false"
-   fi
-
-   if [ "$PADOGRID_HOME_EXISTS" == "false" ]; then
+   vm_products=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND")
+   if [ "$vm_products" == "" ]; then
       PADOGRID_HOME_NOT_FOUND_LIST="$PADOGRID_HOME_NOT_FOUND_LIST $VM_HOST"
-      ISSUES_FOUND="true"
-      SOFTWARE_ISSUES_FOUND="true"
-   fi
-   if [ "$JAVA_HOME_EXISTS" == "false" ]; then
       JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
       ISSUES_FOUND="true"
       SOFTWARE_ISSUES_FOUND="true"
+      continue
    fi
-   if [ "$PRODUCT_HOME_EXISTS" == "false" ]; then
-      PRODUCT_HOME_NOT_FOUND_LIST="$PRODUCT_HOME_NOT_FOUND_LIST $VM_HOST"
-      ISSUES_FOUND="true"
-      SOFTWARE_ISSUES_FOUND="true"
-   fi
-done
-
-if [ "$PADOGRID_HOME_NOT_FOUND_LIST" != "" ]; then
-   echo "------------------------------------------------------------------------------------------"
-   echo -e "${CWarning}WARNING:${CNone}"
-   echo "   PadoGrid is not installed on the following VMs. Please execute 'vm_sync' to resolve"
-   echo "   this issue."
-   echo -e "      ${CHighlight}$PADOGRID_HOME_NOT_FOUND_LIST${CNone}"
-   echo ""
-   echo "VM PadoGrid Home Path:"
-   echo "      $VM_PADOGRID_HOME"
-   echo "------------------------------------------------------------------------------------------"
-fi
-if [ "$JAVA_HOME_NOT_FOUND_LIST" != "" ]; then
-   JAVA_DIR_NAME=$(basename $VM_JAVA_HOME)
-   echo "------------------------------------------------------------------------------------------"
-   echo -e "${CWarning}WARNING:${CNone}"
-   echo "   Java is not installed on the following VMs. The workspace will not be operational"
-   echo "   until you have installed Java on these VMs."
-   echo -e "      ${CError}$JAVA_HOME_NOT_FOUND_LIST${CNone}"
-   echo ""
-   echo "VM Java Home Path:"
-   echo "      $VM_JAVA_HOME"
-   echo ""
-   echo "   To install Java on the above VMs, download the correct version of Java and execute 'vm_install'."
-   echo ""
-   echo "   Example:"
-   echo "      vm_install -product $JAVA_DIR_NAME.tar.gz"
-   echo "------------------------------------------------------------------------------------------"
-fi
-if [ "$PRODUCT_HOME_NOT_FOUND_LIST" != "" ]; then
-   echo "------------------------------------------------------------------------------------------"
-   echo -e "${CWarning}WARNING:${CNone}"
-   echo "   The product [$PRODUCT_NAME] is not configured for the following VMs. Please install it"
-   echo "   with 'vm_install'."
-   echo -e "      ${CHighlight}$PRODUCT_HOME_NOT_FOUND_LIST${CNone}"
-   echo "------------------------------------------------------------------------------------------"
-fi
-
-# Determine all products installed on the first VM
-__VM_HOST_FIRST=$(echo $__VM_HOSTS | sed 's/ .*//')
-if [ "$PADOGRID_HOME_NOT_FOUND_LIST" == "" ]; then
-   declare -A vm_installed_product_array
-   declare -A vm_installed_product_home_array
-   getVmProductArray $__VM_HOST_FIRST vm_installed_product_array vm_installed_product_home_array
-   VM_INSTALLED_PRODUCTS=${!vm_installed_product_array[@]}
-   VM_INSTALLED_PRODUCTS="$(echo $(printf '%s\n' $VM_INSTALLED_PRODUCTS|sort -u))"
-
-   echo "------------------------------------------------------------------------------------------"
-   echo "VM Installed Products:"
-   for VM_PRODUCT in $VM_INSTALLED_PRODUCTS; do
-      echo "   $VM_PRODUCT: ${vm_installed_product_array[$VM_PRODUCT]}"
+   total=0
+   for i in $vm_products; do
+      if [ "$i" == ";" ]; then
+        let total=total+1
+      fi
    done
-   echo "------------------------------------------------------------------------------------------"
-fi
-if [[ "$VM_INSTALLED_PRODUCTS" != *"$PRODUCT_NAME"* ]]; then
-   echo "------------------------------------------------------------------------------------------"
-   echo -e "${CBrownOrange}WARNING:${CNone}"
-   echo "   The cluster product [$PRODUCT_NAME] is not installed in the VMs. The workspace will"
-   echo "   not be operational until you have installed the product."
-   echo ""
-   echo "To install the product in the VMs, download the correct version of the product and"
-   echo "execute 'vm_install'."
-   echo "------------------------------------------------------------------------------------------"
-   SOFTWARE_ISSUES_FOUND="true"
-fi
+   product=""
+   active_version=""
+   count=0
+   delimiter_count=0
+   echo "$VM_HOST"
+   for i in $vm_products; do
+      if [ $count -eq 0 ]; then
+         product=$i
+      elif [ $count -eq 1 ]; then
+         active_version=$i
+      fi
+      let count=count+1
+      if [ "$i" == ";" ]; then
+         let delimiter_count=delimiter_count+1
+         if [ "$product" == "padogrid" ]; then
+            if [ "$active_version" == "" ]; then
+               PADOGRID_HOME_NOT_FOUND_LIST="$PADOGRID_HOME_NOT_FOUND_LIST $VM_HOST"
+               ISSUES_FOUND="true"
+               SOFTWARE_ISSUES_FOUND="true"
+            fi
+         elif [ "$product" == "java" ]; then
+            if [ "$active_version" == "" ]; then
+               JAVA_HOME_NOT_FOUND_LIST="$JAVA_HOME_NOT_FOUND_LIST $VM_HOST"
+               ISSUES_FOUND="true"
+               SOFTWARE_ISSUES_FOUND="true"
+            fi
+         fi
+         if [ "$active_version" != "" ]; then
+            line="$product $active_version"
+            if [ $delimiter_count -eq $total ]; then
+               echo -e "$TLel $line"
+            else
+               echo -e "$TTee $line"
+            fi
+         fi
+         product=""
+         active_version=""
+         count=0
+      fi
+   done
+done
 
 # Display cluster info
 __VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 __VM_HOSTS_CLUSTER=`getClusterProperty "vm.hosts"`
-__VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-__VM_PRIVATE_KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+
 cat <<EOF
 ------------------------------------------------------------------------------------------
 Cluster: $CLUSTER
@@ -395,19 +377,22 @@ fi
 
 # Check if the cluster has been deployed
 CLUSTER_NOT_FOUND_LIST=""
-# Replace , with space
-__VM_HOSTS=$(echo "$__VM_HOSTS_CLUSTER" | sed "s/,/ /g")
 if [ "$NETWORK_ISSUES_VM_HOSTS" == "" ]; then
    CLUSTER_COMMAND="if [ -d "$VM_PADOGRID_WORKSPACE/clusters/$CLUSTER" ]; then echo true; else echo false; fi"
    for VM_HOST in $__VM_HOSTS; do
-      CLUSTER_EXISTS=$(ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$CLUSTER_COMMAND")
+      CLUSTER_EXISTS=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$CLUSTER_COMMAND")
       if [[ "$CLUSTER_EXISTS" == *"false" ]]; then
-	 CLUSTER_NOT_FOUND_LIST="$CLUSTER_NOT_FOUND_LIST $VM_HOST"
-	 CLUSTER_ISSUES_FOUND=true
+          CLUSTER_NOT_FOUND_LIST="$CLUSTER_NOT_FOUND_LIST $VM_HOST"
+          CLUSTER_ISSUES_FOUND=true
       fi
    done
 fi
 echo "------------------------------------------------------------------------------------------"
+
+if [ "$IS_PUBLIC_HOST" == "true" ]; then
+   # Use the public host as a proxy to sync the rest of hosts
+   ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+fi
 
 # Summary
 echo "------------------------------------------------------------------------------------------"

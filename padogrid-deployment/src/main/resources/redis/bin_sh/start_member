@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -num -fg -simulate -?"
+   echo "-cluster -num -simulate -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -41,7 +41,7 @@ NAME
    $EXECUTABLE - Display member configuration information in the specified cluster
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-fg] [-simulate] [-?]
+   $EXECUTABLE [-cluster cluster_name] [-num member_number] [-simulate] [-?]
 
 DESCRIPTION
    Displays Redis member configuration information. The displayed information can be
@@ -53,10 +53,6 @@ OPTIONS
 
    -num member_number
              Member number 1-99.
-
-   -fg
-             Run the member in the foreground until it is fully initialized and started. If this
-             option is not specified, then by default, it starts the member in the background.
 
    -simulate
              If specified then it only displays the member information
@@ -89,12 +85,6 @@ fi
 
 POD=`getClusterProperty "pod.name" "local"`
 
-# Set FG_OPT
-if [ "$SIMULATE" == "true" ]; then
-   FG_OPT="-fg"
-else
-   FG_OPT=""
-fi
 # Set -simulate if specified
 if [ "$SIMULATE" == "true" ]; then
    SIMULATE_OPT="-simulate"
@@ -133,39 +123,56 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
          fi
       fi
 
-      # Replace , with space
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      DEFAULT_USER=$(whoami)
-      VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-      VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-      if [ "$VM_KEY" == "" ]; then
-         VM_KEY="$VM_PRIVATE_KEY_FILE"
-      fi
-      if [ "$VM_KEY" != "" ]; then 
-         VM_KEY="-i $VM_KEY"
-      fi
+      VM_USER=`getVmUser`
+      VM_KEY=`getVmKeyArg`
+      if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+         # If private hosts are reachable then execute from here.
+         # Replace , with space
+         __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
 
-      # Determine the host
-      __MEMBER_NUMBER=0
-      __FOUND="false"
-      
-      for VM_HOST in $__VM_HOSTS; do
-         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
-         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
-            __FOUND="true"
-            if [ "$POD" == "local" ]; then
-               NUM=1
-            else
-               let NUM=__MEMBER_NUMBER
+         # Determine the host
+         __MEMBER_NUMBER=0
+         __FOUND="false"
+         
+         for VM_HOST in $__VM_HOSTS; do
+            let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+            if [ $__MEMBER_NUMBER -eq $MEMBER_NUM_NO_LEADING_ZERO ]; then
+               __FOUND="true"
+               if [ "$POD" == "local" ]; then
+                  NUM=1
+               else
+                  let NUM=__MEMBER_NUMBER
+               fi
+               ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX "$VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE" $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
+               break;
             fi
-            ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member $FG_OPT $SIMULATE_OPT $CREATE_SCRIPT_OPT -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $NUM"
-            break;
+         done
+         FIRST_NUMBER=1
+         LAST_NUMBER=$__MEMBER_NUMBER
+         if [ "$__FOUND" == "false" ]; then
+            echo >&2 "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
          fi
-      done
-      FIRST_NUMBER=1
-      LAST_NUMBER=$__MEMBER_NUMBER
-      if [ "$__FOUND" == "false" ]; then
-         echo >&2 "ERROR: Invalid member number. Valid range is [$FIRST_NUMBER, $LAST_NUMBER]. Command aborted." 
+
+      else
+         # If private hosts are not reachable then use a public host as a proxy to execute this command.
+         #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+         #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+         RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+         WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+         VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+         if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+            echo -e "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+            echo "       Command aborted."
+            exit 1
+         fi
+
+         # Replace , with space
+         __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+         for VM_HOST in $__VM_HOSTS; do
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+            break;
+         done
       fi
       exit
    fi
@@ -302,7 +309,7 @@ REPLICAS=`getClusterProperty "redis.replicas" "$DEFAULT_REPLICAS"`
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
    NODE_LOCAL="${NODE_NAME_PREFIX}-${MEMBER_NUM}.local"
-   ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
+   ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $REMOTE_BASE_DIR/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER -remote $NODE_LOCAL -workspace $PADOGRID_WORKSPACE $*"
    exit
 elif [ "$SIMULATE" == "true" ]; then
    PID="Simulated"
@@ -314,22 +321,14 @@ else
       mkdir -p $LOG_DIR
    fi
    if [ "$RUN_SCRIPT" != "" ]; then
-      if [ "$FG_SPECIFIED" == "true" ]; then
-         $RUN_SCRIPT >> $LOG_FILE
-      else
          nohup $RUN_SCRIPT >> $LOG_FILE &
-      fi
    else
       CONFIG_FILE=$MEMBER_DIR/redis.conf
       if [ ! -f "$CONFIG_FILE" ]; then
          cp $ETC_DIR/template-redis.conf $CONFIG_FILE
       fi
       pushd ${MEMBER_DIR} > /dev/null 2>&1
-      if [ "$FG_SPECIFIED" == "true" ]; then
-         redis-server $CONFIG_FILE --port $MEMBER_PORT
-      else
-         nohup redis-server $CONFIG_FILE --port $MEMBER_PORT >> $LOG_FILE &
-      fi
+      nohup redis-server $CONFIG_FILE --port $MEMBER_PORT >> $LOG_FILE &
       popd > /dev/null 2>&1
 
       # If "no-add-node" is NOT specified, then add this node as master or slave based
@@ -372,8 +371,8 @@ else
            fi
            if [ "$IS_SLAVE" == "true" ]; then
               # Add this node as a slave to this master node
-               MASTER_ID=$(redis-cli -h $MASTER_HOST -p $MASTER_PORT cluster nodes | grep "$MASTER_NODE" | grep master | sed 's/ .*//')
-               redis-cli --cluster add-node $TARGET_NODE $MASTER_NODE --cluster-slave --cluster-master-id $MASTER_ID
+              MASTER_ID=$(redis-cli -h $MASTER_HOST -p $MASTER_PORT cluster nodes | grep ":$MASTER_PORT" | grep master | sed 's/ .*//')
+              redis-cli --cluster add-node $TARGET_NODE $MASTER_NODE --cluster-slave --cluster-master-id $MASTER_ID
            else
               # Add as master
               redis-cli --cluster add-node $TARGET_NODE $FIRST_NODE
@@ -394,9 +393,6 @@ else
 echo "             Pod: $POD"
 fi
 echo "          Member: $MEMBER"
-if [ "$FG_SPECIFIED" == "true" ]; then
-echo "             PID: $PID"
-fi
 echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
 echo "       NOTE_TYPE: $NODE_TYPE"
 echo "     WORKING_DIR: $MEMBER_DIR"

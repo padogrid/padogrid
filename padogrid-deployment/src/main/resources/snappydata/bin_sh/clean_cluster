@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,21 +87,14 @@ POD=`getClusterProperty "pod.name" "local"`
 #
 VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
 if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
-   DEFAULT_USER=$(whoami)
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-   if [ "$VM_KEY" == "" ]; then
-      VM_KEY="$VM_PRIVATE_KEY_FILE"
-   fi
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
    VM_HOSTS=$(getAllMergedVmHosts)
    # Replace , with space
    __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
    __MEMBER_NUMBER=0
    for VM_HOST in $__VM_HOSTS; do
-      ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/clean_cluster -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $*"
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/clean_cluster -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $*"
    done
    exit
 fi

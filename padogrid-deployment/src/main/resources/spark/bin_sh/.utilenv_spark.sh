@@ -1,5 +1,5 @@
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,9 +49,9 @@ function getMasterPid
    local masters
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       if [ "$__RWE" == "" ]; then
-         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+         masters=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
       else
-         masters=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+         masters=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MASTER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
       fi
    else
       if [ "$__RWE" == "" ]; then
@@ -97,9 +97,9 @@ function getVmMasterPid
    local __RWE=$4
 
    if [ "$__RWE" == "" ]; then
-      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+      local masters=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      local masters=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+      local masters=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
    fi
    spids=""
    for j in $masters; do
@@ -269,40 +269,12 @@ function getMasterName
 function getVmMasterName
 {
    local __HOST=$1
-   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   local __HOSTNAME=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$__HOSTNAME" == "" ]; then
       echo ""
    else
       echo "${CLUSTER}-master-${__HOSTNAME}-01"
    fi
-}
-
-#
-# Returns merged comma-separated list of VM master and member hosts
-# @required  CLUSTERS_DIR  Cluster directory path.
-# @required  CLUSTER       Cluster name.
-#
-function getAllMergedVmHosts
-{
-   local VM_MASTER_HOSTS=$(getClusterProperty "vm.master.hosts")
-   local VM_HOSTS=$(getClusterProperty "vm.hosts")
-   if [ "$VM_MASTER_HOSTS" != "" ]; then
-      # Replace , with space
-      __VM_MASTER_HOSTS=$(echo "$VM_MASTER_HOSTS" | sed "s/,/ /g")
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      for i in $__VM_MASTER_HOSTS; do
-         found=false
-         for j in $__VM_HOSTS; do
-            if [ "$i" == "$j" ]; then
-               found=true
-            fi
-	 done
-	 if [ "$found" == "false" ]; then
-            VM_HOSTS="$VM_HOSTS,$i"
-         fi
-      done
-   fi
-   echo $VM_HOSTS
 }
 
 #

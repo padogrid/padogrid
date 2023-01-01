@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ WORKSPACE_NAME=$(basename $PADOGRID_WORKSPACE)
 
 __options()
 {
-   echo "-product -?"
+   echo "-product -version -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -55,7 +55,7 @@ NAME
    $EXECUTABLE - Iteratively add or update product versions in the current RWE
 
 SYNOPSIS
-   $EXECUTABLE [-product product_name] [-?]
+   $EXECUTABLE [-product product_name] [-version product_version] [-?]
 
 DESCRIPTION
    Iteractively add or update the current PadoGrid environment (RWE) with the installed
@@ -66,6 +66,10 @@ DESCRIPTION
 OPTIONS
    -product product_name
              Product to update. The product name must be one of the following.
+
+   -version product_version
+             Product version to install. The product version number must exactly match the
+             version number following the conventions used by PadoGrid.
 
 EOF
 for i in $DOWNLOADABLE_PRODUCTS; do
@@ -105,6 +109,15 @@ if [ "$PRODUCT_ARG" != "" ]; then
       echo >&2 "       Command aborted."
       exit 1
    fi
+fi
+
+# Exit if -product and -version specified for non-standard products
+if [ "$PRODUCT_SPECIFIED" == "true" ] && [ "$VERSION_SPECIFIED" == "true" ]; then
+   case $PRODUCT_ARG in
+      coherence|java|padoeclipse )
+         echo -e >&2 "${CLightRed}ERROR:${CNone} Product not supported for version update: [$PRODUCT_ARG]. Full path required. Command aborted."
+         exit 1;;
+   esac
 fi
 
 #
@@ -237,7 +250,7 @@ getProductVersions
 # Add "(none)"
 PADOGRID_VERSIONS="(none) $PADOGRID_VERSIONS"
 PADO_VERSIONS="(none) $PADO_VERSIONS"
-PADODEKSTOP_VERSIONS="(none) $PADODEKSTOP_VERSIONS"
+PADODESKTOP_VERSIONS="(none) $PADODESKTOP_VERSIONS"
 PADOWEB_VERSIONS="(none) $PADOWEB_VERSIONS"
 GEMFIRE_VERSIONS="(none) $GEMFIRE_VERSIONS"
 GEODE_VERSIONS="(none) $GEODE_VERSIONS"
@@ -261,7 +274,7 @@ DERBY_VERSIONS="(none) $DERBY_VERSIONS"
 # Convert to array
 __PADOGRID_VERSIONS=($PADOGRID_VERSIONS)
 __PADO_VERSIONS=($PADO_VERSIONS)
-__PADODEKSTOP_VERSIONS=($PADODEKSTOP_VERSIONS)
+__PADODESKTOP_VERSIONS=($PADODESKTOP_VERSIONS)
 __PADOWEB_VERSIONS=($PADOWEB_VERSIONS)
 __GEMFIRE_VERSIONS=($GEMFIRE_VERSIONS)
 __GEODE_VERSIONS=($GEODE_VERSIONS)
@@ -282,13 +295,6 @@ __CONFLUENT_VERSIONS=($CONFLUENT_VERSIONS)
 __HADOOP_VERSIONS=($HADOOP_VERSIONS)
 __DERBY_VERSIONS=($DERBY_VERSIONS)
 
-echo ""
-echo "Products Directoy:"
-echo "   $PADOGRID_ENV_BASE_PATH/products"
-echo ""
-echo "The following product versions are found in the products directory."
-echo -e "The current workspace versions are ${CLightGreen}highlighted${CNone}."
-echo ""
 
 SELECTED_INDEX_PADOGRID=""
 SELECTED_INDEX_PADO=""
@@ -372,402 +378,528 @@ NEW_COHERENCE_HOME=$COHERENCE_HOME
 __JAVA_HOME=$JAVA_HOME
 NEW_JAVA_HOME=$JAVA_HOME
 
-REDO="true"
-while [ "$REDO" == "true" ]; do
-   # PadoGrid
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padogrid" ]; then
-      doUserInput "PadoGrid" "$PADOGRID_VERSIONS" "$__PADOGRID_VERSION" "$SELECTED_INDEX_PADOGRID"
-      echo "Selected: [$SELECTED_INDEX] ${__PADOGRID_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_PADOGRID=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_PADOGRID]=${__PADOGRID_VERSIONS[$SELECTED_INDEX]}
-   fi
+if [ "$VERSION_SPECIFIED" == "true" ]; then
 
-   # Java
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "java" ]; then
-      __REDO=true
-      while [ "$__REDO" == "true" ]; do
-         echo "Enter Java home path. Leave blank to skip."
-         if [[ $OS_NAME == CYGWIN* ]]; then
-            echo "Enter only Unix absolute path. Windows path not allowed."
-         fi
-         echo "[$__JAVA_HOME]:"
-         read -p "" INPUT
-         # trim string
-         INPUT=`echo "$INPUT" | xargs`
-         if [ "$INPUT" != "" ]; then
-            __JAVA_HOME="$INPUT"
-         fi
-         if [[ $OS_NAME == CYGWIN* ]]; then
-            __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
-         fi
-         __JAVA_HOME="$(trimString "$__JAVA_HOME")"
-         if [ "$JAVA_HOME" != "" ] && [[ ! -d "$__JAVA_HOME" ]]; then
-            echo "Directory does not exist or not a directory."
-            __JAVA_HOME="$JAVA_HOME_ARG"
-            __REDO=true
-         else
-            __REDO=false
-         fi
-      done
-      NEW_JAVA_HOME="$__JAVA_HOME"
-   fi
-   
-   # Pado
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
-      doUserInput "Pado" "$PADO_VERSIONS" "$__PADO_VERSION" "$SELECTED_INDEX_PADO"
-      echo "Selected: [$SELECTED_INDEX] ${__PADO_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_PADO=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_PADO]=${__PADO_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   # PadoDesktop
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
-      doUserInput "PadoDesktop" "$PADODEKSTOP_VERSIONS" "$__PADODESKTOP_VERSION" "$SELECTED_INDEX_PADODESKTOP"
-      echo "Selected: [$SELECTED_INDEX] ${__PADODEKSTOP_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_PADODESKTOP=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_PADODESKTOP]=${__PADODEKSTOP_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   # PadoWeb
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
-      doUserInput "PadoWeb" "$PADOWEB_VERSIONS" "$__PADOWEB_VERSION" "$SELECTED_INDEX_PADOWEB"
-      echo "Selected: [$SELECTED_INDEX] ${__PADOWEB_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_PADOWEB=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_PADOWEB]=${__PADOWEB_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-   
-   # GemFire
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "gemfire" ]; then
-      doUserInput "GemFire" "$GEMFIRE_VERSIONS" "$__GEMFIRE_VERSION" "$SELECTED_INDEX_GEMFIRE"
-      echo "Selected: [$SELECTED_INDEX] ${__GEMFIRE_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_GEMFIRE=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_GEMFIRE]=${__GEMFIRE_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-   
-   # Geode
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
-      doUserInput "Geode" "$GEODE_VERSIONS" "$__GEODE_VERSION" "$SELECTED_INDEX_GEODE"
-      echo "Selected: [$SELECTED_INDEX] ${__GEODE_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_GEODE=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_GEODE]=${__GEODE_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   if [ "$PRODUCT_ARG" == "" ]; then
-      __NONE="false"
-      __INNER_LOOP="true"
-      while [ "$__INNER_LOOP" == "true" ]; do
-         read -p "Do you want to add Hazelcast Enterprise or OSS? Enter 'e' for Enterprise, 'o' for OSS, 'n' for none: " INPUT
-         case $INPUT in
-            [Ee]* ) IS_HAZELCAST_ENTERPRISE="true"; __INNER_LOOP="false";;
-            [Oo]* ) IS_HAZELCAST_ENTERPRISE="false"; __INNER_LOOP="false";;
-            [Nn]* ) IS_HAZELCAST_ENTERPRISE="false"; __NONE="true"; __INNER_LOOP="false";;
-         esac
-      done
-   else
-      if [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+   # Identical product list as install_padogrid
+   case $PRODUCT_ARG in
+      confluent )
+         PRODUCT_VERSIONS=$CONFLUENT_VERSIONS ;;
+      derby )
+         PRODUCT_VERSIONS=$DERBY_VERSIONS ;;
+      hadoop )
+         PRODUCT_VERSIONS=$HADOOP_VERSIONS ;;
+      hazelcast-desktop )
+         PRODUCT_VERSIONS=$HAZELCAST_DESKTOP_VERSIONS ;;
+      hazelcast-enterprise ) 
          IS_HAZELCAST_ENTERPRISE="true"
-         __NONE="false"
-      elif [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
-         IS_HAZELCAST_ENTERPRISE="false"
-         __NONE="false"
-      else
-         __NONE="true"
+         PRODUCT_VERSIONS=$HAZELCAST_ENTERPRISE_VERSIONS ;;
+      hazelcast-mc )
+         PRODUCT_VERSIONS=$HAZELCAST_MANAGEMENT_CENTER_VERSIONS ;;
+      hazelcast-oss )
+         PRODUCT_VERSIONS=$HAZELCAST_OSS_VERSIONS ;;
+      gemfire )
+         PRODUCT_VERSIONS=$GEMFIRE_VERSIONS ;;
+      geode )
+         PRODUCT_VERSIONS=$GEODE_VERSIONS ;;
+      grafana )
+         PRODUCT_VERSIONS=$GRAFANA_VERSIONS ;;
+      kafka )
+         PRODUCT_VERSIONS=$KAFKA_VERSIONS ;;
+      pado )
+         PRODUCT_VERSIONS=$PADO_VERSIONS ;;
+      padodesktop )
+         PRODUCT_VERSIONS=$PADODESKTOP_VERSIONS ;;
+      padoeclipse )
+         PRODUCT_VERSIONS=$PADOECLIPSE_VERSIONS ;;
+      padogrid )
+         PRODUCT_VERSIONS=$PADOGRID_VERSIONS ;;
+      padoweb )
+         PRODUCT_VERSIONS=$PADOWEB_VERSIONS ;;
+      prometheus )
+         PRODUCT_VERSIONS=$PROMETHEUS_VERSIONS ;;
+      redis-oss )
+         PRODUCT_VERSIONS=$REDIS_VERSIONS ;;
+      snappydata )
+         PRODUCT_VERSIONS=$SNAPPYDATA_VERSIONS ;;
+      spark )
+         PRODUCT_VERSIONS=$SPARK_VERSIONS ;;
+      *) ;;
+   esac
+
+   found="false"
+   SELECTED_INDEX=0
+   for i in ${PRODUCT_VERSIONS[@]}; do
+      if [ "$i" == "$VERSION_ARG" ]; then
+         found="true"
+         break;
       fi
-   fi
+      let SELECTED_INDEX=SELECTED_INDEX+1
+   done
 
-   if [ "$__NONE" == "false" ]; then
-      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
-         # Hazelcast Enterprise
-         doUserInput "Hazelcast Enterprise" "$HAZELCAST_ENTERPRISE_VERSIONS" "$__HAZELCAST_ENTERPRISE_VERSION" "$SELECTED_INDEX_HAZELCAST_ENTERPRISE"
-         echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}"
-         SELECTED_INDEX_HAZELCAST_ENTERPRISE=$SELECTED_INDEX
-         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}
-         echo ""
-      else
-         # Hazelcast OSS
-         doUserInput "Hazelcast OSS" "$HAZELCAST_OSS_VERSIONS" "$__HAZELCAST_OSS_VERSION" "$SELECTED_INDEX_HAZELCAST_OSS"
-         echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX]}"
-         SELECTED_INDEX_HAZELCAST_OSS=$SELECTED_INDEX
-         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX]}
-         echo ""
-      fi
-   fi
-
-   # Hazelcast Management Center
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
-      doUserInput "Hazelcast Management Center" "$HAZELCAST_MANAGEMENT_CENTER_VERSIONS" "$__HAZELCAST_MC_VERSION" "$SELECTED_INDEX_HAZELCAST_MC"
-      echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_HAZELCAST_MC=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST_MC]=${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}
+   if [ "$found" == "false" ]; then
       echo ""
-   fi
-
-   # HazelcastDesktop
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
-      doUserInput "HazelcastDesktop" "$HAZELCAST_DESKTOP_VERSIONS" "$__HAZELCAST_DESKTOP_VERSION" "$SELECTED_INDEX_HAZELCAST_DESKTOP"
-      echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_DESKTOP_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_HAZELCAST_DESKTOP=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST_DESKTOP]=${__HAZELCAST_DESKTOP_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   if [ "$PRODUCT_ARG" == "" ]; then
-      __INNER_LOOP="true"
-      __NONE="false"
-      while [ "$__INNER_LOOP" == "true" ]; do
-         read -p "Do you want to add Jet Enterprise or OSS? Enter 'e' for Enterprise, 'o' for OSS, 'n' for none: " INPUT
-         case $INPUT in
-            [Ee]* ) IS_JET_ENTERPRISE="true"; __INNER_LOOP="false";;
-            [Oo]* ) IS_JET_ENTERPRISE="false"; __INNER_LOOP="false";;
-            [Nn]* ) IS_HAZELCAST_ENTERPRISE="false"; __NONE="true"; __INNER_LOOP="false";;
-         esac
+      echo "Available product versions: [$PRODUCT_ARG]"
+      index=0
+      for i in ${PRODUCT_VERSIONS[@]}; do
+         echo "[$index] $i"
+         let index=index+1
       done
-    else
-      if [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-         IS_JET_ENTERPRISE="true"
-         __NONE="false"
-      elif [ "$PRODUCT_ARG" == "jet-oss" ]; then
-         IS_JET_ENTERPRISE="false"
-         __NONE="false"
-      else
-         __NONE="true"
+      echo ""
+      echo -e >&2 "${CLightRed}ERROR:${CNone} Product version not found [$VERSION_ARG]. Command aborted."
+      exit 1
+   fi
+
+   # Set the selected index
+   case $PRODUCT_ARG in
+      confluent )
+         PRODUCT_EVAL_ARRAY[$INDEX_CONFLUENT]=${__CONFLUENT_VERSIONS[$SELECTED_INDEX]} ;;
+      derby )
+         PRODUCT_EVAL_ARRAY[$INDEX_DERBY]=${__DERBY_VERSIONS[$SELECTED_INDEX]} ;;
+      hadoop )
+         PRODUCT_EVAL_ARRAY[$INDEX_HADOOP]=${__HADOOP_VERSIONS[$SELECTED_INDEX]} ;;
+      hazelcast-desktop )
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST_DESKTOP]=${__HAZELCAST_DESKTOP_VERSIONS[$SELECTED_INDEX]} ;;
+      hazelcast-enterprise ) 
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX]} ;;
+      hazelcast-mc )
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST_MC]=${__HAZELCAST_MC_VERSIONS[$SELECTED_INDEX]} ;;
+      hazelcast-oss )
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX]} ;;
+      gemfire )
+         PRODUCT_EVAL_ARRAY[$INDEX_GEMFIRE]=${__GEMFIRE_VERSIONS[$SELECTED_INDEX]} ;;
+      geode )
+         PRODUCT_EVAL_ARRAY[$INDEX_GEODE]=${__GEODE_VERSIONS[$SELECTED_INDEX]} ;;
+      grafana )
+         PRODUCT_EVAL_ARRAY[$INDEX_GRAFANA]=${__GRAFANA_ENTERPRISE_VERSIONS[$SELECTED_INDEX]} ;;
+      kafka )
+         PRODUCT_EVAL_ARRAY[$INDEX_KAFKA]=${__KAFKA_VERSIONS[$SELECTED_INDEX]} ;;
+      pado )
+         PRODUCT_EVAL_ARRAY[$INDEX_PADO]=${__PADO_VERSIONS[$SELECTED_INDEX]} ;;
+      padodesktop )
+         PRODUCT_EVAL_ARRAY[$INDEX_PADODESKTOP]=${__PADODESKTOP_VERSIONS[$SELECTED_INDEX]} ;;
+      padogrid )
+         PRODUCT_EVAL_ARRAY[$INDEX_PADOGRID]=${__PADOGRID_VERSIONS[$SELECTED_INDEX]} ;;
+      padoweb )
+         PRODUCT_EVAL_ARRAY[$INDEX_PADOWEB]=${__PADOWEB_VERSIONS[$SELECTED_INDEX]} ;;
+      prometheus )
+         PRODUCT_EVAL_ARRAY[$INDEX_PROMETHEUS]=${__PROMETHEUS_VERSIONS[$SELECTED_INDEX]} ;;
+      redis-oss )
+         PRODUCT_EVAL_ARRAY[$INDEX_REDIS]=${__REDIS_VERSIONS[$SELECTED_INDEX]} ;;
+      snappydata )
+         PRODUCT_EVAL_ARRAY[$INDEX_SNAPPYDATA]=${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX]} ;;
+      spark )
+         PRODUCT_EVAL_ARRAY[$INDEX_SPARK]=${__SPARK_VERSIONS[$SELECTED_INDEX]} ;;
+      *) ;;
+   esac
+   UPDATE_WORKSPACES="current"
+fi
+
+if [ "$VERSION_SPECIFIED" != "true" ]; then
+   echo ""
+   echo "Products Directoy:"
+   echo "   $PADOGRID_ENV_BASE_PATH/products"
+   echo ""
+   echo "The following product versions are found in the products directory."
+   echo -e "The current workspace versions are ${CLightGreen}highlighted${CNone}."
+   echo ""
+
+   REDO="true"
+   while [ "$REDO" == "true" ]; do
+      # PadoGrid
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padogrid" ]; then
+         doUserInput "PadoGrid" "$PADOGRID_VERSIONS" "$__PADOGRID_VERSION" "$SELECTED_INDEX_PADOGRID"
+         echo "Selected: [$SELECTED_INDEX] ${__PADOGRID_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_PADOGRID=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_PADOGRID]=${__PADOGRID_VERSIONS[$SELECTED_INDEX]}
       fi
-   fi
 
-   if [ "$__NONE" == "false" ]; then
-      if [ "$IS_JET_ENTERPRISE" == "true" ]; then
-         # Jet Enterprise
-         doUserInput "Jet Enterprise" "$JET_ENTERPRISE_VERSIONS" "$__JET_ENTERPRISE_VERSION" "$SELECTED_INDEX_JET_ENTERPRISE"
-         echo "Selected: [$SELECTED_INDEX] ${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}"
-         SELECTED_INDEX_JET_ENTERPRISE=$SELECTED_INDEX
-         PRODUCT_EVAL_ARRAY[$INDEX_JET]=${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}
-         echo ""
-      else
-         # Jet OSS
-         doUserInput "Jet OSS" "$JET_OSS_VERSIONS" "$__JET_OSS_VERSION" "$SELECTED_INDEX_JET_OSS"
-         echo "Selected: [$SELECTED_INDEX] ${__JET_OSS_VERSIONS[$SELECTED_INDEX]}"
-         SELECTED_INDEX_JET_OSS=$SELECTED_INDEX
-         PRODUCT_EVAL_ARRAY[$INDEX_JET]=${__JET_OSS_VERSIONS[$SELECTED_INDEX]}
+      # Java
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "java" ]; then
+         __REDO=true
+         while [ "$__REDO" == "true" ]; do
+            echo "Enter Java home path. Leave blank to skip."
+            if [[ $OS_NAME == CYGWIN* ]]; then
+               echo "Enter only Unix absolute path. Windows path not allowed."
+            fi
+            echo "[$__JAVA_HOME]:"
+            read -p "" INPUT
+            # trim string
+            INPUT=`echo "$INPUT" | xargs`
+            if [ "$INPUT" != "" ]; then
+               __JAVA_HOME="$INPUT"
+            fi
+            if [[ $OS_NAME == CYGWIN* ]]; then
+               __JAVA_HOME="$(cygpath -au "$__JAVA_HOME")"
+            fi
+            __JAVA_HOME="$(trimString "$__JAVA_HOME")"
+            if [ "$JAVA_HOME" != "" ] && [[ ! -d "$__JAVA_HOME" ]]; then
+               echo "Directory does not exist or not a directory."
+               __JAVA_HOME="$JAVA_HOME_ARG"
+               __REDO=true
+            else
+               __REDO=false
+            fi
+         done
+         NEW_JAVA_HOME="$__JAVA_HOME"
+      fi
+      
+      # Pado
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+         doUserInput "Pado" "$PADO_VERSIONS" "$__PADO_VERSION" "$SELECTED_INDEX_PADO"
+         echo "Selected: [$SELECTED_INDEX] ${__PADO_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_PADO=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_PADO]=${__PADO_VERSIONS[$SELECTED_INDEX]}
          echo ""
       fi
-   fi
 
-   # Jet Management Center
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-mc" ]; then
-      doUserInput "Jet Management Center" "$JET_MANAGEMENT_CENTER_VERSIONS" "$__JET_MC_VERSION" "$SELECTED_INDEX_JET_MC"
-      echo "Selected: [$SELECTED_INDEX] ${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_JET_MC=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_JET_MC]=${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
+      # PadoDesktop
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+         doUserInput "PadoDesktop" "$PADODESKTOP_VERSIONS" "$__PADODESKTOP_VERSION" "$SELECTED_INDEX_PADODESKTOP"
+         echo "Selected: [$SELECTED_INDEX] ${__PADODESKTOP_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_PADODESKTOP=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_PADODESKTOP]=${__PADODESKTOP_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
 
-   # Redis
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
-      doUserInput "Redis" "$REDIS_VERSIONS" "$__REDIS_VERSION" "$SELECTED_INDEX_REDIS"
-      echo "Selected: [$SELECTED_INDEX] ${__REDIS_VERSIONS[$SELECTED_INDEX]}"
-      PRODUCT_EVAL_ARRAY[$INDEX_REDIS]=${__REDIS_VERSIONS[$SELECTED_INDEX]}
-      SELECTED_INDEX_REDIS=$SELECTED_INDEX
-      echo ""
-   fi
+      # PadoWeb
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+         doUserInput "PadoWeb" "$PADOWEB_VERSIONS" "$__PADOWEB_VERSION" "$SELECTED_INDEX_PADOWEB"
+         echo "Selected: [$SELECTED_INDEX] ${__PADOWEB_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_PADOWEB=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_PADOWEB]=${__PADOWEB_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+      
+      # GemFire
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "gemfire" ]; then
+         doUserInput "GemFire" "$GEMFIRE_VERSIONS" "$__GEMFIRE_VERSION" "$SELECTED_INDEX_GEMFIRE"
+         echo "Selected: [$SELECTED_INDEX] ${__GEMFIRE_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_GEMFIRE=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_GEMFIRE]=${__GEMFIRE_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+      
+      # Geode
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+         doUserInput "Geode" "$GEODE_VERSIONS" "$__GEODE_VERSION" "$SELECTED_INDEX_GEODE"
+         echo "Selected: [$SELECTED_INDEX] ${__GEODE_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_GEODE=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_GEODE]=${__GEODE_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
 
-   # SnappyData
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
-      doUserInput "SnappyData" "$SNAPPYDATA_VERSIONS" "$__SNAPPYDATA_VERSION" "$SELECTED_INDEX_SNAPPYDATA"
-      echo "Selected: [$SELECTED_INDEX] ${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX]}"
-      PRODUCT_EVAL_ARRAY[$INDEX_SNAPPYDATA]=${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX]}
-      SELECTED_INDEX_SNAPPYDATA=$SELECTED_INDEX
-      echo ""
-   fi
-
-   # Coherence
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
-      __REDO=true
-      while [ "$__REDO" == "true" ]; do
-         echo "Enter Coherence home path. Leave blank to skip."
-         if [[ $OS_NAME == CYGWIN* ]]; then
-            echo "Enter only Unix absolute path. Windows path not allowed."
-         fi
-         echo "[$__COHERENCE_HOME]:"
-         read -p "" INPUT
-         # trim string
-         INPUT=`echo "$INPUT" | xargs`
-         if [ "$INPUT" != "" ]; then
-            __COHERENCE_HOME="$INPUT"
-         fi
-         if [[ $OS_NAME == CYGWIN* ]]; then
-            __COHERENCE_HOME="$(cygpath -au "$__COHERENCE_HOME")"
-         fi
-         __COHERENCE_HOME="$(trimString "$__COHERENCE_HOME")"
-         if [ "$__COHERENCE_HOME" != "" ] && [[ ! -d "$__COHERENCE_HOME" ]]; then
-            echo "Directory does not exist or not a directory."
-            __COHERENCE_HOME="$COHERENCE_HOME_ARG"
-            __REDO=true
+      if [ "$PRODUCT_ARG" == "" ]; then
+         __NONE="false"
+         __INNER_LOOP="true"
+         while [ "$__INNER_LOOP" == "true" ]; do
+            read -p "Do you want to add Hazelcast Enterprise or OSS? Enter 'e' for Enterprise, 'o' for OSS, 'n' for none: " INPUT
+            case $INPUT in
+               [Ee]* ) IS_HAZELCAST_ENTERPRISE="true"; __INNER_LOOP="false";;
+               [Oo]* ) IS_HAZELCAST_ENTERPRISE="false"; __INNER_LOOP="false";;
+               [Nn]* ) IS_HAZELCAST_ENTERPRISE="false"; __NONE="true"; __INNER_LOOP="false";;
+            esac
+         done
+      else
+         if [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+            IS_HAZELCAST_ENTERPRISE="true"
+            __NONE="false"
+         elif [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+            IS_HAZELCAST_ENTERPRISE="false"
+            __NONE="false"
          else
-            __REDO=false
+            __NONE="true"
+         fi
+      fi
+
+      if [ "$__NONE" == "false" ]; then
+         if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+            # Hazelcast Enterprise
+            doUserInput "Hazelcast Enterprise" "$HAZELCAST_ENTERPRISE_VERSIONS" "$__HAZELCAST_ENTERPRISE_VERSION" "$SELECTED_INDEX_HAZELCAST_ENTERPRISE"
+            echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}"
+            SELECTED_INDEX_HAZELCAST_ENTERPRISE=$SELECTED_INDEX
+            PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}
+            echo ""
+         else
+            # Hazelcast OSS
+            doUserInput "Hazelcast OSS" "$HAZELCAST_OSS_VERSIONS" "$__HAZELCAST_OSS_VERSION" "$SELECTED_INDEX_HAZELCAST_OSS"
+            echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX]}"
+            SELECTED_INDEX_HAZELCAST_OSS=$SELECTED_INDEX
+            PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST]=${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX]}
+            echo ""
+         fi
+      fi
+
+      # Hazelcast Management Center
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
+         doUserInput "Hazelcast Management Center" "$HAZELCAST_MANAGEMENT_CENTER_VERSIONS" "$__HAZELCAST_MC_VERSION" "$SELECTED_INDEX_HAZELCAST_MC"
+         echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_HAZELCAST_MC=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST_MC]=${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # HazelcastDesktop
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
+         doUserInput "HazelcastDesktop" "$HAZELCAST_DESKTOP_VERSIONS" "$__HAZELCAST_DESKTOP_VERSION" "$SELECTED_INDEX_HAZELCAST_DESKTOP"
+         echo "Selected: [$SELECTED_INDEX] ${__HAZELCAST_DESKTOP_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_HAZELCAST_DESKTOP=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_HAZELCAST_DESKTOP]=${__HAZELCAST_DESKTOP_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      if [ "$PRODUCT_ARG" == "" ]; then
+         __INNER_LOOP="true"
+         __NONE="false"
+         while [ "$__INNER_LOOP" == "true" ]; do
+            read -p "Do you want to add Jet Enterprise or OSS? Enter 'e' for Enterprise, 'o' for OSS, 'n' for none: " INPUT
+            case $INPUT in
+               [Ee]* ) IS_JET_ENTERPRISE="true"; __INNER_LOOP="false";;
+               [Oo]* ) IS_JET_ENTERPRISE="false"; __INNER_LOOP="false";;
+               [Nn]* ) IS_HAZELCAST_ENTERPRISE="false"; __NONE="true"; __INNER_LOOP="false";;
+            esac
+         done
+       else
+         if [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+            IS_JET_ENTERPRISE="true"
+            __NONE="false"
+         elif [ "$PRODUCT_ARG" == "jet-oss" ]; then
+            IS_JET_ENTERPRISE="false"
+            __NONE="false"
+         else
+            __NONE="true"
+         fi
+      fi
+
+      if [ "$__NONE" == "false" ]; then
+         if [ "$IS_JET_ENTERPRISE" == "true" ]; then
+            # Jet Enterprise
+            doUserInput "Jet Enterprise" "$JET_ENTERPRISE_VERSIONS" "$__JET_ENTERPRISE_VERSION" "$SELECTED_INDEX_JET_ENTERPRISE"
+            echo "Selected: [$SELECTED_INDEX] ${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}"
+            SELECTED_INDEX_JET_ENTERPRISE=$SELECTED_INDEX
+            PRODUCT_EVAL_ARRAY[$INDEX_JET]=${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX]}
+            echo ""
+         else
+            # Jet OSS
+            doUserInput "Jet OSS" "$JET_OSS_VERSIONS" "$__JET_OSS_VERSION" "$SELECTED_INDEX_JET_OSS"
+            echo "Selected: [$SELECTED_INDEX] ${__JET_OSS_VERSIONS[$SELECTED_INDEX]}"
+            SELECTED_INDEX_JET_OSS=$SELECTED_INDEX
+            PRODUCT_EVAL_ARRAY[$INDEX_JET]=${__JET_OSS_VERSIONS[$SELECTED_INDEX]}
+            echo ""
+         fi
+      fi
+
+      # Jet Management Center
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-mc" ]; then
+         doUserInput "Jet Management Center" "$JET_MANAGEMENT_CENTER_VERSIONS" "$__JET_MC_VERSION" "$SELECTED_INDEX_JET_MC"
+         echo "Selected: [$SELECTED_INDEX] ${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_JET_MC=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_JET_MC]=${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # Redis
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
+         doUserInput "Redis" "$REDIS_VERSIONS" "$__REDIS_VERSION" "$SELECTED_INDEX_REDIS"
+         echo "Selected: [$SELECTED_INDEX] ${__REDIS_VERSIONS[$SELECTED_INDEX]}"
+         PRODUCT_EVAL_ARRAY[$INDEX_REDIS]=${__REDIS_VERSIONS[$SELECTED_INDEX]}
+         SELECTED_INDEX_REDIS=$SELECTED_INDEX
+         echo ""
+      fi
+
+      # SnappyData
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+         doUserInput "SnappyData" "$SNAPPYDATA_VERSIONS" "$__SNAPPYDATA_VERSION" "$SELECTED_INDEX_SNAPPYDATA"
+         echo "Selected: [$SELECTED_INDEX] ${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX]}"
+         PRODUCT_EVAL_ARRAY[$INDEX_SNAPPYDATA]=${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX]}
+         SELECTED_INDEX_SNAPPYDATA=$SELECTED_INDEX
+         echo ""
+      fi
+
+      # Coherence
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
+         __REDO=true
+         while [ "$__REDO" == "true" ]; do
+            echo "Enter Coherence home path. Leave blank to skip."
+            if [[ $OS_NAME == CYGWIN* ]]; then
+               echo "Enter only Unix absolute path. Windows path not allowed."
+            fi
+            echo "[$__COHERENCE_HOME]:"
+            read -p "" INPUT
+            # trim string
+            INPUT=`echo "$INPUT" | xargs`
+            if [ "$INPUT" != "" ]; then
+               __COHERENCE_HOME="$INPUT"
+            fi
+            if [[ $OS_NAME == CYGWIN* ]]; then
+               __COHERENCE_HOME="$(cygpath -au "$__COHERENCE_HOME")"
+            fi
+            __COHERENCE_HOME="$(trimString "$__COHERENCE_HOME")"
+            if [ "$__COHERENCE_HOME" != "" ] && [[ ! -d "$__COHERENCE_HOME" ]]; then
+               echo "Directory does not exist or not a directory."
+               __COHERENCE_HOME="$COHERENCE_HOME_ARG"
+               __REDO=true
+            else
+               __REDO=false
+            fi
+         done
+         NEW_COHERENCE_HOME="$__COHERENCE_HOME"
+      fi
+
+      # Spark
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+         doUserInput "Spark" "$SPARK_VERSIONS" "$__SPARK_VERSION" "$SELECTED_INDEX_SPARK"
+         echo "Selected: [$SELECTED_INDEX] ${__SPARK_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_SPARK=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_SPARK]=${__SPARK_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # Kafka
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+         doUserInput "Kafka" "$KAFKA_VERSIONS" "$__KAFKA_VERSION" "$SELECTED_INDEX_KAFKA"
+         echo "Selected: [$SELECTED_INDEX] ${__KAFKA_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_KAFKA=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_KAFKA]=${__KAFKA_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # Kafka Confluent Platform
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
+         doUserInput "Kafka Confluent Platform" "$CONFLUENT_VERSIONS" "$__CONFLUENT_VERSION" "$SELECTED_INDEX_CONFLUENT"
+         echo "Selected: [$SELECTED_INDEX] ${__CONFLUENT_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_CONFLUENT=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_CONFLUENT]=${__CONFLUENT_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # Hadoop
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
+         doUserInput "Hadoop" "$HADOOP_VERSIONS" "$__HADOOP_VERSION" "$SELECTED_INDEX_HADOOP"
+         echo "Selected: [$SELECTED_INDEX] ${__HADOOP_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_HADOOP=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_HADOOP]=${__HADOOP_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # Prometheus
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
+         doUserInput "Hadoop" "$PROMETHEUS_VERSIONS" "$__PROMETHEUS_VERSION" "$SELECTED_INDEX_PROMETHEUS"
+         echo "Selected: [$SELECTED_INDEX] ${__PROMETHEUS_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_PROMETHEUS=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_PROMETHEUS]=${__PROMETHEUS_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # Grafana
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana" ]; then
+         doUserInput "Grafana" "$GRAFANA_VERSIONS" "$__GRAFANA_VERSION" "$SELECTED_INDEX_GRAFANA"
+         echo "Selected: [$SELECTED_INDEX] ${__GRAFANA_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_GRAFANA=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_GRAFANA]=${__GRAFANA_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      # Derby
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
+         doUserInput "Derby" "$DERBY_VERSIONS" "$__DERBY_VERSION" "$SELECTED_INDEX_DERBY"
+         echo "Selected: [$SELECTED_INDEX] ${__DERBY_VERSIONS[$SELECTED_INDEX]}"
+         SELECTED_INDEX_DERBY=$SELECTED_INDEX
+         PRODUCT_EVAL_ARRAY[$INDEX_DERBY]=${__DERBY_VERSIONS[$SELECTED_INDEX]}
+         echo ""
+      fi
+
+      __INNER_REDO="true"
+      while [ "$__INNER_REDO" == "true" ]; do
+         # RWE
+         __INNER_LOOP="true"
+         while [ "$__INNER_LOOP" == "true" ]; do
+            echo "Apply selected version(s) to RWE?"
+            read -p "Enter 'r' for RWE, 'n' for no RWE, 'q' to quit this command: " INPUT
+            case $INPUT in
+               [Rr]* ) UPDATE_RWE=true; __INNER_LOOP=false;;
+               [Nn]* ) UPDATE_RWE=false; __INNER_LOOP=false;;
+               [Qq]* ) exit;;
+            esac
+         done
+         echo ""
+         
+         # Workspaces
+         __INNER_LOOP="true"
+         while [ "$__INNER_LOOP" == "true" ]; do
+            echo "Apply selected version(s) to the current workspace or all workspaces?"
+            echo "Enter 'w' for current workspace, 'a' for all workspaces,"
+            read -p "      'n' for no workspaces,     'q' to quit this command: " INPUT
+            case $INPUT in
+               [Ww]* ) UPDATE_WORKSPACES="current"; __INNER_LOOP=false;;
+               [Aa]* ) UPDATE_WORKSPACES="all"; __INNER_LOOP=false;;
+               [Nn]* ) UPDATE_WORKSPACES="none"; __INNER_LOOP=false;;
+               [Qq]* ) exit;;
+            esac
+         done
+         if [ "$UPDATE_RWE" == "false" ] && [ "$UPDATE_WORKSPACES" == "none" ]; then
+            echo "You have selected no RWE and workspaces to apply. You must select at least one."
+         else
+            __INNER_REDO="false"
          fi
       done
-      NEW_COHERENCE_HOME="$__COHERENCE_HOME"
-   fi
 
-   # Spark
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
-      doUserInput "Spark" "$SPARK_VERSIONS" "$__SPARK_VERSION" "$SELECTED_INDEX_SPARK"
-      echo "Selected: [$SELECTED_INDEX] ${__SPARK_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_SPARK=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_SPARK]=${__SPARK_VERSIONS[$SELECTED_INDEX]}
+      ### Summary
       echo ""
-   fi
-
-   # Kafka
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
-      doUserInput "Kafka" "$KAFKA_VERSIONS" "$__KAFKA_VERSION" "$SELECTED_INDEX_KAFKA"
-      echo "Selected: [$SELECTED_INDEX] ${__KAFKA_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_KAFKA=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_KAFKA]=${__KAFKA_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   # Kafka Confluent Platform
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
-      doUserInput "Kafka Confluent Platform" "$CONFLUENT_VERSIONS" "$__CONFLUENT_VERSION" "$SELECTED_INDEX_CONFLUENT"
-      echo "Selected: [$SELECTED_INDEX] ${__CONFLUENT_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_CONFLUENT=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_CONFLUENT]=${__CONFLUENT_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   # Hadoop
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
-      doUserInput "Hadoop" "$HADOOP_VERSIONS" "$__HADOOP_VERSION" "$SELECTED_INDEX_HADOOP"
-      echo "Selected: [$SELECTED_INDEX] ${__HADOOP_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_HADOOP=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_HADOOP]=${__HADOOP_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   # Prometheus
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
-      doUserInput "Hadoop" "$PROMETHEUS_VERSIONS" "$__PROMETHEUS_VERSION" "$SELECTED_INDEX_PROMETHEUS"
-      echo "Selected: [$SELECTED_INDEX] ${__PROMETHEUS_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_PROMETHEUS=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_PROMETHEUS]=${__PROMETHEUS_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   # Grafana
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana" ]; then
-      doUserInput "Grafana" "$GRAFANA_VERSIONS" "$__GRAFANA_VERSION" "$SELECTED_INDEX_GRAFANA"
-      echo "Selected: [$SELECTED_INDEX] ${__GRAFANA_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_GRAFANA=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_GRAFANA]=${__GRAFANA_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   # Derby
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
-      doUserInput "Derby" "$DERBY_VERSIONS" "$__DERBY_VERSION" "$SELECTED_INDEX_DERBY"
-      echo "Selected: [$SELECTED_INDEX] ${__DERBY_VERSIONS[$SELECTED_INDEX]}"
-      SELECTED_INDEX_DERBY=$SELECTED_INDEX
-      PRODUCT_EVAL_ARRAY[$INDEX_DERBY]=${__DERBY_VERSIONS[$SELECTED_INDEX]}
-      echo ""
-   fi
-
-   __INNER_REDO="true"
-   while [ "$__INNER_REDO" == "true" ]; do
-      # RWE
-      __INNER_LOOP="true"
-      while [ "$__INNER_LOOP" == "true" ]; do
-         echo "Apply selected version(s) to RWE?"
-         read -p "Enter 'r' for RWE, 'n' for no RWE, 'q' to quit this command: " INPUT
-         case $INPUT in
-            [Rr]* ) UPDATE_RWE=true; __INNER_LOOP=false;;
-            [Nn]* ) UPDATE_RWE=false; __INNER_LOOP=false;;
-            [Qq]* ) exit;;
-         esac
-      done
-      echo ""
-      
-      # Workspaces
-      __INNER_LOOP="true"
-      while [ "$__INNER_LOOP" == "true" ]; do
-         echo "Apply selected version(s) to the current workspace or all workspaces?"
-         echo "Enter 'w' for current workspace, 'a' for all workspaces,"
-         read -p "      'n' for no workspaces,     'q' to quit this command: " INPUT
-         case $INPUT in
-            [Ww]* ) UPDATE_WORKSPACES="current"; __INNER_LOOP=false;;
-            [Aa]* ) UPDATE_WORKSPACES="all"; __INNER_LOOP=false;;
-            [Nn]* ) UPDATE_WORKSPACES="none"; __INNER_LOOP=false;;
-            [Qq]* ) exit;;
-         esac
-      done
-      if [ "$UPDATE_RWE" == "false" ] && [ "$UPDATE_WORKSPACES" == "none" ]; then
-         echo "You have selected no RWE and workspaces to apply. You must select at least one."
+      echo "You have selected the following products to add or update:"
+      echo "        PadoGrid: ${__PADOGRID_VERSIONS[$SELECTED_INDEX_PADOGRID]}"
+      echo "            Java: ${NEW_JAVA_HOME}"
+      echo "            Pado: ${__PADO_VERSIONS[$SELECTED_INDEX_PADO]}"
+      echo "     PadoDesktop: ${__PADODESKTOP_VERSIONS[$SELECTED_INDEX_PADODESKTOP]}"
+      echo "         PadoWeb: ${__PADOWEB_VERSIONS[$SELECTED_INDEX_PADOWEB]}"
+      echo "         GemFire: ${__GEMFIRE_VERSIONS[$SELECTED_INDEX_GEMFIRE]}"
+      echo "           Geode: ${__GEODE_VERSIONS[$SELECTED_INDEX_GEODE]}"
+      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+      echo "       Hazelcast: ${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX_HAZELCAST_ENTERPRISE]} - enterprise"
       else
-         __INNER_REDO="false"
+      echo "       Hazelcast: ${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX_HAZELCAST_OSS]} - oss"
       fi
-   done
+      echo "     Hazecast MC: ${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX_HAZELCAST_MC]}"
+      echo "HazelcastDesktop: ${__HAZELCAST_DESKTOP_VERSIONS[$SELECTED_INDEX_HAZELCAST_DESKTOP]}"
+      if [ "$IS_JET_ENTERPRISE" == "true" ]; then
+      echo "             Jet: ${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX_JET_ENTERPRISE]} - enterprise"
+      else
+      echo "             Jet: ${__JET_OSS_VERSIONS[$SELECTED_INDEX_JET_OSS]} - oss"
+      fi
+      echo "          Jet MC: ${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX_JET_MC]}"
+      echo "           Redis: ${__REDIS_VERSIONS[$SELECTED_INDEX_REDIS]}"
+      echo "      SnappyData: ${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX_SNAPPYDATA]}"
+      echo "           Spark: ${__SPARK_VERSIONS[$SELECTED_INDEX_SPARK]}"
+      echo "           Kafka: ${__KAFKA_VERSIONS[$SELECTED_INDEX_KAFKA]}"
+      echo "       Confluent: ${__CONFLUENT_VERSIONS[$SELECTED_INDEX_CONFLUENT]}"
+      echo "          Hadoop: ${__HADOOP_VERSIONS[$SELECTED_INDEX_HADOOP]}"
+      echo "      Prometheus: ${__PROMETHEUS_VERSIONS[$SELECTED_INDEX_PROMETHEUS]}"
+      echo "         Grafana: ${__GRAFANA_VERSIONS[$SELECTED_INDEX_GRAFANA]}"
+      echo "           Derby: ${__DERBY_VERSIONS[$SELECTED_INDEX_DERBY]}"
+      echo "       Coherence: ${NEW_COHERENCE_HOME}"
+      echo ""
+      echo "The selected product(s) will be applied to"
+      if [ "$UPDATE_RWE" == "true" ]; then
+         echo "   - Current RWE [$RWE_NAME]"
+      fi
+      if [ "$UPDATE_WORKSPACES" == "all" ]; then
+         echo "   - All workspaces in the current RWE"
+      elif [ "$UPDATE_WORKSPACES" == "current" ]; then
+         echo "   - Current workspace [$WORKSPACE_NAME]"
+      fi
+      echo ""
 
-   ### Summary
-   echo ""
-   echo "You have selected the following products to add or update:"
-   echo "        PadoGrid: ${__PADOGRID_VERSIONS[$SELECTED_INDEX_PADOGRID]}"
-   echo "            Java: ${NEW_JAVA_HOME}"
-   echo "            Pado: ${__PADO_VERSIONS[$SELECTED_INDEX_PADO]}"
-   echo "     PadoDesktop: ${__PADODESKTOP_VERSIONS[$SELECTED_INDEX_PADODESKTOP]}"
-   echo "         PadoWeb: ${__PADOWEB_VERSIONS[$SELECTED_INDEX_PADOWEB]}"
-   echo "         GemFire: ${__GEMFIRE_VERSIONS[$SELECTED_INDEX_GEMFIRE]}"
-   echo "           Geode: ${__GEODE_VERSIONS[$SELECTED_INDEX_GEODE]}"
-   if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
-   echo "       Hazelcast: ${__HAZELCAST_ENTERPRISE_VERSIONS[$SELECTED_INDEX_HAZELCAST_ENTERPRISE]} - enterprise"
-   else
-   echo "       Hazelcast: ${__HAZELCAST_OSS_VERSIONS[$SELECTED_INDEX_HAZELCAST_OSS]} - oss"
-   fi
-   echo "     Hazecast MC: ${__HAZELCAST_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX_HAZELCAST_MC]}"
-   echo "HazelcastDesktop: ${__HAZELCAST_DESKTOP_VERSIONS[$SELECTED_INDEX_HAZELCAST_DESKTOP]}"
-   if [ "$IS_JET_ENTERPRISE" == "true" ]; then
-   echo "             Jet: ${__JET_ENTERPRISE_VERSIONS[$SELECTED_INDEX_JET_ENTERPRISE]} - enterprise"
-   else
-   echo "             Jet: ${__JET_OSS_VERSIONS[$SELECTED_INDEX_JET_OSS]} - oss"
-   fi
-   echo "          Jet MC: ${__JET_MANAGEMENT_CENTER_VERSIONS[$SELECTED_INDEX_JET_MC]}"
-   echo "           Redis: ${__REDIS_VERSIONS[$SELECTED_INDEX_REDIS]}"
-   echo "      SnappyData: ${__SNAPPYDATA_VERSIONS[$SELECTED_INDEX_SNAPPYDATA]}"
-   echo "           Spark: ${__SPARK_VERSIONS[$SELECTED_INDEX_SPARK]}"
-   echo "           Kafka: ${__KAFKA_VERSIONS[$SELECTED_INDEX_KAFKA]}"
-   echo "       Confluent: ${__CONFLUENT_VERSIONS[$SELECTED_INDEX_CONFLUENT]}"
-   echo "          Hadoop: ${__HADOOP_VERSIONS[$SELECTED_INDEX_HADOOP]}"
-   echo "      Prometheus: ${__PROMETHEUS_VERSIONS[$SELECTED_INDEX_PROMETHEUS]}"
-   echo "         Grafana: ${__GRAFANA_VERSIONS[$SELECTED_INDEX_GRAFANA]}"
-   echo "           Derby: ${__DERBY_VERSIONS[$SELECTED_INDEX_DERBY]}"
-   echo "       Coherence: ${NEW_COHERENCE_HOME}"
-   echo ""
-   echo "The selected product(s) will be applied to"
-   if [ "$UPDATE_RWE" == "true" ]; then
-      echo "   - Current RWE [$RWE_NAME]"
-   fi
-   if [ "$UPDATE_WORKSPACES" == "all" ]; then
-      echo "   - All workspaces in the current RWE"
-   elif [ "$UPDATE_WORKSPACES" == "current" ]; then
-      echo "   - Current workspace [$WORKSPACE_NAME]"
-   fi
-   echo ""
-
-   __INNER_LOOP="true"
-   while [ "$__INNER_LOOP" == "true" ]; do
-      read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
-      case $INPUT in
-         [Cc]* ) REDO=false; __INNER_LOOP=false;;
-         [Rr]* ) REDO=true; __INNER_LOOP=false;;
-         [Qq]* ) echo "Command Aborted."; __INNER_LOOP=false; exit;;
-      esac
+      __INNER_LOOP="true"
+      while [ "$__INNER_LOOP" == "true" ]; do
+         read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
+         case $INPUT in
+            [Cc]* ) REDO=false; __INNER_LOOP=false;;
+            [Rr]* ) REDO=true; __INNER_LOOP=false;;
+            [Qq]* ) echo "Command Aborted."; __INNER_LOOP=false; exit;;
+         esac
+      done
+         
    done
-      
-done
+fi
 
 echo ""
 

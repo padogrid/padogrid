@@ -1,5 +1,5 @@
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,9 +49,9 @@ function getNameNodePid
    local namenodes
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       if [ "$__RWE" == "" ]; then
-         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+         namenodes=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
       else
-         namenodes=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+         namenodes=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__NAMENODE | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
       fi
    else
       if [ "$__RWE" == "" ]; then
@@ -97,9 +97,9 @@ function getVmNameNodePid
    local __RWE=$4
 
    if [ "$__RWE" == "" ]; then
-      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+      local namenodes=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      local namenodes=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+      local namenodes=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
    fi
    spids=""
    for j in $namenodes; do
@@ -278,40 +278,12 @@ function getNameNodeName
 function getVmNameNodeName
 {
    local __HOST=$1
-   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   local __HOSTNAME=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$__HOSTNAME" == "" ]; then
       echo ""
    else
       echo "${CLUSTER}-namenode-${__HOSTNAME}-01"
    fi
-}
-
-#
-# Returns merged comma-separated list of VM namenode and member hosts
-# @required  CLUSTERS_DIR  Cluster directory path.
-# @required  CLUSTER       Cluster name.
-#
-function getAllMergedVmHosts
-{
-   local VM_NAMENODE_HOSTS=$(getClusterProperty "vm.namenode.hosts")
-   local VM_HOSTS=$(getClusterProperty "vm.hosts")
-   if [ "$VM_NAMENODE_HOSTS" != "" ]; then
-      # Replace , with space
-      __VM_NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      for i in $__VM_NAMENODE_HOSTS; do
-         found=false
-         for j in $__VM_HOSTS; do
-            if [ "$i" == "$j" ]; then
-               found=true
-            fi
-	 done
-	 if [ "$found" == "false" ]; then
-            VM_HOSTS="$VM_HOSTS,$i"
-         fi
-      done
-   fi
-   echo $VM_HOSTS
 }
 
 #

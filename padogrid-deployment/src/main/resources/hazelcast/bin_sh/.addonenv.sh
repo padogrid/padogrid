@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -257,9 +257,9 @@ HEALTH_MONITOR_PROPERTIES="-Dhazelcast.health.monitoring.level=NOISY \
 -Dhazelcast.health.monitoring.threshold.memory.percentage=70 \
 -Dhazelcast.health.monitoring.threshold.cpu.percentage=70"
 
-# Disagnostics logging
+# Diagnostics logging
 DEFAULT_DIAGNOSTICS_ENABLED="true"
-if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -eq 3 ]; then
+if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" != "" ] && [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -eq 3 ]; then
    DIAGNOSTICS_PROPERTIES="-Dhazelcast.diagnostics.metric.distributed.datastructures=true \
 -Dhazelcast.diagnostics.metric.level=Debug"
 else
@@ -357,7 +357,7 @@ if [ "$HAZELCAST_VERSION" != "" ]; then
          __CLASSPATH="$__CLASSPATH:$JET_HOME/lib/hazelcast-jet-${HAZELCAST_VERSION}.jar"
       fi
    else
-      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+      if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" != "" ] && [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
          __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib:$HAZELCAST_HOME/lib/*:$HAZELCAST_HOME/bin/user-lib/*"
       elif [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
          __CLASSPATH="$__CLASSPATH:$HAZELCAST_HOME/lib/hazelcast-enterprise-all-${HAZELCAST_VERSION}.jar:$HAZELCAST_HOME/bin/user-lib/*"

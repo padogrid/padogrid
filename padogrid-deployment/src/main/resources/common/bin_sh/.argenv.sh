@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ OS_NAME=`echo "$OS_NAME"|awk '{print toupper($0)}'`
 # Determine arguments
 #
 LAST_ARG=
+PRODUCT_SPECIFIED=false
 PRODUCT_ARG=
 ENV_ARG=
 RWE_ARG=
@@ -49,6 +50,8 @@ DASHBOARD_SPECIFIED=false
 DEFAULT_SPECIFIED=false
 JAVA_HOME_ARG=
 PATH_ARG=
+FILE_SPECIFIED=false
+FILE_ARG=
 JAR_ARG=
 CLASSPATH_ARG=
 JET_ARG=
@@ -84,15 +87,19 @@ CLUSTER_TYPE_ARG=
 REPLICAS=1
 ARG_ARG=
 FG_SPECIFIED=false
+BG_SPECIFIED=false
 MEMBER_NUM=1
 MEMBER_NUM_SPECIFIED=false
 REMOTE=
 REMOTE_SPECIFIED=false
+RAW_SPECIFIED=false
+ACTIVE_SPECIFIED=false
 PRODUCT_CLUSTER=
 PRODUCT_CLUSTER_SPECIFIED=false
 MIRROR_SPECIFIED=false
 VM_SPECIFIED=false
 VM_HOSTS_ARG=
+VM_PUBLIC_HOSTS_ARG=
 VM_JAVA_HOME_ARG=
 VM_PADOGRID_BASE_ARG=
 VM_PADOGRID_HOME_ARG=
@@ -205,6 +212,8 @@ do
          JAVA_HOME_ARG=$i
       elif [ "$PREV" == "-path" ]; then
          PATH_ARG=$i
+      elif [ "$PREV" == "-file" ]; then
+         FILE_ARG=$i
       elif [ "$PREV" == "-jar" ]; then
          JAR_ARG=$i
       elif [ "$PREV" == "-classpath" ]; then
@@ -289,6 +298,10 @@ do
          if [[ "$i" != "-"* ]]; then
             VM_HOSTS_ARG=$i
          fi
+      elif [ "$PREV" == "-vm-public" ]; then
+         if [[ "$i" != "-"* ]]; then
+            VM_PUBLIC_HOSTS_ARG=$i
+         fi
       elif [ "$PREV" == "-vm-java" ]; then
          VM_JAVA_HOME_ARG=$i
       elif [ "$PREV" == "-vm-product" ]; then
@@ -364,6 +377,8 @@ do
          MAN_SPECIFIED=true
       elif [ "$i" == "-fg" ]; then
          FG_SPECIFIED=true
+      elif [ "$i" == "-bg" ]; then
+         BG_SPECIFIED=true
       elif [ "$i" == "-simulate" ]; then
          SIMULATE=true
       elif [ "$i" == "-preview" ]; then
@@ -482,6 +497,10 @@ do
          MIRROR_SPECIFIED=true
       elif [ "$i" == "-remote" ]; then
          REMOTE_SPECIFIED=true
+      elif [ "$i" == "-raw" ]; then
+         RAW_SPECIFIED=true
+      elif [ "$i" == "-active" ]; then
+         ACTIVE_SPECIFIED=true
       elif [ "$i" == "-product-cluster" ]; then
          PRODUCT_CLUSTER_SPECIFIED=true
       elif [ "$i" == "-standalone" ]; then
@@ -490,6 +509,10 @@ do
          TREE=true
       elif [ "$i" == "-overwrite" ]; then
          OVERWRITE=true
+      elif [ "$i" == "-product" ]; then
+         PRODUCT_SPECIFIED=true
+      elif [ "$i" == "-file" ]; then
+         FILE_SPECIFIED=true
       fi
    fi
    PREV=$i

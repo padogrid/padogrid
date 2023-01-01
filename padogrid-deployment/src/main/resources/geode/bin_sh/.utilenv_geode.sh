@@ -1,5 +1,5 @@
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,9 +51,9 @@ function getLocatorPid
    local locators
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
       if [ "$__RWE" == "" ]; then
-         locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+         locators=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
       else
-         locators=`ssh -q -n $SSH_USER@$NODE_LOCAL -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+         locators=`ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__LOCATOR | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
       fi
    else
       # Use eval to handle commands with spaces
@@ -101,9 +101,9 @@ function getVmLocatorPid
    local __RWE=$4
 
    if [ "$__RWE" == "" ]; then
-      local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
+      local locators=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep -v grep" | awk '{print $1}'`
    else
-      local locators=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
+      local locators=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -wweo pid,comm,args | grep java | grep pado.vm.id=$__MEMBER | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep" | awk '{print $1}'`
    fi
    spids=""
    for j in $locators; do
@@ -287,7 +287,7 @@ function getLocatorName
 function getVmLocatorName
 {
    local __HOST=$1
-   local __HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$__HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   local __HOSTNAME=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$__HOSTNAME" == "" ]; then
       echo ""
    elif [ "$POD" != "local" ]; then
@@ -295,34 +295,6 @@ function getVmLocatorName
    else
       echo "${CLUSTER}-locator-${__HOSTNAME}-01"
    fi
-}
-
-#
-# Returns merged comma-separated list of VM locator and member hosts
-# @required  CLUSTERS_DIR  Cluster directory path.
-# @required  CLUSTER       Cluster name.
-#
-function getAllMergedVmHosts
-{
-   local VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
-   local VM_HOSTS=$(getClusterProperty "vm.hosts")
-   if [ "$VM_LOCATOR_HOSTS" != "" ]; then
-      # Replace , with space
-      __VM_LOCATOR_HOSTS=$(echo "$VM_LOCATOR_HOSTS" | sed "s/,/ /g")
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      for i in $__VM_LOCATOR_HOSTS; do
-         found=false
-         for j in $__VM_HOSTS; do
-            if [ "$i" == "$j" ]; then
-               found=true
-            fi
-	 done
-	 if [ "$found" == "false" ]; then
-            VM_HOSTS="$VM_HOSTS,$i"
-         fi
-      done
-   fi
-   echo $VM_HOSTS
 }
 
 #

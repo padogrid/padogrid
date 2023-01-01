@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -114,15 +114,8 @@ if [ "$VM_ENABLED" == "true" ]; then
 
    # Start namenodes
    __NAMENODE_HOSTS=$(echo "$VM_NAMENODE_HOSTS" | sed "s/,/ /g")
-   DEFAULT_USER=$(whoami)
-   VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
-   VM_KEY=`getClusterProperty "vm.privateKeyFile"`
-   if [ "$VM_KEY" == "" ]; then
-      VM_KEY="$VM_PRIVATE_KEY_FILE"
-   fi
-   if [ "$VM_KEY" != "" ]; then 
-      VM_KEY="-i $VM_KEY"
-   fi
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
 
    # namenode count
    NAMENODE_COUNT=0
@@ -135,9 +128,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    for VM_HOST in $__NAMENODE_HOSTS; do
       let COUNT=COUNT+1
       if [ $COUNT -lt $NAMENODE_COUNT ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_namenode -cluster $CLUSTER -vm VM_NAMENODE_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
       fi
       if [ "$POD" != "local" ]; then
          let MEMBER_NUM=MEMBER_NUM+1
@@ -149,9 +142,9 @@ if [ "$VM_ENABLED" == "true" ]; then
    MEMBER_NUM=1
    for VM_HOST in $__VM_HOSTS; do
       if [ "$FG_SPECIFIED" == "true" ]; then
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/start_member -cluster $CLUSTER -vm $VM_HOSTS  $* -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM" &
       fi
       if [ "$POD" != "local" ]; then
          let MEMBER_NUM=MEMBER_NUM+1

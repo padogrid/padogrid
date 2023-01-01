@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -123,9 +123,9 @@ if [ "$PORT_SPECIFIED" == "true" ] || [ "$ALL" == "true" ] || [ "$FULL" == "true
    fi
 else
    TMP_FILE=/tmp/$EXECUTABLE.jupyter-list.txt
-   jupyter lab list > $TMP_FILE
+   jupyter lab list &> $TMP_FILE
    echo ""
-   cat $TMP_FILE 
+   cat $TMP_FILE
    if [ $(cat $TMP_FILE | wc -l) -gt 1 ]; then
       echo ""
       echo "PadoGrid workspace dashboard(s):"
@@ -133,7 +133,7 @@ else
          url=$(echo $line | grep http)
          if [ "$url" != "" ]; then
             header=$(echo $url | sed 's/::.*//')
-            http=$(echo $header | sed 's/?token.*$//')
+            http=$(echo $header | sed -e 's/^.*http/http/' -e 's/?token.*$//')
             if [[ "$header" == *"token"* ]]; then
                token=$(echo $header | sed 's/^.*token=//')
             else

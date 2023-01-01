@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,14 +30,6 @@ if [ "$OPTIONS" == "true" ]; then
    __options
    exit
 fi
-
-#
-# Determeint $TAR_BALL_PATH
-#
-ROOT_DIR_NAME=$(basename $BASE_DIR)
-TOP_DIR="$(dirname "$BASE_DIR")"
-TAR_BALL_GZ_NAME=$ROOT_DIR_NAME.tar.gz
-TAR_BALL_GZ_PATH=$BASE_DIR/bundle/$TAR_BALL_GZ_NAME
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -120,7 +112,7 @@ fi
 
 # If the -vm option is specified then it overrides all other options
 if [ "$VM_SPECIFIED" == "true" ]; then
-   if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+   if [ "$VM_HOSTS_ARG" != "" ] && [ "${VM_HOSTS_ARG:0:1}" != "-" ]; then
       VM_HOSTS=$VM_HOSTS_ARG
    else
       echo "----------------------------------------------------------------"
@@ -177,7 +169,7 @@ if [ "$VM_ENABLED" != "true" ]; then
    exit 1 
 fi
 
-if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
+if [ "$VM_HOSTS_ARG" != "" ] && [ "${VM_HOSTS_ARG:0:1}" != "-" ]; then
    VM_HOSTS=$VM_HOSTS_ARG
 fi
 if [ "$VM_HOSTS" == "" ]; then
@@ -192,39 +184,79 @@ if [ "$VM_HOSTS" == "" ]; then
    echo "----------------------------------------------------------------"
 fi
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+VM_USER=`getVmUser`
 KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" == "" ]; then
+   # Set the first private key file found in the workspace directory if exists
+   __VM_PRIVATE_KEY_FILE_FOUND="false"
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+         for i in $PADOGRID_WORKSPACE/*.pem; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
+         for i in $PADOGRID_WORKSPACE/*.key; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      fi
+   fi
+   # Replace '~' with the VM home path
+   KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
+fi
 if [ "$KEY_FILE" == "" ]; then 
    KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-if [ ! -f "$KEY_FILE" ]; then
-   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
-   echo >&2 "       Command aborted."
-   exit 1
-fi
-if [ "$KEY_FILE" == "" ]; then
-   VM_KEY=""
-else
+VM_KEY=""
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
    VM_KEY="-i $KEY_FILE"
 fi
 
 # Fail fast: Exit if any of the hosts is not reachable
-for VM_HOST in $__VM_HOSTS; do
-   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
-   EXIT_CODE=$?
-   if [ "$EXIT_CODE" != "0" ]; then
-      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
-      echo "       Command aborted."
-      exit 1
-   fi
-done
+#for VM_HOST in $__VM_HOSTS; do
+#   REPLY=$(ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT -o PasswordAuthentication=no "echo hello" 2>&1)
+#   EXIT_CODE=$?
+#   if [ "$EXIT_CODE" != "0" ]; then
+#      echo -e "ERROR: $VM_HOST - ${CLightRed}Failed${CNone} ($REPLY)"
+#      echo "       Command aborted."
+#      exit 1
+#   fi
+#done
 
-# Simulation runs in the quite mode
+# Simulation runs in the quiet mode
 if [ "$SIMULATE" == "true" ]; then
    QUIET=$SIMULATE
+fi
+
+IS_PUBLIC_HOST="false"
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   echo "Scanning VMs... Please wait."
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then deploy to the first public host and then
+   # use that public host as a proxy to execute this command.
+   echo "Scanning public VM... Please wait."
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+
+   # Use the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   __VM_HOSTS=$VM_HOST
+   IS_PUBLIC_HOST="true"
 fi
 
 # Find all existing and new hosts
@@ -235,11 +267,11 @@ COMMAND="if [ -d "$VM_PADOGRID_HOME" ]; then echo true; else echo false; fi"
 EXISTING_HOST_COUNT=0
 NEW_HOST_COUNT=0
 for VM_HOST in $__VM_HOSTS; do
-   HOST_NAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   HOST_NAME=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$HOST_NAME" == "$THIS_VM_HOSTNAME" ]; then
       continue
    fi
-   DIR_EXISTS=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND`
+   DIR_EXISTS=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $COMMAND`
    if [ "$DIR_EXISTS" == "true" ]; then
       EXISTING_HOSTS="$EXISTING_HOSTS $VM_HOST"
       let EXISTING_HOST_COUNT=EXISTING_HOST_COUNT+1
@@ -249,27 +281,26 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 done
 
-echo ""
-echo "padogrid installation found in the following host(s):"
-echo "   $EXISTING_HOSTS"
-echo ""
-echo "padogrid not found in the following host(s) (these hosts will be ignored):"
-echo "   $NEW_HOSTS"
+if [ "$NEW_HOSTS" != "" ]; then
+   echo ""
+   echo "padogrid not found in the following host(s) (these hosts will be ignored):"
+   echo "   $NEW_HOSTS"
+fi
 echo ""
 DEPLOYMENT_HOST_COUNT=$EXISTING_HOST_COUNT
 INPUT=
-if [ "$QUIET" == "false" ]; then
-   echo "Do you want to continue?"
-   echo "('continue' + Enter to continue deployment, other keys to quit.)"
-   read INPUT
-   echo ""
-   # trim string
-   INPUT=`echo "$INPUT" | xargs`
-   if [ "$INPUT" != "continue" ]; then
-      echo "Bundle deployment aborted."
-      exit
-   fi
-fi
+#if [ "$QUIET" == "false" ]; then
+#   echo "Do you want to continue?"
+#   echo "('continue' + Enter to continue deployment, other keys to quit.)"
+#   read INPUT
+#   echo ""
+#   # trim string
+#   INPUT=`echo "$INPUT" | xargs`
+#   if [ "$INPUT" != "continue" ]; then
+#      echo "Bundle deployment aborted."
+#      exit
+#   fi
+#fi
 
 if [ $DEPLOYMENT_HOST_COUNT -eq 0 ]; then
    echo "No qualified hosts found. Command aborted." 
@@ -282,26 +313,46 @@ echo "Total deployment host count: $DEPLOYMENT_HOST_COUNT"
 BUNDLE_FILE_PATH=${@: -1}
 BUNDLE_FILE_DIR="$(dirname "$BUNDLE_FILE_PATH")"
 BUNDLE_FILE="$(basename "$BUNDLE_FILE_PATH")"
+VM_WORKSPACE_BUNDLES_PATH="$VM_PADOGRID_WORKSPACE/bundles"
+VM_WORKSPACE_BUNDLE_FILE_PATH="$VM_WORKSPACE_BUNDLES_PATH/$BUNDLE_FILE"
 
 if [ "$EXISTING_HOSTS" != "" ]; then
    echo "Existing Hosts:"
    for VM_HOST in $EXISTING_HOSTS; do
       echo "   Deploying to $VM_HOST..."
       if [ "$SIMULATE" == "true" ]; then
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE/bundle"
-         echo scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $BUNDLE_FILE_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/bundle
-         echo ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE -xzf $VM_PADOGRID_WORKSPACE/bundle/$BUNDLE_FILE"
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_WORKSPACE_BUNDLES_PATH"
+         echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $BUNDLE_FILE_PATH $VM_USER@$VM_HOST:$VM_WORKSPACE_BUNDLE_FILE_PATH
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE -xzf $VM_WORKSPACE_BUNDLE_FILE_PATH"
       else
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE/bundle"
-         scp -q -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $BUNDLE_FILE_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/bundle
-         ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE -xzf $VM_PADOGRID_WORKSPACE/bundle/$BUNDLE_FILE"
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_WORKSPACE_BUNDLES_PATH"
+         scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $BUNDLE_FILE_PATH $VM_USER@$VM_HOST:$VM_WORKSPACE_BUNDLE_FILE_PATH
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE -xzf $VM_WORKSPACE_BUNDLE_FILE_PATH"
       fi
    done
 fi
 
-echo ""
-if [ "$SIMULATE" == "true" ]; then
-   echo "Simulation deployment complete."
-else
-   echo "Deployment complete."
+if [ "$IS_PUBLIC_HOST" == "true" ]; then
+   # Use the public host as a proxy to sync the rest of hosts
+   #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+   #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   COMMAND_OPTS=""
+
+   # Execute public vm - replace file_path with TO_APTH in the argument list
+   if [ "$SIMULATE" == "true" ]; then
+      echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER ${@:1:$#-1} $VM_WORKSPACE_BUNDLE_FILE_PATH"
+   else
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE $COMMAND_OPTS -remote -cluster $CLUSTER ${@:1:$#-1} $VM_WORKSPACE_BUNDLE_FILE_PATH"
+   fi
+fi
+
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   echo ""
+   if [ "$SIMULATE" == "true" ]; then
+      echo "Simulation deployment complete."
+   else
+      echo "Deployment complete."
+   fi
 fi

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ if [ "$OPTIONS" == "true" ]; then
 fi
 
 #
-# Determeint $TAR_BALL_PATH
+# Determine $TAR_BALL_PATH
 #
 ROOT_DIR_NAME=$(basename $BASE_DIR)
 TOP_DIR="$(dirname "$BASE_DIR")"
@@ -46,17 +46,17 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Download all the log and statistics files from the VMs to the local file system
+   $EXECUTABLE - Download all the log and relevant files from the VMs to the local file system
 
 SYNOPSIS
    $EXECUTABLE [-cluster cluster_name] [-vm comma_separated_hosts] [-?]
 
 DESCRIPTION
-   Downloads the log and statistics files from the VMs to the local cluster's
-   'log' directory.
+   Downloads the log and relevant files from the VMs to the local cluster's
+   'log' and relevant  directories.
 
    If the '-vm' option is not specified, then it downloads the log files from the hosts defined
-   by the 'vm.hosts' property in the 'etc/cluster.properties' file.
+   by the 'vm.hosts' and 'vm.*.hosts' properties in the 'etc/cluster.properties' file.
 
 OPTIONS
    -cluster cluster_name
@@ -78,7 +78,13 @@ FILES
 
    $LOG_DIR
              The current cluster log directory.
+
 EOF
+case $CLUSTER_TYPE in
+geode|gemfire)
+   echo "   $STATS_DIR"
+   echo "             The current cluster stats directory.";;
+esac
 fi
 cat <<EOF
 
@@ -110,7 +116,7 @@ fi
 if [ "$VM_HOSTS_ARG" != "" ] && [[ "$VM_HOSTS_ARG" != *"-"* ]]; then
    VM_HOSTS=$VM_HOSTS_ARG
 else
-   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   VM_HOSTS=$(getAllMergedVmHosts)
 fi
 if [ "$VM_HOSTS" == "" ]; then
    echo "----------------------------------------------------------------"
@@ -123,23 +129,65 @@ if [ "$VM_HOSTS" == "" ]; then
    echo "----------------------------------------------------------------"
 fi
 
-# Replace , with space
-__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-DEFAULT_USER=$(whoami)
-VM_USER=`getClusterProperty "vm.user" "$DEFAULT_USER"`
+VM_USER=`getVmUser`
 KEY_FILE=`getClusterProperty "vm.privateKeyFile"`
+if [ "$KEY_FILE" == "" ]; then
+   # Set the first private key file found in the workspace directory if exists
+   __VM_PRIVATE_KEY_FILE_FOUND="false"
+   if [ "$VM_PRIVATE_KEY_FILE" == "" ]; then
+      if [ -f $PADOGRID_WORKSPACE/*.pem ]; then
+         for i in $PADOGRID_WORKSPACE/*.pem; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      elif [ -f $PADOGRID_WORKSPACE/*.key ]; then
+         for i in $PADOGRID_WORKSPACE/*.key; do
+            VM_PRIVATE_KEY_FILE=$i
+            __VM_PRIVATE_KEY_FILE_FOUND="true"
+            break
+         done
+      fi
+   fi
+   # Replace '~' with the VM home path
+   KEY_FILE=$(echo $VM_PRIVATE_KEY_FILE | sed "s|\~|$HOME|")
+fi
 if [ "$KEY_FILE" == "" ]; then 
    KEY_FILE="$VM_PRIVATE_KEY_FILE"
 fi
-if [ "$KEY_FILE" != "" ] && [ ! -f "$KEY_FILE" ]; then
-   echo >&2 "ERROR: Private key does not exist [$KEY_FILE]."
-   echo >&2 "       Command aborted."
-   exit 1
-fi
-if [ "$KEY_FILE" == "" ]; then
-   VM_KEY=""
-else
+VM_KEY=""
+if [ "$KEY_FILE" != "" ]; then 
+   if [ ! -f "$KEY_FILE" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified private key does not exist [$KEY_FILE]."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
    VM_KEY="-i $KEY_FILE"
+fi
+
+if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+   echo "Scanning VMs... Please wait."
+   # If private hosts are reachable then execute from here.
+   # Replace , with space
+   __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+else
+   # If private hosts are not reachable then download files in the first public host and then
+   # download files form the public host to this host.
+   echo "Scanning public VM... Please wait."
+   VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+   if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+
+   # Download from the first public host
+   VM_HOST=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,.*//g")
+   RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+   WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+   ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -remote -cluster $CLUSTER $@"
+
+   __VM_HOSTS=$VM_HOST
 fi
 
 # Find all existing and new hosts
@@ -151,16 +199,24 @@ EXISTING_HOST_COUNT=0
 NEW_HOST_COUNT=0
 
 FROM_LOG_DIR=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/$CLUSTER/log
-
 if [ ! -d "$LOG_DIR" ]; then
    mkdir -p $LOG_DIR
 fi
+
+# Other relevant files (product specific)
+case $CLUSTER_TYPE in
+geode|gemfire)
+   FROM_STATS_DIR=$VM_PADOGRID_WORKSPACES_HOME/$WORKSPACE/clusters/$CLUSTER/stats
+   if [ ! -d "$STATS_DIR" ]; then
+      mkdir -p $STATS_DIR
+   fi;;
+esac
 
 for VM_HOST in $__VM_HOSTS; do
    if [ "$VM_HOST" == "$THIS_VM_HOSTNAME" ]; then
       continue
    fi
-   HOSTNAME=`ssh -q -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
+   HOSTNAME=`ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "hostname"`
    if [ "$HOSTNAME" == "" ]; then
       echo "Invalid host [$VM_HOST]"
       continue
@@ -169,12 +225,21 @@ for VM_HOST in $__VM_HOSTS; do
    fi
 
    echo "   Downloading $VM_HOST..."
-   scp -q -r -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$FROM_LOG_DIR/*.log $LOG_DIR/ 
-
+   scp -q -r -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$FROM_LOG_DIR/*.log $LOG_DIR/ 
+   case $CLUSTER_TYPE in
+   geode|gemfire)
+         scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $VM_USER@$VM_HOST:$FROM_STATS_DIR/*.gfs $STATS_DIR/ ;;
+   esac
 done
 
-echo ""
-echo "Downloaded directories:"
-echo "   $LOG_DIR"
-echo ""
-echo "Download complete."
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   echo ""
+   echo "Downloaded directories:"
+   echo "   $LOG_DIR"
+   case $CLUSTER_TYPE in
+      geode|gemfire)
+         echo "   $STATS_DIR"
+      esac
+   echo ""
+   echo "Download complete."
+fi

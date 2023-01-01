@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2022 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ if [ -f "$SCRIPT_DIR/.addonenv.sh" ] && [ -f "$SCRIPT_DIR/.argenv.sh" ]; then
    IS_STANDALONE_SCRIPT="false"
 else
    IS_STANDALONE_SCRIPT="true"
+   FILE_SPECIFIED="false"
+   FILE_ARG=""
    PRODUCT_SPECIFIED="false"
    PRODUCT_ARG=""
    QUIET="false" 
@@ -41,6 +43,7 @@ else
       case $i in
          -quiet ) QUIET="true";;
          -product ) PRODUCT_SPECIFIED="true";;
+         -file ) FILE_SPECIFIED="true";;
          -no-stty ) NO_STTY_SPECIFIED="true";;
          -scan ) SCAN_SPECIFIED="true";;
          -save ) SAVE_SPECIFIED="true";;
@@ -51,6 +54,8 @@ else
          * ) 
             if [ "$PREV" == "-product" ]; then
                PRODUCT_ARG="$i";
+            elif [ "$PREV" == "-file" ]; then
+               FILE_ARG="$i";
             elif [ "$PREV" == "-save" ]; then
                SAVE_ARG="$i";
             elif [ "$PREV" == "-load" ]; then
@@ -83,11 +88,6 @@ elif [ "$PADOGRID_ENV_BASE_PATH" == "" ]; then
    fi
 fi
 
-# If the base path is not writable then set it to the default PadoGrid base path.
-if [ ! -w "$PADOGRID_ENV_BASE_PATH" ]; then
-   PADOGRID_ENV_BASE_PATH="$HOME/Padogrid"
-fi
-
 #
 # NOTE: To make this command independent, some of the functions defined in the file are duplicated
 #       from the .utilenv.sh and .argenv.sh files.
@@ -96,8 +96,8 @@ fi
 if [ "$NO_COLOR" != "true" ]; then
    CNone='\033[0m' # No Color
    CBlue='\033[0;34m'
-   CLightGreen='\033[1;32m'
-   CLightRed='\033[1;31m'
+   CGo='\033[1;32m'
+   CError='\033[1;31m'
    CUnderline='\033[4m'
    CUrl=$CBlue$CUnderline
 fi
@@ -139,7 +139,7 @@ PADOGRID_WORKSPACES_PATH="$PADOGRID_ENV_BASE_PATH/workspaces"
 
 __options()
 {
-   echo "-product -version -quiet -simulate -save -load -scan -?"
+   echo "-product -version -file -quiet -simulate -save -load -scan -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -155,6 +155,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-product product_name] [-version product_version]
+                    [file padogrid_distribution_file_path]
                     [-scan [scan_delay_in_seconds]]
                     [-save|-load file_path]
                     [-quiet] [-simulate] [-?]
@@ -177,32 +178,38 @@ done
 cat <<EOF
 
    -version product_version
-             Product version to install. The product version number must exactly match the version
-             number conventions used by PadoGrid.
+             Product version to install. The product version number must exactly match the
+             version number conventions used by PadoGrid.
+
+   -file padogrid_distribution_file_path
+             Installs the specified padogrid distribution file. This option overrides all
+             other options and runs in the non-interactive mode.
 
    -simulate
-             If specified, then it only simulates the download steps by printing the 'curl' commands.
+             If specified, then it only simulates the download steps by printing the 'curl'
+             commands.
 
    -scan [scan_delay_in_seconds]
-             If specified, then it scans the product download sites to gather product versions. This
-             may take over a minute to complete. Specify scan_delay_in_seconds to delay between
-             GitHub URL scans to prevent the GitHub rate meter from rejecting repetive URL
-             scans. By default, if this option is not specified, then it uses the the cached product
-             versions downloaded from the PadoGrid site. The cached product versions are updated nightly.
+             If specified, then it scans the product download sites to gather product versions.
+             This may take over a minute to complete. Specify scan_delay_in_seconds to delay
+             between GitHub URL scans to prevent the GitHub rate meter from rejecting repetive
+             URL scans. By default, if this option is not specified, then it uses the the cached
+             product versions downloaded from the PadoGrid site. The cached product versions are
+             updated nightly.
              Default: $SLEEP_DELAY seconds
 
    -save file_path
-             Saves the downloadble product versions to the specified file path. If the '-scan' option
-             is specified then it saves the scanned product versions.
+             Saves the downloadble product versions to the specified file path. If the '-scan'
+             option is specified then it saves the scanned product versions.
 
    -load file_path
              Loads the downloadable product versions defined in the specified file.
 
    -quiet
-             If specified, then it runs in the non-internactive mode. By default, it installs all of
-             the latest products if not installed and creates an RWE if it does not exist. Note that
-             installing all the products may take up to a few minutes to complete depending on your
-             network speed.
+             If specified, then it runs in the non-internactive mode. By default, it installs all
+             of the latest products if not installed and creates an RWE if it does not exist. Note
+             that installing all the products may take up to a few minutes to complete depending
+             on your network speed.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -322,20 +329,34 @@ function containsWord
     echo "$retval"
 }
 
+# Exit if the user lacks download permissions
+if [ -d "$PADOGRID_ENV_BASE_PATH" ] && [ ! -w "$PADOGRID_ENV_BASE_PATH" ]; then
+   echo -e "${CError}ERROR:${CNone} Product installation denied. You do not have write permissions. Command aborted."
+   exit 1
+fi
+if [ -d "$PADOGRID_PRODUCTS_PATH" ] && [ ! -w "$PADOGRID_PRODUCTS_PATH" ]; then
+   echo -e "${CError}ERROR:${CNone} Product installation denied. You do not have write permissions. Command aborted."
+   exit 1
+fi
 # Exit if both -save and -load specified
 if [ "$SAVE_SPECIFIED" == "true" ] && [ "$LOAD_SPECIFIED" == "true" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-load' and '-save' are not allowed together. Command aborted."
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid options. '-load' and '-save' are not allowed together. Command aborted."
    exit 1
 fi
 # Exit if both -scan and -save specified
 if [ "$SCAN_SPECIFIED" == "true" ] && [ "$LOAD_SPECIFIED" == "true" ]; then
-   echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid options. '-scan' and '-load' are not allowed together. Command aborted."
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid options. '-scan' and '-load' are not allowed together. Command aborted."
+   exit 1
+fi
+# Exit if both -product and -file specified
+if [ "$PRODUCT_SPECIFIED" == "true" ] && [ "$FILE_SPECIFIED" == "true" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid options. '-product' and '-file' are not allowed together. Command aborted."
    exit 1
 fi
 # Exit if invalid product specified
 if [ "$PRODUCT_ARG" != "" ]; then
    if [ "$(containsWord "$DOWNLOADABLE_PRODUCTS" "$PRODUCT_ARG")" == "false" ]; then
-      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid product name: [$PRODUCT_ARG]. Please enter one of the following products."
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid product name: [$PRODUCT_ARG]. Please enter one of the following products."
       for i in $DOWNLOADABLE_PRODUCTS; do
          echo >&2 "          $i"
       done
@@ -347,7 +368,7 @@ fi
 if [ "$SAVE_SPECIFIED" == "true" ]; then
    DOWNLOAD_VERSIONS_FILE="$SAVE_ARG"
    if [ "$SAVE_ARG" == "" ] || [[ "$SAVE_ARG" == "-"** ]]; then
-      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid save option: [$SAVE_ARG]. Please enter file name."
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid save option: [$SAVE_ARG]. Please enter file name."
       echo >&2 "       Command aborted."
       exit 1
    fi
@@ -356,11 +377,11 @@ fi
 if [ "$LOAD_SPECIFIED" == "true" ]; then
    DOWNLOAD_VERSIONS_FILE="$LOAD_ARG"
    if [ "$LOAD_ARG" == "" ] || [[ "$LOAD_ARG" == "-"** ]]; then
-      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid load option: [$LOAD_ARG]. Please enter file name."
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid load option: [$LOAD_ARG]. Please enter file name."
       echo >&2 "       Command aborted."
       exit 1
    elif [ ! -f "$DOWNLOAD_VERSIONS_FILE" ]; then
-      echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid file: [$DOWNLOAD_VERSIONS_FILE]. Please enter a valid file name."
+      echo -e >&2 "${CError}ERROR:${CNone} Invalid file: [$DOWNLOAD_VERSIONS_FILE]. Please enter a valid file name."
       echo >&2 "       Command aborted."
       exit 1
    fi
@@ -875,7 +896,7 @@ function getDownloadableConfluentVersions
       local MAJOR_VERSION=$(echo $i | awk -F. '{printf "%s", $1}')
       # KRaft supported startingetDownloadableConfluentVersionsg 7.0
       if [ $MAJOR_VERSION -ge 6 ]; then
-         local versions=$(curl -sL ${CONFLUENT_DOWNLOAD_URL}$i/ | grep "confluent-.*.tar.gz<" | sed -e 's/.*>confluent/confluent/' -e 's/.tar.gz.*//')
+         local versions=$(curl -sL ${CONFLUENT_DOWNLOAD_URL}$i/ | grep "confluent-.*.tar.gz<" | grep -v zOS | sed -e 's/.*>confluent/confluent/' -e 's/.tar.gz.*//')
          ALL_CONFLUENT_VERSIONS="$ALL_CONFLUENT_VERSIONS $versions"
       fi
    done
@@ -1300,907 +1321,9 @@ function doUserInput
    if [ "$INSTALL_VERSION" == "" ]; then
       echo -e "$PRODUCT_NAME Selected: ${CBrownOrange}Skipped${CNone}"
    else
-      echo -e "$PRODUCT_NAME Selected: ${CLightGreen}$INSTALL_VERSION${CNone}"
+      echo -e "$PRODUCT_NAME Selected: ${CGo}$INSTALL_VERSION${CNone}"
    fi
 }
-
-# Simulation message
-if [ "$SIMULATE" == "true" ]; then
-   echo ""
-   if [ "$SAVE_SPECIFIED" == "true" ]; then
-      echo "You have specified both '-save' and '-simulate'. Simulation ignored."
-   else
-      echo -e "${CBrownOrange}Simulation Only. You have specified the '-simulate' option. File downloads will be"
-      echo -e "simulated and will not be downloaded.${CNone}"
-   fi
-fi
-
-if [ "$SAVE_SPECIFIED" == "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" != "" ]; then
-   __DIR=$(dirname $DOWNLOAD_VERSIONS_FILE)
-   if [ ! -d "$__DIR" ]; then
-      echo -e "${CError}ERROR:${CNone} Invalid file path. Directory does not exist. Command aborted."
-      echo "   $DOWNLOAD_VERSIONS_FILE"
-      exit 1
-   fi
-   if [ ! -w "$__DIR" ]; then
-      echo -e "${CError}ERROR:${CNone} Invalid file path. You do not have write permissions. Command aborted."
-      echo "   $DOWNLOAD_VERSIONS_FILE"
-      exit 1
-   fi
-   echo ""
-   echo "Product versions will be saved in the specified file."
-   echo "   $DOWNLOAD_VERSIONS_FILE"
-fi
-
-if [ "$SCAN_SPECIFIED" != "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" == "" ]; then
-   # Download the cached product versions
-   DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
-   curl -sL -o "$DOWNLOAD_VERSIONS_FILE" "$DOWNLOAD_VERSIONS_URL"
-fi
-if [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
-   . "$DOWNLOAD_VERSIONS_FILE"
-   PADOGRID_DOWNLOAD_VERSIONS=($PADOGRID_DOWNLOAD_VERSIONS)
-   PADO_DOWNLOAD_VERSIONS=($PADO_DOWNLOAD_VERSIONS)
-   PADODESKTOP_DOWNLOAD_VERSIONS=($PADODESKTOP_DOWNLOAD_VERSIONS)
-   PADOWEB_DOWNLOAD_VERSIONS=($PADOWEB_DOWNLOAD_VERSIONS)
-   PADOECLIPSE_DOWNLOAD_VERSIONS=($PADOECLIPSE_DOWNLOAD_VERSIONS)
-   GEODE_DOWNLOAD_VERSIONS=($GEODE_DOWNLOAD_VERSIONS)
-   HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS)
-   HAZELCAST_OSS_DOWNLOAD_VERSIONS=($HAZELCAST_OSS_DOWNLOAD_VERSIONS)
-   HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS)
-   HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS)
-   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($JET_ENTERPRISE_DOWNLOAD_VERSIONS)
-   JET_OSS_DOWNLOAD_VERSIONS=($JET_OSS_DOWNLOAD_VERSIONS)
-   REDIS_DOWNLOAD_VERSIONS=($REDIS_DOWNLOAD_VERSIONS)
-   SNAPPYDATA_DOWNLOAD_VERSIONS=($SNAPPYDATA_DOWNLOAD_VERSIONS)
-   SPARK_DOWNLOAD_VERSIONS=($SPARK_DOWNLOAD_VERSIONS)
-   KAFKA_DOWNLOAD_VERSIONS=($KAFKA_DOWNLOAD_VERSIONS)
-   CONFLUENT_DOWNLOAD_VERSIONS=$(sortVersionList "$CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS $CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS")
-   CONFLUENT_DOWNLOAD_VERSIONS=($CONFLUENT_DOWNLOAD_VERSIONS)
-   HADOOP_DOWNLOAD_VERSIONS=($HADOOP_DOWNLOAD_VERSIONS)
-   PROMETHEUS_DOWNLOAD_VERSIONS=($PROMETHEUS_DOWNLOAD_VERSIONS)
-   GRAFANA_DOWNLOAD_VERSIONS=($GRAFANA_DOWNLOAD_VERSIONS)
-   DERBY_DOWNLOAD_VERSIONS=($DERBY_DOWNLOAD_VERSIONS)
-else
-   #
-   # Scan downloadable product versions
-   #
-   echo ""
-   echo "Scanning downloadable products... Please wait."
-   echo ""
-
-   # Turn off the enter key while waiting
-   if [ "$NO_STTY_SPECIFIED" != "true" ]; then
-      stty igncr
-   fi
-
-   PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions)"))
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
-      PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
-      PADODESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadodesktopVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
-      PADOWEB_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadowebVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
-      PADOECLIPSE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoEclipseVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
-      GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
-      HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastEnterpriseVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
-      HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastOssVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
-      HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastManCenterVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
-      HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastDesktopVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-      JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetEnterpriseVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
-      JET_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetOssVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
-      REDIS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableRedisVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
-      SNAPPYDATA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSnappyDataVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
-      SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
-      KAFKA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableKafkaVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
-      CONFLUENT_DOWNLOAD_VERSIONS=$(getDownloadableConfluentVersions)
-      CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=$(echo $CONFLUENT_DOWNLOAD_VERSIONS | sed 's/confluent-community-[0-9].[0-9].[0-9]//g')
-      CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=$(echo $CONFLUENT_DOWNLOAD_VERSIONS | sed 's/confluent-[0-9].[0-9].[0-9]//g')
-      CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS"))
-      CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS"))
-      CONFLUENT_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_DOWNLOAD_VERSIONS"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
-      HADOOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHadoopVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
-      PROMETHEUS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePrometheusVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ] || [ "$PRODUCT_ARG" == "grafana-oss" ]; then
-      GRAFANA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGrafanaVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
-      DERBY_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableDerbyVersions)"))
-   fi
-
-   # Enable the enter key
-   if [ "$NO_STTY_SPECIFIED" != "true" ]; then
-      stty -igncr
-   fi
-fi
-
-# Save downloadable versions and exit
-if [ "$SAVE_SPECIFIED" == "true" ]; then
-   echo "PADOGRID_DOWNLOAD_VERSIONS=\"${PADOGRID_DOWNLOAD_VERSIONS[@]}\"" > "$DOWNLOAD_VERSIONS_FILE"
-   echo "PADO_DOWNLOAD_VERSIONS=\"${PADO_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "PADODESKTOP_DOWNLOAD_VERSIONS=\"${PADODESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "PADOWEB_DOWNLOAD_VERSIONS=\"${PADOWEB_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "PADOECLIPSE_DOWNLOAD_VERSIONS=\"${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "GEODE_DOWNLOAD_VERSIONS=\"${GEODE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=\"${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "HAZELCAST_OSS_DOWNLOAD_VERSIONS=\"${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=\"${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=\"${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "JET_ENTERPRISE_DOWNLOAD_VERSIONS=\"${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "JET_OSS_DOWNLOAD_VERSIONS=\"${JET_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "REDIS_DOWNLOAD_VERSIONS=\"${REDIS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "SNAPPYDATA_DOWNLOAD_VERSIONS=\"${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "SPARK_DOWNLOAD_VERSIONS=\"${SPARK_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "KAFKA_DOWNLOAD_VERSIONS=\"${KAFKA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "HADOOP_DOWNLOAD_VERSIONS=\"${HADOOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "PROMETHEUS_DOWNLOAD_VERSIONS=\"${PROMETHEUS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "GRAFANA_DOWNLOAD_VERSIONS=\"${GRAFANA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "DERBY_DOWNLOAD_VERSIONS=\"${DERBY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "Downloadable product versions saved:"
-   echo "   + $DOWNLOAD_VERSIONS_FILE"
-   exit
-fi
-
-# Version variables set by user inputs
-PADOGRID_VERSION=""
-PADO_VERSION=""
-PADODESKTOP_VERSION=""
-PADOWEB_VERSION=""
-PADOECLIPSE_VERSION=""
-GEODE_VERSION=""
-HAZELCAST_ENTERPRISE_VERSION=""
-HAZELCAST_OSS_VERSION=""
-HAZELCAST_MANAGEMENT_CENTER_VERSION=""
-HAZELCAST_DESKTOP_VERSION=""
-JET_ENTERPRISE_VERSION=""
-JET_OSS_VERSION=""
-REDIS_VERSION=""
-SNAPPYDATA_VERSION=""
-SPARK_VERSION=""
-KAFKA_VERSION=""
-CONFLUENT_VERSION=""
-HADOOP_VERSION=""
-PROMETHEUS_VERSION=""
-GRAFANA_ENTERPRISE_VERSION=""
-GRAFANA_OSS_VERSION=""
-DERBY_VERSION=""
-
-if [ "$VERSION_SPECIFIED" == "true" ]; then
-
-   INSTALL_COUNT=1
-   case $PRODUCT_ARG in
-      confluent )
-         DOWNLOAD_VERSIONS=( "${CONFLUENT_DOWNLOAD_VERSIONS[@]}" )
-         CONFLUENT_DIST_VERSION=$VERSION_ARG
-         CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//') ;;
-      derby )
-         DOWNLOAD_VERSIONS=( "${DERBY_DOWNLOAD_VERSIONS[@]}" )
-         DERBY_VERSION=$VERSION_ARG ;;
-      hadoop )
-         DOWNLOAD_VERSIONS=( "${HADOOP_DOWNLOAD_VERSIONS[@]}" )
-         HADOOP_VERSION=$VERSION_ARG ;;
-      hazelcast-desktop )
-         DOWNLOAD_VERSIONS=( "${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}" )
-         HAZELCAST_DESKTOP_VERSION=$VERSION_ARG ;;
-      hazelcast-enterprise ) 
-         DOWNLOAD_VERSIONS=( "${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}" )
-         HAZELCAST_ENTERPRISE_VERSION=$VERSION_ARG ;;
-      hazelcast-mc )
-         DOWNLOAD_VERSIONS=( "${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}" )
-         HAZELCAST_MANAGEMENT_CENTER_VERSION=$VERSION_ARG ;;
-      hazelcast-oss )
-         DOWNLOAD_VERSIONS=( "${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}" )
-         HAZELCAST_OSS_VERSION=$VERSION_ARG ;;
-      geode )
-         DOWNLOAD_VERSIONS=( "${GEODE_DOWNLOAD_VERSIONS[@]}" )
-         GEODE_VERSION=$VERSION_ARG ;;
-      grafana-enterprise )
-         DOWNLOAD_VERSIONS=( "${GRAFANA_DOWNLOAD_VERSIONS[@]}" )
-         GRAFANA_ENTERPRISE_VERSION=$VERSION_ARG ;;
-      grafana-oss )
-         DOWNLOAD_VERSIONS=( "${GRAFANA_DOWNLOAD_VERSIONS[@]}" )
-         GRAFANA_OSS_VERSION=$VERSION_ARG ;;
-      kafka )
-         DOWNLOAD_VERSIONS=( "${KAFKA_DOWNLOAD_VERSIONS[@]}" )
-         KAFKA_VERSION=$VERSION_ARG
-         KAFKA_SCALA_VERSIONS_ARRAY=($(getScalaKafkaVersions "$KAFKA_VERSION"))
-         # Pick the last one (newer version of scala)
-         KAFKA_DIST_VERSION=${KAFKA_SCALA_VERSIONS_ARRAY[${#KAFKA_SCALA_VERSIONS_ARRAY[@]}-1]}
-         ;;
-      pado )
-         DOWNLOAD_VERSIONS=( "${PADO_DOWNLOAD_VERSIONS[@]}" )
-         PADO_VERSION=$VERSION_ARG ;;
-      padodesktop )
-         DOWNLOAD_VERSIONS=( "${PADODESKTOP_DOWNLOAD_VERSIONS[@]}" )
-         PADODESKTOP_VERSION=$VERSION_ARG ;;
-      padoeclipse )
-         DOWNLOAD_VERSIONS=( "${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}" )
-         PADOECLIPSE_VERSION=$VERSION_ARG ;;
-      padogrid )
-         DOWNLOAD_VERSIONS=( "${PADOGRID_DOWNLOAD_VERSIONS[@]}" )
-         PADOGRID_VERSION=$VERSION_ARG ;;
-      padoweb )
-         DOWNLOAD_VERSIONS=( "${PADOWEB_DOWNLOAD_VERSIONS[@]}" )
-         PADOWEB_VERSION=$VERSION_ARG ;;
-      prometheus )
-         DOWNLOAD_VERSIONS=( "${PROMETHEUS_DOWNLOAD_VERSIONS[@]}" )
-         PROMETHEUS_VERSION=$VERSION_ARG ;;
-      redis-oss )
-         DOWNLOAD_VERSIONS=( "${REDIS_DOWNLOAD_VERSIONS[@]}" )
-         REDIS_VERSION=$VERSION_ARG ;;
-      snappydata )
-         DOWNLOAD_VERSIONS=( "${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}" )
-         SNAPPYDATA_VERSION=$VERSION_ARG ;;
-      spark )
-         DOWNLOAD_VERSIONS=( "${SPARK_DOWNLOAD_VERSIONS[@]}" )
-         SPARK_VERSION=$VERSION_ARG
-         SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop ;;
-      *) ;;
-   esac
-
-   found="false"
-   for i in ${DOWNLOAD_VERSIONS[@]}; do
-      if [ "$i" == "$VERSION_ARG" ]; then
-         found="true"
-      fi
-   done
-
-   if [ "$found" == "false" ]; then
-      echo ""
-      echo "Downloadable product versions: [$PRODUCT_ARG]"
-      index=0
-      for i in ${DOWNLOAD_VERSIONS[@]}; do
-         echo "[$index] $i"
-         let index=index+1
-      done
-      echo ""
-      echo -e >&2 "${CLightRed}ERROR:${CNone} Product version not found [$VERSION_ARG]. Command aborted."
-      exit 1
-   fi
-
-elif [ "$QUIET" == "true" ]; then
-   # Set to the latest versions
-   PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[0]}
-   if [[ "$PADOGRID_VERSION" == *"SNAPSHOT" ]]; then
-      PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[1]} 
-   fi
-   PADO_VERSION=${PADO_DOWNLOAD_VERSIONS[0]}
-   if [[ "$PADO_VERSION" == *"SNAPSHOT" ]]; then
-      PADO_VERSION=${PADO_DOWNLOAD_VERSIONS[1]} 
-   fi
-   PADODESKTOP_VERSION=${PADODESKTOP_DOWNLOAD_VERSIONS[0]}
-   if [[ "$PADODESKTOP_VERSION" == *"SNAPSHOT" ]]; then
-      PADODESKTOP_VERSION=${PADODESKTOP_DOWNLOAD_VERSIONS[1]} 
-   fi
-   PADOWEB_VERSION=${PADOWEB_DOWNLOAD_VERSIONS[0]}
-   if [[ "$PADOWEB_VERSION" == *"SNAPSHOT" ]]; then
-      PADOWEB_VERSION=${PADOWEB_DOWNLOAD_VERSIONS[1]} 
-   fi
-   PADOECLIPSE_VERSION=${PADOECLIPSE_DOWNLOAD_VERSIONS[0]}
-   GEODE_VERSION=${GEODE_DOWNLOAD_VERSIONS[0]}
-   HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
-   HAZELCAST_OSS_VERSION=${HAZELCAST_OSS_DOWNLOAD_VERSIONS[0]}
-   HAZELCAST_MANAGEMENT_CENTER_VERSION=${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[0]}
-
-   HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[0]}
-   JET_ENTERPRISE_VERSION=${JET_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
-   JET_OSS_VERSION=${JET_OSS_DOWNLOAD_VERSIONS[0]}
-   REDIS_VERSION=${REDIS_DOWNLOAD_VERSIONS[0]}
-   SNAPPYDATA_VERSION=${SNAPPYDATA_DOWNLOAD_VERSIONS[0]}
-   SPARK_VERSION=${SPARK_DOWNLOAD_VERSIONS[0]}
-   SPARK_DIST_VERSION=${SPARK_VERSION}
-   if [ "$SPARK_VERSION" != "" ]; then
-      SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop
-   fi
-   KAFKA_VERSION=${KAFKA_DOWNLOAD_VERSIONS[0]}
-   CONFLUENT_DIST_VERSION=${CONFLUENT_DOWNLOAD_VERSIONS[0]}
-   CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//')
-   HADOOP_VERSION=${HADOOP_DOWNLOAD_VERSIONS[0]}
-   PROMETHEUS_VERSION=${PROMETHEUS_DOWNLOAD_VERSIONS[0]}
-   # Install the enterprise version for grafana. Enterprise and OSS have the same installation directory.
-   GRAFANA_ENTERPRISE_VERSION=${GRAFANA_DOWNLOAD_VERSIONS[0]}
-   DERBY_VERSION=${DERBY_DOWNLOAD_VERSIONS[0]}
-
-   echo "Installing the latest products versions as follows:"
-   echo ""
-   echo "PadoGrid             $PADOGRID_VERSION"
-   echo "Pado                 $PADO_VERSION"
-   echo "PadoDesktop          $PADODESKTOP_VERSION"
-   echo "PadoWeb              $PADOWEB_VERSION"
-   echo "PadoEclipse          $PADOECLIPSE_VERSION"
-   echo "Geode                $GEODE_VERSION"
-   echo "Hazelcast Enterprise $HAZELCAST_ENTERPRISE_VERSION"
-   echo "Hazelcast OSS        $HAZELCAST_OSS_VERSION"
-   echo "Hazelcast Man Center $HAZELCAST_MANAGEMENT_CENTER_VERSION"
-   echo "HazelcastDesktop     $HAZELCAST_DESKTOP_VERSION"
-   echo "Jet Enterprise       $JET_ENTERPRISE_VERSION"
-   echo "Jet OSS              $JET_OSS_VERSION"
-   echo "Redis OSS            $REDIS_VERSION"
-   echo "SnappyData           $SNAPPYDATA_VERSION"
-   echo "Spark                $SPARK_VERSION"
-   echo "Kafka                $KAFKA_VERSION"
-   echo "Kafka Confluent      $CONFLUENT_VERSION"
-   echo "Hadoop               $HADOOP_VERSION"
-   echo "Prometheus           $PROMETHEUS_VERSION"
-   echo "Grafana Enterprise   $GRAFANA_ENTERPRISE_VERSION"
-   echo "Derby                $DERBY_VERSION"
-   echo ""
-else
-# Get user inputs
-REDO="true"
-while [ "$REDO" == "true" ]; do
-
-   INSTALL_COUNT=0
-
-   REDO=true
-   INNER_LOOP=true
-   while [ "$INNER_LOOP" == "true" ]; do
-      echo "Enter the PadoGrid environment base directory path. All of the products will be installed in this directory."
-      echo "[$PADOGRID_ENV_BASE_PATH]":
-      read -p "" INPUT
-      if [ "$INPUT" == "" ]; then
-         __BASE_PATH="$PADOGRID_ENV_BASE_PATH"
-      else
-         __BASE_PATH="$INPUT"
-      fi
-      if [ ! -d "$__BASE_PATH" ]; then
-         if [ -f "$__BASE_PATH" ]; then
-            echo "Invalid path. The specified path exists and is not a directory."
-            continue;
-         fi
-         __parent=$(dirname "$__BASE_PATH")
-         if [ ! -w "$__parent" ]; then
-            echo "Invalid path. You do not have write permissions to create directory: [$__parent]"
-            continue;
-         fi
-      fi
-      INNER_LOOP=false
-      PADOGRID_ENV_BASE_PATH="$__BASE_PATH"
-   done
-
-   echo ""
-   echo -e "PadoGrid environment base directory: ${CLightGreen}$PADOGRID_ENV_BASE_PATH${CNone}"
-   echo ""
-
-   # Get local installations
-   determineInstalledProductVersions
-
-   # PadoGrid
-   PRODUCT_NAME="PadoGrid"
-   PRODUCT_DOWNLOAD_VERSIONS=("${PADOGRID_DOWNLOAD_VERSIONS[@]}")
-   INSTALLED_VERSIONS=$PADOGRID_VERSIONS
-   echo -e "PadoGrid ${CUrl}$PADOGRID_DOWNLOAD_URL${CNone}"
-   doUserInput
-   if [ "$INSTALL_VERSION" != "" ]; then
-      let INSTALL_COUNT=INSTALL_COUNT+1
-   fi
-   PADOGRID_VERSION=$INSTALL_VERSION
-   echo ""
-
-   # Pado
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
-      PRODUCT_NAME="Pado"
-      PRODUCT_DOWNLOAD_VERSIONS=("${PADO_DOWNLOAD_VERSIONS[@]}")
-      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
-      INSTALLED_VERSIONS=$PADO_VERSIONS
-      echo -e "Pado ${CUrl}$PADO_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      PADO_VERSION=$INSTALL_VERSION
-      echo ""
-      fi
-   fi
-
-   # PadoDesktop
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
-      PRODUCT_NAME="PadoDesktop"
-      PRODUCT_DOWNLOAD_VERSIONS=("${PADODESKTOP_DOWNLOAD_VERSIONS[@]}")
-      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
-      INSTALLED_VERSIONS=$PADODESKTOP_VERSIONS
-      echo -e "PadoDesktop ${CUrl}$PADODESKTOP_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      PADODESKTOP_VERSION=$INSTALL_VERSION
-      echo ""
-      fi
-   fi
-
-   # PadoWeb
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
-      PRODUCT_NAME="PadoWeb"
-      PRODUCT_DOWNLOAD_VERSIONS=("${PADOWEB_DOWNLOAD_VERSIONS[@]}")
-      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
-      INSTALLED_VERSIONS=$PADOWEB_VERSIONS
-      echo -e "PadoWeb ${CUrl}$PADOWEB_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      PADOWEB_VERSION=$INSTALL_VERSION
-      echo ""
-      fi
-   fi
-
-   # PadoEclipse
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
-      PRODUCT_NAME="PadoEclipse"
-      PRODUCT_DOWNLOAD_VERSIONS=("${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}")
-      if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
-      INSTALLED_VERSIONS=$PADOECLIPSE_VERSIONS
-      echo -e "PadoEclipse ${CUrl}$PADOECLIPSE_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      PADOECLIPSE_VERSION=$INSTALL_VERSION
-      echo ""
-      fi
-   fi
-
-   # Geode
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
-      PRODUCT_NAME="Geode"
-      PRODUCT_DOWNLOAD_VERSIONS=("${GEODE_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$GEODE_VERSIONS
-      echo -e "Geode ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      GEODE_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # Hazelcast Enterprise
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
-      PRODUCT_NAME="Hazelcast Enterprise"
-      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$HAZELCAST_ENTERPRISE_VERSIONS
-      echo -e "Hazelcast Enterprise ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      HAZELCAST_ENTERPRISE_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # Hazelcast OSS
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
-      PRODUCT_NAME="Hazelcast OSS"
-      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$HAZELCAST_OSS_VERSIONS
-      echo -e "Hazelcast OSS ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      HAZELCAST_OSS_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # Hazelcast Management Center
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
-      PRODUCT_NAME="Hazelcast Management Center"
-      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$HAZELCAST_MANAGEMENT_CENTER_VERSIONS
-      echo -e "Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      HAZELCAST_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-
-   # HazelcastDesktop
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
-      PRODUCT_NAME="HazelcastDesktop"
-      PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$HAZELCAST_DESKTOP_VERSIONS
-      echo -e "HazelcastDesktop ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      HAZELCAST_DESKTOP_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # Jet Enterprise
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-      PRODUCT_NAME="Jet Enterprise"
-      PRODUCT_DOWNLOAD_VERSIONS=("${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$JET_ENTERPRISE_VERSIONS
-      echo -e "Jet Enterprise ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      JET_ENTERPRISE_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # Jet OSS
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
-      PRODUCT_NAME="Jet OSS"
-      PRODUCT_DOWNLOAD_VERSIONS=("${JET_OSS_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$JET_OSS_VERSIONS
-      echo -e "Jet OSS ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      JET_OSS_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-
-   # Redis
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
-      PRODUCT_NAME="Redis"
-      PRODUCT_DOWNLOAD_VERSIONS=("${REDIS_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$REDIS_VERSIONS
-      echo -e "Redis ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      REDIS_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # SnappyData
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
-      PRODUCT_NAME="SnappyData"
-      PRODUCT_DOWNLOAD_VERSIONS=("${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$SNAPPYDATA_VERSIONS
-      echo -e "SnappyData ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      SNAPPYDATA_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # Spark
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
-      PRODUCT_NAME="Spark"
-      PRODUCT_DOWNLOAD_VERSIONS=("${SPARK_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$SPARK_VERSIONS
-      echo -e "Spark ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      SPARK_VERSION=$INSTALL_VERSION
-      
-      # Allow the user to select a prebuilt spark distribution.
-      INSTALLED_VERSIONS=($SPARK_VERSIONS)
-      if [ "$SPARK_VERSION" != "" ]; then
-         SPARK_PREBUILT_VERSIONS_ARRAY=(${SPARK_VERSION} $(getPrebuiltSparkVersions "$SPARK_VERSION"))
-         __LEN=${#SPARK_PREBUILT_VERSIONS_ARRAY[@]}
-         let __LAST_INDEX=__LEN-1
-         __LOOP=true
-         __INSTALLED="false"
-         while [ "$__LOOP" == "true" ]; do
-            __INDEX=0
-            echo -e "Spark distributions ${CUrl}${SPARK_DOWNLOAD_URL}spark-$SPARK_VERSION/${CNone}"
-            for i in ${SPARK_PREBUILT_VERSIONS_ARRAY[@]}; do
-               __INSTALLED="false"
-               for j in ${INSTALLED_VERSIONS[@]}; do
-                  if [ "$i" == "$j" ]; then
-                     __INSTALLED="true"
-                     break;
-                  fi
-               done
-               if [ "$__INSTALLED" == "true" ]; then
-                  if [ $__INDEX -eq 0 ]; then
-                     echo "   [$__INDEX] $i [installed] - source only (build may be required)"
-                  else
-                     echo "   [$__INDEX] $i [installed]"
-                  fi
-               else
-                  if [ $__INDEX -eq 0 ]; then
-                     echo "   [$__INDEX] $i - source only (build required)"
-                  else
-                     echo "   [$__INDEX] $i"
-                  fi
-               fi
-               let __INDEX=__INDEX+1
-            done
-            read -p "Enter a distribution to install or leave blank to skip: " INPUT
-            if [ "$INPUT" == "" ]; then
-               break;
-            else
-               if [ "$(isNumber $INPUT)" == "true" ]; then
-                  if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
-                     echo "Invalid number. Enter [0, $__LAST_INDEX]."
-                     continue;
-                  fi
-               fi
-               SPARK_DIST_VERSION=${SPARK_PREBUILT_VERSIONS_ARRAY[$INPUT]}
-               echo -e "Spark selected: ${CLightGreen}$SPARK_DIST_VERSION${CNone}"
-               __LOOP="false"
-            fi
-         done
-      fi
-      echo ""
-   fi
-
-   # Kafka
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
-      PRODUCT_NAME="Kafka"
-      PRODUCT_DOWNLOAD_VERSIONS=("${KAFKA_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$KAFKA_VERSIONS
-      echo -e "Kafka ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
-      echo -e "(PadoGrid currently ${CLightGreen}supports only Kafka 2.8.0 and above.${CNone} Unsupported versions require manual management.)"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      KAFKA_VERSION=$INSTALL_VERSION
-
-      # Allow the user to select a kafka distribution. (Scala versions)
-      INSTALLED_VERSIONS=($KAFKA_VERSIONS)
-      if [ "$KAFKA_VERSION" != "" ]; then
-         KAFKA_SCALA_VERSIONS_ARRAY=($(getScalaKafkaVersions "$KAFKA_VERSION"))
-         __LEN=${#KAFKA_SCALA_VERSIONS_ARRAY[@]}
-         let __LAST_INDEX=__LEN-1
-         __LOOP=true
-         __INSTALLED="false"
-         while [ "$__LOOP" == "true" ]; do
-            __INDEX=0
-            echo -e "Kafka distributions ${CUrl}${KAFKA_DOWNLOAD_URL}$KAFKA_VERSION/${CNone}"
-            for i in ${KAFKA_SCALA_VERSIONS_ARRAY[@]}; do
-               __INSTALLED="false"
-               for j in ${INSTALLED_VERSIONS[@]}; do
-                  if [ "$i" == "$j" ]; then
-                     __INSTALLED="true"
-                     break;
-                  fi
-               done
-               if [ "$__INSTALLED" == "true" ]; then
-                     echo "   [$__INDEX] $i [installed]"
-               else
-                  echo "   [$__INDEX] $i"
-               fi
-               let __INDEX=__INDEX+1
-            done
-            read -p "Enter a distribution to install or leave blank to skip: " INPUT
-            if [ "$INPUT" == "" ]; then
-               break;
-            else
-               if [ "$(isNumber $INPUT)" == "true" ]; then
-                  if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
-                     echo "Invalid number. Enter [0, $__LAST_INDEX]."
-                     continue;
-                  fi
-               fi
-               KAFKA_DIST_VERSION=${KAFKA_SCALA_VERSIONS_ARRAY[$INPUT]}
-               echo -e "Kafka selected: ${CLightGreen}$KAFKA_DIST_VERSION${CNone}"
-               __LOOP="false"
-            fi
-         done
-      fi
-   fi
-
-   # Kafka Confluent
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
-      PRODUCT_NAME="Confluent"
-      PRODUCT_DOWNLOAD_VERSIONS=("${CONFLUENT_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$CONFLUENT_VERSIONS
-      echo -e "Confluent ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}"
-      echo -e "(PadoGrid currently ${CLightGreen}supports only Confluent 7.0 and above.${CNone} Unsupported versions require manual management.)"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      CONFLUENT_DIST_VERSION=$INSTALL_VERSION
-      CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//')
-      echo ""
-   fi
-
-   # Hadoop
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
-      PRODUCT_NAME="Hadoop"
-      PRODUCT_DOWNLOAD_VERSIONS=("${HADOOP_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$HADOOP_VERSIONS
-      echo -e "Hadoop ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      HADOOP_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-   
-   # Prometheus
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
-      PRODUCT_NAME="Prometheus"
-      PRODUCT_DOWNLOAD_VERSIONS=("${PROMETHEUS_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$PROMETHEUS_VERSIONS
-      echo -e "Prometheus ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      PROMETHEUS_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-
-   # Grafana Enterprise
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ]; then
-      PRODUCT_NAME="Grafana Enterprise"
-      PRODUCT_DOWNLOAD_VERSIONS=("${GRAFANA_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$GRAFANA_ENTERPRISE_VERSIONS
-      echo -e "Grafana Enterprise ${CUrl}$GRAFANA_GITHUB_RELEASES_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      GRAFANA_ENTERPRISE_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-
-   # Grafana OSS
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-oss" ]; then
-      PRODUCT_NAME="Grafana OSS"
-      if [ "$GRAFANA_VERSIONS" == "" ]; then
-         PRODUCT_DOWNLOAD_VERSIONS=("${GRAFANA_DOWNLOAD_VERSIONS[@]}")
-         INSTALLED_VERSIONS=$GRAFANA_OSS_VERSIONS
-      fi
-      echo -e "Grafana OSS ${CUrl}$GRAFANA_GITHUB_RELEASES_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      GRAFANA_OSS_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-
-   # Derby
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
-      PRODUCT_NAME="Derby"
-      PRODUCT_DOWNLOAD_VERSIONS=("${DERBY_DOWNLOAD_VERSIONS[@]}")
-      INSTALLED_VERSIONS=$DERBY_VERSIONS
-      echo -e "Derby ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
-      doUserInput
-      if [ "$INSTALL_VERSION" != "" ]; then
-         let INSTALL_COUNT=INSTALL_COUNT+1
-      fi
-      DERBY_VERSION=$INSTALL_VERSION
-      echo ""
-   fi
-
-   echo ""
-
-   if [ $INSTALL_COUNT -eq 0 ]; then
-      echo "You have not selected any products to install."
-   else
-      echo "You have selected the following versions to install:"
-   fi
-
-   if [ "$PADOGRID_VERSION" != "" ]; then
-      echo -e "Padogrid: ${CLightGreen}$PADOGRID_VERSION${CNone}"
-   fi
-   if [ "$PADO_VERSION" != "" ]; then
-      echo -e "Pado: ${CLightGreen}$PADO_VERSION${CNone}"
-   fi
-   if [ "$PADODESKTOP_VERSION" != "" ]; then
-      echo -e "PadoDesktop: ${CLightGreen}$PADODESKTOP_VERSION${CNone}"
-   fi
-   if [ "$PADOWEB_VERSION" != "" ]; then
-      echo -e "PadoWeb: ${CLightGreen}$PADOWEB_VERSION${CNone}"
-   fi
-   if [ "$PADOECLIPSE_VERSION" != "" ]; then
-      echo -e "PadoEclipse: ${CLightGreen}$PADOECLIPSE_VERSION${CNone}"
-   fi
-   if [ "$GEODE_VERSION" != "" ]; then
-      echo -e "Geode: ${CLightGreen}$GEODE_VERSION${CNone}"
-   fi
-   if [ "$HAZELCAST_ENTERPRISE_VERSION" != "" ]; then
-      echo -e "Hazelcast Enterprise: ${CLightGreen}$HAZELCAST_ENTERPRISE_VERSION${CNone}"
-   fi
-   if [ "$HAZELCAST_OSS_VERSION" != "" ]; then
-      echo -e "Hazelcast OSS: ${CLightGreen}$HAZELCAST_OSS_VERSION${CNone}"
-   fi
-   if [ "$HAZELCAST_MANAGEMENT_CENTER_VERSION" != "" ]; then
-      echo -e "Hazelcast Management Center: ${CLightGreen}$HAZELCAST_MANAGEMENT_CENTER_VERSION${CNone}"
-   fi
-   if [ "$HAZELCAST_DESKTOP_VERSION" != "" ]; then
-      echo -e "HazelcastDesktop: ${CLightGreen}$HAZELCAST_DESKTOP_VERSION${CNone}"
-   fi
-   if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
-      echo -e "Jet Enterprise: ${CLightGreen}$JET_ENTERPRISE_VERSION${CNone}"
-   fi
-   if [ "$JET_OSS_VERSION" != "" ]; then
-      echo -e "Jet OSS: ${CLightGreen}$JET_OSS_VERSION${CNone}"
-   fi
-   if [ "$REDIS_VERSION" != "" ]; then
-      echo -e "Redis: ${CLightGreen}$REDIS_VERSION${CNone}"
-   fi
-   if [ "$SNAPPYDATA_VERSION" != "" ]; then
-      echo -e "SnappyData: ${CLightGreen}$SNAPPYDATA_VERSION${CNone}"
-   fi
-   if [ "$SPARK_VERSION" != "" ] && [ "$SPARK_DIST_VERSION" != "" ]; then
-      echo -e "Spark: ${CLightGreen}$SPARK_DIST_VERSION${CNone}"
-   fi
-   if [ "$KAFKA_VERSION" != "" ]; then
-      echo -e "Kafka: ${CLightGreen}$KAFKA_DIST_VERSION${CNone}"
-   fi
-   if [ "$CONFLUENT_VERSION" != "" ]; then
-      echo -e "Kafka Confluent: ${CLightGreen}$CONFLUENT_DIST_VERSION${CNone}"
-   fi
-   if [ "$HADOOP_VERSION" != "" ]; then
-      echo -e "Hadoop: ${CLightGreen}$HADOOP_VERSION${CNone}"
-   fi
-   if [ "$PROMETHEUS_VERSION" != "" ]; then
-      echo -e "Prometheus: ${CLightGreen}$PROMETHEUS_VERSION${CNone}"
-   fi
-   if [ "$GRAFANA_ENTERPRISE_VERSION" != "" ]; then
-      echo -e "Grafana Enterprise: ${CLightGreen}$GRAFANA_ENTERPRISE_VERSION${CNone}"
-   fi
-   if [ "$GRAFANA_OSS_VERSION" != "" ]; then
-      echo -e "Grafana OSS: ${CLightGreen}$GRAFANA_OSS_VERSION${CNone}"
-   fi
-   if [ "$DERBY_VERSION" != "" ]; then
-      echo -e "Derby: ${CLightGreen}$DERBY_VERSION${CNone}"
-   fi
-   echo ""
-
-   REDO=true
-   INNER_LOOP=true
-   while [ "$INNER_LOOP" == "true" ]; do
-      read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
-      case $INPUT in
-         [Cc]* ) REDO=false; INNER_LOOP=false;;
-         [Rr]* ) REDO=true; INNER_LOOP=false;;
-         [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
-      esac
-   done
-
-done
-fi
 
 #
 # Installs the specified product in the PadoGrid products directory.
@@ -2835,11 +1958,977 @@ function installProduct
 
 }
 
-if [ "$QUIET" == "false" ] && [ $INSTALL_COUNT -eq 0 ]; then
+# Simulation message
+if [ "$SIMULATE" == "true" ]; then
+   echo ""
+   if [ "$SAVE_SPECIFIED" == "true" ]; then
+      echo "You have specified both '-save' and '-simulate'. Simulation ignored."
+   else
+      echo -e "${CBrownOrange}Simulation Only. You have specified the '-simulate' option. File downloads will be"
+      echo -e "simulated and will not be downloaded.${CNone}"
+   fi
+fi
+
+if [ "$FILE_SPECIFIED" == "true" ]; then
+   if [ "$FILE_ARG" == "" ]; then
+      echo -e "${CError}ERROR:${CNone} '-file' option required file path. Command aborted."
+      exit 1
+   fi
+   if [ ! -f "$FILE_ARG" ]; then
+      echo -e "${CError}ERROR:${CNone} File not found: [$FILE_ARG]. Command aborted."
+      exit 1
+   fi
+   FILE_NAME=$(basename "$FILE_ARG")
+   if [[ "$FILE_NAME" != "padogrid_"* ]] || [[ "$FILE_NAME" != *".tar.gz" ]]; then
+      echo -e "${CError}ERROR:${CNone} Invalid padogrid distribution file name. [$FILE_ARG]. Command aborted."
+      exit 1
+   fi
+   PADOGRID_VERSION=$(tar tzvf $FILE_ARG  |grep padogrid_ | grep padogrid-common- | sed 's/.*padogrid-common-//')
+   PADOGRID_VERSION=${PADOGRID_VERSION%.jar}
+   if [ "$PADOGRID_VERSION" == "" ]; then
+      echo -e "${CError}ERROR:${CNone} Invalid contents in distribution. [$FILE_ARG]. Command aborted."
+      exit 1
+   fi
+fi
+
+if [ "$SAVE_SPECIFIED" == "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" != "" ]; then
+   __DIR=$(dirname $DOWNLOAD_VERSIONS_FILE)
+   if [ ! -d "$__DIR" ]; then
+      echo -e "${CError}ERROR:${CNone} Invalid file path. Directory does not exist. Command aborted."
+      echo "   $DOWNLOAD_VERSIONS_FILE"
+      exit 1
+   fi
+   if [ ! -w "$__DIR" ]; then
+      echo -e "${CError}ERROR:${CNone} Invalid file path. You do not have write permissions. Command aborted."
+      echo "   $DOWNLOAD_VERSIONS_FILE"
+      exit 1
+   fi
+   echo ""
+   echo "Product versions will be saved in the specified file."
+   echo "   $DOWNLOAD_VERSIONS_FILE"
+fi
+
+if [ "$FILE_SPECIFIED" != "true" ] && [ "$SCAN_SPECIFIED" != "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" == "" ]; then
+   # Download the cached product versions
+   if [ ! -d "$PADOGRID_DOWNLOADS_PATH" ]; then
+      mkdir -p "$PADOGRID_DOWNLOADS_PATH"
+   fi
+   DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
+   curl -sL -o "$DOWNLOAD_VERSIONS_FILE" "$DOWNLOAD_VERSIONS_URL"
+fi
+if [ "$FILE_SPECIFIED" != "true" ] && [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
+   . "$DOWNLOAD_VERSIONS_FILE"
+   PADOGRID_DOWNLOAD_VERSIONS=($PADOGRID_DOWNLOAD_VERSIONS)
+   PADO_DOWNLOAD_VERSIONS=($PADO_DOWNLOAD_VERSIONS)
+   PADODESKTOP_DOWNLOAD_VERSIONS=($PADODESKTOP_DOWNLOAD_VERSIONS)
+   PADOWEB_DOWNLOAD_VERSIONS=($PADOWEB_DOWNLOAD_VERSIONS)
+   PADOECLIPSE_DOWNLOAD_VERSIONS=($PADOECLIPSE_DOWNLOAD_VERSIONS)
+   GEODE_DOWNLOAD_VERSIONS=($GEODE_DOWNLOAD_VERSIONS)
+   HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS)
+   HAZELCAST_OSS_DOWNLOAD_VERSIONS=($HAZELCAST_OSS_DOWNLOAD_VERSIONS)
+   HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS)
+   HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS)
+   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($JET_ENTERPRISE_DOWNLOAD_VERSIONS)
+   JET_OSS_DOWNLOAD_VERSIONS=($JET_OSS_DOWNLOAD_VERSIONS)
+   REDIS_DOWNLOAD_VERSIONS=($REDIS_DOWNLOAD_VERSIONS)
+   SNAPPYDATA_DOWNLOAD_VERSIONS=($SNAPPYDATA_DOWNLOAD_VERSIONS)
+   SPARK_DOWNLOAD_VERSIONS=($SPARK_DOWNLOAD_VERSIONS)
+   KAFKA_DOWNLOAD_VERSIONS=($KAFKA_DOWNLOAD_VERSIONS)
+   CONFLUENT_DOWNLOAD_VERSIONS=$(sortVersionList "$CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS $CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS")
+   CONFLUENT_DOWNLOAD_VERSIONS=($CONFLUENT_DOWNLOAD_VERSIONS)
+   HADOOP_DOWNLOAD_VERSIONS=($HADOOP_DOWNLOAD_VERSIONS)
+   PROMETHEUS_DOWNLOAD_VERSIONS=($PROMETHEUS_DOWNLOAD_VERSIONS)
+   GRAFANA_DOWNLOAD_VERSIONS=($GRAFANA_DOWNLOAD_VERSIONS)
+   DERBY_DOWNLOAD_VERSIONS=($DERBY_DOWNLOAD_VERSIONS)
+elif [ "$FILE_SPECIFIED" != "true" ]; then
+   #
+   # Scan downloadable product versions
+   #
+   echo ""
+   echo "Scanning downloadable products... Please wait."
+   echo ""
+
+   # Turn off the enter key while waiting
+   if [ "$NO_STTY_SPECIFIED" != "true" ]; then
+      stty igncr
+   fi
+
+   PADOGRID_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadogridVersions)"))
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+      PADO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+      PADODESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadodesktopVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+      PADOWEB_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadowebVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
+      PADOECLIPSE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePadoEclipseVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+      GEODE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGeodeVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+      HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastEnterpriseVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+      HAZELCAST_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastOssVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
+      HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastManCenterVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
+      HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastDesktopVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+      JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetEnterpriseVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
+      JET_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetOssVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
+      REDIS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableRedisVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+      SNAPPYDATA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSnappyDataVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+      SPARK_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableSparkVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+      KAFKA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableKafkaVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
+      CONFLUENT_DOWNLOAD_VERSIONS=$(getDownloadableConfluentVersions)
+      CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=$(echo $CONFLUENT_DOWNLOAD_VERSIONS | sed 's/confluent-community-[0-9].[0-9].[0-9]//g')
+      CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=$(echo $CONFLUENT_DOWNLOAD_VERSIONS | sed 's/confluent-[0-9].[0-9].[0-9]//g')
+      CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS"))
+      CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS"))
+      CONFLUENT_DOWNLOAD_VERSIONS=($(sortVersionList "$CONFLUENT_DOWNLOAD_VERSIONS"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
+      HADOOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHadoopVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
+      PROMETHEUS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadablePrometheusVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ] || [ "$PRODUCT_ARG" == "grafana-oss" ]; then
+      GRAFANA_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableGrafanaVersions)"))
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
+      DERBY_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableDerbyVersions)"))
+   fi
+
+   # Enable the enter key
+   if [ "$NO_STTY_SPECIFIED" != "true" ]; then
+      stty -igncr
+   fi
+fi
+
+# Save downloadable versions and exit
+if [ "$FILE_SPECIFIED" != "true" ] && [ "$SAVE_SPECIFIED" == "true" ]; then
+   echo "PADOGRID_DOWNLOAD_VERSIONS=\"${PADOGRID_DOWNLOAD_VERSIONS[@]}\"" > "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADO_DOWNLOAD_VERSIONS=\"${PADO_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADODESKTOP_DOWNLOAD_VERSIONS=\"${PADODESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADOWEB_DOWNLOAD_VERSIONS=\"${PADOWEB_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PADOECLIPSE_DOWNLOAD_VERSIONS=\"${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "GEODE_DOWNLOAD_VERSIONS=\"${GEODE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS=\"${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_OSS_DOWNLOAD_VERSIONS=\"${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=\"${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=\"${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "JET_ENTERPRISE_DOWNLOAD_VERSIONS=\"${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "JET_OSS_DOWNLOAD_VERSIONS=\"${JET_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "REDIS_DOWNLOAD_VERSIONS=\"${REDIS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "SNAPPYDATA_DOWNLOAD_VERSIONS=\"${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "SPARK_DOWNLOAD_VERSIONS=\"${SPARK_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "KAFKA_DOWNLOAD_VERSIONS=\"${KAFKA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMERCIAL_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS=\"${CONFLUENT_COMMUNITY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "HADOOP_DOWNLOAD_VERSIONS=\"${HADOOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "PROMETHEUS_DOWNLOAD_VERSIONS=\"${PROMETHEUS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "GRAFANA_DOWNLOAD_VERSIONS=\"${GRAFANA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "DERBY_DOWNLOAD_VERSIONS=\"${DERBY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "Downloadable product versions saved:"
+   echo "   + $DOWNLOAD_VERSIONS_FILE"
+   exit
+fi
+
+# Version variables set by user inputs
+PADOGRID_VERSION=""
+PADO_VERSION=""
+PADODESKTOP_VERSION=""
+PADOWEB_VERSION=""
+PADOECLIPSE_VERSION=""
+GEODE_VERSION=""
+HAZELCAST_ENTERPRISE_VERSION=""
+HAZELCAST_OSS_VERSION=""
+HAZELCAST_MANAGEMENT_CENTER_VERSION=""
+HAZELCAST_DESKTOP_VERSION=""
+JET_ENTERPRISE_VERSION=""
+JET_OSS_VERSION=""
+REDIS_VERSION=""
+SNAPPYDATA_VERSION=""
+SPARK_VERSION=""
+KAFKA_VERSION=""
+CONFLUENT_VERSION=""
+HADOOP_VERSION=""
+PROMETHEUS_VERSION=""
+GRAFANA_ENTERPRISE_VERSION=""
+GRAFANA_OSS_VERSION=""
+DERBY_VERSION=""
+
+if [ "$FILE_SPECIFIED" != "true" ] && [ "$VERSION_SPECIFIED" == "true" ]; then
+
+   INSTALL_COUNT=1
+   case $PRODUCT_ARG in
+      confluent )
+         DOWNLOAD_VERSIONS=( "${CONFLUENT_DOWNLOAD_VERSIONS[@]}" )
+         CONFLUENT_DIST_VERSION=$VERSION_ARG
+         CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//') ;;
+      derby )
+         DOWNLOAD_VERSIONS=( "${DERBY_DOWNLOAD_VERSIONS[@]}" )
+         DERBY_VERSION=$VERSION_ARG ;;
+      hadoop )
+         DOWNLOAD_VERSIONS=( "${HADOOP_DOWNLOAD_VERSIONS[@]}" )
+         HADOOP_VERSION=$VERSION_ARG ;;
+      hazelcast-desktop )
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_DESKTOP_VERSION=$VERSION_ARG ;;
+      hazelcast-enterprise ) 
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_ENTERPRISE_VERSION=$VERSION_ARG ;;
+      hazelcast-mc )
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_MANAGEMENT_CENTER_VERSION=$VERSION_ARG ;;
+      hazelcast-oss )
+         DOWNLOAD_VERSIONS=( "${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}" )
+         HAZELCAST_OSS_VERSION=$VERSION_ARG ;;
+      geode )
+         DOWNLOAD_VERSIONS=( "${GEODE_DOWNLOAD_VERSIONS[@]}" )
+         GEODE_VERSION=$VERSION_ARG ;;
+      grafana-enterprise )
+         DOWNLOAD_VERSIONS=( "${GRAFANA_DOWNLOAD_VERSIONS[@]}" )
+         GRAFANA_ENTERPRISE_VERSION=$VERSION_ARG ;;
+      grafana-oss )
+         DOWNLOAD_VERSIONS=( "${GRAFANA_DOWNLOAD_VERSIONS[@]}" )
+         GRAFANA_OSS_VERSION=$VERSION_ARG ;;
+      kafka )
+         DOWNLOAD_VERSIONS=( "${KAFKA_DOWNLOAD_VERSIONS[@]}" )
+         KAFKA_VERSION=$VERSION_ARG
+         KAFKA_SCALA_VERSIONS_ARRAY=($(getScalaKafkaVersions "$KAFKA_VERSION"))
+         # Pick the last one (newer version of scala)
+         KAFKA_DIST_VERSION=${KAFKA_SCALA_VERSIONS_ARRAY[${#KAFKA_SCALA_VERSIONS_ARRAY[@]}-1]}
+         ;;
+      pado )
+         DOWNLOAD_VERSIONS=( "${PADO_DOWNLOAD_VERSIONS[@]}" )
+         PADO_VERSION=$VERSION_ARG ;;
+      padodesktop )
+         DOWNLOAD_VERSIONS=( "${PADODESKTOP_DOWNLOAD_VERSIONS[@]}" )
+         PADODESKTOP_VERSION=$VERSION_ARG ;;
+      padoeclipse )
+         DOWNLOAD_VERSIONS=( "${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}" )
+         PADOECLIPSE_VERSION=$VERSION_ARG ;;
+      padogrid )
+         DOWNLOAD_VERSIONS=( "${PADOGRID_DOWNLOAD_VERSIONS[@]}" )
+         PADOGRID_VERSION=$VERSION_ARG ;;
+      padoweb )
+         DOWNLOAD_VERSIONS=( "${PADOWEB_DOWNLOAD_VERSIONS[@]}" )
+         PADOWEB_VERSION=$VERSION_ARG ;;
+      prometheus )
+         DOWNLOAD_VERSIONS=( "${PROMETHEUS_DOWNLOAD_VERSIONS[@]}" )
+         PROMETHEUS_VERSION=$VERSION_ARG ;;
+      redis-oss )
+         DOWNLOAD_VERSIONS=( "${REDIS_DOWNLOAD_VERSIONS[@]}" )
+         REDIS_VERSION=$VERSION_ARG ;;
+      snappydata )
+         DOWNLOAD_VERSIONS=( "${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}" )
+         SNAPPYDATA_VERSION=$VERSION_ARG ;;
+      spark )
+         DOWNLOAD_VERSIONS=( "${SPARK_DOWNLOAD_VERSIONS[@]}" )
+         SPARK_VERSION=$VERSION_ARG
+         SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop ;;
+      *) ;;
+   esac
+
+   found="false"
+   for i in ${DOWNLOAD_VERSIONS[@]}; do
+      if [ "$i" == "$VERSION_ARG" ]; then
+         found="true"
+      fi
+   done
+
+   if [ "$found" == "false" ]; then
+      echo ""
+      echo "Downloadable product versions: [$PRODUCT_ARG]"
+      index=0
+      for i in ${DOWNLOAD_VERSIONS[@]}; do
+         echo "[$index] $i"
+         let index=index+1
+      done
+      echo ""
+      echo -e >&2 "${CError}ERROR:${CNone} Product version not found [$VERSION_ARG]. Command aborted."
+      exit 1
+   fi
+
+elif [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "true" ]; then
+   # Set to the latest versions
+   PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[0]}
+   if [[ "$PADOGRID_VERSION" == *"SNAPSHOT" ]]; then
+      PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[1]} 
+   fi
+   if [ "$PRODUCT_ARG" != "" ] && [ "$PRODUCT_ARG" != "padogrid" ] && [ -d "$PADOGRID_PRODUCTS_PATH/padogrid_$PADOGRID_VERSION" ]; then
+      PADOGRID_VERSION=""
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+      PADO_VERSION=${PADO_DOWNLOAD_VERSIONS[0]}
+      if [[ "$PADO_VERSION" == *"SNAPSHOT" ]]; then
+         PADO_VERSION=${PADO_DOWNLOAD_VERSIONS[1]} 
+      fi
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+      PADODESKTOP_VERSION=${PADODESKTOP_DOWNLOAD_VERSIONS[0]}
+      if [[ "$PADODESKTOP_VERSION" == *"SNAPSHOT" ]]; then
+         PADODESKTOP_VERSION=${PADODESKTOP_DOWNLOAD_VERSIONS[1]} 
+      fi
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+      PADOWEB_VERSION=${PADOWEB_DOWNLOAD_VERSIONS[0]}
+      if [[ "$PADOWEB_VERSION" == *"SNAPSHOT" ]]; then
+         PADOWEB_VERSION=${PADOWEB_DOWNLOAD_VERSIONS[1]} 
+      fi
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
+      PADOECLIPSE_VERSION=${PADOECLIPSE_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+      GEODE_VERSION=${GEODE_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+      HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+      HAZELCAST_OSS_VERSION=${HAZELCAST_OSS_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
+      HAZELCAST_MANAGEMENT_CENTER_VERSION=${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
+      HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+      JET_ENTERPRISE_VERSION=${JET_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
+      JET_OSS_VERSION=${JET_OSS_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
+      REDIS_VERSION=${REDIS_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+      SNAPPYDATA_VERSION=${SNAPPYDATA_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+      SPARK_VERSION=${SPARK_DOWNLOAD_VERSIONS[0]}
+      SPARK_DIST_VERSION=${SPARK_VERSION}
+      if [ "$SPARK_VERSION" != "" ]; then
+         SPARK_DIST_VERSION=${SPARK_VERSION}-bin-without-hadoop
+      fi
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+      KAFKA_VERSION=${KAFKA_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
+      CONFLUENT_DIST_VERSION=${CONFLUENT_DOWNLOAD_VERSIONS[0]}
+      CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//')
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
+      HADOOP_VERSION=${HADOOP_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
+      PROMETHEUS_VERSION=${PROMETHEUS_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ]; then
+      # Install the enterprise version for grafana. Enterprise and OSS have the same installation directory.
+      GRAFANA_ENTERPRISE_VERSION=${GRAFANA_DOWNLOAD_VERSIONS[0]}
+   fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
+      DERBY_VERSION=${DERBY_DOWNLOAD_VERSIONS[0]}
+   fi
+
+   echo "Installing the latest product(s) as follows:"
+   echo ""
+   echo "PadoGrid             $PADOGRID_VERSION"
+   echo "Pado                 $PADO_VERSION"
+   echo "PadoDesktop          $PADODESKTOP_VERSION"
+   echo "PadoWeb              $PADOWEB_VERSION"
+   echo "PadoEclipse          $PADOECLIPSE_VERSION"
+   echo "Geode                $GEODE_VERSION"
+   echo "Hazelcast Enterprise $HAZELCAST_ENTERPRISE_VERSION"
+   echo "Hazelcast OSS        $HAZELCAST_OSS_VERSION"
+   echo "Hazelcast Man Center $HAZELCAST_MANAGEMENT_CENTER_VERSION"
+   echo "HazelcastDesktop     $HAZELCAST_DESKTOP_VERSION"
+   echo "Jet Enterprise       $JET_ENTERPRISE_VERSION"
+   echo "Jet OSS              $JET_OSS_VERSION"
+   echo "Redis OSS            $REDIS_VERSION"
+   echo "SnappyData           $SNAPPYDATA_VERSION"
+   echo "Spark                $SPARK_VERSION"
+   echo "Kafka                $KAFKA_VERSION"
+   echo "Kafka Confluent      $CONFLUENT_VERSION"
+   echo "Hadoop               $HADOOP_VERSION"
+   echo "Prometheus           $PROMETHEUS_VERSION"
+   echo "Grafana Enterprise   $GRAFANA_ENTERPRISE_VERSION"
+   echo "Derby                $DERBY_VERSION"
+   echo ""
+elif [ "$FILE_SPECIFIED" != "true" ]; then
+   # Get user inputs
+   REDO="true"
+   while [ "$REDO" == "true" ]; do
+
+      INSTALL_COUNT=0
+
+      REDO=true
+      INNER_LOOP=true
+      while [ "$INNER_LOOP" == "true" ]; do
+         echo "Enter the PadoGrid environment base directory path. All of the products will be installed in this directory."
+         echo "[$PADOGRID_ENV_BASE_PATH]":
+         read -p "" INPUT
+         if [ "$INPUT" == "" ]; then
+            __BASE_PATH="$PADOGRID_ENV_BASE_PATH"
+         else
+            __BASE_PATH="$INPUT"
+         fi
+         if [ ! -d "$__BASE_PATH" ]; then
+            if [ -f "$__BASE_PATH" ]; then
+               echo "Invalid path. The specified path exists and is not a directory."
+               continue;
+            fi
+            __parent=$(dirname "$__BASE_PATH")
+            if [ ! -w "$__parent" ]; then
+               echo "Invalid path. You do not have write permissions to create directory: [$__parent]"
+               continue;
+            fi
+         fi
+         INNER_LOOP=false
+         PADOGRID_ENV_BASE_PATH="$__BASE_PATH"
+      done
+
+      echo ""
+      echo -e "PadoGrid environment base directory: ${CGo}$PADOGRID_ENV_BASE_PATH${CNone}"
+      echo ""
+
+      # Get local installations
+      determineInstalledProductVersions
+
+      # PadoGrid
+      PRODUCT_NAME="PadoGrid"
+      PRODUCT_DOWNLOAD_VERSIONS=("${PADOGRID_DOWNLOAD_VERSIONS[@]}")
+      INSTALLED_VERSIONS=$PADOGRID_VERSIONS
+      echo -e "PadoGrid ${CUrl}$PADOGRID_DOWNLOAD_URL${CNone}"
+      doUserInput
+      if [ "$INSTALL_VERSION" != "" ]; then
+         let INSTALL_COUNT=INSTALL_COUNT+1
+      fi
+      PADOGRID_VERSION=$INSTALL_VERSION
+      echo ""
+
+      # Pado
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "pado" ]; then
+         PRODUCT_NAME="Pado"
+         PRODUCT_DOWNLOAD_VERSIONS=("${PADO_DOWNLOAD_VERSIONS[@]}")
+         if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+         INSTALLED_VERSIONS=$PADO_VERSIONS
+         echo -e "Pado ${CUrl}$PADO_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         PADO_VERSION=$INSTALL_VERSION
+         echo ""
+         fi
+      fi
+
+      # PadoDesktop
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padodesktop" ]; then
+         PRODUCT_NAME="PadoDesktop"
+         PRODUCT_DOWNLOAD_VERSIONS=("${PADODESKTOP_DOWNLOAD_VERSIONS[@]}")
+         if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+         INSTALLED_VERSIONS=$PADODESKTOP_VERSIONS
+         echo -e "PadoDesktop ${CUrl}$PADODESKTOP_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         PADODESKTOP_VERSION=$INSTALL_VERSION
+         echo ""
+         fi
+      fi
+
+      # PadoWeb
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoweb" ]; then
+         PRODUCT_NAME="PadoWeb"
+         PRODUCT_DOWNLOAD_VERSIONS=("${PADOWEB_DOWNLOAD_VERSIONS[@]}")
+         if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+         INSTALLED_VERSIONS=$PADOWEB_VERSIONS
+         echo -e "PadoWeb ${CUrl}$PADOWEB_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         PADOWEB_VERSION=$INSTALL_VERSION
+         echo ""
+         fi
+      fi
+
+      # PadoEclipse
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "padoeclipse" ]; then
+         PRODUCT_NAME="PadoEclipse"
+         PRODUCT_DOWNLOAD_VERSIONS=("${PADOECLIPSE_DOWNLOAD_VERSIONS[@]}")
+         if [ ${#PRODUCT_DOWNLOAD_VERSIONS[@]} -gt 0 ]; then
+         INSTALLED_VERSIONS=$PADOECLIPSE_VERSIONS
+         echo -e "PadoEclipse ${CUrl}$PADOECLIPSE_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         PADOECLIPSE_VERSION=$INSTALL_VERSION
+         echo ""
+         fi
+      fi
+
+      # Geode
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "geode" ]; then
+         PRODUCT_NAME="Geode"
+         PRODUCT_DOWNLOAD_VERSIONS=("${GEODE_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$GEODE_VERSIONS
+         echo -e "Geode ${CUrl}$GEODE_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         GEODE_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # Hazelcast Enterprise
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-enterprise" ]; then
+         PRODUCT_NAME="Hazelcast Enterprise"
+         PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$HAZELCAST_ENTERPRISE_VERSIONS
+         echo -e "Hazelcast Enterprise ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         HAZELCAST_ENTERPRISE_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # Hazelcast OSS
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-oss" ]; then
+         PRODUCT_NAME="Hazelcast OSS"
+         PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$HAZELCAST_OSS_VERSIONS
+         echo -e "Hazelcast OSS ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         HAZELCAST_OSS_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # Hazelcast Management Center
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-mc" ]; then
+         PRODUCT_NAME="Hazelcast Management Center"
+         PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$HAZELCAST_MANAGEMENT_CENTER_VERSIONS
+         echo -e "Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         HAZELCAST_MANAGEMENT_CENTER_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+
+      # HazelcastDesktop
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
+         PRODUCT_NAME="HazelcastDesktop"
+         PRODUCT_DOWNLOAD_VERSIONS=("${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$HAZELCAST_DESKTOP_VERSIONS
+         echo -e "HazelcastDesktop ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         HAZELCAST_DESKTOP_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # Jet Enterprise
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
+         PRODUCT_NAME="Jet Enterprise"
+         PRODUCT_DOWNLOAD_VERSIONS=("${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$JET_ENTERPRISE_VERSIONS
+         echo -e "Jet Enterprise ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         JET_ENTERPRISE_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # Jet OSS
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
+         PRODUCT_NAME="Jet OSS"
+         PRODUCT_DOWNLOAD_VERSIONS=("${JET_OSS_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$JET_OSS_VERSIONS
+         echo -e "Jet OSS ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         JET_OSS_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+
+      # Redis
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
+         PRODUCT_NAME="Redis"
+         PRODUCT_DOWNLOAD_VERSIONS=("${REDIS_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$REDIS_VERSIONS
+         echo -e "Redis ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         REDIS_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # SnappyData
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "snappydata" ]; then
+         PRODUCT_NAME="SnappyData"
+         PRODUCT_DOWNLOAD_VERSIONS=("${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$SNAPPYDATA_VERSIONS
+         echo -e "SnappyData ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         SNAPPYDATA_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # Spark
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "spark" ]; then
+         PRODUCT_NAME="Spark"
+         PRODUCT_DOWNLOAD_VERSIONS=("${SPARK_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$SPARK_VERSIONS
+         echo -e "Spark ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         SPARK_VERSION=$INSTALL_VERSION
+         
+         # Allow the user to select a prebuilt spark distribution.
+         INSTALLED_VERSIONS=($SPARK_VERSIONS)
+         if [ "$SPARK_VERSION" != "" ]; then
+            SPARK_PREBUILT_VERSIONS_ARRAY=(${SPARK_VERSION} $(getPrebuiltSparkVersions "$SPARK_VERSION"))
+            __LEN=${#SPARK_PREBUILT_VERSIONS_ARRAY[@]}
+            let __LAST_INDEX=__LEN-1
+            __LOOP=true
+            __INSTALLED="false"
+            while [ "$__LOOP" == "true" ]; do
+               __INDEX=0
+               echo -e "Spark distributions ${CUrl}${SPARK_DOWNLOAD_URL}spark-$SPARK_VERSION/${CNone}"
+               for i in ${SPARK_PREBUILT_VERSIONS_ARRAY[@]}; do
+                  __INSTALLED="false"
+                  for j in ${INSTALLED_VERSIONS[@]}; do
+                     if [ "$i" == "$j" ]; then
+                        __INSTALLED="true"
+                        break;
+                     fi
+                  done
+                  if [ "$__INSTALLED" == "true" ]; then
+                     if [ $__INDEX -eq 0 ]; then
+                        echo "   [$__INDEX] $i [installed] - source only (build may be required)"
+                     else
+                        echo "   [$__INDEX] $i [installed]"
+                     fi
+                  else
+                     if [ $__INDEX -eq 0 ]; then
+                        echo "   [$__INDEX] $i - source only (build required)"
+                     else
+                        echo "   [$__INDEX] $i"
+                     fi
+                  fi
+                  let __INDEX=__INDEX+1
+               done
+               read -p "Enter a distribution to install or leave blank to skip: " INPUT
+               if [ "$INPUT" == "" ]; then
+                  break;
+               else
+                  if [ "$(isNumber $INPUT)" == "true" ]; then
+                     if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
+                        echo "Invalid number. Enter [0, $__LAST_INDEX]."
+                        continue;
+                     fi
+                  fi
+                  SPARK_DIST_VERSION=${SPARK_PREBUILT_VERSIONS_ARRAY[$INPUT]}
+                  echo -e "Spark selected: ${CGo}$SPARK_DIST_VERSION${CNone}"
+                  __LOOP="false"
+               fi
+            done
+         fi
+         echo ""
+      fi
+
+      # Kafka
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "kafka" ]; then
+         PRODUCT_NAME="Kafka"
+         PRODUCT_DOWNLOAD_VERSIONS=("${KAFKA_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$KAFKA_VERSIONS
+         echo -e "Kafka ${CUrl}$KAFKA_DOWNLOAD_URL${CNone}"
+         echo -e "(PadoGrid currently ${CGo}supports only Kafka 2.8.0 and above.${CNone} Unsupported versions require manual management.)"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         KAFKA_VERSION=$INSTALL_VERSION
+
+         # Allow the user to select a kafka distribution. (Scala versions)
+         INSTALLED_VERSIONS=($KAFKA_VERSIONS)
+         if [ "$KAFKA_VERSION" != "" ]; then
+            KAFKA_SCALA_VERSIONS_ARRAY=($(getScalaKafkaVersions "$KAFKA_VERSION"))
+            __LEN=${#KAFKA_SCALA_VERSIONS_ARRAY[@]}
+            let __LAST_INDEX=__LEN-1
+            __LOOP=true
+            __INSTALLED="false"
+            while [ "$__LOOP" == "true" ]; do
+               __INDEX=0
+               echo -e "Kafka distributions ${CUrl}${KAFKA_DOWNLOAD_URL}$KAFKA_VERSION/${CNone}"
+               for i in ${KAFKA_SCALA_VERSIONS_ARRAY[@]}; do
+                  __INSTALLED="false"
+                  for j in ${INSTALLED_VERSIONS[@]}; do
+                     if [ "$i" == "$j" ]; then
+                        __INSTALLED="true"
+                        break;
+                     fi
+                  done
+                  if [ "$__INSTALLED" == "true" ]; then
+                        echo "   [$__INDEX] $i [installed]"
+                  else
+                     echo "   [$__INDEX] $i"
+                  fi
+                  let __INDEX=__INDEX+1
+               done
+               read -p "Enter a distribution to install or leave blank to skip: " INPUT
+               if [ "$INPUT" == "" ]; then
+                  break;
+               else
+                  if [ "$(isNumber $INPUT)" == "true" ]; then
+                     if [ $INPUT -lt 0 ] || [ $INPUT -gt $__LAST_INDEX ]; then
+                        echo "Invalid number. Enter [0, $__LAST_INDEX]."
+                        continue;
+                     fi
+                  fi
+                  KAFKA_DIST_VERSION=${KAFKA_SCALA_VERSIONS_ARRAY[$INPUT]}
+                  echo -e "Kafka selected: ${CGo}$KAFKA_DIST_VERSION${CNone}"
+                  __LOOP="false"
+               fi
+            done
+         fi
+      fi
+
+      # Kafka Confluent
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "confluent" ]; then
+         PRODUCT_NAME="Confluent"
+         PRODUCT_DOWNLOAD_VERSIONS=("${CONFLUENT_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$CONFLUENT_VERSIONS
+         echo -e "Confluent ${CUrl}$CONFLUENT_DOWNLOAD_URL${CNone}"
+         echo -e "(PadoGrid currently ${CGo}supports only Confluent 7.0 and above.${CNone} Unsupported versions require manual management.)"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         CONFLUENT_DIST_VERSION=$INSTALL_VERSION
+         CONFLUENT_VERSION=$(echo $CONFLUENT_DIST_VERSION | sed 's/.*-//')
+         echo ""
+      fi
+
+      # Hadoop
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hadoop" ]; then
+         PRODUCT_NAME="Hadoop"
+         PRODUCT_DOWNLOAD_VERSIONS=("${HADOOP_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$HADOOP_VERSIONS
+         echo -e "Hadoop ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         HADOOP_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+      
+      # Prometheus
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "prometheus" ]; then
+         PRODUCT_NAME="Prometheus"
+         PRODUCT_DOWNLOAD_VERSIONS=("${PROMETHEUS_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$PROMETHEUS_VERSIONS
+         echo -e "Prometheus ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         PROMETHEUS_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+
+      # Grafana Enterprise
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-enterprise" ]; then
+         PRODUCT_NAME="Grafana Enterprise"
+         PRODUCT_DOWNLOAD_VERSIONS=("${GRAFANA_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$GRAFANA_ENTERPRISE_VERSIONS
+         echo -e "Grafana Enterprise ${CUrl}$GRAFANA_GITHUB_RELEASES_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         GRAFANA_ENTERPRISE_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+
+      # Grafana OSS
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "grafana-oss" ]; then
+         PRODUCT_NAME="Grafana OSS"
+         if [ "$GRAFANA_VERSIONS" == "" ]; then
+            PRODUCT_DOWNLOAD_VERSIONS=("${GRAFANA_DOWNLOAD_VERSIONS[@]}")
+            INSTALLED_VERSIONS=$GRAFANA_OSS_VERSIONS
+         fi
+         echo -e "Grafana OSS ${CUrl}$GRAFANA_GITHUB_RELEASES_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         GRAFANA_OSS_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+
+      # Derby
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
+         PRODUCT_NAME="Derby"
+         PRODUCT_DOWNLOAD_VERSIONS=("${DERBY_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$DERBY_VERSIONS
+         echo -e "Derby ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         DERBY_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+
+      echo ""
+
+      if [ $INSTALL_COUNT -eq 0 ]; then
+         echo "You have not selected any products to install."
+      else
+         echo "You have selected the following versions to install:"
+      fi
+
+      if [ "$PADOGRID_VERSION" != "" ]; then
+         echo -e "Padogrid: ${CGo}$PADOGRID_VERSION${CNone}"
+      fi
+      if [ "$PADO_VERSION" != "" ]; then
+         echo -e "Pado: ${CGo}$PADO_VERSION${CNone}"
+      fi
+      if [ "$PADODESKTOP_VERSION" != "" ]; then
+         echo -e "PadoDesktop: ${CGo}$PADODESKTOP_VERSION${CNone}"
+      fi
+      if [ "$PADOWEB_VERSION" != "" ]; then
+         echo -e "PadoWeb: ${CGo}$PADOWEB_VERSION${CNone}"
+      fi
+      if [ "$PADOECLIPSE_VERSION" != "" ]; then
+         echo -e "PadoEclipse: ${CGo}$PADOECLIPSE_VERSION${CNone}"
+      fi
+      if [ "$GEODE_VERSION" != "" ]; then
+         echo -e "Geode: ${CGo}$GEODE_VERSION${CNone}"
+      fi
+      if [ "$HAZELCAST_ENTERPRISE_VERSION" != "" ]; then
+         echo -e "Hazelcast Enterprise: ${CGo}$HAZELCAST_ENTERPRISE_VERSION${CNone}"
+      fi
+      if [ "$HAZELCAST_OSS_VERSION" != "" ]; then
+         echo -e "Hazelcast OSS: ${CGo}$HAZELCAST_OSS_VERSION${CNone}"
+      fi
+      if [ "$HAZELCAST_MANAGEMENT_CENTER_VERSION" != "" ]; then
+         echo -e "Hazelcast Management Center: ${CGo}$HAZELCAST_MANAGEMENT_CENTER_VERSION${CNone}"
+      fi
+      if [ "$HAZELCAST_DESKTOP_VERSION" != "" ]; then
+         echo -e "HazelcastDesktop: ${CGo}$HAZELCAST_DESKTOP_VERSION${CNone}"
+      fi
+      if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
+         echo -e "Jet Enterprise: ${CGo}$JET_ENTERPRISE_VERSION${CNone}"
+      fi
+      if [ "$JET_OSS_VERSION" != "" ]; then
+         echo -e "Jet OSS: ${CGo}$JET_OSS_VERSION${CNone}"
+      fi
+      if [ "$REDIS_VERSION" != "" ]; then
+         echo -e "Redis: ${CGo}$REDIS_VERSION${CNone}"
+      fi
+      if [ "$SNAPPYDATA_VERSION" != "" ]; then
+         echo -e "SnappyData: ${CGo}$SNAPPYDATA_VERSION${CNone}"
+      fi
+      if [ "$SPARK_VERSION" != "" ] && [ "$SPARK_DIST_VERSION" != "" ]; then
+         echo -e "Spark: ${CGo}$SPARK_DIST_VERSION${CNone}"
+      fi
+      if [ "$KAFKA_VERSION" != "" ]; then
+         echo -e "Kafka: ${CGo}$KAFKA_DIST_VERSION${CNone}"
+      fi
+      if [ "$CONFLUENT_VERSION" != "" ]; then
+         echo -e "Kafka Confluent: ${CGo}$CONFLUENT_DIST_VERSION${CNone}"
+      fi
+      if [ "$HADOOP_VERSION" != "" ]; then
+         echo -e "Hadoop: ${CGo}$HADOOP_VERSION${CNone}"
+      fi
+      if [ "$PROMETHEUS_VERSION" != "" ]; then
+         echo -e "Prometheus: ${CGo}$PROMETHEUS_VERSION${CNone}"
+      fi
+      if [ "$GRAFANA_ENTERPRISE_VERSION" != "" ]; then
+         echo -e "Grafana Enterprise: ${CGo}$GRAFANA_ENTERPRISE_VERSION${CNone}"
+      fi
+      if [ "$GRAFANA_OSS_VERSION" != "" ]; then
+         echo -e "Grafana OSS: ${CGo}$GRAFANA_OSS_VERSION${CNone}"
+      fi
+      if [ "$DERBY_VERSION" != "" ]; then
+         echo -e "Derby: ${CGo}$DERBY_VERSION${CNone}"
+      fi
+      echo ""
+
+      REDO=true
+      INNER_LOOP=true
+      while [ "$INNER_LOOP" == "true" ]; do
+         read -p "Enter 'c' to continue, 'r' to re-enter, 'q' to quit: " INPUT
+         case $INPUT in
+            [Cc]* ) REDO=false; INNER_LOOP=false;;
+            [Rr]* ) REDO=true; INNER_LOOP=false;;
+            [Qq]* ) echo "Command Aborted."; INNER_LOOP=false; exit;;
+         esac
+      done
+
+   done
+fi
+
+
+if [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "false" ] && [ $INSTALL_COUNT -eq 0 ]; then
    echo ""
    echo "Product installation canceled. No products selected."
    echo ""
-else
+elif [ "$FILE_SPECIFIED" != "true" ]; then
    echo ""
    echo "Installing PadoGrid products... Some products may take a long time to download. Please wait."
    echo ""
@@ -2875,7 +2964,11 @@ if [ "$SIMULATE" == "true" ]; then
    echo ""
 fi
 
-if [ "$PADOGRID_VERSION" != "" ]; then
+if [ "$FILE_SPECIFIED" == "true" ]; then
+   # Install Padogrid using the specified file
+   tar -C "$PADOGRID_PRODUCTS_PATH" -xzf "$FILE_ARG"
+   QUIET="true"
+elif [ "$PADOGRID_VERSION" != "" ]; then
    PADOGRID_RELEASE="padogrid_$PADOGRID_VERSION"
    PADOGRID_TARBALL="$PADOGRID_RELEASE.tar.gz"
    installProduct "padogrid" "$SIMULATE"
@@ -2973,6 +3066,8 @@ fi
 if [ "$PROMETHEUS_VERSION" != "" ]; then
    if [ "$HARDWARE_NAME" == "x86_64" ]; then
       POSTFIX=".$OS_NAME-amd64"
+   elif [ "$HARDWARE_NAME" == "aarch64" ]; then
+      POSTFIX=".$OS_NAME-arm64"
    else
       POSTFIX=".$OS_NAME-$HARDWARE_NAME"
    fi
@@ -2983,6 +3078,8 @@ fi
 if [ "$GRAFANA_ENTERPRISE_VERSION" != "" ]; then
    if [ "$HARDWARE_NAME" == "x86_64" ]; then
       POSTFIX=".$OS_NAME-amd64"
+   elif [ "$HARDWARE_NAME" == "aarch64" ]; then
+      POSTFIX=".$OS_NAME-arm64"
    else
       POSTFIX=".$OS_NAME-$HARDWARE_NAME"
    fi
@@ -2993,6 +3090,8 @@ fi
 if [ "$GRAFANA_OSS_VERSION" != "" ]; then
    if [ "$HARDWARE_NAME" == "x86_64" ]; then
       POSTFIX=".$OS_NAME-amd64"
+   elif [ "$HARDWARE_NAME" == "aarch64" ]; then
+      POSTFIX=".$OS_NAME-arm64"
    else
       POSTFIX=".$OS_NAME-$HARDWARE_NAME"
    fi
@@ -3010,14 +3109,10 @@ fi
 if [ "$REDIS_VERSION" != "" ]; then
    echo ""
    echo "Redis OSS downloads do not include binaries. You can build binaries by"
-   echo -e "running ${CLightGreen}make${CNone} as follows."
+   echo -e "running ${CGo}make${CNone} as follows."
    echo ""
-   echo -e "   ${CLightGreen}pushd $PADOGRID_PRODUCTS_PATH/$REDIS_RELEASE/ && make && popd ${CNone}"
+   echo -e "   ${CGo}pushd $PADOGRID_PRODUCTS_PATH/$REDIS_RELEASE/deps && make hiredis lua jemalloc linenoise && pushd .. && make && popd && popd ${CNone}"
 fi
-
-echo ""
-echo "PadoGrid Installation complete."
-echo ""
 
 # Check if an RWE exists in the workspaces dir
 pushd $PADOGRID_WORKSPACES_PATH > /dev/null 2>&1
@@ -3181,15 +3276,35 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "PROMETHEUS_HOME=\"$PROMETHEUS_HOME\"" >> $TMP_ENV_FILE
       echo "GRAFANA_HOME=\"$GRAFANA_HOME\"" >> $TMP_ENV_FILE
       echo "DERBY_HOME=\"$DERBY_HOME\"" >> $TMP_ENV_FILE
-      if [ "$QUIET" == "false" ]; then
-         if [ "$PRODUCT_HOME" != "" ]; then
-            $__PADOGRID_HOME/bin_sh/create_rwe -rwe myrwe -product "$PRODUCT_HOME" -env $TMP_ENV_FILE 
-         fi
+
+      PADOGRID_OPTS=""
+      if [ "$PRODUCT_HOME" != "" ]; then
+         PADOGRID_OPTS="-product $PRODUCT_HOME"
+      fi
+      if [ "$QUIET" == "true" ]; then
+         $__PADOGRID_HOME/bin_sh/create_rwe -quiet -rwe myrwe $PADOGRID_OPTS -env $TMP_ENV_FILE
       else
-         if [ "$PRODUCT_HOME" != "" ]; then
-            $__PADOGRID_HOME/bin_sh/create_rwe -quiet -rwe myrwe -product "$PRODUCT_HOME" -env $TMP_ENV_FILE
-         fi
+         $__PADOGRID_HOME/bin_sh/create_rwe -rwe myrwe $PADOGRID_OPTS -env $TMP_ENV_FILE 
       fi
       rm $TMP_ENV_FILE
+
+      # Append padogrid initialization call in .bashrc if it does not exist
+      PADOGRID_INIT_IN_BASHRC=$(grep initenv.sh $HOME/.bashrc)
+      if [ "$PADOGRID_INIT_IN_BASHRC" == "" ]; then
+         echo ""  >> $HOME/.bashrc
+         echo "# >>> padogrid initialization >>>"  >> $HOME/.bashrc
+         echo ". $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet" >> $HOME/.bashrc
+         echo "# <<< padogrid initialization <<<"  >> $HOME/.bashrc
+         echo ""  >> $HOME/.bashrc
+         echo "Appended the following padogrid initialization routine in '~/.bashrc'."
+      else
+         echo "Padogrid initialization routine already exist in '~/.bashrc'. To use the RWE created"
+         echo "by this installation as the default RWE, add the following line in '~/.bashrc'."
+      fi
+      echo -e "${CGo}   . $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet${CNone}"
    fi
 fi
+
+echo ""
+echo "PadoGrid Installation complete."
+echo ""
