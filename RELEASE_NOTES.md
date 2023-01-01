@@ -1,12 +1,20 @@
 # PadoGrid Release Notes
 
-©2020-2023 Netcrest Technologies, LLC. All rights reserved.
+© 2020-2023 Netcrest Technologies, LLC. All rights reserved.
 
 https://github.com/padogrid
 
+## Version 0.9.25-SNAPSHOT
+
+### Release Date: 01/01/23
+
+- Initial snapshot.
+
+---
+
 ## Version 0.9.24-SNAPSHOT
 
-### Release Date: 12/31/22
+### Release Date: 01/01/23
 
 - Fixed `install_padogrid` to download the correct versions of ARM64 for Grafana and Prometheus. 
 - Fixed `install_padogrid -quiet -product` options to override product scanning with the cached product versions during the initial installation time.
