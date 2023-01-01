@@ -167,7 +167,7 @@ docker run -it --rm padogrid/padogrid /bin/bash
 podman run -it --rm padogrid/padogrid /bin/bash
 ```
 
-Beginning version 0.9.23, PadoGrid containers include JupyterLab. To start JupyterLab, start the container in the background as follows.
+Beginning version 0.9.22, PadoGrid containers include JupyterLab. To start JupyterLab, start the container in the background as follows.
 
 ```bash
 # docker
