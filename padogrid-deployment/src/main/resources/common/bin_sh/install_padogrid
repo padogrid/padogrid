@@ -78,7 +78,8 @@ DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazel
 EXECUTABLE="`basename $0`"
 
 # 
-# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid".
+# Determine the PadoGrid environment base path. Default is "$HOME/Padogrid". This maybe changed
+# by the user if installing it for the first time in the interactive mode.
 #
 if [ "$PADOGRID_WORKSPACES_HOME" != "" ]; then
    PADOGRID_ENV_BASE_PATH="$(dirname $(dirname $PADOGRID_WORKSPACES_HOME))"
@@ -2011,13 +2012,15 @@ fi
 if [ "$FILE_SPECIFIED" != "true" ] && [ "$SCAN_SPECIFIED" != "true" ] && [ "$DOWNLOAD_VERSIONS_FILE" == "" ]; then
    # Download the cached product versions
    if [ ! -d "$PADOGRID_DOWNLOADS_PATH" ]; then
-      mkdir -p "$PADOGRID_DOWNLOADS_PATH"
+      DOWNLOAD_VERSIONS_FILE="/tmp/padogrid_download_versions.sh"
+   else
+      DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
    fi
-   DOWNLOAD_VERSIONS_FILE="$PADOGRID_DOWNLOADS_PATH/padogrid_download_versions.sh"
    curl -sL -o "$DOWNLOAD_VERSIONS_FILE" "$DOWNLOAD_VERSIONS_URL"
 fi
 if [ "$FILE_SPECIFIED" != "true" ] && [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$DOWNLOAD_VERSIONS_FILE" ]; then
    . "$DOWNLOAD_VERSIONS_FILE"
+   rm "$DOWNLOAD_VERSIONS_FILE"
    PADOGRID_DOWNLOAD_VERSIONS=($PADOGRID_DOWNLOAD_VERSIONS)
    PADO_DOWNLOAD_VERSIONS=($PADO_DOWNLOAD_VERSIONS)
    PADODESKTOP_DOWNLOAD_VERSIONS=($PADODESKTOP_DOWNLOAD_VERSIONS)
@@ -2921,8 +2924,14 @@ elif [ "$FILE_SPECIFIED" != "true" ]; then
       done
 
    done
+
 fi
 
+# Set the padogrid paths again in case PADOGRID_ENV_BASE_PATH is changed interactively
+PADOGRID_DOWNLOADS_PATH="$PADOGRID_ENV_BASE_PATH/downloads"
+PADOGRID_PRODUCTS_PATH="$PADOGRID_ENV_BASE_PATH/products"
+PADOGRID_SNAPSHOTS_PATH="$PADOGRID_ENV_BASE_PATH/snapshots"
+PADOGRID_WORKSPACES_PATH="$PADOGRID_ENV_BASE_PATH/workspaces"
 
 if [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "false" ] && [ $INSTALL_COUNT -eq 0 ]; then
    echo ""

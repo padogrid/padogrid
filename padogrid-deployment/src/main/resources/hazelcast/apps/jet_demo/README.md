@@ -24,8 +24,9 @@ Upon successful build, you can submit any of the jar files in the `lib` director
 ```console
 cd_app jet_demo
 
-# Submit WordCountJob to localhost:5701  (-a to specify different member)
+# Submit WordCountJob to localhost:5701  (-t to specify different member and/or cluster)
 hz-cli submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
+hz-cli -t dev@localhost:5701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt
 ```
 
 ### Jet 4.1+
