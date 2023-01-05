@@ -40,7 +40,25 @@ PadoGrid natively integrates JupyterLab to bring the server-side tasks to the br
 
 PadoGrid automatically creates a JupyterLab dashboard for the current workspace. If you have JupyterLab installed, then try running `open_jupyter`.
 
-![Terminal:](images/terminal.png) `open_jupyter`
+<head>
+<style>
+  .container {
+    display: flex;
+    align-items: left;
+    justify-content: left
+  }
+</style>
+</head>
+
+<div class="container">
+    <div class="image">
+       <img src="images/terminal.png" alt="Terminal:" />
+    </div>
+    <div>
+    <pre>start_jupyter -dashboard &
+open_jupyter</pre>
+    </div>
+</div>
 
 ## Using PadoGrid
 
@@ -58,7 +76,18 @@ To get familiar with PadoGrid, try the PadoGrid tutorial bundle. It provides ste
 
 Upon installation, follow the instructions in the workspace's `README.md` file. Try the tutorial with JupyterLab.
 
-![Terminal:](images/terminal.png) `switch_workspace tutorial-padogrid && open_jupyter`
+<div class="container">
+    <div class="image">
+       <img src="images/terminal.png" alt="Terminal:" />
+    </div>
+    <div>
+    <pre>
+switch_workspace tutorial-padogrid
+start_jupyter -dashboard &
+open_jupyter
+</pre>
+    </div>
+</div>
 
 ## References
 
