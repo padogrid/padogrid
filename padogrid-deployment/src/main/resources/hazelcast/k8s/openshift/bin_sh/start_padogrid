@@ -3,6 +3,7 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 . $SCRIPT_DIR/.addonenv.sh
 
 EXECUTABLE="`basename $0`"
+PADOGRID_URL=http://padogrid-service-$APP_NAME.apps-crc.testing
 
 if [ "$1" == "-?" ]; then
 cat <<EOF
@@ -27,6 +28,24 @@ DESCRIPTION
 
       oc get storageclass
 
+   Once a PadoGrid pod is started, you can login to the pod using one of the following options.
+
+   To login to PadoGrid, use one of the following options.
+
+   - Browser
+       URL: $PADOGRID_URL
+       Password: padogrid
+
+   - Shell
+       ./login_padogrid_pod
+
+   Once logged in, use the 'perf_test' app to ingest data as follows.
+
+      switch_cluster myhz
+      create_app
+      cd_app perf_test/bin_sh
+      ./test_ingestion -run
+
 OPTIONS
    storage_class
              The specified storage class is used as the Storage Class for the 'paodgrid-pvc' Persistent
@@ -39,7 +58,7 @@ OPTIONS
              anyuid SCC as described in the 'README-crc.md' file.
 
 SEE ALSO
-   padogrid/padogrid.yaml, padogrid/padogrid-no-pvc.yaml
+   login_padogrid_pod(1), padogrid/padogrid.yaml, padogrid/padogrid-no-pvc.yaml
 
 EOF
 exit
@@ -69,3 +88,27 @@ if [ "$STORAGE_CLASS_NAME" == "" ]; then
 else
   oc process -p HAZELCAST_SERVICE=$HAZELCAST_SERVICE -f $APP_DIR/padogrid/padogrid.yaml -o yaml -p=STORAGE_CLASS_NAME=$STORAGE_CLASS_NAME | oc create -f -
 fi
+
+# Expose the PadoGrid service
+echo "Exposing PadoGrid JupyterLab service (route)..."
+oc expose svc/padogrid-service
+
+cat <<EOF
+
+To login to PadoGrid, use one of the following options.
+
+- Browser
+    URL: $PADOGRID_URL
+    Password: padogrid
+
+- Shell
+    ./login_padogrid_pod
+
+Once logged in, use the 'perf_test' app to ingest data as follows.
+
+   switch_cluster myhz
+   create_app
+   cd_app perf_test/bin_sh
+   ./test_ingestion -run
+
+EOF

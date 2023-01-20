@@ -122,7 +122,11 @@ if [ "$PORT_SPECIFIED" == "true" ] || [ "$ALL" == "true" ] || [ "$FULL" == "true
       tail -f $JUPYTER_LOG_FILE
    fi
 else
-   TMP_FILE=/tmp/$EXECUTABLE.jupyter-list.txt
+   # Trap Ctrl-C to remove temp files
+   LAST_TIMESTAMP_TRAP=0
+   POSTFIX=.jupyter-list-$(date "+%m%d%y%H%M%S")
+   trap 'cleanExit "$EXECUTABLE" "$POSTFIX" "true"' INT
+   TMP_FILE="/tmp/${EXECUTABLE}${POSTFIX}.txt"
    jupyter lab list &> $TMP_FILE
    echo ""
    cat $TMP_FILE
@@ -148,7 +152,7 @@ else
          fi
       done < $TMP_FILE
       unset IFS
-      rm $TMP_FILE
       echo ""
    fi
+   rm $TMP_FILE
 fi

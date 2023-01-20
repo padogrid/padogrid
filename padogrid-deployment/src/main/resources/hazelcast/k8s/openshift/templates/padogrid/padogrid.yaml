@@ -22,20 +22,25 @@ objects:
         storage: ${VOLUME_CAPACITY}
     storageClassName: ${STORAGE_CLASS_NAME}
 
-- apiVersion: v1
-  kind: DeploymentConfig
+- apiVersion: apps/v1
+  kind: Deployment
   metadata:
     name: ${APP_NAME}
+    labels:
+      app: padogrid
   spec:
     replicas: 1
     selector:
-      name: ${APP_NAME}
+      matchLabels:
+        app: padogrid
+        role: jupyterlab
     strategy:
       type: Recreate
     template:
       metadata:
         labels:
-          name: ${APP_NAME}
+          app: padogrid
+          role: jupyterlab
       spec:
         securityContext:
           runAsUser: 1001
@@ -44,6 +49,9 @@ objects:
         containers:
         - image: docker.io/padogrid/padogrid:latest
           name: padogrid
+          ports:
+          - name: jupyterlab
+            containerPort: 8888
           volumeMounts:
           - mountPath: /opt/padogrid/workspaces
             name: ${APP_NAME}-data
@@ -62,6 +70,21 @@ objects:
         - name: ${APP_NAME}-data
           persistentVolumeClaim:
             claimName: ${APP_NAME}-pvc
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${PADOGRID_SERVICE_NAME}
+  spec:
+    type: ClusterIP
+    clusterIP: None
+    selector:
+      app: padogrid
+      role: jupyterlab
+    ports:
+    - protocol: TCP
+      port: 8888
+
 parameters:
 - description: The application name
   displayName: Application Name
@@ -92,3 +115,8 @@ parameters:
   name: PADOGRID_HTTPS_ENABLED
   required: false
   value: "false"
+- description: PadoGrid service
+  displayName: PadoGrid service
+  name: PADOGRID_SERVICE_NAME
+  required: false
+  value: padogrid-service

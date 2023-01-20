@@ -236,18 +236,36 @@ cd_k8s $PROJECT; cd bin_sh
 
 ### 8.1. PadoGrid Container
 
-You can use the included PadoGrid container as a client to the Hazelcast cluster. 
+You can use the included PadoGrid container as a client to the Hazelcast cluster. There are two (2) ways to login to the PadoGrid container.
+
+#### 8.1.1. Browser
+
+The PadoGrid container is equipped with JupyterLab. From the browser, login to PadoGrid.
+
+- **URL:** <http://padogrid-service-myocp.apps-crc.testing>
+- **Password:** padogrid
+
+#### 8.1.2. Shell
+
+From your shell, run the `login_padogrid_pod` script as follows.
 
 ```bash
 cd_k8s $PROJECT; cd bin_sh
 ./login_padogrid_pod
 ```
 
-From inside the Padogrid pod, run the `perf_test` app as follows.
+Once logged in, from inside the Padogrid pod, run the `perf_test` app as follows.
 
 ```bash
+# First, change cluster context to the default cluster, 'myhz' so
+# that we can create and run Hazelcast apps.
+switch_cluster myhz
+
+# Create 'perf_test' app
 create_app
 cd_app perft_test; cd bin_sh
+
+# Ingest blob data into Hazelcast
 ./test_ingestion -run
 ```
 
