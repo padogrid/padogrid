@@ -1982,10 +1982,9 @@ function switch_workspace
    export PADO_HOME=""
 
    if [ "$1" == "" ]; then
-
       if [ "$PADOGRID_WORKSPACE" == "" ]; then
          echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Workspace undefined. Command aborted."
-         return 1
+         return
       elif [ ! -r "$PADOGRID_WORKSPACE" ]; then
          local __WORKSPACE="$(basename $PADOGRID_WORKSPACE)"
          echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$__WORKSPACE]. Permission denied. Command aborted."

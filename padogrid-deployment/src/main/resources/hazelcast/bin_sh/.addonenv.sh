@@ -342,12 +342,16 @@ __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/*:$BASE_DIR/lib/*"
 __VERSION_DIR=v${HAZELCAST_VERSION:0:1}
 __CLASSPATH="$__CLASSPATH:$BASE_DIR/plugins/$__VERSION_DIR/*:$BASE_DIR/lib/$__VERSION_DIR/*"
 
-# Exclude slf4j and log4j included in PadoGrid distribution
-for i in $PADOGRID_HOME/lib/*; do
-  if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
-     __CLASSPATH="$__CLASSPATH:$i"
-  fi
-done
+# Exclude slf4j and log4j included in PadoGrid distribution for Hazelcast 5+
+if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" != "" ] && [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+   for i in $PADOGRID_HOME/lib/*; do
+     if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
+        __CLASSPATH="$__CLASSPATH:$i"
+     fi
+   done
+else
+   __CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
+fi
 
 if [ "$HAZELCAST_VERSION" != "" ]; then
    if [ "$CLUSTER_TYPE" == "jet" ]; then

@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.25-SNAPSHOT
 
-### Release Date: 01/01/23
+### Release Date: 03/16/23
 
-- Initial snapshot.
+- Fixed Hazelast 3 and 4 scripts that incorrectly set CLASSPATH for excluding PadoGrid lib which includes log4j binaries. Without this fix, PadoGrid fails to start Hazelast 3/4 clusters.
 
 ---
 
