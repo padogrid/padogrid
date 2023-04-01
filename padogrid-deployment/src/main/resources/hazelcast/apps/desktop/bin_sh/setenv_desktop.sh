@@ -57,9 +57,9 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    HAZELCAST_CLIENT_CONFIG_FILE="$(cygpath -wp "$HAZELCAST_CLIENT_CONFIG_FILE")"
 fi
 
-# Set version to 4 if >=5
+# Set version to 5 if >=5
 if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
-   __MAJOR_VERSION_NUMBER=4
+   __MAJOR_VERSION_NUMBER=5
 else
    __MAJOR_VERSION_NUMBER=$HAZELCAST_MAJOR_VERSION_NUMBER
 fi
