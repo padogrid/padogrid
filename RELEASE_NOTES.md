@@ -11,7 +11,6 @@ https://github.com/padogrid
 - Fixed a version parsing bug in `install_bundle`. If a bundle name has more than 2 versions, then this bug prevented installing the bundle. A workaround is to use the `install_bundle -force` option.
 - Fixed Hazelast 3 and 4 scripts that incorrectly set CLASSPATH for excluding PadoGrid lib which includes log4j binaries. Without this fix, PadoGrid fails to start Hazelast 3/4 clusters.
 
-
 ---
 
 ## Version 0.9.24
