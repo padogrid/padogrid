@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Clean (remove) log files of all stopped members in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster <cluster-name] [-?]
+
+DESCRIPTION
+   Cleans the cluster environment by removing the log files of all the stopped members.
+   This command has no effect for the running members.
+
+   -cluster cluster_name
+             Cluster name.
+
+   -all
+             If specified, then removes all the generated files including metadata and
+             persistent stores. The end result is a fresh cluster at the initial state.
+             
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $DEFAULT_CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+POD=`getClusterProperty "pod.name" "local"`
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ] && [ "$POD" == "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
+   if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+      # If private hosts are reachable then execute from here.
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      __MEMBER_NUMBER=0
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/clean_cluster -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $@"
+      done
+   else
+      # If private hosts are not reachable then use a public host as a proxy to execute this command.
+      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+      VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+      if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+         echo -e "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+         echo "       Command aborted."
+         exit 1
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+         break;
+      done
+   fi
+   exit
+fi
+
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+MEMBER_NUMBER=1 
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+pushd $RUN_DIR > /dev/null 2>&1 
+for i in ${MEMBER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      MEMBER=$i
+      MEMBER_NUMBER=${MEMBER:$MEMBER_PREFIX_LEN}
+
+      NODE_LOCAL=${NODE_NAME_PREFIX}-${MEMBER_NUMBER}.local
+      MEMBER_DIR=$RUN_DIR/$MEMBER
+      PID=`getMemberPid $MEMBER_NUMBER $WORKSPACE`
+      if [ -z "$PID" ]; then
+         rm -f $LOG_DIR/${MEMBER}*.log > /dev/null 2>&1
+         if [ "$ALL" == "true" ]; then
+            rm -rf $RUN_DIR/${MEMBER}/* > /dev/null 2>&1
+         fi
+         echo "----------------------------------------------------------------"
+         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "       Member: $MEMBER"
+         echo -e "          PID: ${CLightRed}Down${CNone}"
+         echo "  Working Dir: $MEMBER_DIR"
+         echo "      Log Dir: $LOG_DIR"
+         echo "      Run Dir: $RUN_DIR"
+         echo "  Log Removed: $LOG_DIR/${MEMBER}*.log"
+         if [ "$ALL" == "true" ]; then
+         echo "  Run Removed: $RUN_DIR/${MEMBER}/*"
+	 fi
+         echo "----------------------------------------------------------------"
+      else
+         echo "----------------------------------------------------------------"
+         echo "    WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "       Member: $MEMBER"
+         echo -e "          PID: ${CLightGreen}$PID${CNone}"
+         echo "  Working Dir: $MEMBER_DIR"
+         echo "      Log Dir: $LOG_DIR"
+         echo "      Run Dir: $RUN_DIR"
+         echo "       Status: This member is running. Unable to remove the generated files. Command aborted."
+         echo "----------------------------------------------------------------"
+      fi
+   fi
+done
+popd > /dev/null 2>&1
+
+# Remove all logs of members that are not part of the member list.
+# Remove leading zero
+MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUMBER))
+while true; do
+   let MEMBER_NUM_NO_LEADING_ZERO=MEMBER_NUM_NO_LEADING_ZERO+1
+   if [ $MEMBER_NUM_NO_LEADING_ZERO -ge 10 ]; then
+      MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+   else
+      MEMBER_NUMBER=0$MEMBER_NUM_NO_LEADING_ZERO
+   fi
+   MEMBER=${MEMBER_PREFIX}${MEMBER_NUMBER}
+   IS_CONTINUE=false
+   for file in "$LOG_DIR"/${MEMBER}*; do
+      if [[ "$file" == *.log ]]; then
+         IS_CONTINUE=true
+      else
+         IS_CONTINUE=false
+      fi
+      break
+   done
+   if [ "${IS_CONTINUE}" == "true" ]; then
+      rm -f $LOG_DIR/${MEMBER}*.log > /dev/null 2>&1
+      if [ "$ALL" == "true" ]; then
+         rm -rf $RUN_DIR/${MEMBER}/* > /dev/null 2>&1
+      fi
+   else
+      break
+   fi
+done

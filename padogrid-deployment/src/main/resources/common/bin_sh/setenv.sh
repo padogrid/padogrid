@@ -81,6 +81,7 @@ DEFAULT_HAZELCAST_CLUSTER="myhz"
 DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_KAFKA_CLUSTER="mykafka"
 DEFAULT_CONFLUENT_CLUSTER="myconfluent"
+DEFAULT_MOSQUITTO_CLUSTER="mymosquitto"
 DEFAULT_NONE_CLUSTER="mynone"
 DEFAULT_PADO_CLUSTER="mypado"
 DEFAULT_PADOLITE_CLUSTER="mypadolite"
@@ -344,7 +345,7 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
 
 # Downloadable products
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby mosquitto"
 
 # Supported Bundle Products
 BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka confluent none redis snappydata spark"
@@ -356,7 +357,7 @@ DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
 K8S_PRODUCT_LIST="geode hazelcast jet"
 
 # Supported App Products (all cluster products)
-APP_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka redis snappydata spark"
+APP_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka mosquitto redis snappydata spark"
 
 # Common Apps for all products
 COMMON_APP_LIST="derby"

@@ -163,9 +163,9 @@ __padogrid_complete()
              product_name="${COMP_WORDS[$index+1]}"
          fi
          if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
-            prodcut_name=$product_name 
+            product_name=$product_name 
          else
-            prodcut_name=$PRODUCT
+            product_name=$PRODUCT
          fi
          type_list=$(getClusterPortOptions $product_name)
 
@@ -1166,9 +1166,9 @@ __command_complete()
              product_name="${COMP_WORDS[$index+1]}"
          fi
          if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
-            prodcut_name=$product_name 
+            product_name=$product_name 
          else
-            prodcut_name=$PRODUCT
+            product_name=$PRODUCT
          fi
          type_list=$(getClusterPortOptions $product_name)
 

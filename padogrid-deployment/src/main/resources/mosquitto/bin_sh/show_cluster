@@ -1,0 +1,568 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -short -long -all -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the status of the specified cluster in the current
+                 padogrid workspace
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-short | -long] [-all] [-?]
+
+DESCRIPTION
+   Displays cluster status.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+   -short
+             Displays running status only.
+
+   -long
+             Displays detailed information.
+
+   -all
+             Displays all clusters
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+RWE_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
+WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+SWITCH_CLUSTER_COMMAND="switch_rwe $RWE_NAME $WORKSPACE_NAME; switch_cluster $CLUSTER"
+
+# Displays short status of a VM cluster.
+# @required VM_HOSTS         A space separated list of VM member hosts (addresses)
+function displayVmClusterShort()
+{
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv $NODE`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+    . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
+   # Members
+   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   for VM_HOST in ${VM_HOSTS}; do
+      let MEMBER_COUNT=MEMBER_COUNT+1
+      MEMBER=`getVmMemberName $VM_HOST`
+      # start port number is the port number for vm
+      MEMBER_PORT=$MEMBER_START_PORT
+      pid=`getVmMosquittoMemberPid $VM_HOST $MEMBER_PORT`
+      if [ "$pid" != "" ]; then
+          let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+      fi
+   done
+   
+   echo "         CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "      Deployment: VM"
+   fi
+   if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   if [ "$SHORT" == "false" ]; then
+   echo "         Version: $MOSQUITTO_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
+} # displayVmClusterShort
+
+# Displays long status of a VM cluster.
+function displayVmClusterLong()
+{
+   MOSQUITTO_CONFIG_FILE=$ETC_DIR/mosquitto.conf
+   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
+   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv $NODE`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+    . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   pushd $RUN_DIR > /dev/null 2>&1
+   MEMBER_PREFIX=`getMemberPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+
+   echo "----------------------------------------------------------------"
+   if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
+      echo "         CLUSTER: $CLUSTER (default)"
+   else
+      echo "         CLUSTER: $CLUSTER"
+   fi
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
+   echo "      Deployment: VM"
+   echo ""
+
+
+   # Members
+
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   DOWN_MEMBER_COUNT=0
+   for VM_HOST in ${VM_HOSTS}; do
+      MEMBER=`getVmMemberName $VM_HOST`
+      let MEMBER_COUNT=MEMBER_COUNT+1
+      MEMBER_DIR=$RUN_DIR/$MEMBER
+
+      # start port number is the port number for vm
+      MEMBER_PORT=$MEMBER_START_PORT
+      LOG_FILE=$LOG_DIR/${MEMBER}.log
+      
+      if [ $MEMBER_COUNT -lt 10 ]; then
+         NUM="0"$MEMBER_COUNT
+      else
+         NUM=$MEMBER_COUNT
+      fi
+      echo "$NUM        Member: $MEMBER"
+
+      pid=`getVmMosquittoMemberPid $VM_HOST $MEMBER_PORT`
+      if [ -z $pid ]; then
+         let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
+         echo -e "           STATE: ${CLightRed}Down${CNone}"
+         echo "             PID: N/A"
+      else
+         let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+         echo -e "           STATE: ${CLightGreen}Running${CNone}"
+         echo "             PID: $pid"
+      fi
+
+      echo "     MEMBER_PORT: $MEMBER_PORT"
+      echo "     Working Dir: $MEMBER_DIR"
+      echo "        LOG_FILE: $LOG_FILE"
+      echo ""
+   done
+
+   echo "         CLUSTER: $CLUSTER"
+   if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   echo "         Version: $MOSQUITTO_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+} # displayVmClusterLong
+
+# Displays short status of a local/pod cluster.
+function displayClusterShort()
+{
+   __HOSTNAME=`hostname`
+   OS_ENV=`getOsEnv $__HOSTNAME`
+   NODE=`getOsNodeName`
+   POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
+   __NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
+   MEMBER_PREFIX=`getMemberPrefix`
+   MEMBER_COUNT=`getMemberCount`
+   MEMBER_START_PORT=`getClusterProperty "tcp.startRPort" $DEFAULT_MEMBER_START_PORT`
+
+   RUNNING_MEMBER_COUNT=-1
+   if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
+      ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
+      ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
+      pushd $RUN_DIR > /dev/null 2>&1
+      RUNNING_MEMBER_COUNT=0
+      if [ "$OS_ENV" == "gg" ] && [ "$POD" != "local" ]; then
+         REMOTE_SPECIFIED=false
+      else
+         REMOTE_SPECIFIED=true
+      fi
+      # Members
+      PIDS=""
+      for i in ${MEMBER_PREFIX}*; do
+         if [ -d "$i" ]; then
+            MEMBER=$i
+            MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
+            MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+            if [ "$OS_ENV" == "hh" ]; then
+               NODE_LOCAL=`getOsNodeName`
+            else
+               NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
+               NODE_LOCAL=`getOsNodeName $NODE`
+            fi
+            pid=`getMosquittoMemberPid $MEMBER_NUM`
+            if [ "$pid" != "" ]; then
+               # PIDS is used to remove duplicate PIDs. Duplicates
+               # may occur when there is an error that is not
+               # properly handled by the function.
+               if [[ "$PIDS" != *"$pid"* ]]; then
+                  let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+                  PIDS="$PIDS $pid"
+               fi
+            fi
+         fi
+      done
+      popd > /dev/null 2>&1
+   fi
+   echo "         CLUSTER: $CLUSTER"
+   if [ "$SHORT" == "false" ]; then
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "             POD: $POD"
+   echo "        POD_TYPE: $POD_TYPE"
+   fi
+   if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
+   echo -e " Members Running: ${CYellow}Unknown${CNone}"
+   elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   if [ "$SHORT" == "false" ]; then
+   echo "         Version: $MOSQUITTO_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   fi
+} # dispalyClusterShort
+
+# Displays long status of a local/pod cluster.
+function displayClusterLong()
+{
+   MOSQUITTO_CONFIG_FILE=$ETC_DIR/mosquitto.conf
+   POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
+   __NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" $NODE_NAME_PRIMARY`
+   NODE_NAME_PREFIX=$NODE_NAME_PRIMARY
+   NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
+   NODE=`getOsNodeName`
+   MEMBER_START_PORT=`getClusterProperty "tcp.startRPort" $DEFAULT_MEMBER_START_PORT`
+   MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
+   MEMBER_HTTP_START_PORT=`getClusterProperty "http.startRPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+   HOST_NAME=`hostname`
+   HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" $HOST_NAME`
+
+   OS_ENV=`getOsEnv $NODE`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   pushd $RUN_DIR > /dev/null 2>&1
+   MEMBER_PREFIX=`getMemberPrefix`
+   pushd $RUN_DIR > /dev/null 2>&1
+
+   echo "----------------------------------------------------------------"
+   if [ $CLUSTER == $DEFAULT_CLUSTER ]; then
+      echo "         CLUSTER: $CLUSTER (default)"
+   else
+      echo "         CLUSTER: $CLUSTER"
+   fi
+   echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   echo "         PRODUCT: $PRODUCT"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "             POD: $POD"
+   echo "        POD_TYPE: $POD_TYPE"
+   echo ""
+
+   #
+   # Members
+   #
+   MEMBER_COUNT=0
+   RUNNING_MEMBER_COUNT=0
+   DOWN_MEMBER_COUNT=0
+   PIDS=""
+   for i in ${MEMBER_PREFIX}*; do
+      if [ -d "$i" ]; then
+         let MEMBER_COUNT=MEMBER_COUNT+1
+         pushd $i > /dev/null 2>&1
+         MEMBER=$i
+         MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
+         MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+         MEMBER_DIR=$RUN_DIR/$MEMBER
+         if [ "$OS_ENV" == "hh" ]; then
+            NODE=`getOsNodeName`
+         else
+            NODE=${NODE_NAME_PREFIX}-$MEMBER_NUM
+            NODE=`getOsNodeName $NODE`
+         fi
+         if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
+            ( [ "$OS_ENV" == "gg" ] );  then
+            # Same port number for guest OS
+            MEMBER_PORT=$MEMBER_START_PORT
+         else
+            # Increment port numbers for host OS
+            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+         fi
+         LOG_FILE=$LOG_DIR/${MEMBER}.log
+         echo "$MEMBER_NUM        Member: $MEMBER"
+         if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
+            ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
+            NODE_LOCAL=$NODE
+            if [ "$OS_ENV" == "gg" ] && [ "$POD" != "local" ]; then
+               REMOTE_SPECIFIED=false
+            else
+               REMOTE_SPECIFIED=true
+            fi
+            pid=`getMosquittoMemberPid $MEMBER_NUM`
+            if [ "$pid" != "" ]; then
+               # PIDS is used to remove duplicate PIDs. Duplicates
+               # may occur when there is an error that is not
+               # properly handled by the function.
+               if [[ "$PIDS" == *"$pid"* ]]; then
+                  pid=""
+               else
+                  PIDS="$PIDS $pid"
+               fi
+            fi
+            if [ -z $pid ]; then
+               let DOWN_MEMBER_COUNT=DOWN_MEMBER_COUNT+1
+               echo -e "           STATE: ${CLightRed}Down${CNone}"
+               echo "             PID: N/A"
+            else
+               let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
+               echo -e "           STATE: ${CLightGreen}Running${CNone}"
+               echo "             PID: $pid"
+            fi
+         else
+            echo "           STATE: Unknown"
+            echo "             PID: Unknown"
+            RUNNING_MEMBER_COUNT=-1
+            DOWN_MEMBER_COUNT=-1
+         fi
+         echo "     MEMBER_PORT: $MEMBER_PORT"
+         echo "     Working Dir: $MEMBER_DIR"
+         echo "        LOG_FILE: $LOG_FILE"
+         echo ""
+         popd > /dev/null 2>&1
+      fi
+   done
+   popd > /dev/null 2>&1
+
+   # Summary
+   echo "         CLUSTER: $CLUSTER"
+   echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   if [ $RUNNING_MEMBER_COUNT -lt 0 ]; then
+   echo -e " Members Running: ${CYellow}Unknown${CNone}"
+   elif [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
+   echo -e " Members Running: ${CLightGreen}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   else
+   echo -e " Members Running: ${CLightRed}$RUNNING_MEMBER_COUNT/$MEMBER_COUNT${CNone}"
+   fi
+   echo "         Version: $MOSQUITTO_VERSION"
+   echo "  Switch Cluster: $SWITCH_CLUSTER_COMMAND"
+   echo "----------------------------------------------------------------"
+} # displayClusterLong
+
+POD=`getClusterProperty "pod.name" "local"`
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+
+   # Display single VM cluster status
+
+   if [ ! -d $CLUSTER_DIR ]; then
+      echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+      exit 1
+   fi
+
+   VM_HOSTS=$(getClusterProperty "vm.hosts")
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
+      echo "       ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "              $ETC_DIR/cluster.properties"
+      echo "              Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
+   if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+      # If private hosts are reachable then execute from here.
+
+      # Replace , with space
+      VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      if [ "$LONG" == "false" ]; then
+         # Short display (single)
+         displayVmClusterShort
+      else
+         # Long display (single)
+         displayVmClusterLong
+      fi
+   else
+      # If private hosts are not reachable then use a public host as a proxy to execute this command.
+      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+      VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+      if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+         echo -e "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+         echo "       Command aborted."
+         exit 1
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+         break;
+      done
+   fi
+   exit
+fi
+
+#
+# Local cluster
+#
+if [ "$ALL" == "true" ]; then
+
+   # Display all clusters
+
+   pushd $CLUSTERS_DIR > /dev/null 2>&1
+   CLUSTERS=""
+   COUNT=0
+   for i in *; do
+      if [ -d "$i" ]; then
+         let COUNT=COUNT+1
+         if [ $COUNT -eq 1 ]; then
+            CLUSTERS="$i"
+         else
+            CLUSTERS="$CLUSTERS $i"
+         fi
+      fi
+   done
+   popd > /dev/null 2>&1
+
+   if [ "$CLUSTERS" == "" ]; then
+      echo "No clusters found. To create one, execute the 'create_cluster' command."
+      exit 0
+   fi
+
+   echo "----------------------------------------------------------------"
+   echo "Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
+   echo ""
+
+   THIS_PRODUCT=$PRODUCT
+   if [ "$LONG" == "false" ]; then 
+      # Short display -all
+      for CLUSTER in ${CLUSTERS}; do
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterShort
+         else
+           if [ "$SHORT" == "true" ]; then
+              SHORT_OPT="-short"
+           else
+              SHORT_OPT=""
+           fi
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -cluster $CLUSTER $SHORT_OPT
+         fi
+         echo ""
+      done
+   else
+      # Long display -all
+      for CLUSTER in ${CLUSTERS}; do
+         determineClusterProduct $CLUSTER
+         if [ "$THIS_PRODUCT" == $PRODUCT ]; then
+            displayClusterLong
+         else
+            $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER -long -cluster $CLUSTER
+         fi
+         echo ""
+      done
+   fi
+
+   echo "----------------------------------------------------------------"
+   popd > /dev/null 2>&1
+   echo "Clusters: $CLUSTERS"
+   echo "----------------------------------------------------------------"
+
+else
+
+   # Display single cluster status
+
+   if [ ! -d $CLUSTER_DIR ]; then
+      echo "ERROR: The specified cluster does not exist: [$CLUSTER]. Command aborted."
+      exit 1
+   fi
+
+   if [ "$LONG" == "false" ]; then
+      # Short display (single)
+      displayClusterShort
+   else
+      # Long display (single)
+      displayClusterLong
+   fi
+fi

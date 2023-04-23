@@ -631,6 +631,10 @@ function getAppOptions
       echo "derby grafana padodesktop perf_test"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "derby perf_test"
+   elif [ "$__PRODUCT" == "mosquitto" ]; then
+      echo "derby perf_test"
+   elif [ "$__PRODUCT" == "kafka" ]; then
+      echo "derby perf_test"
    elif [ "$__PRODUCT" == "redis" ]; then
       echo "derby perf_test"
    else
@@ -658,10 +662,14 @@ function getClusterPortOptions
       __DEFAULT_PORT="$DEFAULT_HAZELCAST_START_PORT";;
    kafka|confluent)
       __DEFAULT_PORT="$DEFAULT_KAFKA_START_PORT";;
+   mosquitto)
+      __DEFAULT_PORT="$DEFAULT_MOSQUITTO_START_PORT";;
    redis)
       __DEFAULT_PORT="$DEFAULT_REDIS_START_PORT";;
    spark)
       __DEFAULT_PORT="$DEFAULT_SPARK_START_PORT";;
+   mosquitto)
+      __DEFAULT_PORT="$DEFAULT_MOSQUITTO_START_PORT";;
     *)
       __DEFAULT_PORT=""
    esac
@@ -1692,6 +1700,9 @@ function retrieveClusterEnvFile
       elif [ -f "$CLUSTER_DIR/etc/tangosol-coherence-override.xml" ]; then
          PRODUCT="coherence"
          CLUSTER_TYPE=$PRODUCT
+      elif [ -f "$CLUSTER_DIR/etc/template-mosquitto.conf" ]; then
+         PRODUCT="mosquitto"
+         CLUSTER_TYPE=$PRODUCT
       elif [ -f "$CLUSTER_DIR/etc/redis.conf" ]; then
          PRODUCT="redis"
          CLUSTER_TYPE=$PRODUCT
@@ -1706,6 +1717,9 @@ function retrieveClusterEnvFile
       elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then
          PRODUCT="hadoop"
          CLUSTER_TYPE="pseudo"
+      elif [ -f "$CLUSTER_DIR/etc/mosquitto.conf" ]; then
+         PRODUCT="mosquitto"
+         CLUSTER_TYPE=$PRODUCT
       else
          PRODUCT="none"
          CLUSTER_TYPE="none"
@@ -2339,9 +2353,6 @@ function __switch_cluster
       elif [ "$PRODUCT" == "jet" ]; then
          export PRODUCT_HOME=$JET_HOME
          __PRODUCT="hazelcast"
-      elif [ "$PRODUCT" == "redis" ]; then
-         export PRODUCT_HOME=$REDIS_HOME
-         __PRODUCT="snappydata"
       elif [ "$PRODUCT" == "snappydata" ]; then
          export PRODUCT_HOME=$SNAPPYDATA_HOME
          __PRODUCT="snappydata"
@@ -2351,6 +2362,9 @@ function __switch_cluster
       elif [ "$PRODUCT" == "coherence" ]; then
          export PRODUCT_HOME=$COHERENCE_HOME
          __PRODUCT="coherence"
+      elif [ "$PRODUCT" == "mosquitto" ]; then
+         export PRODUCT_HOME=$MOSQUITTO_HOME
+         __PRODUCT="mosquitto"
       elif [ "$PRODUCT" == "redis" ]; then
          export PRODUCT_HOME=$REDIS_HOME
          __PRODUCT="redis"
@@ -2364,6 +2378,9 @@ function __switch_cluster
       elif [ "$PRODUCT" == "hadoop" ]; then
          export PRODUCT_HOME=$HADOOP_HOME
          __PRODUCT="hadoop"
+      elif [ "$PRODUCT" == "mosquitto" ]; then
+         export PRODUCT_HOME=$MOSQUITTO_HOME
+         __PRODUCT="mosquitto"
       fi
       local NEW_PRODUCT=$PRODUCT
       local NEW_PRODUCT_HOME=$PRODUCT_HOME
@@ -3746,6 +3763,7 @@ function sortVersionList
 #    JET_OSS_VERSIONS
 #    JET_MANAGEMENT_CENTER_VERSIONS
 #    KAFKA_VERSIONS
+#    MOSQUITTO_VERSIONS
 #    PROMETHEUS_VERSIONS
 #    REDIS_VERSIONS
 #    SNAPPYDATA_VERSIONS
@@ -3795,6 +3813,7 @@ function determineInstalledProductVersions
    JET_MANAGEMENT_CENTER_VERSIONS=""
    KAFKA_VERSIONS=""
    CONFLUENT_VERSIONS=""
+   MOSQUITTO_VERSIONS=""
    PROMETHEUS_VERSIONS=""
    REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
@@ -4018,6 +4037,16 @@ function determineInstalledProductVersions
          done
          KAFKA_VERSIONS=$(sortVersionList "$__versions")
       fi
+      
+      # Mosquitto
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "mosquitto" ]; then
+         __versions=""
+         for i in mosquitto-*; do
+            __version=${i#mosquitto-}
+            __versions="$__versions $__version "
+         done
+         MOSQUITTO_VERSIONS=$(sortVersionList "$__versions")
+      fi
 
       # Prometheus
       if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "prometheus" ]; then
@@ -4069,7 +4098,7 @@ function determineInstalledProductVersions
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, redis, hadoop, kafka, spark
+#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, mosquitto, redis, hadoop, kafka, spark
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
@@ -4082,6 +4111,7 @@ function determineInstalledProductVersions
 #   GEMFIRE_HOME    Set to PRODUCT_HOME if PRODUCT is geode and CLUSTER_TYPE is gemfire.
 #   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is imdg.
 #   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is jet.
+#   MOSQUITTO_HOME  Set to PRODUCT_HOME if PRODUCT is mosquitto.
 #   REDIS_HOME      Set to PRODUCT_HOME if PRODUCT is redis.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
 #   SPARK_HOME      Set to PRODUCT_HOME if PRODUCT is spark.
@@ -4148,6 +4178,11 @@ function determineProduct
          fi
       fi
       KAFKA_HOME="$PRODUCT_HOME"
+   elif [[ "$PRODUCT_HOME" == *"mosquitto"* ]]; then
+      PRODUCT="mosquitto"
+      MOSQUITTO_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="mosquitto"
+      CLUSTER=$DEFAULT_MOSQUITTO_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"redis"* ]]; then
       PRODUCT="redis"
       REDIS_HOME="$PRODUCT_HOME"
@@ -4193,6 +4228,7 @@ function determineProduct
 # __JET_MC_VERSION
 # __KAFKA_VERSION
 # __CONFLUENT_VERSION
+# __MOSQUITTO_VERSION
 # __PROMETHEUS_VERSION
 # __REDIS_VERSION
 # __SNAPPYDATA_VERSION
@@ -4245,6 +4281,7 @@ function getCurrentProductVersions
    fi
    __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
    __CONFLUENT_VERSION=${CONFLUENT_HOME#*confluent-}
+   __MOSQUITTO_VERSION=${MOSQUITTO_HOME#*mosquitto-}
    __PROMETHEUS_VERSION=${PROMETHEUS_HOME#*prometheus-}
    __REDIS_VERSION=${REDIS_HOME#*redis-}
    __SNAPPYDATA_VERSION=${SNAPPYDATA_HOME#*snappydata-}
@@ -4276,6 +4313,7 @@ function getCurrentProductVersion
     hazelcast-desktop ) echo $__HAZELCAST_DESKTOP_VERSION;;
     jet-enterprise ) echo $__JET_ENTERPRISE_VERSION;;
     jet-oss ) echo $__JET_OSS_VERSION;;
+    mosquitto ) echo $__MOSQUITTO_VERSION;;
     redis ) echo $__REDIS_VERSION;;
     snappydata ) echo $__SNAPPYDATA_VERSION;;
     spark ) echo $__SPARK_VERSION;;
@@ -4319,6 +4357,7 @@ function getInstalledProductVersions
     hazelcast-desktop ) VERSIONS=("${HAZELCAST_DESKTOP_VERSIONS[@]}");;
     jet-enterprise ) VERSIONS=("${JET_ENTERPRISE_VERSIONS[@]}");;
     jet-oss ) VERSIONS=("${JET_OSS_VERSIONS[@]}");;
+    mosquitto ) VERSIONS=("${MOSQUITTO_VERSIONS[@]}");;
     redis-oss ) VERSIONS=("${REDIS_VERSIONS[@]}");;
     snappydata ) VERSIONS=("${SNAPPYDATA_VERSIONS[@]}");;
     spark ) VERSIONS=("${SPARK_VERSIONS[@]}");;
@@ -4337,7 +4376,7 @@ function getInstalledProductVersions
 #
 # Determines the product by examining cluster files. The following environment variables
 # are set after invoking this function.
-#   PRODUCT         geode, hazelcast, snappydata, coherence, redis, spark, hadoop
+#   PRODUCT         geode, hazelcast, snappydata, coherence, mosquitto, redis, spark, hadoop
 #   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
 #                   set to standalone if PRODUCT is spark,
 #                   set to PRODUCT for all others.
@@ -4391,6 +4430,11 @@ function getInstalledProducts
   if [ "$JET_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS jet"
   fi
+  if [ "$MOSQUITTO_HOME" != "" ]; then
+     PRODUCTS="$PRODUCTS mosquitto"
+  elif [ "$(which mosquitto 2> /dev/null)" != "" ]; then
+     PRODUCTS="$PRODUCTS mosquitto"
+  fi
   if [ "$REDIS_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS redis"
   fi
@@ -4402,9 +4446,6 @@ function getInstalledProducts
   fi
   if [ "$COHERENCE_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS coherence"
-  fi
-  if [ "$REDIS_HOME" != "" ]; then
-     PRODUCTS="$PRODUCTS redis"
   fi
   if [ "$KAFKA_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS kafka"
@@ -4426,7 +4467,7 @@ function getInstalledProducts
 # .coherenceenv.sh, or .sparkenv.sh in the specified RWE directory if it does not exist.
 #
 # @optional PADOGRID_WORKSPACES_HOME
-# @param productName      Valid value are 'geode', 'hazelcast', 'snappydata', 'coherence', 'redis', 'spark', 'hadoop'.
+# @param productName      Valid value are 'geode', 'hazelcast', 'snappydata', 'coherence', 'mosquitto', 'redis', 'spark', 'hadoop'.
 # @param workspacesHome   RWE directory path. If not specified then it creates .geodeenv.sh, 
 #                         .hazelcastenv.sh, .snappydataenv.sh, .coherenceenv.sh, or .sparkenv.sh in
 #                         PADOGRID_WORKSPACES_HOME.
@@ -4478,6 +4519,13 @@ function createProductEnvFile
          echo "# Enter Coherence product specific environment variables and initialization" >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.coherenceenv.sh
          echo "#" >> $WORKSPACES_HOME/.coherenceenv.sh
+      fi
+   elif [ "$PRODUCT_NAME" == "mosquitto" ]; then
+      if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.mosquittoenv.sh ]; then
+         echo "#" > $WORKSPACES_HOME/.mosquittoenv.sh
+         echo "# Enter Mosquitto product specific environment variables and initialization" >> $WORKSPACES_HOME/.mosquittoenv.sh
+         echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.mosquittoenv.sh
+         echo "#" >> $WORKSPACES_HOME/.mosquittoenv.sh
       fi
    elif [ "$PRODUCT_NAME" == "redis" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.redisenv.sh ]; then
@@ -4550,7 +4598,7 @@ function getOptValue
 
 #
 # Returns the default start port number of the specified product.
-# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, redis, spark, kafka.
+# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, mosquitto, redis, spark, kafka.
 #
 function getDefaultStartPortNumber
 {
@@ -4563,6 +4611,8 @@ function getDefaultStartPortNumber
       echo "10334"
    elif [ "$__PRODUCT" == "coherence" ]; then
       echo "9000"
+   elif [ "$__PRODUCT" == "mosquitto" ]; then
+      echo "1883"
    elif [ "$__PRODUCT" == "redis" ]; then
       echo "6379"
    elif [ "$__PRODUCT" == "spark" ]; then
@@ -4742,6 +4792,8 @@ function getProductName
       __PRODUCT="hazelcast-mc"
    elif [[ "$__PRODUCT_DIR" == **"hazelcast"** ]]; then
       __PRODUCT="hazelcast"
+   elif [[ "$__PRODUCT_DIR" == **"mosquitto"** ]]; then
+      __PRODUCT="mosquitto"
    elif [[ "$__PRODUCT_DIR" == **"redis"** ]]; then
       __PRODUCT="redis"
    elif [[ "$__PRODUCT_DIR" == **"snappydata"** ]]; then
@@ -4915,6 +4967,7 @@ function getDownloadableProductVersions
          padoeclipse ) echo "$PADOECLIPSE_DOWNLOAD_VERSIONS" ;;
          padogrid ) echo "$PADOGRID_DOWNLOAD_VERSIONS" ;;
          padoweb ) echo "$PADOWEB_DOWNLOAD_VERSIONS" ;;
+         mosquitto ) echo "$MOSQUITTO_DOWNLOAD_VERSIONS" ;;
          prometheus ) echo "$PROMETHEUS_DOWNLOAD_VERSIONS" ;;
          redis-oss ) echo "$REDIS_DOWNLOAD_VERSIONS" ;;
          snappydata ) echo "$SNAPPYDATA_DOWNLOAD_VERSIONS" ;;

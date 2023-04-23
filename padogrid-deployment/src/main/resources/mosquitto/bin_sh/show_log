@@ -1,0 +1,256 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+  
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -num -all -full -log -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Display the log file of the specified member in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster <cluster-name>] [-num <member-number>]
+               [-all | -full] [-log [data|gc]] [-?]
+
+DESCRIPTION
+   Displays the specified member's log file. By default, follows the tail
+   part of the log, equivalent to 'tail -f'. To view the full log, specify
+   the '-full' option, which is equivalent to 'less'.
+
+   For VM clusters, the member number reflects the host in the order it is
+   defined by the cluster property, 'vm.hosts', in the 'etc/cluster.properties' file.
+   (Run 'show_cluster -long' to see the VM member numbers that map to hosts.)
+
+   -cluster cluster_name
+             Cluster name.
+
+   -num member_number
+              Member number 1-99
+
+   -all       
+              Display all log files. This option is applicable to local clusters only.
+              The '-num' option overrides this this option.
+
+   -full
+              Display the entire log file using 'less'
+
+   -log [data|gc]
+              Display data or GC log file. Default: data
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER -num $MEMBER_NUM -log data
+
+FILES
+   $CLUSTER_DIR/etc/cluster.properties
+             The current cluster configuration file.
+
+   $LOG_DIR
+             The current cluster log directory. 
+
+EOF
+fi
+   exit
+fi
+
+if [ "$ALL" == "true" ] && [ "$FULL" == "true" ]; then 
+   echo >&2 -e "${CLightRed}ERROR:${CNone} '-all' and '-full' cannot be specified together. Command aborted ."
+   exit 1
+fi
+# -num overrides -all
+if [ "$MEMBER_NUM_SPECIFIED" == "true" ]; then
+   ALL="false"
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+POD=`getClusterProperty "pod.name" "local"`
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+
+   # If pod cluster, then source in the pod env vars to set the VM specific variables
+   OS_ENV=`getOsEnv`
+   if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+      if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+         . "$PODS_DIR/$POD/.nodeenv.sh"
+      fi
+   fi
+
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
+   if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+      # If private hosts are reachable then execute from here.
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      __MEMBER_NUMBER=0
+      VM_HOST=""
+      for __VM_HOST in $__VM_HOSTS; do
+         let __MEMBER_NUMBER=__MEMBER_NUMBER+1
+         if [ $__MEMBER_NUMBER -eq $MEMBER_NUM ]; then
+            VM_HOST=$__VM_HOST
+            break;
+         fi
+      done
+      if [ "$VM_HOST" == "" ]; then
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "ERROR: Invalid member number [$MEMBER_NUM]. Command aborted."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+
+      if [ "$ALL" == "true" ]; then
+         COMMAND_TAIL=""
+      elif [ "$POD" != "local" ]; then
+         COMMAND_TAIL="-num $MEMBER_NUM"
+      else
+         COMMAND_TAIL="-num 1"
+      fi
+      ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/show_log -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE $@ $COMMAND_TAIL"
+   else
+      # If private hosts are not reachable then use a public host as a proxy to execute this command.
+      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+      VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+      if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+         echo -e "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+         echo "       Command aborted."
+         exit 1
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+         break;
+      done
+   fi
+   exit
+fi
+
+#
+# Local cluster
+#
+
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER=`getMemberName $MEMBER_NUMBER`
+MEMBER_DIR=$RUN_DIR/$MEMBER
+
+if  [ ! -d $CLUSTER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "   Status: This cluster has not been created. Please run the create_cluster command to"
+   echo "           to create the cluster before running this command."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ ! -d $MEMBER_DIR ]; then
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "  Cluster: $CLUSTER"
+   echo "----------------------------------------------------------------"
+   exit 1
+fi
+
+case "$LOG" in 
+gc)
+   if [ "$ALL" == "true" ]; then
+      LOG_FILE=$LOG_DIR/${MEMBER_PREFIX}??-gc.log
+   else
+      LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
+   fi
+   ;;
+
+*)
+   if [ "$ALL" == "true" ]; then
+      LOG_FILE=$LOG_DIR/${MEMBER_PREFIX}??.log
+   else
+      LOG_FILE=$LOG_DIR/${MEMBER}.log
+   fi
+   ;;
+
+esac
+
+echo ""
+echo -e "Showing log: ${CLightGreen}$LOG_FILE${CNone}"
+echo ""
+if [ "$ALL" == "true" ]; then
+   eval "tail -f $LOG_FILE"
+elif [ "$LOG_FILE" != "" ] && [ -f "$LOG_FILE" ]; then
+   if [ "$FULL" == "true" ]; then 
+      less $LOG_FILE
+   else
+      tail -f $LOG_FILE
+   fi
+else
+   echo "----------------------------------------------------------------"
+   echo "WORKSPACE: $PADOGRID_WORKSPACE"
+   echo "    ERROR: Log file does not exist. Command aborted."
+   echo "----------------------------------------------------------------"
+   exit 1
+fi

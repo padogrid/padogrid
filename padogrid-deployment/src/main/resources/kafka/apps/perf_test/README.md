@@ -38,6 +38,12 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 | `build_app` | pom.xml | Downloads the required libraries by running Maven. **You must first run the `build_app` script before you can run other scripts.** If you are behind a firewall then you can manually download `kafka-clients-<version>.jar` from the following MVNRepository and place it in the workspace `lib` directory: https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients |
 | `test_group` | etc/group.properties | Displays or runs group test cases (`send`, `sendbatch`, `sleep`). A group represents a function that executes one or more Kafka client operations. |
 
+✏️  The `perf_test` app uses Avro classes and requires Schema Registry. If you have configured the cluster with Confluent in PadoGrid, then you can start the registry as follows.
+
+```bash
+schema-registry-start $CONFLUENT_HOME/etc/schema-registry/schema-registry.properties
+```
+
 ## Script Usages
 
 ### test_group

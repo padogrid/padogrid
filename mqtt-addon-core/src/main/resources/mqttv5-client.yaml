@@ -1,0 +1,153 @@
+# true to enable the cluster service, false to disable.
+# Default: true
+enabled: true
+
+# Default cluster name.
+# Default: cluster-default
+defaultCluster: cluster-default
+
+# Tag name that describes this JVM.
+# Default: cluster-tag
+tag: cluster-tag
+
+# Cluster probe delay interval in milliseconds. The cluster service periodically
+# probes the endpoints defined in each cluster.
+# Default: 5000 
+probeDelay: 5000
+
+# Define persistence class that persists messages for QoS 1 and 2.
+persistence:
+  # Persistence type. Specify the fully-qualified class name and
+  # the constructor argument list. Paho provides the following
+  # persistence classes:
+  #
+  #   MemoryPersistence, MqttDefaultFilePersistence
+  #
+  # MqttDefaultFilePersistence takes the 'path' property for the directory path
+  # where the persistence data is to be stored. If the 'path' property is not
+  # defined the working directory is used. All other properties are ignored.
+  #
+  # MemoryPersistence does not take properties. All properties are ignored.
+  #
+  # A custom persistence class must implement MqttClientPersistence and include
+  # a constuctor with a single argument with the Properties type if the properties
+  # are required. If such a constructor does not exist then the default no-arg
+  # constructor is used to instantiate the class. In that case, the properties
+  # are ignored. Unlike the Paho's builtin persistence classes described above,
+  # a custom class requires the fully-quailifed class name. 
+  #
+  # All cluster clients use the top-level ''persistence'' element unless they have
+  # their own ''persistence'' element defined.
+  #
+  # Default:
+  #   className: MqttDefaultFilePersistence
+  #   properties:
+  #     - key: path
+  #       value: persist
+  className: MqttDefaultFilePersistence
+  properties:
+    - key: path
+      value: null
+
+# Cluster definitions. HaMqttClient supports multiple clusters.      
+clusters:
+    # Unique cluster name. Each cluster name defined in this file must be unique.
+    # Default: cluster-default
+  - name: cluster-default
+  
+    # true to enable the cluster, false to disable.
+    # Default: true
+    enabled: true
+    
+    # Optional pulisherType. Valid values are STICKY, RANDOM, ROUND_ROBIN.
+    # If STICKY and primaryServerURI is defined, the cluster client always uses
+    # that server for all operations.
+    # Default: STICKY
+    publisherType: STICKY
+    
+    # Optional primary server URI. For STICKY connection of publisherType, 
+    # the primary server takes a priority over other servers for all operations.
+    # For other publisherType values, it has no effect. The primary server
+    # is automatically added to connection.serverURIs if not included.
+    primaryServerURI: null
+    
+    # MqttClientConnectionOptions attributes. Each attribute defined in this
+    # file represents the corresponding attribute in MqttConnectionOptions.
+    # Please see MqttConnectionOptions for details.
+    # Attribute values shown below are default values.
+    connection:
+      automaticReconnect: false
+      automaticReconnectMaxDelay: 120
+      automaticReconnectMinDelay: 1
+      cleanStart: true
+      connectionTimeout: 30
+      customWebSocketHeaders: null
+      executorServiceTimeout: 1
+      httpsHostnameVerificationEnabled: true
+      keepAliveInterval: 60
+      maxReconnectDelay: 128000
+      maximumPacketSize: null
+      password: null
+      receiveMaximum: null
+      requestProblemInfo: null
+      requestResponseInfo: null
+      sendReasonMessages: false
+      
+      # serverURIs defines a list of brokers that make up the cluster. URI ranges
+      # are supported for the last IP address octet and the port numbers. If the port
+      # number is not specified then default to 1883 for tcp and 8883 for ssl.
+      #
+      #   tcp|ssl://<host-name>[:<port-range>]
+      #     tcp://mqtt.org:1883-1885
+      #     tcp://mqtt.org:1883
+      #     tcp://mqtt.org
+      #
+      #   tcp|ssl://<IPv3>.<octet-range>[:port-range]   
+      #     tcp://192.168.1.10-20:1883-1885
+      #     tcp://192.168.1.10:1883-1885
+      #     tcp://192.168.1.10-20:1883
+      #     tcp://192.168.1.10-20
+      #
+      # Default: [tcp://localhost:1883-1885]
+      serverURIs: [tcp://localhost:1883-1885]
+      
+      sessionExpiryInterval: null
+      socketFactory: null
+      sslClientProps: null
+      sslHostnameVerifier: null
+      topicAliasMaximum: null
+      useSubscriptionIdentifiers: true
+      userName: null
+      userProperties: null
+      willDestination: null
+      willMessage: null
+      willMessageProperties:
+        assignedClientIdentifier: null
+        authenticationData: null
+        authenticationMethod: null
+        contentType: null
+        correlationData: null
+        maximumPacketSize: null
+        maximumQoS: null
+        messageExpiryInterval: null
+        payloadFormat: false
+        publishSubscriptionIdentifiers: []
+        reasonString: null
+        receiveMaximum: null
+        requestProblemInfo: null
+        requestResponseInfo: null
+        responseInfo: null
+        responseTopic: null
+        retainAvailable: null
+        serverKeepAlive: null
+        serverReference: null
+        sessionExpiryInterval: null
+        sharedSubscriptionAvailable: null
+        subscribeSubscriptionIdentifier: null
+        subscriptionIdentifiersAvailable: null
+        topicAlias: null
+        topicAliasMaximum: null
+        userProperties: []
+        validProperties: null
+        wildcardSubscriptionsAvailable: null
+        willDelayInterval: null

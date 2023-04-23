@@ -58,6 +58,7 @@ public class ClusterUtil {
 			try (InputStream inputStream = new FileInputStream(configFile)) {
 				Properties props = new Properties();
 				props.load(inputStream);
+				inputStream.close();
 				return new KafkaProducer(props);
 			}
 		}
@@ -87,6 +88,7 @@ public class ClusterUtil {
 				try (InputStream inputStream = new FileInputStream(configFile)) {
 					props = new Properties();
 					props.load(inputStream);
+					inputStream.close();
 					props.putAll(producerProps);
 				}
 			}
@@ -114,6 +116,7 @@ public class ClusterUtil {
 			try (InputStream inputStream = new FileInputStream(configFile)) {
 				Properties props = new Properties();
 				props.load(inputStream);
+				inputStream.close();
 				return new KafkaConsumer(props);
 			}
 		}
@@ -143,6 +146,7 @@ public class ClusterUtil {
 				try (InputStream inputStream = new FileInputStream(configFile)) {
 					props = new Properties();
 					props.load(inputStream);
+					inputStream.close();
 					props.putAll(consumerProps);
 				}
 			}

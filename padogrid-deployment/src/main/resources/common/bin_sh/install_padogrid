@@ -73,7 +73,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby mosquitto"
 
 EXECUTABLE="`basename $0`"
 
@@ -130,6 +130,7 @@ PROMETHEUS_DOWNLOAD_URL="https://github.com/prometheus/prometheus/releases"
 GRAFANA_GITHUB_RELEASES_URL="https://github.com/grafana/grafana/releases"
 GRAFANA_DOWNLOAD_URL="https://grafana.com/grafana/download?edition=enterprise&pg=get&plcmt=selfmanaged-box1-cta1${None}"
 DERBY_DOWNLOAD_URL="https://archive.apache.org/dist/db/derby/"
+MOSQUITTO_DOWNLOAD_URL="https://mosquitto.org/files/source/"
 
 PADOECLIPSE_MANUAL_URL="https://github.com/padogrid/padogrid/wiki/Eclipse"
 
@@ -193,7 +194,7 @@ cat <<EOF
    -scan [scan_delay_in_seconds]
              If specified, then it scans the product download sites to gather product versions.
              This may take over a minute to complete. Specify scan_delay_in_seconds to delay
-             between GitHub URL scans to prevent the GitHub rate meter from rejecting repetive
+             between GitHub URL scans to prevent the GitHub rate meter from rejecting repetitive
              URL scans. By default, if this option is not specified, then it uses the the cached
              product versions downloaded from the PadoGrid site. The cached product versions are
              updated nightly.
@@ -256,6 +257,7 @@ echo -e "      - Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}
 echo -e "      - Prometheus                  ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
 echo -e "      - Grafana Enterprise/OSS      ${CUrl}$GRAFANA_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Derby                ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
+echo -e "      - Eclipse Mosquitto           ${CUrl}$MOSQUITTO_DOWNLOAD_URL${CNone}"
 
 cat <<EOF
 
@@ -294,7 +296,7 @@ NOTES
    - Jet Management Center installation is no longer supported. Install Hazelcast Management Center
      instead. It supports both IMDG and Jet.
 
-   - PadoGrid support for Kafka is limited to the new RAFT mode which requires Kafka 2.8.0+ or Confluent 7.0.0+.
+   - PadoGrid support for Kafka is limited to the RAFT mode which requires Kafka 2.8.0+ or Confluent 7.0.0+.
 
    - PadoEclipse is an Eclipse plugin for generating Gedoe/GemFire and Pado data classes. Once it is
      downloaded, place it in the Eclipse's 'dropins' folder. Please see instructions in the following link.
@@ -418,6 +420,7 @@ echo -e "[13] Apache Hadoop               ${CUrl}$HADOOP_DOWNLOAD_URL${CNone}"
 echo -e "[14] Prometheus                  ${CUrl}$PROMETHEUS_DOWNLOAD_URL${CNone}"
 echo -e "[15] Grafana Enterprise/OSS      ${CUrl}$GRAFANA_DOWNLOAD_URL${CNone}"
 echo -e "[16] Apache  Derby               ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
+echo -e "[17] Eclipse Mosquitto           ${CUrl}$MOSQUITTO_DOWNLOAD_URL${CNone}"
 
 cat <<EOF
 
@@ -954,6 +957,12 @@ function getDownloadableDerbyVersions
    unique_words "$ALL_DERBY_VERSIONS"
 }
 
+function getDownloadableMosquittoVersions
+{
+   local ALL_MOSQUITTO_VERSIONS=$(curl -sL $MOSQUITTO_DOWNLOAD_URL | grep .tar.gz | sed -e 's|.tar.gz.*||' -e 's|.*ref="||' -e 's|mosquitto-||' | uniq)
+   unique_words "$ALL_MOSQUITTO_VERSIONS"
+}
+
 #
 # Returns the sorted list of the specified list that contains product versions
 # @param versionList
@@ -1007,6 +1016,7 @@ function sortVersionList
 #    GRAFANA_ENTERPRISE_VERSIONS
 #    GRAFANA_OSS_VERSIONS
 #    DERBY_VERSIONS
+#    MOSQUITTO_VERSIONS
 #
 # @required PADOGRID_ENV_BASE_PATH 
 #
@@ -1034,6 +1044,7 @@ function determineInstalledProductVersions
    GRAFANA_ENTERPRISE_VERSIONS=""
    GRAFANA_OSS_VERSIONS=""
    DERBY_VERSIONS=""
+   MOSQUITTO_VERSIONS=""
 
    if [ -d "$PADOGRID_ENV_BASE_PATH/products" ]; then
       pushd $PADOGRID_ENV_BASE_PATH/products > /dev/null 2>&1
@@ -1199,11 +1210,22 @@ function determineInstalledProductVersions
 
       # Derby
       __versions=""
+      echo debug: 1
       for i in db-derby-*; do
-         __version=${i#db-derby-}
+         #__version=${i#db-derby-}
+         __version=$i
          __versions="$__versions $__version "
       done
+      __versions=$(echo $__versions | sed 's/-bin//g')
       DERBY_VERSIONS=$(sortVersionList "$__versions")
+
+      # Mosquitto
+      __versions=""
+      for i in mosquitto-*; do
+         __version=${i#mosquitto-}
+         __versions="$__versions $__version "
+      done
+      MOSQUITTO_VERSIONS=$(sortVersionList "$__versions")
 
       popd > /dev/null 2>&1
             
@@ -1405,6 +1427,9 @@ function doUserInput
 #
 # @required DERBY_VERSION
 # @required DERBY_TARBALL
+#
+# @required MOSQUITTO_RELEASE
+# @required MOSQUITTO_TARBALL
 #
 function installProduct
 {
@@ -1864,23 +1889,23 @@ function installProduct
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$PROMETHEUS_RELEASE" ]; then
          echo "Already installed - $PROMETHEUS_RELEASE"
       else
-      # --------------
-      # Download Prometheus
-      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL" "https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/$PROMETHEUS_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL" "https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/$PROMETHEUS_TARBALL"
-      fi
-      
-      # Install Prometheus
-      echo "  Installing Prometheus $PROMETHEUS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL"
-      else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL"
-         echo "  Installed - $PROMETHEUS_TARBALL"
-      fi
+         # --------------
+         # Download Prometheus
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL" "https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/$PROMETHEUS_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL" "https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/$PROMETHEUS_TARBALL"
+         fi
+         
+         # Install Prometheus
+         echo "  Installing Prometheus $PROMETHEUS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$PROMETHEUS_TARBALL"
+            echo "  Installed - $PROMETHEUS_TARBALL"
+         fi
       fi
 
    elif [ "$__PRODUCT" == "grafana-enterprise" ]; then 
@@ -1888,23 +1913,23 @@ function installProduct
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$GRAFANA_ENTERPRISE_RELEASE" ]; then
          echo "Already installed - $GRAFANA_ENTERPRISE_RELEASE"
       else
-      # --------------
-      # Download Grafana
-      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL" "https://dl.grafana.com/enterprise/release/$GRAFANA_ENTERPRISE_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL" "https://dl.grafana.com/enterprise/release/$GRAFANA_ENTERPRISE_TARBALL"
-      fi
-      
-      # Install Grafana
-      echo "  Installing Grafana Eterprise $GRAFANA_ENTERPRISE_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL"
-      else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL"
-         echo "  Installed - $GRAFANA_ENTERPRISE_TARBALL"
-      fi
+         # --------------
+         # Download Grafana
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL" "https://dl.grafana.com/enterprise/release/$GRAFANA_ENTERPRISE_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL" "https://dl.grafana.com/enterprise/release/$GRAFANA_ENTERPRISE_TARBALL"
+         fi
+         
+         # Install Grafana
+         echo "  Installing Grafana Eterprise $GRAFANA_ENTERPRISE_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_ENTERPRISE_TARBALL"
+            echo "  Installed - $GRAFANA_ENTERPRISE_TARBALL"
+         fi
       fi
 
    elif [ "$__PRODUCT" == "grafana-oss" ]; then 
@@ -1912,23 +1937,23 @@ function installProduct
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$GRAFANA_OSS_RELEASE" ]; then
          echo "Already installed - $GRAFANA_OSS_RELEASE"
       else
-      # --------------
-      # Download Grafana
-      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL" "https://dl.grafana.com/oss/release/$GRAFANA_OSS_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL" "https://dl.grafana.com/oss/release/$GRAFANA_OSS_TARBALL"
-      fi
-      
-      # Install Grafana
-      echo "  Installing Grafana OSS $GRAFANA_OSS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL"
-      else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL"
-         echo "  Installed - $GRAFANA_OSS_TARBALL"
-      fi
+         # --------------
+         # Download Grafana
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL" "https://dl.grafana.com/oss/release/$GRAFANA_OSS_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL" "https://dl.grafana.com/oss/release/$GRAFANA_OSS_TARBALL"
+         fi
+         
+         # Install Grafana
+         echo "  Installing Grafana OSS $GRAFANA_OSS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$GRAFANA_OSS_TARBALL"
+            echo "  Installed - $GRAFANA_OSS_TARBALL"
+         fi
       fi
 
    elif [ "$__PRODUCT" == "derby" ]; then 
@@ -1936,23 +1961,47 @@ function installProduct
       if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$DERBY_RELEASE" ]; then
          echo "Already installed - $DERBY_RELEASE"
       else
-      # --------------
-      # Download Derby
-      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL" "https://archive.apache.org/dist/db/derby/$DERBY_VERSION/$DERBY_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL" "https://archive.apache.org/dist/db/derby/$DERBY_VERSION/$DERBY_TARBALL"
+         # --------------
+         # Download Derby
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL" "https://archive.apache.org/dist/db/derby/$DERBY_VERSION/$DERBY_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL" "https://archive.apache.org/dist/db/derby/$DERBY_VERSION/$DERBY_TARBALL"
+         fi
+         
+         # Install Derby
+         echo "  Installing Apache Derby $DERBY_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL"
+            echo "  Installed - $DERBY_TARBALL"
+         fi
       fi
+
+   elif [ "$__PRODUCT" == "mosquitto" ]; then 
       
-      # Install Derby
-      echo "  Installing Apache Derby $DERBY_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL"
+      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$MOSQUITTO_RELEASE" ]; then
+         echo "Already installed - $MOSQUITTO_RELEASE"
       else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$DERBY_TARBALL"
-         echo "  Installed - $DERBY_TARBALL"
-      fi
+         # --------------
+         # Download Mosquitto
+         echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$MOSQUITTO_TARBALL..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$MOSQUITTO_TARBALL" "$MOSQUITTO_DOWNLOAD_URL/$MOSQUITTO_TARBALL"
+         else
+            curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$MOSQUITTO_TARBALL" "$MOSQUITTO_DOWNLOAD_URL/$MOSQUITTO_TARBALL"
+         fi
+      
+         # Install Mosquitto
+         echo "  Installing Mosquitto $MOSQUITTO_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
+         if [ "$__SIMULATE" == "true" ]; then
+            echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$MOSQUITTO_TARBALL"
+         else
+            tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$MOSQUITTO_TARBALL"
+            echo "  Installed - $MOSQUITTO_TARBALL"
+         fi
       fi
 
    fi
@@ -2043,6 +2092,7 @@ if [ "$FILE_SPECIFIED" != "true" ] && [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$
    PROMETHEUS_DOWNLOAD_VERSIONS=($PROMETHEUS_DOWNLOAD_VERSIONS)
    GRAFANA_DOWNLOAD_VERSIONS=($GRAFANA_DOWNLOAD_VERSIONS)
    DERBY_DOWNLOAD_VERSIONS=($DERBY_DOWNLOAD_VERSIONS)
+   MOSQUITTO_DOWNLOAD_VERSIONS=($MOSQUITTO_DOWNLOAD_VERSIONS)
 elif [ "$FILE_SPECIFIED" != "true" ]; then
    #
    # Scan downloadable product versions
@@ -2122,6 +2172,9 @@ elif [ "$FILE_SPECIFIED" != "true" ]; then
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
       DERBY_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableDerbyVersions)"))
    fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "mosquitto" ]; then
+      MOSQUITTO_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableMosquittoVersions)"))
+   fi
 
    # Enable the enter key
    if [ "$NO_STTY_SPECIFIED" != "true" ]; then
@@ -2153,6 +2206,7 @@ if [ "$FILE_SPECIFIED" != "true" ] && [ "$SAVE_SPECIFIED" == "true" ]; then
    echo "PROMETHEUS_DOWNLOAD_VERSIONS=\"${PROMETHEUS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "GRAFANA_DOWNLOAD_VERSIONS=\"${GRAFANA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "DERBY_DOWNLOAD_VERSIONS=\"${DERBY_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
+   echo "MOSQUITTO_DOWNLOAD_VERSIONS=\"${MOSQUITTO_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "Downloadable product versions saved:"
    echo "   + $DOWNLOAD_VERSIONS_FILE"
    exit
@@ -2181,6 +2235,7 @@ PROMETHEUS_VERSION=""
 GRAFANA_ENTERPRISE_VERSION=""
 GRAFANA_OSS_VERSION=""
 DERBY_VERSION=""
+MOSQUITTO_VERSION=""
 
 if [ "$FILE_SPECIFIED" != "true" ] && [ "$VERSION_SPECIFIED" == "true" ]; then
 
@@ -2224,6 +2279,9 @@ if [ "$FILE_SPECIFIED" != "true" ] && [ "$VERSION_SPECIFIED" == "true" ]; then
          # Pick the last one (newer version of scala)
          KAFKA_DIST_VERSION=${KAFKA_SCALA_VERSIONS_ARRAY[${#KAFKA_SCALA_VERSIONS_ARRAY[@]}-1]}
          ;;
+      mosquitto )
+         DOWNLOAD_VERSIONS=( "${MOSQUITTO_DOWNLOAD_VERSIONS[@]}" )
+         MOSQUITTO_VERSION=$VERSION_ARG ;;
       pado )
          DOWNLOAD_VERSIONS=( "${PADO_DOWNLOAD_VERSIONS[@]}" )
          PADO_VERSION=$VERSION_ARG ;;
@@ -2359,6 +2417,9 @@ elif [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "true" ]; then
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "derby" ]; then
       DERBY_VERSION=${DERBY_DOWNLOAD_VERSIONS[0]}
    fi
+   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "mosquitto" ]; then
+      MOSQUITTO_VERSION=${MOSQUITTO_DOWNLOAD_VERSIONS[0]}
+   fi
 
    echo "Installing the latest product(s) as follows:"
    echo ""
@@ -2383,6 +2444,7 @@ elif [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "true" ]; then
    echo "Prometheus           $PROMETHEUS_VERSION"
    echo "Grafana Enterprise   $GRAFANA_ENTERPRISE_VERSION"
    echo "Derby                $DERBY_VERSION"
+   echo "Mosquitto            $MOSQUITTO_VERSION"
    echo ""
 elif [ "$FILE_SPECIFIED" != "true" ]; then
    # Get user inputs
@@ -2836,6 +2898,20 @@ elif [ "$FILE_SPECIFIED" != "true" ]; then
          echo ""
       fi
 
+      # Mosquitto
+      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "mosquitto" ]; then
+         PRODUCT_NAME="Mosquitto"
+         PRODUCT_DOWNLOAD_VERSIONS=("${MOSQUITTO_DOWNLOAD_VERSIONS[@]}")
+         INSTALLED_VERSIONS=$MOSQUITTO_VERSIONS
+         echo -e "Mosquitto ${CUrl}$MOSQUITTO_DOWNLOAD_URL${CNone}"
+         doUserInput
+         if [ "$INSTALL_VERSION" != "" ]; then
+            let INSTALL_COUNT=INSTALL_COUNT+1
+         fi
+         MOSQUITTO_VERSION=$INSTALL_VERSION
+         echo ""
+      fi
+
       echo ""
 
       if [ $INSTALL_COUNT -eq 0 ]; then
@@ -2909,6 +2985,9 @@ elif [ "$FILE_SPECIFIED" != "true" ]; then
       fi
       if [ "$DERBY_VERSION" != "" ]; then
          echo -e "Derby: ${CGo}$DERBY_VERSION${CNone}"
+      fi
+      if [ "$MOSQUITTO_VERSION" != "" ]; then
+         echo -e "Mosquitto: ${CGo}$MOSQUITTO_VERSION${CNone}"
       fi
       echo ""
 
@@ -3113,6 +3192,11 @@ if [ "$DERBY_VERSION" != "" ]; then
    DERBY_TARBALL="$DERBY_RELEASE-bin.tar.gz"
    installProduct "derby" "$SIMULATE"
 fi
+if [ "$MOSQUITTO_VERSION" != "" ]; then
+   MOSQUITTO_RELEASE="$MOSQUITTO_VERSION"
+   MOSQUITTO_TARBALL="mosquitto-$MOSQUITTO_RELEASE.tar.gz"
+   installProduct "mosquitto" "$SIMULATE"
+fi
 
 # Redis distribution contains source code only. Tell the user how to build.
 if [ "$REDIS_VERSION" != "" ]; then
@@ -3158,6 +3242,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
    PROMETHEUS_HOME=""
    GRAFANA_HOME=""
    DERBY_HOME=""
+   MOSQUITTO_HOME=""
 
    # Set default workspaces home
    PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/myrwe"
@@ -3210,6 +3295,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
        GRAFANA_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"derby"** ]]; then
        DERBY_HOME="$PADOGRID_PRODUCTS_PATH/$i"
+     elif [[ "$i" == **"mosquitto"** ]]; then
+       MOSQUITTO_HOME="$PADOGRID_PRODUCTS_PATH/$i"
 #     elif [[ "$i" == **"coherence"** ]]; then
 #        COHERENCE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      fi
@@ -3262,6 +3349,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
         PRODUCT_HOME="$GRAFANA_HOME"
       elif [ "$DERBY_HOME" != "" ]; then
         PRODUCT_HOME="$DERBY_HOME"
+      elif [ "$MOSQUITTO_HOME" != "" ]; then
+        PRODUCT_HOME="$MOSQUITTO_HOME"
       fi
 
       echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
@@ -3275,6 +3364,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "HAZELCAST_DESKTOP_HOME=\"$HAZELCAST_DESKTOP_HOME\"" >> $TMP_ENV_FILE
       echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
       echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
+      echo "MOSQUITTO_HOME=\"$MOSQUITTO_HOME\"" >> $TMP_ENV_FILE
       echo "REDIS_HOME=\"$REDIS_HOME\"" >> $TMP_ENV_FILE
       echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
       echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
@@ -3285,6 +3375,7 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "PROMETHEUS_HOME=\"$PROMETHEUS_HOME\"" >> $TMP_ENV_FILE
       echo "GRAFANA_HOME=\"$GRAFANA_HOME\"" >> $TMP_ENV_FILE
       echo "DERBY_HOME=\"$DERBY_HOME\"" >> $TMP_ENV_FILE
+      echo "MOSQUITTO_HOME=\"$MOSQUITTO_HOME\"" >> $TMP_ENV_FILE
 
       PADOGRID_OPTS=""
       if [ "$PRODUCT_HOME" != "" ]; then

@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Kill all running members in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Kills all running Mosquitto members by executing 'kill_member' which kills
+   members individually. This command provides a quick way to stop the cluster
+   but may cause data corruption if the members have persistence enabled. To
+   gracefully stop the cluster, use the 'stop_cluster' or 'shutdown_cluster'.
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat << EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat << EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*cluster*" $EXECUTABLE
+   exit
+fi
+
+#
+# Run the target cluster command if the product is different.
+#
+if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
+   THIS_PRODUCT="$(basename $(dirname $SCRIPT_DIR))"
+   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
+      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
+      exit
+   fi
+fi
+
+POD=`getClusterProperty "pod.name" "local"`
+POD_DIR=$PODS_DIR/$POD
+
+# 
+# VM cluster
+#
+VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+if [ "$VM_ENABLED" == "true" ]; then
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
+      echo "           $ETC_DIR/cluster.properties"
+      echo "           Command aborted."
+      exit 1
+   fi
+
+   VM_USER=`getVmUser`
+   VM_KEY=`getVmKeyArg`
+   if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+      # If private hosts are reachable then execute from here.
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
+      MEMBER_NUM=1
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/kill_member -cluster $CLUSTER -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -num $MEMBER_NUM"
+         if [ "$POD" != "local" ]; then
+            let MEMBER_NUM=MEMBER_NUM+1
+         fi
+      done
+   else
+      # If private hosts are not reachable then use a public host as a proxy to execute this command.
+      #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+      #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+      RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+      WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+      VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+      if [ "$VM_PUBLIC_HOSTS" == "" ]; then
+         echo -e "${CLightRed}ERROR:${CNone} Unable to connect to VM hosts. Please set 'vm.public.hosts' in 'etc/cluster.properties."
+         echo "       Command aborted."
+         exit 1
+      fi
+
+      # Replace , with space
+      __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+      for VM_HOST in $__VM_HOSTS; do
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+         break;
+      done
+   fi
+   exit
+fi
+
+OS_ENV=`getOsEnv`
+if [[ "$OS_ENV" == "hh" || "$OS_ENV" == "gh" ]] && [ "$POD" != "local" ]; then
+   #
+   # Pod cluster
+   #
+   pushd $POD_DIR > /dev/null 2>&1
+   RUNNING_NODES=$(vagrant status --machine-readable | grep "state,")
+   echo "----------------------------------------------------------------"
+   echo " WORKSPACE: $WORKSPACE"
+   echo "   Cluster: $CLUSTER"
+   echo "       Pod: $POD"
+   if [ "$RUNNING_NODES" == "" ]; then
+      echo "    Status: The $POD pod is already stopped. Command aborted."
+   else
+      echo "    Status: Unknown. The $POD pod has the following VM statuses. This command will not attempt to stop VMs."
+      for i in $RUNNING_NODES; do
+         VM_STATUS=$(echo $i | awk -F, '{print $2 " " $4}')
+         echo "        VM: $VM_STATUS (virtualbox)"
+      done
+   fi
+   echo "----------------------------------------------------------------"
+   popd > /dev/null 2>&1
+   exit
+fi
+
+#
+# Local cluster
+#
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+
+# For pod clusters. If non-pod, the following variables are ignored.
+#PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+#NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
+#NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
+
+MEMBER_PREFIX=`getMemberPrefix`
+MEMBER_PREFIX_LEN=${#MEMBER_PREFIX}
+RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+
+pushd $RUN_DIR > /dev/null 2>&1
+# Kill members
+for i in ${MEMBER_PREFIX}*; do
+   if [ -d "$i" ]; then
+      pushd $i > /dev/null 2>&1
+      MEMBER_NUMBER=${i:$MEMBER_PREFIX_LEN}
+      kill_member -cluster $CLUSTER -num $MEMBER_NUMBER
+      popd > /dev/null 2>&1
+   fi
+done
+popd > /dev/null 2>&1

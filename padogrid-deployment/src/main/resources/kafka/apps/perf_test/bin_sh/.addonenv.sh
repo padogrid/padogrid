@@ -61,7 +61,7 @@ if [ "$K8S_PROPERTIES" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS $K8S_PROPERTIES"
 fi
 
-# Set Redisson addon class path. This is to handle 'none' product.
-if [[ "$CLASSPATH" != *"$PADOGRID_HOME/redis/plugins"* ]]; then
-   CLASSPATH="$PADOGRID_HOME/redis/plugins/*:$PADOGRID_HOME/redis/lib/*:$CLASSPATH"
+# Set Kafka addon class path. This is to handle 'none' product.
+if [[ "$CLASSPATH" != *"$PADOGRID_HOME/kafka/plugins"* ]]; then
+   CLASSPATH="$PADOGRID_HOME/kafka/plugins/*:$PADOGRID_HOME/kafka/lib/*:$CLASSPATH"
 fi

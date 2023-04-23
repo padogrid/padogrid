@@ -191,6 +191,15 @@ elif [ "$PRODUCT_ARG" == "coherence" ]; then
       fi
       $PADOGRID_HOME/coherence/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type coherence "$@"
    fi
+elif [ "$PRODUCT_ARG" == "mosquitto" ]; then
+   # Allow mosquitto installed elsewhere as well
+   if [ "$MOSQUITTO_HOME" != "" ] || [ "$(which mosquitto 2> /dev/null)" != "" ]; then
+      PRODUCT_EXISTS="true"
+      if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+         CLUSTER="$DEFAULT_MOSQUITTO_CLUSTER"
+      fi
+      $PADOGRID_HOME/mosquitto/bin_sh/create_cluster -product-cluster $CLUSTER -cluster-type mosquitto "$@"
+   fi
 elif [ "$PRODUCT_ARG" == "redis" ]; then
    if [ "$REDIS_HOME" != "" ]; then
       PRODUCT_EXISTS="true"

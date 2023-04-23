@@ -887,7 +887,7 @@ public class GroupTest implements Constants {
 		writeLine("       -delete           Deletes (destroys) all the data structures pertaining to the group");
 		writeLine("                         test cases that were created in the Kafka cluster. If the '-run'");
 		writeLine("                         option is not specified, then it has the same effect as the '-list'");
-		writeLine("                         option. It only lists data strcutures and their without deleting them.");
+		writeLine("                         option. It only lists data structures and their without deleting them.");
 		writeLine();
 		writeLine("       <properties-file> Optional properties file path.");
 		writeLine();
@@ -896,7 +896,8 @@ public class GroupTest implements Constants {
 		writeLine("      " + resultsDirStr);
 		writeLine();
 		writeLine("Notes:");
-		writeLine("   The 'perf_test' app uses Avro classes and requires Schema Registry.");
+		writeLine("   The 'perf_test' app uses Avro classes and requires Schema Registry. Please see README.md");
+		writeLine("   for starting Confluent Schema Registry.");
 		writeLine();
 	}
 
