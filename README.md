@@ -117,19 +117,20 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir -p ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.18-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.25-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.18-SNAPSHOT
+tree -L 1 padogrid_0.9.25-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.18-SNAPSHOT
+padogrid_0.9.25-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
 ├── RELEASE_NOTES.md
+├── apps
 ├── bin_sh
 ├── coherence
 ├── etc
@@ -138,11 +139,13 @@ padogrid_0.9.18-SNAPSHOT
 ├── hazelcast
 ├── kafka
 ├── lib
+├── mosquitto
 ├── none
 ├── pods
 ├── redis
 ├── snappydata
-└── spark
+├── spark
+└── workspace
 ```
 
 ## Initializing PadoGrid
@@ -152,12 +155,12 @@ padogrid_0.9.18-SNAPSHOT
 To use PadoGrid, you must first create an RWE (Root Workspace Environment) by running the interactive command, `create_rwe`, to specify the workspaces directory and the product installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.18-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.25-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid using Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.18-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.25-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 ```bash
 # docker
@@ -282,6 +285,9 @@ PadoGrid natively supports the following data grid and analytics products.
   </a> 
 </p> 
 <p align="center">
+  <a href="https://mosquitto.org/">
+  <img src="images/mosquitto.png" width="300" height="80" hspace="14" alt="Mosquitto" />
+  </a>
   <a href="https://redis.io/">
   <img src="images/redis.png" width="200" height="80" hspace="14" alt="Redis" />
   </a>
