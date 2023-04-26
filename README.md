@@ -240,7 +240,7 @@ You may encounter a random userid assigned by Kubernetes and OpenShift instead o
 
 ## Data Grid Products
 
-PadoGrid natively supports the following data grid and analytics products.
+PadoGrid natively supports the following data grid, messaging, and analytics products.
 
 ---
 
