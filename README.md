@@ -286,7 +286,7 @@ PadoGrid natively supports the following data grid and analytics products.
 </p> 
 <p align="center">
   <a href="https://mosquitto.org/">
-  <img src="images/mosquitto.png" width="300" height="80" hspace="14" alt="Mosquitto" />
+  <img src="images/mosquitto.png" width="270" height="80" hspace="14" alt="Mosquitto" />
   </a>
   <a href="https://redis.io/">
   <img src="images/redis.png" width="200" height="80" hspace="14" alt="Redis" />
