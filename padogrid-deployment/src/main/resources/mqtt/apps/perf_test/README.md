@@ -1,6 +1,6 @@
 # MQTT `perf_test` App
 
-The `perf_test` app provides MQTT client programs using the Paho API to perform the following:
+The `perf_test` app provides MQTT client programs using the [PadoGrid's MQTT HA API, `HaMqttClient`](https://github.com/padogrid/padogrid/blob/develop/mqtt-addon-core/README.md), to perform the following:
 
 - Ingest mock data of any size
 - Ingest mock data with entity relationships (ER)

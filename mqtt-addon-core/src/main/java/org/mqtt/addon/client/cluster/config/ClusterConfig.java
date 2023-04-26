@@ -1,19 +1,51 @@
+/*
+ * Copyright (c) 2023 Netcrest Technologies, LLC. All rights reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.mqtt.addon.client.cluster.config;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.Properties;
 
+import org.eclipse.paho.mqttv5.client.MqttClientPersistence;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
+import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
+import org.eclipse.paho.mqttv5.client.persist.MqttDefaultFilePersistence;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.PublisherType;
 
+/**
+ * ClusterConfig configures one or more clusters. This class directly maps to
+ * the cluster configuration file.
+ * 
+ * @author dpark
+ *
+ */
 public class ClusterConfig {
 	private boolean enabled = true;
 	private String defaultCluster = IClusterConfig.DEFAULT_CLUSTER_NAME;
 	private String tag = IClusterConfig.DEFAULT_CLUSTER_TAG;
 	private int probeDelay = IClusterConfig.DEFAULT_CLUSTER_PROBE_DELAY_IN_MSEC;
-	private Cluster[] clusters;
-	private Persistence persistence;
+	private Cluster[] clusters = new Cluster[0];
+	private Persistence persistence = new Persistence();
 
+	
+	public ClusterConfig() {
+	}
+	
 	public String getDefaultCluster() {
 		return defaultCluster;
 	}
@@ -124,5 +156,84 @@ public class ClusterConfig {
 			this.primaryServerURI = primaryServerURI;
 		}
 	}
+	
+	public static class Persistence {
+		private MqttClientPersistence mqttClientPersistence;
+		private String className;
+		private Properties props = new Properties();
+		private Property[] properties;
 
+		public String getClassName() {
+			return className;
+		}
+
+		public void setClassName(String className) {
+			this.className = className;
+		}
+
+		/**
+		 * Returns a MqttClientPersistence instance of {@link #getClassName()}. It
+		 * returns null if the class name is undefined, i.e., null.
+		 * 
+		 * @throws ClassNotFoundException
+		 * @throws NoSuchMethodException
+		 * @throws SecurityException
+		 * @throws InstantiationException
+		 * @throws IllegalAccessException
+		 * @throws IllegalArgumentException
+		 * @throws InvocationTargetException
+		 */
+		public MqttClientPersistence getMqttClientPersistence()
+				throws ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException,
+				IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			if (mqttClientPersistence == null) {
+				if (properties != null) {
+					for (Property property : properties) {
+						if (property != null && property.getKey() != null && property.getValue() != null) {
+							props.setProperty(property.getKey(), property.getValue());
+						}
+					}
+				}
+				if (className != null) {
+					if (className.equals("MqttDefaultFilePersistence")) {
+						String path = props.getProperty("path");
+						if (path != null) {
+							mqttClientPersistence = new MqttDefaultFilePersistence(path);
+						}
+					} else if (className.equals("MemoryPersistence")) {
+						mqttClientPersistence = new MemoryPersistence();
+					} else {
+						Class<?> clazz = Class.forName(className);
+						Constructor<?> constructor = clazz.getConstructor(Properties.class);
+						mqttClientPersistence = (MqttClientPersistence) constructor.newInstance(props);
+					}
+				}
+			}
+			return mqttClientPersistence;
+		}
+	}
+	
+	public static class Property {
+		private String key;
+		private String value;
+
+		public String getKey() {
+			return key;
+		}
+
+		public void setKey(String key) {
+			this.key = key;
+		}
+
+		public String getValue() {
+			if (value != null) {
+				return ConfigUtil.parseStringValue(value);
+			}
+			return value;
+		}
+
+		public void setValue(String value) {
+			this.value = value;
+		}
+	}
 }

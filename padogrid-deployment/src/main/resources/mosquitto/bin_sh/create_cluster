@@ -312,15 +312,7 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "POD" == "local" ]; then
       POD_TYPE="local"
    fi
-elif [ "$POD" == "local" ]; then
-   let MEMBER_COUNT=3
-   for i in $(seq 1 $MEMBER_COUNT); do
-      add_member -product mosquitto -cluster $CLUSTER
-     # MEMBER_NUM=$i
-     # MEMBER=`getMemberName $i`
-     # MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
-     # mkdir -p $MEMBER_DIR
-   done
+else
    POD_TYPE="local"
 fi
 
@@ -413,6 +405,18 @@ CLUSTER_TYPE="mosquitto"
 
 # Write cluster files
 writeCluster
+
+# Add initial members
+if [ "$VM_ENABLED" != "true" ] && [ "$POD" == "local" ]; then
+   let MEMBER_COUNT=3
+   for i in $(seq 1 $MEMBER_COUNT); do
+      add_member -product mosquitto -cluster $CLUSTER
+     # MEMBER_NUM=$i
+     # MEMBER=`getMemberName $i`
+     # MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER
+     # mkdir -p $MEMBER_DIR
+   done
+fi
 
 # Display cluster information
 echo "----------------------------------------------------------------"

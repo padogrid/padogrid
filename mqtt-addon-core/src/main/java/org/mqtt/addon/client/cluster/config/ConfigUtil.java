@@ -1,14 +1,30 @@
+/*
+ * Copyright (c) 2023 Netcrest Technologies, LLC. All rights reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.mqtt.addon.client.cluster.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class ConfigUtil {
 	/**
-	 * Replaces a system property defined by ${property} and environment variable
-	 * defined by ${env: envar} with the respective values. Only one of each is
-	 * supported, i.e., multiple properties or multiple environment variables are
-	 * not supported.
+	 * Replaces a system property defined by <code>${property}</code> and
+	 * environment variable defined by <code>${env:envar}</code> with the respective
+	 * values. Only one of each in the specified value is supported, i.e., multiple
+	 * properties or multiple environment variables are not supported.
 	 * 
 	 * @param value String value with a system property and/or environment variable.
 	 */
@@ -39,6 +55,36 @@ public class ConfigUtil {
 		return pvalue;
 	}
 
+	/**
+	 * Returns a list of parsed endpoints in the form of
+	 * &#9001;protocol&#9002;://&#9001;address&#9002;[:&#9001;port&#9002;]. The port
+	 * number is optional.
+	 * 
+	 * @param endpoints A comma separated endpoints. Each endpoint may have the last
+	 *                  IPv4 octect in a range in addition to a range of port
+	 *                  numbers, e.g., <code>tcp://10.1.2.10-12:32000-32010</code>.
+	 */
+	public static List<String> parseEndpoints(String endpoints) {
+		String[] split = endpoints.split(",");
+		ArrayList<String> list = new ArrayList<String>(split.length);
+		for (String endpoint : split) {
+			endpoint = endpoint.trim();
+			if (list.contains(endpoint) == false) {
+				list.add(endpoint);
+			}
+		}
+		return parseEndpoints(list.toArray(new String[0]));
+	}
+
+	/**
+	 * Returns a list of parsed endpoints in the form of
+	 * &#9001;protocol&#9002;://&#9001;address&#9002;[:&#9001;port&#9002;]. The port
+	 * number is optional.
+	 * 
+	 * @param endpoints An array of endpoints. Each endpoint may have the last IPv4
+	 *                  octect in a range in addition to a range of port numbers,
+	 *                  e.g., <code>tcp://10.1.2.10-12:32000-32010</code>.
+	 */
 	public static List<String> parseEndpoints(String[] endpoints) {
 		List<String> endpointList = new ArrayList<String>(10);
 
@@ -54,10 +100,9 @@ public class ConfigUtil {
 				if (tmp.contains(":")) {
 					portRange = endpoint.replaceAll(".*:", "");
 				}
-			
 
 				String[] addressParts = addressRange.split("-");
-				
+
 				// Determine port range
 				int startPort = -1;
 				int endPort = -1;
@@ -79,9 +124,9 @@ public class ConfigUtil {
 						}
 					}
 				}
-				
+
 				int index = addressParts[0].lastIndexOf(".");
-				
+
 				// Determine whether IP address or host name.
 				boolean isHostName = index == -1;
 				int startOctet = -1;
@@ -126,5 +171,33 @@ public class ConfigUtil {
 		}
 
 		return endpointList;
+	}
+
+	/**
+	 * Returns an array of randomly selected integer values from 0 to count-1.
+	 * 
+	 * @param count Number of integer values.
+	 * @return An empty array if the specified count is less than or equal to 0.
+	 */
+	public static int[] shuffleRandom(int count) {
+		if (count <= 0) {
+			return new int[0];
+		}
+		Random random = new Random();
+		int[] shuffled = new int[count];
+		for (int i = 0; i < count; i++) {
+			shuffled[i] = -1;
+		}
+		for (int i = 0; i < count; i++) {
+			boolean assigned = false;
+			while (assigned == false) {
+				int index = random.nextInt(count);
+				if (shuffled[index] == -1) {
+					shuffled[index] = i;
+					assigned = true;
+				}
+			}
+		}
+		return shuffled;
 	}
 }

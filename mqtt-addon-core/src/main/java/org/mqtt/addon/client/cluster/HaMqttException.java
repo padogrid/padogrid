@@ -13,36 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.mqtt.addon.test.perf.data;
+package org.mqtt.addon.client.cluster;
 
-import java.util.Properties;
+import org.eclipse.paho.mqttv5.common.MqttException;
 
 /**
- * DataObjectFactory provides data ingestion properties for creating MQTT
- * payloads.
+ * HaMqttException is used for throwing HaMqttClient specific exceptions.
  * 
  * @author dpark
  *
  */
-public interface DataObjectFactory {
+public class HaMqttException extends MqttException {
 
-	/**
-	 * Initializes the data object factory with the specified properties.
-	 * 
-	 * @param props Data object factory properties
-	 */
-	public void initialize(Properties props);
+	private static final long serialVersionUID = 1L;
+	private String message;
 
-	/**
-	 * @return the data object class
-	 */
-	public Class<?> getDataObjectClass();
+	public HaMqttException(int reasonCode, String message) {
+		super(reasonCode);
+		this.message = message;
+	}
 
-	/**
-	 * Creates a new MQTT payload with the specified ID.
-	 * 
-	 * @param idNum Optional ID for constructing a unique payload
-	 * @return an MQTT payload
-	 */
-	public byte[] createPayload(int idNum);
+	public HaMqttException(Throwable cause) {
+		super(cause);
+	}
+
+	@Override
+	public String getMessage() {
+		return message;
+	}
 }

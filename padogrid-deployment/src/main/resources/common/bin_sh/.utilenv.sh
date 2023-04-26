@@ -1717,7 +1717,7 @@ function retrieveClusterEnvFile
       elif [ -d "$CLUSTER_DIR/etc/pseudo" ]; then
          PRODUCT="hadoop"
          CLUSTER_TYPE="pseudo"
-      elif [ -f "$CLUSTER_DIR/etc/mosquitto.conf" ]; then
+      elif [ -f "$CLUSTER_DIR/etc/template-mosquitto.conf" ]; then
          PRODUCT="mosquitto"
          CLUSTER_TYPE=$PRODUCT
       else
@@ -2378,9 +2378,6 @@ function __switch_cluster
       elif [ "$PRODUCT" == "hadoop" ]; then
          export PRODUCT_HOME=$HADOOP_HOME
          __PRODUCT="hadoop"
-      elif [ "$PRODUCT" == "mosquitto" ]; then
-         export PRODUCT_HOME=$MOSQUITTO_HOME
-         __PRODUCT="mosquitto"
       fi
       local NEW_PRODUCT=$PRODUCT
       local NEW_PRODUCT_HOME=$PRODUCT_HOME

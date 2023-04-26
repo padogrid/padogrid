@@ -1,9 +1,25 @@
+/*
+ * Copyright (c) 2023 Netcrest Technologies, LLC. All rights reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.mqtt.addon.client.cluster;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,8 +36,7 @@ import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.MqttSecurityException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
-
-import com.mysql.cj.xdevapi.Client;
+import org.mqtt.addon.client.cluster.config.ConfigUtil;
 
 /**
  * HaMqttClient wraps {@linkplain MqttClient} and provides HA services. It
@@ -50,11 +65,12 @@ public class HaMqttClient implements IHaMqttClient {
 	private int roundRobinIndex = 0;
 	private Random random = new Random();
 
-	HaMqttClient() throws FileNotFoundException {
-		this(null, null);
+	HaMqttClient() throws IOException {
+		this(null, null, null);
 	}
 
-	HaMqttClient(ClusterConfig.Cluster clusterConfig, MqttClientPersistence persistence) throws FileNotFoundException {
+	HaMqttClient(ClusterConfig.Cluster clusterConfig, MqttClientPersistence persistence,
+			ScheduledExecutorService executorService) throws IOException {
 		if (clusterConfig != null) {
 			this.clusterName = clusterConfig.getName();
 			if (this.clusterName == null || this.clusterName.length() == 0) {
@@ -65,7 +81,8 @@ public class HaMqttClient implements IHaMqttClient {
 					HaMqttClient.class.getSimpleName(), clusterName, publisherType));
 
 			// Obtain cluster state
-			clusterState = ClusterService.getClusterService().addHaClient(this, clusterConfig, persistence);
+			clusterState = ClusterService.getClusterService().addHaClient(this, clusterConfig, persistence,
+					executorService);
 		}
 	}
 
@@ -75,12 +92,33 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
+	 * Returns a new array containing shuffled clients.
+	 * 
+	 * @param clients An array of clients
+	 * @return null or the same clients instance if the specified clients is null or
+	 *         empty.
+	 */
+	private MqttClient[] shuffleEndpoints(MqttClient[] clients) {
+		if (clients == null || clients.length == 0) {
+			return clients;
+		}
+		int count = clients.length;
+		int[] shuffledIndexes = ConfigUtil.shuffleRandom(count);
+		MqttClient[] shuffled = new MqttClient[count];
+		for (int i = 0; i < count; i++) {
+			shuffled[i] = clients[shuffledIndexes[i]];
+		}
+		return shuffled;
+	}
+
+	/**
 	 * Invoked by the discovery service upon detecting live client updates.
 	 * 
 	 * @param liveClientCollection A collection containing the latest live clients.
 	 */
 	void updateLiveClients(Collection<MqttClient> liveClientCollection) {
 		MqttClient[] clients = liveClientCollection.toArray(new MqttClient[0]);
+		clients = shuffleEndpoints(clients);
 
 		// Set publisherClient if the current one is not in the live list.
 		// Also, set the callback for the new clients.
@@ -99,6 +137,10 @@ public class HaMqttClient implements IHaMqttClient {
 		}
 	}
 
+	/**
+	 * Returns the publisher extracted from the live client list based on the
+	 * publisher type.
+	 */
 	private MqttClient getPublisher() {
 		MqttClient client = null;
 		MqttClient[] clients = liveClients;
@@ -136,15 +178,24 @@ public class HaMqttClient implements IHaMqttClient {
 		return clusterName;
 	}
 
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
 	@Override
 	public void publish(String topicFilter, MqttMessage message) throws MqttException {
+		if (isDisconnected()) {
+			throw new HaMqttException(-101, "Cluster disconnected");
+		}
+		if (clusterState.isClosed()) {
+			throw new HaMqttException(-102, "Cluster closed");
+		}
 		// Live client variables are updated from another thread. We reassign them to
 		// local variables to handle a race condition.
 		MqttClient client = getPublisher();
 
 		if (client == null || liveClients.length == 0) {
 			publisherClient = null;
-			throw new MqttException(-100);
+			throw new HaMqttException(-100, String.format("Cluster unreachable"));
 		}
 		try {
 			client.publish(topicFilter, message);
@@ -156,7 +207,7 @@ public class HaMqttClient implements IHaMqttClient {
 			removeMqttClient(client);
 
 			logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-					client.getServerURI()));
+					client.getServerURI()), e);
 
 			// Upon removal, a new live client list is obtained.
 			// Publish it again with the new publisherClient.
@@ -170,14 +221,24 @@ public class HaMqttClient implements IHaMqttClient {
 		}
 	}
 
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
 	@Override
 	public void publish(String topic, byte[] payload, int qos, boolean retained) throws MqttException {
+		if (isDisconnected()) {
+			throw new HaMqttException(-101, "Cluster disconnected");
+		}
+		if (clusterState.isClosed()) {
+			throw new HaMqttException(-102, "Cluster closed");
+		}
 		// Live client variables are updated from another thread. We reassign them to
 		// local variables to handle a race condition.
 		MqttClient client = getPublisher();
 		if (client == null || liveClients.length == 0) {
 			publisherClient = null;
-			throw new MqttException(-100);
+			throw new HaMqttException(-100, String.format("Cluster unreachable [client=%s, liveClients.length=%d]",
+					client, liveClients.length));
 		}
 		try {
 			client.publish(topic, payload, qos, retained);
@@ -188,7 +249,7 @@ public class HaMqttClient implements IHaMqttClient {
 			removeMqttClient(client);
 
 			logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-					client.getServerURI()));
+					client.getServerURI()), e);
 
 			// Upon removal, a new live client list is obtained.
 			// Publish it again with the new publisherClient.
@@ -211,7 +272,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 * IMqttClient: {@inheritDoc}
 	 */
 	@Override
-	public IMqttToken subscribe(String topicFilter, int qos) {
+	public IMqttToken subscribe(String topicFilter, int qos) throws MqttException {
 		IMqttToken[] tokens = subscribeCluster(topicFilter, qos);
 		IMqttToken token = null;
 		MqttClient client = getPublisher();
@@ -226,7 +287,10 @@ public class HaMqttClient implements IHaMqttClient {
 		return token;
 	}
 
-	public IMqttToken[] subscribeCluster(String topicFilter, int qos) {
+	/**
+	 * IHaMqttClient: {@inheritDoc}
+	 */
+	public IMqttToken[] subscribeCluster(String topicFilter, int qos) throws MqttException {
 		clusterState.subscribe(topicFilter, qos);
 
 		// Live client variables are updated from another thread. We reassign them to
@@ -256,10 +320,15 @@ public class HaMqttClient implements IHaMqttClient {
 	 * well as receiving messages. To obtain all tokens, use
 	 * {@link #subscribeCluster(MqttConnectionOptions)}.
 	 * <p>
+	 * IMqttClient: /** Subscribes to the specified topic filters and returns the
+	 * publisher's token. The publisher is the client that is responsible for
+	 * publishing messages as well as receiving messages. To obtain all tokens, use
+	 * {@link #subscribeCluster(MqttConnectionOptions)}.
+	 * <p>
 	 * IMqttClient: {@inheritDoc}
 	 */
 	@Override
-	public IMqttToken subscribe(String[] topicFilters, int[] qos) {
+	public IMqttToken subscribe(String[] topicFilters, int[] qos) throws MqttException {
 		IMqttToken[] tokens = subscribeCluster(topicFilters, qos);
 		IMqttToken token = null;
 		MqttClient client = getPublisher();
@@ -274,7 +343,10 @@ public class HaMqttClient implements IHaMqttClient {
 		return token;
 	}
 
-	public IMqttToken[] subscribeCluster(String[] topicFilters, int[] qos) {
+	/**
+	 * IHaMqttClient: {@inheritDoc}
+	 */
+	public IMqttToken[] subscribeCluster(String[] topicFilters, int[] qos) throws MqttException {
 		clusterState.subscribe(topicFilters, qos);
 
 		// Live client variables are updated from another thread. We reassign them to
@@ -323,6 +395,9 @@ public class HaMqttClient implements IHaMqttClient {
 		return token;
 	}
 
+	/**
+	 * IHaMqttClient: {@inheritDoc}
+	 */
 	public IMqttToken[] subscribeCluster(String[] topicFilters, int[] qos, IMqttMessageListener[] messageListeners)
 			throws MqttException {
 		clusterState.subscribe(topicFilters, qos);
@@ -341,7 +416,8 @@ public class HaMqttClient implements IHaMqttClient {
 
 //		for (MqttClient client : clients) {
 //			try {
-//				// A bug in Paho 1.2.5. The following loops indefinitely.
+//				// A bug in Paho 1.2.5. The following loops indefinitely. This is fixed
+//		        // in the next version yet to be released (4/25/2023)
 //				tokens[index++] = client.subscribe(topicFilters, qos, messageListeners);
 //			} catch (MqttException e) {
 //				removeMqttClient(client);
@@ -363,7 +439,12 @@ public class HaMqttClient implements IHaMqttClient {
 		return tokens;
 	}
 
-	public IMqttToken[] subscribe(MqttSubscription[] subscriptions) {
+	/**
+	 * MqttClient: {@inheritDoc}
+	 * 
+	 * @see IMqttClient#subscribe(String[], int[])
+	 */
+	public IMqttToken[] subscribe(MqttSubscription[] subscriptions) throws MqttException {
 		clusterState.subscribe(subscriptions);
 
 		// Live client variables are updated from another thread. We reassign them to
@@ -412,6 +493,9 @@ public class HaMqttClient implements IHaMqttClient {
 		return token;
 	}
 
+	/**
+	 * IHaMqttClient: {@inheritDoc}
+	 */
 	public IMqttToken[] subscribeCluster(String topicFilter, int qos, IMqttMessageListener messageListener)
 			throws MqttException {
 		clusterState.subscribe(topicFilter, qos, messageListener);
@@ -430,7 +514,8 @@ public class HaMqttClient implements IHaMqttClient {
 
 //		for (MqttClient client : clients) {
 //			try {
-//				// A bug in Paho 1.2.5. The following loops indefinitely.
+//		        // A bug in Paho 1.2.5. The following loops indefinitely. This is fixed
+//              // in the next version yet to be released (4/25/2023)
 //				tokens[index++] = client.subscribe(topicFilter, qos, messageListener);
 //			} catch (MqttException e) {
 //				removeMqttClient(client);
@@ -451,6 +536,9 @@ public class HaMqttClient implements IHaMqttClient {
 		return tokens;
 	}
 
+	/**
+	 * MqttClient: {@inheritDoc}
+	 */
 	public IMqttToken[] subscribe(MqttSubscription[] subscriptions, IMqttMessageListener[] messageListeners)
 			throws MqttException {
 		clusterState.subscribe(subscriptions, messageListeners);
@@ -476,8 +564,11 @@ public class HaMqttClient implements IHaMqttClient {
 		return tokens;
 	}
 
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
 	@Override
-	public void unsubscribe(String topicFilter) {
+	public void unsubscribe(String topicFilter) throws MqttException {
 		clusterState.unsubscribe(topicFilter);
 
 		// Live client variables are updated from another thread. We reassign them to
@@ -493,8 +584,11 @@ public class HaMqttClient implements IHaMqttClient {
 		}
 	}
 
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
 	@Override
-	public void unsubscribe(String[] topicFilters) {
+	public void unsubscribe(String[] topicFilters) throws MqttException {
 		clusterState.unsubscribe(topicFilters);
 
 		// Live client variables are updated from another thread. We reassign them to
@@ -510,16 +604,25 @@ public class HaMqttClient implements IHaMqttClient {
 		}
 	}
 
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
 	@Override
 	public void setCallback(MqttCallback callback) {
 		clusterState.setCallback(callback);
 	}
 
-	public void addCallbackCluster(IHaMqttClientCallback callback) {
+	/**
+	 * IHaMqttClient: {@inheritDoc}
+	 */
+	public void addCallbackCluster(IHaMqttCallback callback) {
 		clusterState.addCallbackCluster(callback);
 	}
 
-	public void removeCallbackCluster(IHaMqttClientCallback callback) {
+	/**
+	 * IHaMqttClient: {@inheritDoc}
+	 */
+	public void removeCallbackCluster(IHaMqttCallback callback) {
 		clusterState.removeCallbackCluster(callback);
 	}
 
@@ -542,12 +645,11 @@ public class HaMqttClient implements IHaMqttClient {
 	public void connect() throws MqttSecurityException, MqttException {
 		if (isDisconnected()) {
 			clusterState.connect();
-			liveClients = clusterState.getLiveClients().toArray(new MqttClient[0]);
-
-			if (liveClients.length > 0) {
-				publisherClient = getPublisher();
-			}
-			clusterState.connect();
+//			liveClients = clusterState.getLiveClients().toArray(new MqttClient[0]);
+//
+//			if (liveClients.length > 0) {
+//				publisherClient = getPublisher();
+//			}
 		}
 	}
 
@@ -563,11 +665,6 @@ public class HaMqttClient implements IHaMqttClient {
 	public void connect(MqttConnectionOptions options) throws MqttSecurityException, MqttException {
 		if (isDisconnected()) {
 			clusterState.connect(options);
-			liveClients = clusterState.getLiveClients().toArray(new MqttClient[0]);
-
-			if (liveClients.length > 0) {
-				publisherClient = getPublisher();
-			}
 		}
 	}
 
@@ -593,25 +690,13 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
-	 * Connects to the cluster and returns all the connected client tokens. This
-	 * method may modify the specified connection options to be compliant with this
-	 * object.
-	 * 
-	 * @param options Connection options
-	 * @return A non-null token array.
-	 * @throws MqttSecurityException
-	 * @throws MqttException
+	 * IHaMqttClient: {@inheritDoc}
 	 */
 	public IMqttToken[] connectWithResultCluster(MqttConnectionOptions options)
 			throws MqttSecurityException, MqttException {
 		IMqttToken[] tokens;
 		if (isDisconnected()) {
 			tokens = clusterState.connectWithResult(options);
-			liveClients = clusterState.getLiveClients().toArray(new MqttClient[0]);
-
-			if (liveClients.length > 0) {
-				publisherClient = getPublisher();
-			}
 		} else {
 			tokens = new IMqttToken[0];
 		}
@@ -619,10 +704,7 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
-	 * Returns true if the cluster state is disconnected, indicating all the
-	 * endpoints in the cluster have been disconnected and the cluster is not
-	 * maintained. From this state, the cluster can be reactivated by invoking any
-	 * of the {@linkplain #connect()} methods.
+	 * {@inheritDoc}
 	 */
 	public boolean isDisconnected() {
 		return clusterState.isDisconnected();
@@ -662,8 +744,9 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
-	 * Forcibly closes the cluster. Once closed, this object is no longer
-	 * operational.
+	 * MqttClient: Forcibly closes the cluster. Once closed, this object is no
+	 * longer operational.
+	 * 
 	 * 
 	 * @param force true to Forcibly close the cluster, false to gracefully close
 	 *              the cluster.
@@ -673,67 +756,49 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
-	 * Returns true if the cluster is closed.
+	 * HaMqttClient: {@inheritDoc}
 	 */
 	public boolean isClosed() {
 		return clusterState.isClosed();
 	}
 
 	/**
-	 * Returns the primary MqttClient instance. It returns null if the primary
-	 * client is not configured.
+	 * HaMqttClient: {@inheritDoc}
 	 */
 	public MqttClient getPrimaryMqttClient() {
 		return clusterState.getPrimaryClient();
 	}
 
 	/**
-	 * Returns all client IDs including live and disconnected. If this HA client has
-	 * been closed, then it returns an empty array.
-	 * 
-	 * @return An empty array if no clients exist.
+	 * HaMqttClient: {@inheritDoc}
 	 */
 	public String[] getClientIds() {
 		return clusterState.getClientIds();
 	}
 
 	/**
-	 * Returns live client IDs. This method is analogous to
-	 * {@link #getCurrentServerURIs()}.
-	 * 
-	 * @return An empty array if no live clients exist.
-	 * @see #getCurrentServerURIs()
+	 * HaMqttClient: {@inheritDoc}
 	 */
 	public String[] getLiveClientIds() {
 		return clusterState.getLiveClientIds();
 	}
 
 	/**
-	 * Returns disconnected client IDs.
-	 * 
-	 * @return An empty array if no disconnected clients exist.
+	 * HaMqttClient: {@inheritDoc}
 	 */
 	public String[] getDisconnectedClientIds() {
 		return clusterState.getDeadClientIds();
 	}
 
 	/**
-	 * Returns all (connected and disconnected) server URIs that make up the
-	 * cluster.
+	 * HaMqttClient: {@inheritDoc}
 	 */
 	public String[] getServerURIs() {
 		return clusterState.getServerURIs();
 	}
 
 	/**
-	 * Returns the currently connected Server URIs Implemented due to:
-	 * https://bugs.eclipse.org/bugs/show_bug.cgi?id=481097.
-	 * 
-	 * This method is analogous to {@link #getLiveClientIds()}.
-	 *
-	 * @return the currently connected server URIs
-	 * @see MqttClient#getCurrentServerURI()
-	 * @see #getLiveClientIds()
+	 * HaMqttClient: {@inheritDoc}
 	 */
 	public String[] getCurrentServerURIs() {
 		return clusterState.getCurrentServerURIs();
@@ -887,19 +952,26 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
-	 * Indicates that the application has completed processing the message with id
-	 * messageId. This will cause the MQTT acknowledgement to be sent to the server.
-	 * 
-	 * @param client    the client that received the message
-	 * @param messageId the MQTT message id to be acknowledged
-	 * @param qos       the MQTT QoS of the message to be acknowledged
-	 * @throws MqttException if there was a problem sending the acknowledgement
-	 * @see #messageArrivedComplete(int, int)
+	 * IMqttClient: {@inheritDoc}
 	 */
 	public void messageArrivedComplete(MqttClient client, int messageId, int qos) throws MqttException {
 		if (client != null) {
 			client.messageArrivedComplete(messageId, qos);
 		}
+	}
+
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
+	public void addServerURI(String serverURI) {
+		clusterState.addEndpoint(serverURI);
+	}
+
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
+	public boolean removeServerURI(String serverURI) {
+		return clusterState.removeEndpoint(serverURI);
 	}
 
 	@Override

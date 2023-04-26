@@ -28,13 +28,17 @@ target/mqtt-addon-core-<version>.jar
 
 ### Clustering MQTT Brokers
 
-There are numerous commercial MQTT products that offer clustering solutions, but if you are on a tight budget then you might consider implementing your own clustering solution. Depending on the clustering flexibility that you want in your system, clustering MQTT brokers can get complicated. If you are primarily in need of High Availability (HA), then instead of clustering from the server side, you can implement a simple client-side API to attain the same level of HA that many commercial products offer. Such an API undoubtedly comes with many limitations but because of the instability nature of edge devices, the limitations maybe tolerable for many use cases. With this reasoning, PadoGrid provides a simple cluster client API, `HaMqttClient`, for clustering MQTT brokers. 
+There are numerous commercial MQTT products that offer clustering solutions, but if you are on a tight budget then you might consider implementing your own clustering solution. Depending on the clustering flexibility that you want in your system, clustering MQTT brokers can get complicated. If you are primarily in need of High Availability (HA), then instead of clustering from the server side, you can implement a simple client-side API to attain the same level of HA that many commercial products offer. Such an API undoubtedly comes with some limitations but because of the instability nature of edge devices, the limitations maybe tolerable for many use cases. With this reasoning, PadoGrid provides a simple cluster client API, `HaMqttClient`, for clustering MQTT brokers. 
+
+![HaClusters Diagram](images/padogrid-mqtt-haclusters.drawio.png)
 
 ### `HaMqttClient` Design
 
-`HaMqttClient` wraps Paho's `MqttClient` and provides support for multiple broker connections. It can be configured with a configuration file or via API. You can have one or more instances of `HaMqttClient`, each forming a cluster. A cluster is initially defined by listing the server URIs which can be modified at any time. `HaMqttClient` attempts to connect to all of the URIs when it is first instantiated. The successfully connected URIs are placed in the live broker client list and the failed URIs are placed in the dead broker client list. If a live broker client fails, then `HaMqttClient` automatically moves it from the live broker client list to the dead broker client list. Behind the scene, a dedicated daemon thread periodically probes the dead broker client list and attempts to connect to each URI. It moves the successfully connected broker clients from the dead broker client list to the live broker client list. `HaMqttClient` only uses the live broker client list to communicate with the brokers.
+`HaMqttClient` wraps [Paho's `MqttClient`](https://www.eclipse.org/paho/index.php?page=clients/java/index.php) and provides support for multiple broker connections. It can be configured with a configuration file or via API. You can have one or more instances of `HaMqttClient`, each forming a cluster. A cluster is initially defined by listing the server URIs which can be modified at any time. `HaMqttClient` attempts to connect to all of the URIs when it is first instantiated. The successfully connected URIs are placed in the live broker client list and the failed URIs are placed in the dead broker client list. If a live broker client fails, then `HaMqttClient` automatically moves it from the live broker client list to the dead broker client list. Behind the scene, a dedicated daemon thread periodically probes the dead broker client list and attempts to connect to each URI. It moves the successfully connected broker clients from the dead broker client list to the live broker client list. `HaMqttClient` only uses the live broker client list to communicate with the brokers.
 
-For topic publications, `HaMqttClient` publishes messages using only one of the broker clients, ensuring non-duplicate messages are delivered to the cluster. For topic subscriptions, `HaMqttClient` subscribes to all live brokers. Even though subscriptions are made by all broker clients, since only one broker client publishes messages, only one broker will deliver messages to one broker client. The application can receive messages in the form of Paho's `MqttCallback` or PadoGrid's `IHaMqttClientCallback`. While `MqttCallback` only receives messages, `IHaMqttClientCallback` also includes the Paho's `MqttClient` instance that is responsible for receiving messages. `IHaMqttClientCallback` is useful for lifting [`HaMqttClient` Limitations](#hamqttclient-limitations) described below.
+![Endpoints Diagram](images/padogrid-mqtt-endpoints.drawio.png)
+
+For topic publications, `HaMqttClient` publishes messages using only one of the broker clients, ensuring non-duplicate messages are delivered to the cluster. For topic subscriptions, `HaMqttClient` subscribes to all live brokers. Even though subscriptions are made by all broker clients, since only one broker client publishes messages, only one broker will deliver messages to the corresponding broker client. The application can receive messages in the form of Paho's `MqttCallback` or PadoGrid's `IHaMqttClientCallback`. While `MqttCallback` only receives messages, `IHaMqttClientCallback` also includes the Paho's `MqttClient` instance that is responsible for receiving messages. `IHaMqttClientCallback` is useful for lifting [`HaMqttClient` Limitations](#hamqttclient-limitations) described below.
 
 ### `HaMqttClient` QoS (Quality of Service)
 
@@ -48,17 +52,20 @@ Since `HaMqttClient` subscribes to multiple brokers, it receives the retained me
 
 There are workarounds to the limitations.
 
-1. **Create a cluster with a single endpoint (server URI).** This essentially disables HA but guarantees one retained message per topic per `HaMqttClient` instance. For other topics that do not require retained messages, you can create additional clusters with multiple endpoints.
+1. **Create a cluster with a single endpoint (server URI).** This essentially disables HA but guarantees one retained message per topic per `HaMqttClient` instance. To offload the single endpoint, you can create additional clusters for the topics that do not require retained messages.
 
-2. The previous workaround, of course, defeats the purpose of `HaMqttClient`. If you need to keep HA intact, then you can include a timestamp as part of the payload and add logic to pick the message with the latest timesamp as the latest retained message. This workaround assumes that the publishers are synchronized with the network clock that handles time drift.
 
-3. For edge devices scattered everywhere, however, it might be impossible to synchronize them with the network clock. In that case, depending on data requirements, the application can add logic to designate one broker for for providing all retained messages. If that broker fails then select the next reliable one from the endpoint list. With this approach, the application might not receive the latest retained messages but it will receive the retained messages in a consistent manner. 
+2. The previous workaround, of course, defeats the purpose of `HaMqttClient`. If you need to keep HA intact, then you can include a timestamp as part of the payload and determine the latest retained message based on the latest timestamp. This workaround assumes that the publishers are synchronized with the network clock that properly handles time drift.
+
+3. For edge devices scattered everywhere, however, it might be impossible to synchronize them with the network clock. In that case, depending on data consistency requirements, the application can designate one broker for providing all retained messages. If that broker fails then the application selects the next reliable one from the endpoint list. This approach is not for all applications but those that weigh more on receiving data in a consistent manner and can tolerate a small window of data inaccuracy of retained data.
 
 ## Using `HaMqttClient`
 
 `HaMqttClient` has the same API as Paho's `MqttClient`. It implements `IHaMqttClient` which extends `IMqttClient`. `IHaMqttClient` contains the additional methods that are specific to `HaMqttClient`. This allows you to easily and seamlessly migrate to `HaMqttClient` from `MqttClient`, and vice versa.
 
-Unlike `MqttClient`, you cannot directly instantiate `HaMqttClient`. You must use `HaCluster` to create an `HaMqttClient` instance. Once you have an `HaMqttClient` instance, you use it just like `MqttClient`. All the methods provided by `MqttClient` are available for your use. If you want to be able to quickly switch between `HaMqttClient` and `MqttClient`, then you can restrict from using the `IHaMqttClient` methods. However, we encourage you to try out the additional methods which can greatly ease your cluster chores.
+Unlike `MqttClient`, you cannot directly instantiate `HaMqttClient`. You must use `HaCluster` to create an `HaMqttClient` instance. Once you have an `HaMqttClient` instance, you use it just like `MqttClient`. All the methods provided by `MqttClient` are also available from `HaMqttClient`. If you want to be able to quickly switch between `HaMqttClient` and `MqttClient`, then you can restrict from using the `IHaMqttClient` methods. However, we encourage you to try out the additional methods which can greatly ease your cluster chores.
+
+![Class Diagram](images/padogrid-mqtt-class.drawio.png)
 
 ### Migration: `HaMqttClient` vs `MqttClient`
 
@@ -72,7 +79,7 @@ The simplest way is to type-cast `IMqttClient` as follows.
 IMqttClient client  = (IMqttClient)HaCluster.getHaMqttClient();
 ```
 
-✏️ There is one caveat to this approach, however. The method, `IMqttClient.messageArrivedComplete(int messageId, int qos)`, is supported only if the cluster has one (1) endpoint. If the cluster is configured with more than one (1) endpoint, then it throws `UnsupportedOperationException`. This is because, with `IMqttClient` alone, there is no way to determine which server in the cluster to direct this call. Remember, an `HaMqttClient` instance represents multiple servers. If you must use this method then you would need ot use `HaMqttClient` as described in the next section.
+✏️ There is one caveat to this approach, however. The method, `IMqttClient.messageArrivedComplete(int messageId, int qos)`, is supported only if the cluster has one (1) endpoint. If the cluster is configured with more than one (1) endpoint, then it throws `UnsupportedOperationException`. This is because, with `IMqttClient` alone, there is no way to determine which server in the cluster to direct this call. Remember, an `HaMqttClient` instance represents multiple servers. If you must use this method then you would need to use `HaMqttClient` as described in the next section.
 
 #### `HaMqttClient`
 
@@ -82,7 +89,7 @@ It turns out `MqttClient` that implements `IMqttClient` includes some methods th
 HaMqttClient haclient = HaCluster.getHaMqttClient();
 ```
 
-✏️  The method, `HaMqttClient.messageArrivedComplete(MqttClient client, int messageId, int qos)`, is a counterpart of `IMqttClient.messageArrivedComplete(int message Id, int qos)`. As described in the preivous section, the latter method is not supported for a cluster with more than one (1) endpoint. The former method is simply there for completeness. You would instead normally invoke `client.messageArrivedComplete(int message Id, int qos)` from the callback as shown in the following example. *Note that unlike `MqttClient` which supports only one callback, `HaMqttClient` supports multiple callbacks.*
+✏️  The method, `HaMqttClient.messageArrivedComplete(MqttClient client, int messageId, int qos)`, is a counterpart of `IMqttClient.messageArrivedComplete(int message Id, int qos)`. As described in the preivous section, the latter method is not supported for a cluster with more than one (1) endpoint. The former method addresses this limitation, but since you can simply use the required argument, `client` to directly invoke the method, it is not that useful. It is merely there for API completeness. You would normally invoke `client.messageArrivedComplete(int message Id, int qos)` from a callback as shown in the following example. *Note that unlike `MqttClient` which supports only one callback, `HaMqttClient` supports multiple callbacks.*
 
 ```java
 HaMqttClient haclient = HaCluster.getHaMqttClient();
@@ -126,7 +133,7 @@ client.connect();
 
 ## Configuring `HaMqttClient`
 
-`HaMqttClient` can be configured using the API or an Yaml file. The following shows an example Yaml file. Configuring `HaMqttClient` with an Yaml file is preferred. It eliminates the complexity and rigidity of coding, and provides the portablity and simplicity of namespace-based clustering.
+`HaMqttClient` can be configured using the API or an YAML file. The following shows an example YAML file. Configuring `HaMqttClient` with an YAML file is preferred. It eliminates the complexity and rigidity of coding, and provides the portablity and simplicity of namespace-based clustering.
 
 For example, you can configure your application to host **multiple clusters** in the configuration file, each with a a unique cluster name assigned. In your application, you would simply invoke `HaCluster.getOrCreateHaMqttClient(String clusterName)` to get the `HaMqttClient` instance that has been configured with the specified cluster name.
 
@@ -146,7 +153,21 @@ HaMqttClient client = HaCluster.getHaMqttClient("mycluster");
 
 If the cluster name is defined in the configuration file then the `HaMqttClient` will form the cluster based on the cluster definition in the configuration file. If it is not found, then it uses the default settings.
 
-The default Yaml file is shown below.
+### Configuration File
+
+The configuration file is searched in the following order.
+
+1. API, i.e., `HaCluster.getOrCreateHaMqttClient(ClusterConfig.Cluster clusterConfig)`.
+2. File path defined by the system property, `org.mqtt.addon.client.cluster.config.file`.
+3. In class path, `mqttv5-client.yaml`.
+
+System properties and environment variables are supported for string attributes in the configuration file. 
+
+- A system property is denoted by `${my.system.property}`
+- An environment variable is denoed by `${env:MY_ENV_VAR}`, `env` must be in lowercase and no spaces allowed before or after `:`. 
+- Only one of each type per attribute is allowed, i.e., one system property, one environment variable, or both.
+
+The default YAML configuration file is shown below.
 
 ```yaml
 # true to enable the cluster service, false to disable.
@@ -303,6 +324,15 @@ clusters:
         wildcardSubscriptionsAvailable: null
         willDelayInterval: null
 ```
+
+## Logging
+
+`HaMqttClient` uses two (2) logging frameworks, `log4j2` and `java.util.logging`, as follows.
+
+- `HaMqttClient` uses `log4j2`. The default `log4j2` file is `etc/log4j2.properties`.
+- `MqttClient` uses `java.util.logging`. An example Paho logging configuration file is provided: `etc/paho-logging.properties`.
+
+✏️  As a reference, please see the `perf_test` app, which includes both configuration files.
 
 ## Apps
 

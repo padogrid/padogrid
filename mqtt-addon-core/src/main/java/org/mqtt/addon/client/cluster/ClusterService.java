@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023 Netcrest Technologies, LLC. All rights reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.mqtt.addon.client.cluster;
 
 import java.io.File;
@@ -51,7 +66,7 @@ public class ClusterService {
 	 * {@link #initialize(Properties)} method must be invoked once prior to invoking
 	 * this method. Otherwise, it will return null.
 	 */
-	static ClusterService getClusterService() {
+	public static ClusterService getClusterService() {
 		return clusterService;
 	}
 
@@ -69,11 +84,14 @@ public class ClusterService {
 	 *                      {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE}
 	 *                      in the class path is read. If all fails, then the
 	 *                      default settings are applied.
+	 * @param isStart       true to start the service. If false, then the
+	 *                      {@link #start()} method must be invoked to start the
+	 *                      service.
 	 * 
 	 * @return ClusterService instance
 	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
-	static synchronized ClusterService initialize(ClusterConfig clusterConfig) throws IOException {
+	public static synchronized ClusterService initialize(ClusterConfig clusterConfig, boolean isStart) throws IOException {
 		if (clusterService == null) {
 			if (clusterConfig == null) {
 				String configFile = System.getProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE);
@@ -94,7 +112,9 @@ public class ClusterService {
 
 			clusterService = new ClusterService();
 			clusterService.init(clusterConfig);
-			clusterService.start();
+			if (isStart) {
+				clusterService.start();
+			}
 		}
 		return clusterService;
 	}
@@ -125,7 +145,7 @@ public class ClusterService {
 						clusterName = IClusterConfig.DEFAULT_CLUSTER_NAME;
 					}
 				}
-				HaCluster.getOrCreateHaMqttClient(cluster);
+				HaClusters.getOrCreateHaMqttClient(cluster);
 			}
 		}
 
@@ -161,10 +181,10 @@ public class ClusterService {
 	}
 
 	ClusterState addHaClient(HaMqttClient haclient, ClusterConfig.Cluster clusterConfig,
-			MqttClientPersistence persistence) {
+			MqttClientPersistence persistence, ScheduledExecutorService executorService) {
 		ClusterState state = haclientMap.get(haclient);
 		if (state == null) {
-			state = new ClusterState(haclient, clusterConfig, persistence);
+			state = new ClusterState(haclient, clusterConfig, persistence, executorService);
 			haclientMap.put(haclient, state);
 		}
 		return state;
@@ -192,7 +212,7 @@ public class ClusterService {
 	 * have no effect. It starts only if {@link #isServiceEnabled()} is true. This
 	 * method must be invoked to activate the service.
 	 */
-	synchronized void start() {
+	public synchronized void start() {
 		if (isServiceEnabled && isStarted == false) {
 			if (ses != null) {
 				if (ses.isShutdown()) {
@@ -226,7 +246,7 @@ public class ClusterService {
 	 * Stops the service. Once stopped, the service is no longer operational and
 	 * usable.
 	 */
-	synchronized void stop() {
+	public synchronized void stop() {
 		if (ses != null) {
 			ses.shutdown();
 			if (logger != null) {

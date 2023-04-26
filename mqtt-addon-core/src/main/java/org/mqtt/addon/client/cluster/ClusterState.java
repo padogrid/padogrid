@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023 Netcrest Technologies, LLC. All rights reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.mqtt.addon.client.cluster;
 
 import java.util.ArrayList;
@@ -8,6 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,12 +35,14 @@ import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttClientPersistence;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
+import org.eclipse.paho.mqttv5.client.internal.NetworkModuleService;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.MqttSecurityException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
+import org.mqtt.addon.client.cluster.config.ConfigUtil;
 
 /**
  * {@linkplain ClusterState} probes a collection of MQTT endpoints. The endpoint
@@ -36,6 +55,14 @@ import org.mqtt.addon.client.cluster.config.ClusterConfig;
 public class ClusterState implements IClusterConfig {
 	private final HaMqttClient haclient;
 	private final MqttClientPersistence persistence;
+	private ScheduledExecutorService executorService;
+
+	// The first iteration of connections is done on a small number of brokers
+	// to reduce the connection blocking time.
+	private boolean isFirstConnectionAttempt = true;
+	
+	// Mutex lock to synchronize endpoint sets.
+	private Object lock = new Object();
 
 	private String primaryServerURI;
 	private MqttClient primaryClient;
@@ -49,8 +76,8 @@ public class ClusterState implements IClusterConfig {
 
 	private Set<TopicInfo> subscribedTopics = Collections.synchronizedSet(new HashSet<TopicInfo>());
 	private MqttCallback callback;
-	private ArrayList<IHaMqttClientCallback> haCallbackList = new ArrayList<IHaMqttClientCallback>(2);
-	private IHaMqttClientCallback[] haCallbacks = haCallbackList.toArray(new IHaMqttClientCallback[0]);
+	private ArrayList<IHaMqttCallback> haCallbackList = new ArrayList<IHaMqttCallback>(2);
+	private IHaMqttCallback[] haCallbacks = haCallbackList.toArray(new IHaMqttCallback[0]);
 
 	private MqttConnectionOptions connectionOptions = new MqttConnectionOptions();
 
@@ -58,13 +85,14 @@ public class ClusterState implements IClusterConfig {
 		LIVE, DISCONNECTED, CLOSED
 	}
 
+	private volatile boolean connectionInProgress = false;
 	private volatile ConnectionState connectionState = ConnectionState.DISCONNECTED;
 
-	ClusterState(HaMqttClient haclient, ClusterConfig.Cluster clusterConfig, MqttClientPersistence persistence) {
+	ClusterState(HaMqttClient haclient, ClusterConfig.Cluster clusterConfig, MqttClientPersistence persistence, ScheduledExecutorService executorService) {
 		this.haclient = haclient;
-
 		this.primaryServerURI = clusterConfig.getPrimaryServerURI();
 		this.persistence = persistence;
+		this.executorService = executorService;
 		this.logger = LogManager.getLogger(String.format("ClusterState[%s]", haclient.getClusterName()));
 		clientIdPrefix = haclient.getClusterName();
 		MqttConnectionOptions options = clusterConfig.getConnection();
@@ -80,18 +108,6 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
-	private List<String> getEndpointList(String endpoints) {
-		String[] split = endpoints.split(",");
-		ArrayList<String> list = new ArrayList<String>(split.length);
-		for (String endpoint : split) {
-			endpoint = endpoint.trim();
-			if (list.contains(endpoint) == false) {
-				list.add(endpoint);
-			}
-		}
-		return Collections.unmodifiableList(list);
-	}
-
 	/**
 	 * Adds the specified target endpoints. New endpoints are placed in the dead
 	 * endpoint list and eventually moved to the live endpoint list upon successful
@@ -103,15 +119,17 @@ public class ClusterState implements IClusterConfig {
 		if (endpoints == null) {
 			return;
 		}
-		for (String endpoint : endpoints) {
-			if (allEndpointSet.contains(endpoint) == false) {
-				allEndpointSet.add(endpoint);
-				deadEndpointSet.add(endpoint);
+		synchronized (lock) {
+			for (String endpoint : endpoints) {
+				if (allEndpointSet.contains(endpoint) == false) {
+					allEndpointSet.add(endpoint);
+					deadEndpointSet.add(endpoint);
+				}
 			}
-		}
-		if (logger != null) {
-			logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints [%s].", endpoints,
-					getAllEndpoints()));
+			if (logger != null) {
+				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints [%s].", endpoints,
+						getAllEndpoints()));
+			}
 		}
 	}
 
@@ -120,22 +138,24 @@ public class ClusterState implements IClusterConfig {
 	 * endpoint list and eventually moved to the live endpoint list upon successful
 	 * connections.
 	 * 
-	 * @param endpoints Endpoint URLs. If null, then it is treated as empty.
+	 * @param endpoints A comma-separated list of endpoint URLs. If null, then it is treated as empty.
 	 */
 	public void addEndpoints(String endpoints) {
 		if (endpoints == null) {
 			return;
 		}
-		List<String> endpointList = getEndpointList(endpoints);
-		for (String endpoint : endpointList) {
-			if (allEndpointSet.contains(endpoint) == false) {
-				allEndpointSet.add(endpoint);
-				deadEndpointSet.add(endpoint);
+		synchronized (lock) {
+			List<String> endpointList = ConfigUtil.parseEndpoints(endpoints);
+			for (String endpoint : endpointList) {
+				if (allEndpointSet.contains(endpoint) == false) {
+					allEndpointSet.add(endpoint);
+					deadEndpointSet.add(endpoint);
+				}
 			}
-		}
-		if (logger != null) {
-			logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints [%s].", endpoints,
-					getAllEndpoints()));
+			if (logger != null) {
+				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints [%s].", endpoints,
+						getAllEndpoints()));
+			}
 		}
 	}
 
@@ -166,11 +186,11 @@ public class ClusterState implements IClusterConfig {
 	 * 
 	 * @return A non-empty array of user tokens.
 	 */
-	private IMqttToken[] connectDeadEndpoints() {
+	private IMqttToken[] connectDeadEndpoints(Set<String> deadEndpointSet) {
 		int count = 0;
 		StringBuffer buffer = new StringBuffer();
 		ArrayList<IMqttToken> tokenList = new ArrayList<IMqttToken>(deadClientSet.size());
-		synchronized (deadEndpointSet) {
+		synchronized (lock) {
 			Iterator<String> iterator = deadEndpointSet.iterator();
 			while (iterator.hasNext()) {
 				String endpoint = iterator.next();
@@ -183,13 +203,20 @@ public class ClusterState implements IClusterConfig {
 					if (persistence == null) {
 						MqttClientPersistence persistence = ClusterService.getClusterService()
 								.createMqttClientPersistence();
+//						ScheduledExecutorService executorService = this.executorService;
+//						if (executorService == null) {
+//							executorService = Executors.newScheduledThreadPool(allEndpointSet.size() * 3 + 1);
+//							this.executorService = executorService;
+//						}
 						if (persistence == null) {
+							// Note: the following creates MqttDefaultFilePersistence.
 							client = new MqttClient(endpoint, clientId);
 						} else {
-							client = new MqttClient(endpoint, clientId, persistence);
+							// Note: Passing null value for persistence creates MemoryPersistence.
+							client = new MqttClient(endpoint, clientId, persistence, executorService);
 						}
 					} else {
-						client = new MqttClient(endpoint, clientId, persistence);
+						client = new MqttClient(endpoint, clientId, persistence, executorService);
 					}
 					client.setCallback(new MqttCallbackImpl(client));
 					IMqttToken token = client.connectWithResult(connectionOptions);
@@ -210,8 +237,7 @@ public class ClusterState implements IClusterConfig {
 					buffer.append(client.getServerURI());
 					count++;
 				} catch (MqttException e) {
-					logger.debug(String.format("Exception raised while making initial connection [%s]. %s", endpoint,
-							e.getMessage()));
+					logger.debug(String.format("Exception raised while making initial connection [%s].", endpoint), e);
 					if (client != null) {
 						try {
 							client.close();
@@ -225,6 +251,47 @@ public class ClusterState implements IClusterConfig {
 		return tokenList.toArray(new IMqttToken[0]);
 	}
 
+	private IMqttToken[] connectDeadEndpoints() {
+
+//		return connectDeadEndpoints(deadEndpointSet);
+
+		// See if we can reduced the connection time by connecting to a few brokers for
+		// the first pass.
+		IMqttToken[] tokens = null;
+		synchronized (lock) {
+			if (isFirstConnectionAttempt) {
+				Set<String> condensedDeadEndpointSet;
+				int condensedMinCount = 3;
+				List<IMqttToken> tokenList = new ArrayList<IMqttToken>(condensedMinCount+1);
+				Set<String> deadEndpointSetCopy = new HashSet<String>(deadEndpointSet);
+				condensedDeadEndpointSet = Collections.synchronizedSet(new HashSet<String>(condensedMinCount, 1f));
+				if (primaryClient == null && primaryServerURI != null) {
+					condensedDeadEndpointSet.add(primaryServerURI);
+				}
+				while (tokenList.size() < condensedMinCount && deadEndpointSetCopy.size() > 0) {		
+					Iterator<String> iterator = deadEndpointSetCopy.iterator();
+					int count = 0;
+					while (count < condensedMinCount && iterator.hasNext()) {
+						condensedDeadEndpointSet.add(iterator.next());
+						iterator.remove();
+						count++;
+					}			
+					tokens = connectDeadEndpoints(condensedDeadEndpointSet);
+					for (IMqttToken token : tokens) {
+						deadEndpointSet.remove(token.getClient().getServerURI());
+						tokenList.add(token);
+					}
+					condensedDeadEndpointSet.clear();
+				}
+				tokens = tokenList.toArray(new IMqttToken[0]);
+				isFirstConnectionAttempt = false;
+			} else {
+				tokens = connectDeadEndpoints(deadEndpointSet);
+			}
+		}
+		return tokens;
+	}
+
 	/**
 	 * Revives the dead endpoints if any. The revived endpoints are promoted to the
 	 * live client list.
@@ -232,18 +299,22 @@ public class ClusterState implements IClusterConfig {
 	void reviveDeadEndpoints() {
 
 		// Revive only if in LiVE state
-		if (connectionState != ConnectionState.LIVE) {
+		if (connectionInProgress || connectionState != ConnectionState.LIVE) {
 			return;
 		}
 
-		int count = 0;
-		StringBuffer buffer = new StringBuffer();
+		connectionInProgress = true;
 
-		// First pass, iterate endpoints (String)
-		count = connectDeadEndpoints().length;
+		synchronized (lock) {
 
-		// Second pass - iterate dead clients (MqttClient) - Not used
-		synchronized (deadClientSet) {
+			int count = 0;
+			StringBuffer buffer = new StringBuffer();
+
+			// First pass, iterate endpoints (String)
+			count = connectDeadEndpoints().length;
+
+			// Second pass - iterate dead clients (MqttClient)
+
 			Iterator<MqttClient> iterator = deadClientSet.iterator();
 			TopicInfo[] subscriptions;
 			if (iterator.hasNext()) {
@@ -273,11 +344,9 @@ public class ClusterState implements IClusterConfig {
 					}
 				}
 			}
-		}
 
-		// Third pass - iterate live list and remove all disconnected clients
-		synchronized (liveClientSet) {
-			Iterator<MqttClient> iterator = liveClientSet.iterator();
+			// Third pass - iterate live list and remove all disconnected clients
+			iterator = liveClientSet.iterator();
 			while (iterator.hasNext()) {
 				MqttClient client = iterator.next();
 				if (client.isConnected() == false) {
@@ -286,14 +355,15 @@ public class ClusterState implements IClusterConfig {
 					count--;
 				}
 			}
-		}
 
-		if (count > 0) {
-			haclient.updateLiveClients(getLiveClients());
-			logger.info(String.format("Revived endpoint [%s]. Live endpoints [%s]. Dead endpoints %s.",
-					buffer.toString(), getLiveEndpoints(), deadEndpointSet));
-			logConnectionStatus();
+			if (count > 0) {
+				haclient.updateLiveClients(getLiveClients());
+				logger.info(String.format("Revived endpoint [%s]. Live endpoints [%s]. Dead endpoints %s.",
+						buffer.toString(), getLiveEndpoints(), deadEndpointSet));
+				logConnectionStatus();
+			}
 		}
+		connectionInProgress = false;
 	}
 
 	private void logConnectionStatus() {
@@ -302,6 +372,74 @@ public class ClusterState implements IClusterConfig {
 		} else {
 			logger.info(String.format("%d endpoint(s) connected and %d endpoint(s) not connected.",
 					liveClientSet.size(), deadEndpointSet.size() + deadClientSet.size()));
+		}
+	}
+
+	/**
+	 * Adds the specified endpoint.
+	 * 
+	 * @param serverURI Endpoint URI. If null, ignored.
+	 * @throws IllegalArgumentException Thrown if the specified serverURI is not
+	 *                                  valid.
+	 */
+	public void addEndpoint(String serverURI) throws IllegalArgumentException {
+		if (serverURI == null) {
+			return;
+		}
+		NetworkModuleService.validateURI(serverURI);
+		synchronized (lock) {
+			deadEndpointSet.add(serverURI);
+		}
+	}
+
+	/**
+	 * Removes the specified endpoint from the cluster. It disconnects and closes
+	 * the corresponding MqttClient instance.
+	 * 
+	 * @param serverURI Server URI representing the endpoint to remove.
+	 * @return true if the specified endpoint existed and is removed.
+	 */
+	public boolean removeEndpoint(String serverURI) {
+		if (serverURI == null) {
+			return false;
+		}
+		synchronized (lock) {
+			deadEndpointSet.remove(serverURI);
+
+			MqttClient client = null;
+			Iterator<MqttClient> iterator = liveClientSet.iterator();
+			while (iterator.hasNext()) {
+				MqttClient c = iterator.next();
+				if (c.getServerURI().equals(serverURI)) {
+					iterator.remove();
+					client = c;
+					break;
+				}
+			}
+
+			if (client == null) {
+				iterator = liveClientSet.iterator();
+				while (iterator.hasNext()) {
+					MqttClient c = iterator.next();
+					if (c.getServerURI().equals(serverURI)) {
+						iterator.remove();
+						client = c;
+						break;
+					}
+				}
+			}
+
+			if (client != null) {
+				try {
+					if (client.isConnected()) {
+						client.disconnect();
+					}
+					client.close();
+				} catch (MqttException e) {
+					// ignore
+				}
+			}
+			return client != null;
 		}
 	}
 
@@ -402,6 +540,9 @@ public class ClusterState implements IClusterConfig {
 			connectionState = ConnectionState.LIVE;
 			this.connectionOptions = updateConnectionOptions(options);
 			tokens = connectDeadEndpoints();
+			if (tokens != null && tokens.length > 0) {
+				haclient.updateLiveClients(getLiveClients());
+			}
 			break;
 		default:
 			tokens = new IMqttToken[0];
@@ -420,7 +561,8 @@ public class ClusterState implements IClusterConfig {
 		switch (connectionState) {
 		case LIVE:
 			connectionState = ConnectionState.DISCONNECTED;
-			synchronized (liveClientSet) {
+			synchronized (lock) {
+				List<MqttClient> disconnectedClientList = new ArrayList<MqttClient>(liveClientSet.size());
 				Iterator<MqttClient> iterator = liveClientSet.iterator();
 				while (iterator.hasNext()) {
 					MqttClient client = iterator.next();
@@ -433,10 +575,11 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
-					// deadEndpointSet.add(client.getServerURI());
-					deadClientSet.add(client);
+					disconnectedClientList.add(client);
 				}
+				deadClientSet.addAll(disconnectedClientList);
 			}
+
 			break;
 		default:
 			break;
@@ -453,7 +596,8 @@ public class ClusterState implements IClusterConfig {
 		switch (connectionState) {
 		case LIVE:
 			connectionState = ConnectionState.DISCONNECTED;
-			synchronized (liveClientSet) {
+			synchronized (lock) {
+				List<MqttClient> disconnectedClientList = new ArrayList<MqttClient>(liveClientSet.size());
 				Iterator<MqttClient> iterator = liveClientSet.iterator();
 				while (iterator.hasNext()) {
 					MqttClient client = iterator.next();
@@ -466,9 +610,9 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
-					// deadEndpointSet.add(client.getServerURI());
-					deadClientSet.add(client);
+					disconnectedClientList.add(client);
 				}
+				deadClientSet.addAll(disconnectedClientList);
 			}
 			break;
 		default:
@@ -486,7 +630,8 @@ public class ClusterState implements IClusterConfig {
 		switch (connectionState) {
 		case LIVE:
 			connectionState = ConnectionState.DISCONNECTED;
-			synchronized (liveClientSet) {
+			synchronized (lock) {
+				List<MqttClient> disconnectedClientList = new ArrayList<MqttClient>(liveClientSet.size());
 				Iterator<MqttClient> iterator = liveClientSet.iterator();
 				while (iterator.hasNext()) {
 					MqttClient client = iterator.next();
@@ -499,8 +644,9 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
-					deadClientSet.add(client);
+					disconnectedClientList.add(client);
 				}
+				deadClientSet.addAll(disconnectedClientList);
 			}
 			break;
 		default:
@@ -518,7 +664,8 @@ public class ClusterState implements IClusterConfig {
 		switch (connectionState) {
 		case LIVE:
 			connectionState = ConnectionState.DISCONNECTED;
-			synchronized (liveClientSet) {
+			synchronized (lock) {
+				List<MqttClient> disconnectedClientList = new ArrayList<MqttClient>(liveClientSet.size());
 				Iterator<MqttClient> iterator = liveClientSet.iterator();
 				while (iterator.hasNext()) {
 					MqttClient client = iterator.next();
@@ -531,8 +678,9 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
-					deadClientSet.add(client);
+					disconnectedClientList.add(client);
 				}
+				deadClientSet.addAll(disconnectedClientList);
 			}
 			break;
 		default:
@@ -550,7 +698,8 @@ public class ClusterState implements IClusterConfig {
 		switch (connectionState) {
 		case LIVE:
 			connectionState = ConnectionState.DISCONNECTED;
-			synchronized (liveClientSet) {
+			synchronized (lock) {
+				List<MqttClient> disconnectedClientList = new ArrayList<MqttClient>(liveClientSet.size());
 				Iterator<MqttClient> iterator = liveClientSet.iterator();
 				while (iterator.hasNext()) {
 					MqttClient client = iterator.next();
@@ -563,8 +712,9 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
-					deadClientSet.add(client);
+					disconnectedClientList.add(client);
 				}
+				deadClientSet.addAll(disconnectedClientList);
 			}
 			break;
 		default:
@@ -590,12 +740,15 @@ public class ClusterState implements IClusterConfig {
 	 * 
 	 * @param force true to forcibly close the client
 	 */
-	public void close(boolean force) {
+	public synchronized void close(boolean force) {
 		switch (connectionState) {
 		case LIVE:
 		case DISCONNECTED:
 			connectionState = ConnectionState.CLOSED;
-			synchronized (liveClientSet) {
+			synchronized (lock) {
+				
+				// Iterate liveClientSet
+				List<MqttClient> disconnectedClientList = new ArrayList<MqttClient>(liveClientSet.size());
 				Iterator<MqttClient> iterator = liveClientSet.iterator();
 				while (iterator.hasNext()) {
 					MqttClient client = iterator.next();
@@ -614,11 +767,12 @@ public class ClusterState implements IClusterConfig {
 								String.format("Exception raised while closing disconnected client %s", e.getMessage()));
 					}
 					iterator.remove();
-					deadEndpointSet.add(client.getServerURI());
+					disconnectedClientList.add(client);
 				}
-			}
-			synchronized (deadClientSet) {
-				Iterator<MqttClient> iterator = deadClientSet.iterator();
+				deadClientSet.addAll(disconnectedClientList);
+			
+				// Iterate deadClistSet
+				iterator = deadClientSet.iterator();
 				while (iterator.hasNext()) {
 					MqttClient client = iterator.next();
 					if (client.isConnected()) {
@@ -635,7 +789,6 @@ public class ClusterState implements IClusterConfig {
 						logger.debug(String.format("Exception raised while closing dead client %s", e.getMessage()));
 					}
 					iterator.remove();
-					deadEndpointSet.add(client.getServerURI());
 				}
 			}
 			break;
@@ -646,7 +799,7 @@ public class ClusterState implements IClusterConfig {
 
 	/**
 	 * Returns true if the cluster connection is closed. A closed cluster is no
-	 * longer operational.
+	 * longer operational and cannot be reconnected.
 	 */
 	public boolean isClosed() {
 		return connectionState == ConnectionState.CLOSED;
@@ -783,31 +936,33 @@ public class ClusterState implements IClusterConfig {
 		this.callback = callback;
 	}
 
-	public void addCallbackCluster(IHaMqttClientCallback haCallback) {
+	public void addCallbackCluster(IHaMqttCallback haCallback) {
 		haCallbackList.add(haCallback);
-		haCallbacks = haCallbackList.toArray(new IHaMqttClientCallback[0]);
+		haCallbacks = haCallbackList.toArray(new IHaMqttCallback[0]);
 	}
 
-	public void removeCallbackCluster(IHaMqttClientCallback haCallback) {
+	public void removeCallbackCluster(IHaMqttCallback haCallback) {
 		haCallbackList.remove(haCallback);
-		haCallbacks = haCallbackList.toArray(new IHaMqttClientCallback[0]);
+		haCallbacks = haCallbackList.toArray(new IHaMqttCallback[0]);
 	}
 
 	/**
 	 * Refreshes the discovery service by reconstructing the dead client list.
 	 */
 	public void refresh() {
-		deadEndpointSet.clear();
-		for (String endpoint : allEndpointSet) {
-			boolean found = false;
-			for (MqttClient client : liveClientSet) {
-				if (endpoint.equals(client.getServerURI())) {
-					found = true;
-					break;
+		synchronized (lock) {
+			deadEndpointSet.clear();
+			for (String endpoint : allEndpointSet) {
+				boolean found = false;
+				for (MqttClient client : liveClientSet) {
+					if (endpoint.equals(client.getServerURI())) {
+						found = true;
+						break;
+					}
 				}
-			}
-			if (found == false) {
-				deadEndpointSet.add(endpoint);
+				if (found == false) {
+					deadEndpointSet.add(endpoint);
+				}
 			}
 		}
 	}
@@ -1049,11 +1204,12 @@ public class ClusterState implements IClusterConfig {
 			if (cb != null) {
 				cb.mqttErrorOccurred(exception);
 			}
-			IHaMqttClientCallback[] hacb = haCallbacks;
-			for (IHaMqttClientCallback hacallback : hacb) {
+			IHaMqttCallback[] hacb = haCallbacks;
+			for (IHaMqttCallback hacallback : hacb) {
 				hacallback.mqttErrorOccurred(client, exception);
 			}
-			logger.info(String.format("MQTT error received: %s.", exception));
+			logger.info(String.format("MqttCallbackImpl().mqttErrorOccurred() - MQTT error received: %s.", exception));
+			logger.debug(String.format("MqttCallbackImpl().mqttErrorOccurred() - MQTT error received."), exception);
 		}
 
 		@Override
@@ -1062,8 +1218,8 @@ public class ClusterState implements IClusterConfig {
 			if (cb != null) {
 				cb.messageArrived(topic, message);
 			}
-			IHaMqttClientCallback[] hacb = haCallbacks;
-			for (IHaMqttClientCallback hacallback : hacb) {
+			IHaMqttCallback[] hacb = haCallbacks;
+			for (IHaMqttCallback hacallback : hacb) {
 				hacallback.messageArrived(client, topic, message);
 			}
 		}
@@ -1076,14 +1232,15 @@ public class ClusterState implements IClusterConfig {
 				if (cb != null) {
 					cb.disconnected(disconnectResponse);
 				}
-				IHaMqttClientCallback[] hacb = haCallbacks;
-				for (IHaMqttClientCallback hacallback : hacb) {
+				IHaMqttCallback[] hacb = haCallbacks;
+				for (IHaMqttCallback hacallback : hacb) {
 					hacallback.disconnected(client, disconnectResponse);
 				}
-				removeLiveClient(client);
-				haclient.updateLiveClients(getLiveClients());
-				logger.info(String.format("Client disconnected and removed from the live list [%s]. %s.",
+//				removeLiveClient(client);
+//				haclient.updateLiveClients(getLiveClients());
+				logger.info(String.format("MqttCallbackImpl().disconnected() - Client disconnected and removed from the live list [%s]. %s.",
 						client.getServerURI(), disconnectResponse));
+				logger.debug("MqttCallbackImpl().disconnected() - Client disconnected.", new RuntimeException("MqttCallbackImpl().disconnected() - Client disconnected"));
 				logConnectionStatus();
 			}
 		}
@@ -1094,8 +1251,8 @@ public class ClusterState implements IClusterConfig {
 			if (cb != null) {
 				cb.deliveryComplete(token);
 			}
-			IHaMqttClientCallback[] hacb = haCallbacks;
-			for (IHaMqttClientCallback hacallback : hacb) {
+			IHaMqttCallback[] hacb = haCallbacks;
+			for (IHaMqttCallback hacallback : hacb) {
 				hacallback.deliveryComplete(client, token);
 			}
 		}
@@ -1106,12 +1263,13 @@ public class ClusterState implements IClusterConfig {
 			if (cb != null) {
 				cb.connectComplete(reconnect, serverURI);
 			}
-			IHaMqttClientCallback[] hacb = haCallbacks;
-			for (IHaMqttClientCallback hacallback : hacb) {
+			IHaMqttCallback[] hacb = haCallbacks;
+			for (IHaMqttCallback hacallback : hacb) {
 				hacallback.connectComplete(client, reconnect, serverURI);
 			}
-			logger.info(String.format("Client connected and moved to the live list [reconnect=%s, serverURI=%s].",
+			logger.info(String.format("MqttCallbackImpl().connectComplete() - Client connected and moved to the live list [reconnect=%s, serverURI=%s].",
 					reconnect, serverURI));
+			logger.debug(String.format("MqttCallbackImpl().connectComplete() - client.isConnected()=%s", client.isConnected()));
 		}
 
 		@Override
@@ -1120,8 +1278,8 @@ public class ClusterState implements IClusterConfig {
 			if (cb != null) {
 				cb.authPacketArrived(reasonCode, properties);
 			}
-			IHaMqttClientCallback[] hacb = haCallbacks;
-			for (IHaMqttClientCallback hacallback : hacb) {
+			IHaMqttCallback[] hacb = haCallbacks;
+			for (IHaMqttCallback hacallback : hacb) {
 				hacallback.authPacketArrived(client, reasonCode, properties);
 			}
 		}

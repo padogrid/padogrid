@@ -260,6 +260,16 @@ echo -e "      - Apache Derby                ${CUrl}$DERBY_DOWNLOAD_URL${CNone}"
 echo -e "      - Eclipse Mosquitto           ${CUrl}$MOSQUITTO_DOWNLOAD_URL${CNone}"
 
 cat <<EOF
+  
+   Mosquitto installation downloads a source distribution which requires a manual build.
+   The build instructions are given upon completion of installation. If you prefer a binary
+   distribution then you can manually download it from the following link:
+
+EOF
+
+echo -e "      ${CUrl}https://mosquitto.org/download/${CNone}"
+
+cat <<EOF
 
    The following products are not downlodable due to their sign-in requirements. You must manually
    download and install them. See the PadoGrid manual for instructions.
@@ -3196,6 +3206,36 @@ if [ "$MOSQUITTO_VERSION" != "" ]; then
    MOSQUITTO_RELEASE="$MOSQUITTO_VERSION"
    MOSQUITTO_TARBALL="mosquitto-$MOSQUITTO_RELEASE.tar.gz"
    installProduct "mosquitto" "$SIMULATE"
+fi
+
+# OS_NAME in uppercase
+OS_NAME=`uname`
+OS_NAME=`echo "$OS_NAME"|awk '{print toupper($0)}'`
+
+# Mosquitto distribution contains source code only. Tell the user how to build.
+if [ "$MOSQUITTO_VERSION" != "" ]; then
+   echo ""
+   echo "Mosquitto downloads do not include binaries. You can build binaries by"
+   echo "following the steps below."
+   echo ""
+   if [ "$OS_NAME" == "DARWIN" ]; then
+      echo -e "macOS:"
+      echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
+      echo -e "   ${CGo}export OPENSSL_ROOT_DIR=<openssl root directory path>${CNone}"
+      echo -e "   ${CGo}cmake install -DDOCUMENTATION=NO -DWITH_PLUGINS=NO .${CNone}"
+      echo -e "   ${CGo}make${CNone}"
+      echo -e "   ${CGo}cd -${CNone}"
+   else
+      echo -e "Linux (Debian):"
+      echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
+      echo -e "   ${CGo}sudo apt install g++ libc-ares-dev libssl-dev libcjson-dev${CNone}"
+      echo -e "   ${CGo}make${CNone}"
+      echo -e "   ${CGo}cd -${CNone}"
+   fi
+   echo "If you are unable to build, then you can install a binary package by following"
+   echo "the instructions in the following link:"
+   echo ""
+   echo -e "   ${CUrl}https://mosquitto.org/download/${CNone}"
 fi
 
 # Redis distribution contains source code only. Tell the user how to build.
