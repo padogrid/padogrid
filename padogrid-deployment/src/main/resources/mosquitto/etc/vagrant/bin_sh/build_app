@@ -84,8 +84,7 @@ PODS_DIR=$GUEST_PADOGRID_WORKSPACE/pods
 
 # Find all installed products in the host product dir and
 # set the guest environment variables with them.
-HAZELCAST_HOME=""
-JET_HOME=""
+MOSQUITTO_HOME=""
 JAVA_HOME=""
 VM_JAVA_HOME=""
 PROMETHEUS_HOME=""
@@ -93,12 +92,8 @@ GRAFANA_HOME=""
 JQ_HOME=""
 pushd $HOST_PRODUCTS_DIR > /dev/null 2>&1
 for i in *; do
-   if [[ $i == hazelcast-enterprise* ]]; then
-      HAZELCAST_HOME="$GUEST_HOME_DIR/products/$i"  
-   elif [[ $i == hazelcast-jet-enterprise* ]]; then
-      JET_HOME="$GUEST_HOME_DIR/products/$i"  
-   elif [[ $i =~ hazelcast-[0-9].* ]]; then
-      HAZELCAST_HOME="$GUEST_HOME_DIR/products/$i"  
+   if [[ $i == mosquitto* ]]; then
+      MOSQUITTO_HOME="$GUEST_HOME_DIR/products/$i"  
    elif [[ $i == *java* ]] || [[ $i == *jdk* ]] || [[ $i == *openjdk* ]]; then
       JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
       VM_JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
@@ -118,8 +113,7 @@ echo "#!/bin/bash" > $NODEENV_FILE
 echo "" >> $NODEENV_FILE
 echo "export PRODUCT=$PRODUCT" >> $NODEENV_FILE
 echo "export HOST_OS_HOSTNAME=`hostname`" >> $NODEENV_FILE
-echo "export HAZELCAST_HOME=$HAZELCAST_HOME" >> $NODEENV_FILE
-echo "export JET_HOME=$JET_HOME" >> $NODEENV_FILE
+echo "export MOSQUITTO_HOME=$MOSQUITTO_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_HOME=$VAGRANT_PADOGRID_HOME" >> $NODEENV_FILE
 echo "export VM_PADOGRID_HOME=$VAGRANT_PADOGRID_HOME" >> $NODEENV_FILE
 echo "export PADOGRID_WORKSPACES_HOME=$GUEST_PADOGRID_WORKSPACES_HOME" >> $NODEENV_FILE
@@ -133,11 +127,7 @@ echo "export VM_JAVA_HOME=$JAVA_HOME" >> $NODEENV_FILE
 echo "export PROMETHEUS_HOME=$PROMETHEUS_HOME" >> $NODEENV_FILE
 echo "export GRAFANA_HOME=$GRAFANA_HOME" >> $NODEENV_FILE
 echo "export JQ_HOME=$JQ_HOME" >> $NODEENV_FILE
-if [ "$CLUSTER_TYPE" == "imdg" ]; then
-   echo "export PATH=\$JAVA_HOME/bin:\$HAZELCAST_HOME/bin:\$PADOGRID_HOME/\$PRODUCT/bin_sh:\$PADOGRID_HOME/bin_sh:\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
-else
-   echo "export PATH=\$JAVA_HOME/bin:\$JET_HOME/bin:\$PADOGRID_HOME/\$PRODUCT/bin_sh:\$PADOGRID_HOME/bin_sh:\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
-fi
+echo "export PATH=\$JAVA_HOME/bin:\$MOSQUITTO_HOME/bin:\$PADOGRID_HOME/\$PRODUCT/bin_sh:\$PADOGRID_HOME/bin_sh:\$PROMETHEUS_HOME:\$GRAFANA_HOME/bin:\$JQ_HOME:\$PATH" >> $NODEENV_FILE
 
 # Create the bootstrap file. This file is executed when the user
 # logs in.

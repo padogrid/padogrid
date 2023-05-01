@@ -42,10 +42,9 @@ public class ClusterConfig {
 	private Cluster[] clusters = new Cluster[0];
 	private Persistence persistence = new Persistence();
 
-	
 	public ClusterConfig() {
 	}
-	
+
 	public String getDefaultCluster() {
 		return defaultCluster;
 	}
@@ -98,7 +97,9 @@ public class ClusterConfig {
 		private String name;
 		private PublisherType publisherType = PublisherType.STICKY;
 		private String primaryServerURI;
-		private boolean enabled;
+		private boolean enabled = true;
+		private boolean autoConnect = true;
+		private int initialEndpointCount = -1;
 		private MqttConnectionOptions connection;
 
 		public String getName() {
@@ -120,6 +121,37 @@ public class ClusterConfig {
 
 		public void setEnabled(boolean enabled) {
 			this.enabled = enabled;
+		}
+
+		public boolean isAutoConnect() {
+			return autoConnect;
+		}
+
+		public void setAutoConnect(boolean autoConnect) {
+			this.autoConnect = autoConnect;
+		}
+
+		/**
+		 * Returns the initial endpoint count. The default value is -1, i.e., all
+		 * endpoints.
+		 */
+		public int getInitialEndpointCount() {
+			return initialEndpointCount;
+		}
+
+		/**
+		 * Sets the initial endpoint count. The default value is -1, i.e., all
+		 * endpoints.
+		 * 
+		 * @param initialEndpointCount Initial endpoint count. Less than 0 for all
+		 *                             endpoints.
+		 */
+		public void setInitialEndpointCount(int initialEndpointCount) {
+			if (initialEndpointCount < 0) {
+				this.initialEndpointCount = 0;
+			} else {
+				this.initialEndpointCount = initialEndpointCount;
+			}
 		}
 
 		public MqttConnectionOptions getConnection() {
@@ -156,7 +188,7 @@ public class ClusterConfig {
 			this.primaryServerURI = primaryServerURI;
 		}
 	}
-	
+
 	public static class Persistence {
 		private MqttClientPersistence mqttClientPersistence;
 		private String className;
@@ -212,7 +244,7 @@ public class ClusterConfig {
 			return mqttClientPersistence;
 		}
 	}
-	
+
 	public static class Property {
 		private String key;
 		private String value;

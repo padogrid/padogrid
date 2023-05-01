@@ -8,7 +8,7 @@ https://github.com/padogrid
 
 ### Release Date: 04/26/23
 
-- Added clustering support for [Eclipse Mosquitto](https://mosquitto.org/), an open source MQTT broker. PadoGrid clusters Mosquitto brokers as stateless servers and provides HA services via the client API, `HaMqttClient`, which wraps the [Paho API](https://www.eclipse.org/paho/) for seamless application migration. This release supports MQTT v5.
+- Added clustering support for [Eclipse Mosquitto](https://mosquitto.org/), an open source MQTT broker. PadoGrid clusters Mosquitto brokers as standalone servers and provides HA services via the client API, `HaMqttClient`, which wraps the [Paho API](https://www.eclipse.org/paho/) for seamless application migration. This release supports MQTT v5.
 - Fixed a version parsing bug in `install_bundle`. If a bundle name has more than 2 versions, then this bug prevented installing the bundle. A workaround is to use the `install_bundle -force` option.
 - Fixed Hazelast 3 and 4 scripts that incorrectly set CLASSPATH for excluding PadoGrid lib which includes log4j binaries. Without this fix, PadoGrid fails to start Hazelast 3/4 clusters.
 

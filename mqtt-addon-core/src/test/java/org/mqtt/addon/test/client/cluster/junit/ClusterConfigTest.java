@@ -25,8 +25,10 @@ import org.junit.Test;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
 import org.mqtt.addon.client.cluster.config.ConfigUtil;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.introspector.BeanAccess;
 
 /**
  * ClusterConfigTest tests {@linkplain ClusterConfig}.
@@ -45,6 +47,7 @@ public class ClusterConfigTest implements IClusterConfig {
 		}
 		try {
 			Yaml yaml = new Yaml(new Constructor(ClusterConfig.class));
+			yaml.setBeanAccess(BeanAccess.FIELD);
 			FileReader reader = new FileReader(file);
 			ClusterConfig config = yaml.load(reader);
 			System.out.println(config);

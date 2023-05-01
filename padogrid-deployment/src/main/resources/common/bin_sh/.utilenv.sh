@@ -2744,26 +2744,25 @@ function cd_pod
             echo -e >&2 "${CError}ERROR:${CNone} Invalid pod: [$__COMPONENT_NAME]. Permission denied. Command aborted."
             return 1
          fi
-      else
-         local DIR=""
-         for i in "$@"; do
-            DIR="$DIR"/"$i"
-         done
-         DIR="${PARENT_DIR}${DIR}"
-         if [ ! -d "$DIR" ]; then
-            if [ "$__COMPONENT_NAME" == "local" ] && [ "$__INDEX" -eq 1 ]; then
-               cd $PADOGRID_WORKSPACE/pods
-            else
-               echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
-               return 1
-            fi
-         elif [ ! -r "$DIR" ]; then
-            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Permission denied. Command aborted."
-            return 1
-         else
-            cd "$DIR"
-         fi
       fi
+
+      local DIR=""
+      for i in "$@"; do
+         DIR="$DIR"/"$i"
+      done
+      DIR="${PARENT_DIR}${DIR}"
+      if [ ! -d "$DIR" ]; then
+         if [ "$__COMPONENT_NAME" == "local" ] && [ "$__INDEX" -eq 1 ]; then
+            cd $PADOGRID_WORKSPACE/pods
+         else
+            echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Directory does not exist. Command aborted."
+            return 1
+         fi
+      elif [ ! -r "$DIR" ]; then
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid directory: [$DIR]. Permission denied. Command aborted."
+         return 1
+      fi
+      cd "$DIR"
    fi
    pwd
 }

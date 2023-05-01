@@ -31,9 +31,14 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.paho.mqttv5.client.MqttClientPersistence;
+import org.eclipse.paho.mqttv5.common.MqttException;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
+import org.mqtt.addon.client.cluster.config.ClusterConfig.Persistence;
+import org.mqtt.addon.client.cluster.config.ClusterConfig.Property;
+import org.yaml.snakeyaml.TypeDescription;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.introspector.BeanAccess;
 
 /**
  * {@linkplain ClusterService} is a singleton class for managing the broker
@@ -98,6 +103,7 @@ public class ClusterService {
 				if (configFile != null && configFile.length() > 0) {
 					File file = new File(configFile);
 					Yaml yaml = new Yaml(new Constructor(ClusterConfig.class));
+					yaml.setBeanAccess(BeanAccess.FIELD);
 					FileReader reader = new FileReader(file);
 					clusterConfig = yaml.load(reader);
 				} else {
@@ -105,6 +111,7 @@ public class ClusterService {
 							.getResourceAsStream(IClusterConfig.DEFAULT_CLIENT_CONFIG_FILE);
 					if (inputStream != null) {
 						Yaml yaml = new Yaml(new Constructor(ClusterConfig.class));
+						yaml.setBeanAccess(BeanAccess.FIELD);
 						clusterConfig = yaml.load(inputStream);
 					}
 				}
@@ -145,7 +152,16 @@ public class ClusterService {
 						clusterName = IClusterConfig.DEFAULT_CLUSTER_NAME;
 					}
 				}
-				HaClusters.getOrCreateHaMqttClient(cluster);
+				
+				// Create HaMqttClient. Connect only if autoConnect is enabled.
+				try {
+					HaMqttClient client = HaClusters.getOrCreateHaMqttClient(cluster);
+					if (cluster.isAutoConnect()) {
+						client.connect();
+					}
+				} catch (MqttException | IOException e) {
+					// ignore
+				}
 			}
 		}
 

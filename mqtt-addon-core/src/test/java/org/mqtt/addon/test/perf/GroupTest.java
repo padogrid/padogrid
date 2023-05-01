@@ -32,6 +32,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
+import org.eclipse.paho.mqttv5.client.IMqttClient;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttPersistenceException;
 import org.mqtt.addon.client.cluster.HaClusters;
@@ -124,7 +125,7 @@ public class GroupTest implements Constants {
 		int qos;
 		boolean retain;
 		int sleep;
-		HaMqttClient client;
+		IMqttClient client;
 		DataStructureEnum ds;
 		TestCaseEnum testCase;
 		int totalEntryCount = -1;
@@ -170,11 +171,11 @@ public class GroupTest implements Constants {
 		}
 	}
 
-	public GroupTest(boolean runDb) throws Exception {
-		init(runDb);
+	public GroupTest(boolean runDb, boolean publisher) throws Exception {
+		init(runDb, publisher);
 	}
 
-	private void init(boolean runDb) throws Exception {
+	private void init(boolean runDb, boolean publisher) throws Exception {
 		if (runDb == false) {
 			// Get data structures
 			for (Operation operation : operationMap.values()) {
@@ -186,9 +187,14 @@ public class GroupTest implements Constants {
 						switch (operation.testCase) {
 						case publish:
 						default:
-							operation.client = HaClusters.getOrCreateHaMqttClient(clusterName);
-							if (operation.client.isConnected() == false) {
-								operation.client.connect();
+							HaMqttClient haclient = HaClusters.getOrCreateHaMqttClient(clusterName);
+							if (haclient.isConnected() == false) {
+								haclient.connect();
+							}
+							if (publisher) {
+								operation.client = haclient.getPublisher();
+							} else {
+								operation.client = haclient;
 							}
 							break;
 						}
@@ -215,7 +221,7 @@ public class GroupTest implements Constants {
 		}
 	}
 
-	private void runTest(String concurrentGroupNames, Group group) throws Exception {
+	private void runTest(String concurrentGroupNames, Group group, boolean publisher) throws Exception {
 		SimpleDateFormat format = new SimpleDateFormat("yyMMdd-HHmmss");
 		String resultsDirStr = System.getProperty("results.dir", "results");
 		File resultsDir = new File(resultsDirStr);
@@ -236,6 +242,7 @@ public class GroupTest implements Constants {
 		writer.println("******************************************");
 		writer.println();
 		writer.println("                       Product: " + PRODUCT);
+		writer.println("                     Publisher: " + publisher);
 		writer.println("                         Group: " + group.name);
 		writer.println("           Concurrent Group(s): " + concurrentGroupNames);
 		writer.println("                       Comment: " + group.comment);
@@ -470,6 +477,12 @@ public class GroupTest implements Constants {
 		writeLine("      " + DEFAULT_groupPropertiesFile);
 		writeLine();
 		writeLine("       -run              Runs test cases.");
+		writeLine();
+		writeLine("       -publisher        Bypasses the HaMqttClient API and instead uses the publisher");
+		writeLine("                         instance to run the test cases. This means only one MqttClient");
+		writeLine("                         instance is used for all test cases, similar to the STICKY");
+		writeLine("                         publisher type except that it directly applies the MqttClient");
+		writeLine("                         instance.");
 		writeLine();
 		writeLine("       <properties-file> Optional properties file path.");
 		writeLine();
@@ -707,6 +720,7 @@ public class GroupTest implements Constants {
 
 	public static void main(String args[]) throws Exception {
 		boolean showConfig = true;
+		boolean publisher = false;
 		boolean runDb = false;
 		String perfPropertiesFilePath = null;
 		String arg;
@@ -717,6 +731,8 @@ public class GroupTest implements Constants {
 				System.exit(0);
 			} else if (arg.equals("-run")) {
 				showConfig = false;
+			} else if (arg.equals("-publisher")) {
+				publisher = true;
 			} else if (arg.equals("-prop")) {
 				if (i < args.length - 1) {
 					perfPropertiesFilePath = args[++i].trim();
@@ -783,6 +799,7 @@ public class GroupTest implements Constants {
 
 		writeLine();
 		writeLine("                    Product: " + PRODUCT);
+		writeLine("                  Publisher: " + publisher);
 		writeLine("             Test Run Count: " + TEST_COUNT);
 		writeLine("   Test Run Interval (msec): " + TEST_INTERVAL_IN_MSEC);
 
@@ -816,7 +833,8 @@ public class GroupTest implements Constants {
 				+ PRINT_STATUS_INTERVAL_IN_SEC + " sec.");
 		writeLine("Results:");
 
-		final GroupTest groupTest = new GroupTest(runDb);
+		final GroupTest groupTest = new GroupTest(runDb, publisher);
+		final boolean isPublisher = publisher;
 
 		for (Group[] groups : concurrentGroupList) {
 			String groupNames = getGroupNames(groups);
@@ -832,7 +850,7 @@ public class GroupTest implements Constants {
 				new Thread(new Runnable() {
 					public void run() {
 						try {
-							groupTest.runTest(groupNames, group);
+							groupTest.runTest(groupNames, group, isPublisher);
 							threadsComplete[index] = true;
 						} catch (Exception e) {
 							e.printStackTrace();

@@ -32,5 +32,6 @@ public interface IClusterConfig {
 	public static final String DEFAULT_CLUSTER_TAG = "cluster-tag";
 	public static final String DEFAULT_CLUSTER_INSTANCE = "haclient";
 	public final static int DEFAULT_CLUSTER_PROBE_DELAY_IN_MSEC = 5000;
+	public final static int DEFAULT_TIME_TO_WAIT_IN_MSEC = 5000;
 	public static final String DEFAULT_CLIENT_SERVER_URIS = "tcp://localhost:1883-1885";
 }

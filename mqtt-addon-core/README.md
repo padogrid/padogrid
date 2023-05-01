@@ -48,7 +48,7 @@ For topic publications, `HaMqttClient` publishes messages using only one of the 
 
 #### Multiple retained messages
 
-Since `HaMqttClient` subscribes to multiple brokers, it receives the retained messages from all of them. `HaMqttClient` does not determine which message is the lastest retained message and treats all brokers as stateless servers. This means it is the application's responsibility to determine the latest retained message. 
+Since `HaMqttClient` subscribes to multiple brokers, it receives the retained messages from all of them. `HaMqttClient` does not determine which message is the lastest retained message and treats all brokers as standalone servers. This means it is the application's responsibility to determine the latest retained message. 
 
 There are workarounds to the limitations.
 

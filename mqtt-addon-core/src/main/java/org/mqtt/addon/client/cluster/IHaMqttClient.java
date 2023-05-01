@@ -32,6 +32,22 @@ import org.eclipse.paho.mqttv5.common.MqttSubscription;
  *
  */
 public interface IHaMqttClient extends IMqttClient {
+	
+	/**
+	 * Enables or disables the cluster. Default is true.
+	 * @param enabled true to enable, false to disable.
+	 */
+	public void setEnabled(boolean enabled);
+	
+	/**
+	 * Returns true if the cluster is enabled. Default is true.
+	 */
+	public boolean isEnabled();
+	
+	/**
+	 * Returns true is the cluster state is live. If live, then the
+	 * cluster is neither disconnected nor closed.
+	 */
 	boolean isLive();
 
 	/**
@@ -211,6 +227,40 @@ public interface IHaMqttClient extends IMqttClient {
 	// The following method are in MqttClient but not in IMattClient (Paho v1.2.5)
 	// ===========================================================================
 
+	/**
+	 * Set the maximum time to wait for an action to complete.
+	 * <p>
+	 * Set the maximum time to wait for an action to complete before returning
+	 * control to the invoking application. Control is returned when:
+	 * </p>
+	 * <ul>
+	 * <li>the action completes</li>
+	 * <li>or when the timeout if exceeded</li>
+	 * <li>or when the client is disconnect/shutdown</li>
+	 * </ul>
+	 * <p>
+	 * The default value is -1 which means the action will not timeout. In the event
+	 * of a timeout the action carries on running in the background until it
+	 * completes. The timeout is used on methods that block while the action is in
+	 * progress.
+	 * </p>
+	 * 
+	 * @param timeToWaitInMillis
+	 *            before the action times out. A value or 0 or -1 will wait until
+	 *            the action finishes and not timeout.
+	 * @throws IllegalArgumentException
+	 *             if timeToWaitInMillis is invalid
+	 */
+	void setTimeToWait(long timeToWaitInMillis) throws IllegalArgumentException;
+	
+	/**
+	 * Return the maximum time to wait for an action to complete.
+	 * 
+	 * @return the time to wait
+	 * @see MqttClient#setTimeToWait(long)
+	 */
+	long getTimeToWait();
+	
 	/**
 	 * Returns true if the cluster connection is closed. A closed cluster is no
 	 * longer operational and cannot be reconnected.

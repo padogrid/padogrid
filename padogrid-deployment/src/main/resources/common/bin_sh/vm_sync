@@ -55,6 +55,13 @@ DESCRIPTION
    The '-vm' option overrides both the '-cluster' option and VM_HOSTS. The '-cluster' option
    overrides VM_HOSTS. 
 
+   This command uses the 'tar' command to extract tar balls. The 'tar' command may fail
+   for some Linux variants that do not support '--warning' option, however. If you see
+   an error similiar to the following, then you can suppress that option by specifying
+   the '-tar' option.
+
+      "tar: unrecognized option: warning=no-unknown-keyword"
+
 OPTIONS
    -cluster cluster_name
              Cluster name.
@@ -66,6 +73,13 @@ OPTIONS
    -rwe
              Synchronizes RWE specific configuration files also. Specify this option if the license keys
              are updated in the RWE's hidden file, '.<project>env.sh', for example.
+
+   -tar
+             If specified, then it removes the tar option, --warning=no-unknown-keyword, which
+             is required for some Linux variants for inflating macOS generated tar balls. Specify
+             this option if this command fails with tar errors similiar to the following.
+
+                "tar: unrecognized option: warning=no-unknown-keyword"
 
    -simulate
              Print the remote commands but do not execute.
@@ -184,6 +198,12 @@ if [ "$KEY_FILE" != "" ]; then
       exit 1
    fi
    VM_KEY="-i $KEY_FILE"
+fi
+
+if [ "$TAR_SPECIFIED" == "true" ]; then
+   TAR_OPTS=""
+else
+   TAR_OPTS="--warning=no-unknown-keyword"
 fi
 
 echo ""
@@ -362,11 +382,11 @@ if [ "$INSTALL_PADOGRID_HOST_LIST" != "" ]; then
       if [ "$SIMULATE" == "true" ]; then
          echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
          echo scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_TARBALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
-         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR $TAR_OPTS -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
       else
          ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_HOME_PARENT_DIR"
          scp -q -o stricthostkeychecking=no -o LogLevel=error -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $PADOGRID_TARBALL_GZ_PATH $VM_USER@$VM_HOST:$VM_PADOGRID_TARBALL_GZ_PATH
-         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR --warning=no-unknown-keyword -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_HOME_PARENT_DIR $TAR_OPTS -xzf $VM_PADOGRID_TARBALL_GZ_PATH"
       fi
    done
 fi
@@ -455,9 +475,9 @@ for VM_HOST in $__VM_HOSTS; do
       echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "mkdir -p $VM_PADOGRID_WORKSPACE"
       echo scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_VM_SYNC_TARBALL_FILE $VM_USER@$VM_HOST:$TMP_VM_SYNC_TARBALL_FILE
       if [ "$PRIVATE_KEY_FILE_NAME" == "" ]; then
-         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE $TAR_OPTS -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
       else
-         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
+         echo ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE $TAR_OPTS -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
       fi
       echo scp -q -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh
    else
@@ -465,9 +485,9 @@ for VM_HOST in $__VM_HOSTS; do
       scp -q -r -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_VM_SYNC_TARBALL_FILE $VM_USER@$VM_HOST:$TMP_VM_SYNC_TARBALL_FILE
       # private key file permissions must be changed to 400
       if [ "$PRIVATE_KEY_FILE_NAME" == "" ]; then
-         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
+         ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE $TAR_OPTS -xzf $TMP_VM_SYNC_TARBALL_FILE && rm $TMP_VM_SYNC_TARBALL_FILE"
       else
-         ssh -o LogLevel=error -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE --warning=no-unknown-keyword -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
+         ssh -o LogLevel=error -n $VM_KEY $VM_USER@$VM_HOST -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "tar -C $VM_PADOGRID_WORKSPACE $TAR_OPTS -xzf $TMP_VM_SYNC_TARBALL_FILE && chmod 400 $VM_PADOGRID_WORKSPACE/$PRIVATE_KEY_FILE_NAME && rm $TMP_VM_SYNC_TARBALL_FILE"
       fi
       scp -q -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT $VM_KEY $TMP_SETENV_FILE $VM_USER@$VM_HOST:$VM_PADOGRID_WORKSPACE/setenv.sh
    fi

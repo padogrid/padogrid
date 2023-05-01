@@ -53,6 +53,7 @@ PATH_ARG=
 FILE_SPECIFIED=false
 FILE_ARG=
 JAR_ARG=
+TAR_SPECIFIED=false
 CLASSPATH_ARG=
 JET_ARG=
 NAME_ARG=
@@ -489,6 +490,8 @@ do
          LOG_SPECIFIED=true
       elif [ "$i" == "-port" ]; then
          PORT_SPECIFIED=true
+      elif [ "$i" == "-tar" ]; then
+         TAR_SPECIFIED=true
       elif [ "$i" == "-vm" ]; then
          VM_SPECIFIED=true
       elif [ "$i" == "-rwe" ]; then

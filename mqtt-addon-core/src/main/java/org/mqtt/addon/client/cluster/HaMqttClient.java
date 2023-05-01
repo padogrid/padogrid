@@ -17,6 +17,7 @@ package org.mqtt.addon.client.cluster;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -57,12 +58,26 @@ import org.mqtt.addon.client.cluster.config.ConfigUtil;
 public class HaMqttClient implements IHaMqttClient {
 	private String clusterName;
 	private MqttClient liveClients[] = new MqttClient[0];
-	private MqttClient publisherClient;
 	private ClusterState clusterState;
 	private Logger logger = LogManager.getLogger(HaMqttClient.class);
 
 	private PublisherType publisherType = PublisherType.STICKY;
-	private int roundRobinIndex = 0;
+
+	// roundRobinThreadLocal allows each thread to independently round-robin brokers
+	private ThreadLocal<Integer> roundRobinThreadLocal = ThreadLocal.withInitial(() -> -1);
+
+	// stickyThreadLocal allows load-balancing threads for the STICKY publisher
+	// type.
+	// In works in conjunction with stickyIndex.
+	private ThreadLocal<MqttClient> stickyThreadLocal = new ThreadLocal<MqttClient>();
+
+	// stickyIndex is incremented per thread
+	private volatile int stickyIndex = 0;
+
+	// connectionInProgress is to prevent multiple threads from invoking connect()
+	private volatile boolean connectionInProgress = false;
+
+	// Random generator for RANDOM publisher type
 	private Random random = new Random();
 
 	HaMqttClient() throws IOException {
@@ -118,51 +133,75 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	void updateLiveClients(Collection<MqttClient> liveClientCollection) {
 		MqttClient[] clients = liveClientCollection.toArray(new MqttClient[0]);
-		clients = shuffleEndpoints(clients);
+		liveClients = shuffleEndpoints(clients);
+		logger.debug("Live client list recevied [size=%d].", liveClientCollection.size());
+	}
 
-		// Set publisherClient if the current one is not in the live list.
-		// Also, set the callback for the new clients.
-		boolean publisherFound = false;
-		for (MqttClient client : clients) {
-			if (publisherClient == client) {
-				publisherFound = true;
-				break;
-			}
-		}
+	private void cleanupThreadLocals() {
+		roundRobinThreadLocal.remove();
+		stickyThreadLocal.remove();
+	}
 
-		// Set liveClients here. getPublisher() depends on it.
-		liveClients = clients;
-		if (publisherFound == false) {
-			publisherClient = getPublisher();
-		}
+	ClusterState getClusterState() {
+		return clusterState;
+	}
+
+	public void setEnabled(boolean enabled) {
+		clusterState.setEnabled(enabled);
+	}
+
+	public boolean isEnabled() {
+		return clusterState.isEnabled();
 	}
 
 	/**
 	 * Returns the publisher extracted from the live client list based on the
-	 * publisher type.
+	 * publisher type as follows.
+	 * <p>
+	 * <b>RANDOM, ROUND_ROBIN</b>
+	 * <ul>
+	 * <li>May return a different publisher instance per invocation.</li>
+	 * </ul>
+	 * <b>STICKY</b>
+	 * <ul>
+	 * <li>Always returns the same the publisher instance until the publisher
+	 * fails.</li>
+	 * <li>If the publisher fails, then it returns another instance retrieved from
+	 * the live list. The new instance becomes sticky.</li>
+	 * <li>If the primary publisher has been configured then it always returns the
+	 * primary publisher instance. If the primary publisher fails, then another
+	 * instance is returned instead. The new instance becomes sticky until the
+	 * primary publisher becomes available again.</li>
+	 * </ul>
+	 * 
+	 * @return null if the publisher is not available.
 	 */
-	private MqttClient getPublisher() {
+	public MqttClient getPublisher() {
 		MqttClient client = null;
 		MqttClient[] clients = liveClients;
-		if (clients.length > 0) {
+		int len = clients.length;
+		if (len > 0) {
 			switch (publisherType) {
 			case RANDOM:
-				int index = Math.abs(random.nextInt()) % clients.length;
+				int index = Math.abs(random.nextInt()) % len;
 				client = clients[index];
 				break;
 			case ROUND_ROBIN:
-				roundRobinIndex = (++roundRobinIndex) % clients.length;
+				int roundRobinIndex = (roundRobinThreadLocal.get() + 1) % len;
 				client = clients[roundRobinIndex];
+				roundRobinThreadLocal.set(roundRobinIndex);
 				break;
 			case STICKY:
 			default:
-				client = publisherClient;
-				if (client == null) {
-					client = clusterState.getPrimaryClient();
-					if (client == null || client.isConnected() == false) {
-						client = clients[0];
+				client = clusterState.getPrimaryClient();
+				if (client == null || client.isConnected() == false) {
+					client = stickyThreadLocal.get();
+					if (client == null) {
+						index = stickyIndex % len;
+						client = clients[index];
+						stickyThreadLocal.set(client);
+						stickyIndex = index + 1;
 					}
-					publisherClient = client;
 				}
 				break;
 			}
@@ -194,29 +233,34 @@ public class HaMqttClient implements IHaMqttClient {
 		MqttClient client = getPublisher();
 
 		if (client == null || liveClients.length == 0) {
-			publisherClient = null;
+			cleanupThreadLocals();
 			throw new HaMqttException(-100, String.format("Cluster unreachable"));
 		}
 		try {
 			client.publish(topicFilter, message);
 		} catch (MqttException e) {
 
-			// If publish() fails, then we assume the connection is
-			// no longer valid. Remove the client from the live list
-			// so that the discovery service can probe and reconnect.
-			removeMqttClient(client);
+			if (client.isConnected() == false) {
+				// If publish() fails, then we assume the connection is
+				// no longer valid. Remove the client from the live list
+				// so that the discovery service can probe and reconnect.
+				removeMqttClient(client);
 
-			logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-					client.getServerURI()), e);
+				logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
+						client.getServerURI()), e);
 
-			// Upon removal, a new live client list is obtained.
-			// Publish it again with the new publisherClient.
-			MqttClient[] clients = liveClients;
-			if (clients.length == 0) {
-				throw e;
+				// Upon removal, a new live client list is obtained.
+				// Publish it again with the new publisherClient.
+				MqttClient[] clients = liveClients;
+
+				if (clients.length == 0) {
+					cleanupThreadLocals();
+					throw e;
+				} else {
+					publish(topicFilter, message);
+				}
 			} else {
-				publisherClient = null;
-				publish(topicFilter, message);
+				throw e;
 			}
 		}
 	}
@@ -236,29 +280,34 @@ public class HaMqttClient implements IHaMqttClient {
 		// local variables to handle a race condition.
 		MqttClient client = getPublisher();
 		if (client == null || liveClients.length == 0) {
-			publisherClient = null;
+			cleanupThreadLocals();
 			throw new HaMqttException(-100, String.format("Cluster unreachable [client=%s, liveClients.length=%d]",
 					client, liveClients.length));
 		}
 		try {
 			client.publish(topic, payload, qos, retained);
 		} catch (MqttException e) {
-			// If publish() fails, then we assume the connection is
-			// no longer valid. Remove the client from the live list
-			// so that the discovery service can probe and reconnect.
-			removeMqttClient(client);
+			if (client.isConnected() == false) {
+				// If publish() fails, then we assume the connection is
+				// no longer valid. Remove the client from the live list
+				// so that the discovery service can probe and reconnect.
+				removeMqttClient(client);
+				stickyThreadLocal.set(null);
 
-			logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-					client.getServerURI()), e);
+				logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
+						client.getServerURI()), e);
 
-			// Upon removal, a new live client list is obtained.
-			// Publish it again with the new publisherClient.
-			MqttClient[] clients = liveClients;
-			if (clients.length == 0) {
-				throw e;
+				// Upon removal, a new live client list is obtained.
+				// Publish it again with the new publisherClient.
+				MqttClient[] clients = liveClients;
+				if (clients.length == 0) {
+					cleanupThreadLocals();
+					throw e;
+				} else {
+					publish(topic, payload, qos, retained);
+				}
 			} else {
-				publisherClient = null;
-				publish(topic, payload, qos, retained);
+				throw e;
 			}
 		}
 	}
@@ -643,13 +692,17 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public void connect() throws MqttSecurityException, MqttException {
-		if (isDisconnected()) {
-			clusterState.connect();
-//			liveClients = clusterState.getLiveClients().toArray(new MqttClient[0]);
-//
-//			if (liveClients.length > 0) {
-//				publisherClient = getPublisher();
-//			}
+		if (connectionInProgress == false) {
+			connectionInProgress = true;
+			try {
+				if (isDisconnected()) {
+					clusterState.connect();
+				}
+			} catch (Throwable th) {
+				connectionInProgress = false;
+				throw th;
+			}
+			connectionInProgress = false;
 		}
 	}
 
@@ -663,8 +716,16 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public void connect(MqttConnectionOptions options) throws MqttSecurityException, MqttException {
-		if (isDisconnected()) {
-			clusterState.connect(options);
+		if (connectionInProgress == false) {
+			connectionInProgress = true;
+			try {
+				if (isDisconnected()) {
+					clusterState.connect(options);
+				}
+			} catch (Throwable th) {
+				throw th;
+			}
+			connectionInProgress = false;
 		}
 	}
 
@@ -681,7 +742,8 @@ public class HaMqttClient implements IHaMqttClient {
 		IMqttToken[] tokens = connectWithResultCluster(options);
 		IMqttToken token = null;
 		for (IMqttToken t : tokens) {
-			if (publisherClient.getClientId().equals(t.getClient().getClientId())) {
+			MqttClient client = getPublisher();
+			if (client != null && client.getClientId().equals(t.getClient().getClientId())) {
 				token = t;
 				break;
 			}
@@ -753,6 +815,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	public void close(boolean force) throws MqttException {
 		ClusterService.getClusterService().removeHaClient(this, force);
+		roundRobinThreadLocal.remove();
 	}
 
 	/**
@@ -841,8 +904,9 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public MqttTopic getTopic(String topic) {
-		if (publisherClient != null) {
-			return publisherClient.getTopic(topic);
+		MqttClient client = getPublisher();
+		if (client != null) {
+			return client.getTopic(topic);
 		} else {
 			return null;
 		}
@@ -866,8 +930,9 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public String getClientId() {
-		if (publisherClient != null) {
-			return publisherClient.getClientId();
+		MqttClient client = getPublisher();
+		if (client != null) {
+			return client.getClientId();
 		} else {
 			return null;
 		}
@@ -881,8 +946,9 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public String getServerURI() {
-		if (publisherClient != null) {
-			return publisherClient.getServerURI();
+		MqttClient client = getPublisher();
+		if (client != null) {
+			return client.getServerURI();
 		} else {
 			return null;
 		}
@@ -896,8 +962,9 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public IMqttToken[] getPendingTokens() {
-		if (publisherClient != null) {
-			return publisherClient.getPendingTokens();
+		MqttClient client = getPublisher();
+		if (client != null) {
+			return client.getPendingTokens();
 		} else {
 			return null;
 		}
@@ -943,8 +1010,9 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public void messageArrivedComplete(int messageId, int qos) throws MqttException {
-		if (clusterState.getAllEndpoints().size() == 1 && publisherClient != null) {
-			publisherClient.messageArrivedComplete(messageId, qos);
+		MqttClient client = getPublisher();
+		if (client != null && clusterState.getAllEndpoints().size() == 1) {
+			client.messageArrivedComplete(messageId, qos);
 		} else {
 			throw new UnsupportedOperationException(
 					"This method is supported for a single endpoint (broker) cluster only. This cluster has more than one borker. Use messageArrivedComplete(MqttClient client, int messageId, int qos) instead.");
@@ -974,10 +1042,24 @@ public class HaMqttClient implements IHaMqttClient {
 		return clusterState.removeEndpoint(serverURI);
 	}
 
+	/**
+	 * MqttClient: {@inheritDoc}
+	 */
+	public void setTimeToWait(long timeToWaitInMillis) throws IllegalArgumentException {
+		clusterState.setTimeToWait(timeToWaitInMillis);
+	}
+
+	/**
+	 * MqttClient: {@inheritDoc}
+	 */
+	public long getTimeToWait() {
+		return clusterState.getTimeToWait();
+	}
+
 	@Override
 	public String toString() {
-		return "HaMqttClient [clusterName=" + clusterName + ", publisherClient=" + publisherClient + ", publisherType="
-				+ publisherType + "]";
+		return "HaMqttClient [clusterName=" + clusterName + ", currentThreadPublisher=" + getPublisher()
+				+ ", publisherType=" + publisherType + "]";
 	}
 
 }
