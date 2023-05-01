@@ -194,6 +194,13 @@ function writeCluster()
    echo "# Member TCP start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
    echo "tcp.startPort=$NEW_MEMBER_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
+   #
+   # Member websocket port
+   echo "# Enable/disable member websocket" >> $ETC_DIR/cluster.properties
+   echo "http.enabled=$DEFAULT_MEMBER_HTTP_ENABLED" >> $ETC_DIR/cluster.properties
+   echo "# Member websocket start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
+   echo "http.startPort=$NEW_MEMBER_HTTP_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
 
    # VM
    echo "# Enable/disable VM cluster" >> $ETC_DIR/cluster.properties
@@ -281,13 +288,16 @@ for i in *; do
 done
 popd > /dev/null 2>&1
 
-# If the port number is not specified, or if there aren't any existing clusters
+# If the port number is not specified, if there aren't any existing clusters,
 # or the pod name is not "local" then use the default ports. For non-local pods,
 # we can ignore the port number conflicts.
 if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "$VM_ENABLED" == "true" ]; then
    NEW_MEMBER_START_PORT=$DEFAULT_MEMBER_START_PORT
+   NEW_MEMBER_HTTP_START_PORT=$DEFAULT_MEMBER_HTTP_START_PORT
 else
    NEW_MEMBER_START_PORT=$PORT_ARG
+   let PORT_DIFF=$NEW_MEMBER_START_PORT-DEFAULT_MEMBER_START_PORT
+   let NEW_MEMBER_HTTP_START_PORT=DEFAULT_MEMBER_HTTP_START_PORT+PORT_DIFF
 fi
 
 # Create the cluster sub-directories and files.

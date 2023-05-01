@@ -249,6 +249,9 @@ fi
 #
 MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
 let MEMBER_PORT=MEMBER_START_PORT+NEW_MEMBER_NUMBER-1
+MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
+MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+let HTTP_PORT=MEMBER_HTTP_START_PORT+NEW_MEMBER_NUMBER-1
 
 # The mosquitto.conf file is required in the member run directory.
 MEMBER_NUMBER=$(getMemberNumWithLeadingZero $NEW_MEMBER_NUMBER)
@@ -262,11 +265,25 @@ fi
 LOG_FILE_NAME=${NEW_MEMBER}.log
 LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
 if [ ! -f "$ETC_DIR/$CONFIG_FILE_NAME" ]; then
-   sed -e "s|#log_dest.*|log_dest file $LOG_FILE|" \
-       -e "s|#listener.*|listener $MEMBER_PORT|" \
-       -e "s|#protocol.*|protocol mqtt|" \
-       -e "s|#allow_anonymous.*|allow_anonymous true|" \
-       "$BASE_DIR/etc/template-mosquitto.conf" > "$ETC_DIR/$CONFIG_FILE_NAME"
+   if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
+      sed -e "s|#log_dest.*|log_dest file $LOG_FILE|" \
+          -e "s|#listener.*|listener $MEMBER_PORT\nlistener $HTTP_PORT|" \
+          -e "s|#protocol.*|protocol websockets|" \
+          -e "s|#allow_anonymous.*|allow_anonymous true|" \
+          -e "s|#connection_messages true.*|connection_messages true|" \
+          -e "s|#log_timestamp_format.*|log_timestamp_format %Y-%m-%dT%H:%M:%S|" \
+          -e "s|#log_timestamp.*|log_timestamp true|" \
+          "$BASE_DIR/etc/template-mosquitto.conf" > "$ETC_DIR/$CONFIG_FILE_NAME"
+   else
+      sed -e "s|#log_dest.*|log_dest file $LOG_FILE|" \
+          -e "s|#listener.*|listener $MEMBER_PORT|" \
+          -e "s|#protocol.*|protocol mqtt|" \
+          -e "s|#allow_anonymous.*|allow_anonymous true|" \
+          -e "s|#connection_messages true.*|connection_messages true|" \
+          -e "s|#log_timestamp_format.*|log_timestamp_format %Y-%m-%dT%H:%M:%S|" \
+          -e "s|#log_timestamp.*|log_timestamp true|" \
+          "$BASE_DIR/etc/template-mosquitto.conf" > "$ETC_DIR/$CONFIG_FILE_NAME"
+   fi
 fi
 
 echo "----------------------------------------------------------------"

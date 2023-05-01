@@ -94,7 +94,7 @@ DEFAULT_MEMBER_START_PORT=1883
 # Default REST API port for members
 #
 DEFAULT_MEMBER_HTTP_ENABLED=true
-DEFAULT_MEMBER_HTTP_START_PORT=8080
+DEFAULT_MEMBER_HTTP_START_PORT=8083
 
 #
 # The max number of members per cluster. The port number ranges are determined

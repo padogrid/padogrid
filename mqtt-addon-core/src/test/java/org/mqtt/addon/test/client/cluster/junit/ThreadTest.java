@@ -37,35 +37,65 @@ public class ThreadTest implements IClusterConfig {
 	static MqttClient client2;
 	static int publisherThreadCount = 10;
 	static boolean useExecutiveService = true;
+	static String protocol = "ws";
+	static String serverURI1;
+	static String serverURI2;
 
 	@BeforeClass
 	public static void setUp() {
-		try {
-			if (useExecutiveService) {
+		int port1 = 32000;
+		int port2 = 32001;
+		if (protocol == "ws") {
+			port1 = 8080;
+			port2 = 8081;
+		}
+		serverURI1 = protocol + "://localhost:" + port1;
+		serverURI2 = protocol + "://localhost:" + port2;
+
+		if (useExecutiveService) {
+			try {
 				ExecutorService es = Executors.newSingleThreadExecutor();
-				Future<MqttClient> future1 = es.submit(new Client("tcp://localhost:32000", "thread_test"));
+				Future<MqttClient> future1 = es.submit(new Client(serverURI1, "thread_test"));
 				client = future1.get();
-
+			} catch (Exception ex) {
+				System.err.println("ERROR: " + serverURI1);
+				ex.printStackTrace();
+			}
+			
+			// Second instance. This fails for websocket.
+			try {
 				ExecutorService es2 = Executors.newSingleThreadExecutor();
-				Future<MqttClient> future2 = es2.submit(new Client("tcp://localhost:32001", "thread_test2"));
+				Future<MqttClient> future2 = es2.submit(new Client(serverURI2, "thread_test2"));
 				client2 = future2.get();
+			} catch (Exception ex) {
+				System.err.println("ERROR: " + serverURI2);
+				ex.printStackTrace();
+			}
 
-			} else {
+		} else {
 
-				client = new MqttClient("tcp://localhost:32000", "thread_test");
+			try {
+				client = new MqttClient(serverURI1, "thread_test");
 				client.connect();
 				for (int i = 0; i < 1; i++) {
 					publishConnectionMessage(client);
 				}
+			} catch (Exception ex) {
+				System.err.println("ERROR: " + serverURI1);
+				ex.printStackTrace();
+			}
 
+			// Second instance. This fails for websocket.
+			try {
 				// Works up to 3 publisher threads
-				client2 = new MqttClient("tcp://localhost:32001", "thread_test2");
+				client2 = new MqttClient(serverURI2, "thread_test2");
 				client2.connect();
 				client2.disconnect();
 				client2.close();
+			} catch (Exception ex) {
+				System.err.println("ERROR: " + serverURI2);
+				ex.printStackTrace();
 			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
 		}
 	}
 
@@ -84,8 +114,7 @@ public class ThreadTest implements IClusterConfig {
 			future.get();
 		}
 	}
-	
-	
+
 	static private void publishConnectionMessage(MqttClient client) {
 		for (int i = 0; i < 1; i++) {
 			String message = "Connection message " + i;
@@ -143,7 +172,7 @@ public class ThreadTest implements IClusterConfig {
 								System.err.println(ex);
 								System.out.println("Close and reopening...");
 								client.close();
-								client = new MqttClient("tcp://localhost:32000", "thread_test");
+								client = new MqttClient(serverURI1, "thread_test");
 								try {
 									client.connect();
 								} catch (MqttException ex2) {
