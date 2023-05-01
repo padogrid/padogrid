@@ -3221,19 +3221,19 @@ if [ "$MOSQUITTO_VERSION" != "" ]; then
    if [ "$OS_NAME" == "DARWIN" ]; then
       echo -e "macOS:"
       echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
-      echo -e "   ${CGo}export OPENSSL_ROOT_DIR=<openssl root directory path>${CNone}"
-      echo -e "   ${CGo}cmake install -DDOCUMENTATION=NO -DWITH_PLUGINS=NO .${CNone}"
+      echo -e "   ${CGo}export OPENSSL_ROOT_DIR=/usr/local/Cellar/openssl\@1.1${CNone}"
+      echo -e "   ${CGo}cmake install -DDOCUMENTATION=NO -DWITH_PLUGINS=NO -DWITH_WEBSOCKETS=YES .${CNone}"
       echo -e "   ${CGo}make${CNone}"
       echo -e "   ${CGo}cd -${CNone}"
    else
       echo -e "Linux (Debian, Ubuntu):"
       echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
-      echo -e "   ${CGo}sudo apt install -y g++ libc-ares-dev libssl-dev libcjson-dev${CNone}"
+      echo -e "   ${CGo}sudo apt install -y g++ libc-ares-dev libssl-dev libcjson-dev libwebsockets-dev${CNone}"
       echo -e "   ${CGo}make${CNone}"
       echo ""
       echo -e "Linux (Alpine):"
       echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
-      echo -e "   ${CGo}sudo apk add g++ c-ares openssl-dev${CNone}"
+      echo -e "   ${CGo}sudo apk add g++ c-ares openssl-dev libwebsockets-dev${CNone}"
       echo -e "   ${CGo}sudo apk add make cmake git${CNone}"
       echo -e "   ${CGo}git clone https://github.com/DaveGamble/cJSON.git${CNone}"
       echo -e "   ${CGo}cd cJSON${CNone}"
@@ -3246,8 +3246,14 @@ if [ "$MOSQUITTO_VERSION" != "" ]; then
       echo -e "   # Add the following line in /etc/ld.so.conf:"
       echo -e "      /usr/local/lib64"
       echo -e "   ${CGo}cd ../..${CNone}"
+
+      echo -e "   ${CGo}vi config.mk${CNone}"
+      echo -e "   # Enable websockets in config.mk"
+      echo -e "      WITH_WEBSOCKETS:=yes"
+
       echo -e "   ${CGo}make${CNone}"
       echo ""
+
       echo -e "Linux (RedHat,Oracle Linux, Fedora, CentOS):"
       echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
       echo -e "   ${CGo}sudo dnf install -y cmake gcc-c++ openssl-devel c-ares-devel${CNone}"
@@ -3263,6 +3269,17 @@ if [ "$MOSQUITTO_VERSION" != "" ]; then
       echo -e "      /usr/local/lib64"
       echo -e "   ${CGo}sudo /sbin/ldconfig${CNone}"
       echo -e "   ${CGo}cd ../..${CNone}"
+      echo -e "   ${CGo}git clone https://github.com/warmcat/libwebsockets.git${CNone}"
+      echo -e "   ${CGo}cd libwebsockets${CNone}"
+      echo -e "   ${CGo}cmake .${CNone}"
+      echo -e "   ${CGo}make${CNone}"
+      echo -e "   ${CGo}sudo make install${CNone}"
+      echo -e "   ${CGo}cd ..${CNone}"
+
+      echo -e "   ${CGo}vi config.mk${CNone}"
+      echo -e "   # Enable websockets in config.mk"
+      echo -e "      WITH_WEBSOCKETS:=yes"
+
       echo -e "   ${CGo}make${CNone}"
    fi
    echo ""
