@@ -211,8 +211,8 @@ persistence:
   # are ignored. Unlike the Paho's builtin persistence classes described above,
   # a custom class requires the fully-quailifed class name.
   #
-  # All cluster clients use the top-level ''persistence'' element unless they have
-  # their own ''persistence'' element defined.
+  # All cluster clients use the top-level 'persistence' element unless they have
+  # their own 'persistence' element defined.
   #
   # Default:
   #   className: MqttDefaultFilePersistence
