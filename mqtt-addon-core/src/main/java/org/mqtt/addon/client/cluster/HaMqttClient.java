@@ -17,7 +17,6 @@ package org.mqtt.addon.client.cluster;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,7 +36,7 @@ import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.MqttSecurityException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
-import org.mqtt.addon.client.cluster.config.ConfigUtil;
+import org.mqtt.addon.client.cluster.internal.ConfigUtil;
 
 /**
  * HaMqttClient wraps {@linkplain MqttClient} and provides HA services. It

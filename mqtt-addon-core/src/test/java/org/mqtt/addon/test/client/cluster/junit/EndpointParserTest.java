@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.junit.Test;
 import org.mqtt.addon.client.cluster.IClusterConfig;
-import org.mqtt.addon.client.cluster.config.ConfigUtil;
+import org.mqtt.addon.client.cluster.internal.ConfigUtil;
 
 /**
  * EndpointParserTest tests {@linkplain ConfigUtil#parseEndpoints(String[])}.

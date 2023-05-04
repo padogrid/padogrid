@@ -26,6 +26,7 @@ import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.client.persist.MqttDefaultFilePersistence;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.PublisherType;
+import org.mqtt.addon.client.cluster.internal.ConfigUtil;
 
 /**
  * ClusterConfig configures one or more clusters. This class directly maps to

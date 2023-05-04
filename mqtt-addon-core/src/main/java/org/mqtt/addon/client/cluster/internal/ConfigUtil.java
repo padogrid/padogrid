@@ -13,12 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.mqtt.addon.client.cluster.config;
+package org.mqtt.addon.client.cluster.internal;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.mqtt.addon.client.cluster.HaMqttClient;
+
+/**
+ * ConfigUtil contains convenience methods for configuring
+ * {@linkplain HaMqttClient}.
+ * 
+ * @author dpark
+ *
+ */
 public class ConfigUtil {
 	/**
 	 * Replaces a system property defined by <code>${property}</code> and

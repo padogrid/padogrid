@@ -42,12 +42,12 @@ import org.eclipse.paho.mqttv5.common.MqttSecurityException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
-import org.mqtt.addon.client.cluster.config.ConfigUtil;
+import org.mqtt.addon.client.cluster.internal.ConfigUtil;
 
 /**
  * {@linkplain ClusterState} probes a collection of MQTT endpoints. The endpoint
  * string format must be compliant with the Mosquitto server URI format, e.g.,
- * tcp://localhost:1883, ssl://localhost:8883.
+ * tcp://localhost:1883, ssl://localhost:8883, ws://localhost:8083, wss://localhost:8443.
  * 
  * @author dpark
  *
@@ -214,11 +214,8 @@ public class ClusterState implements IClusterConfig {
 					if (persistence == null) {
 						MqttClientPersistence persistence = ClusterService.getClusterService()
 								.createMqttClientPersistence();
-//						ScheduledExecutorService executorService = this.executorService;
-//						if (executorService == null) {
-//							executorService = Executors.newScheduledThreadPool(allEndpointSet.size() * 3 + 1);
-//							this.executorService = executorService;
-//						}
+						// Paho's use of ExecutorService is extremely limited. It blocks indefinitely
+						// if the application exceeds the thread pool size. Its use is discouraged.
 						if (persistence == null) {
 							// Note: the following creates MqttDefaultFilePersistence.
 							client = new MqttClient(endpoint, clientId);
@@ -269,10 +266,8 @@ public class ClusterState implements IClusterConfig {
 
 	private IMqttToken[] connectDeadEndpoints() {
 
-//		return connectDeadEndpoints(deadEndpointSet);
-
-		// See if we can reduced the connection time by connecting to a few brokers for
-		// the first pass.
+		// Application can control the initial number of endpoints to connect during the
+		// first probing cycle reduce the initial connection latency.
 		IMqttToken[] tokens = null;
 		synchronized (lock) {
 			if (isFirstConnectionAttempt) {
@@ -634,7 +629,6 @@ public class ClusterState implements IClusterConfig {
 				}
 				deadClientSet.addAll(disconnectedClientList);
 			}
-
 			break;
 		default:
 			break;
@@ -803,7 +797,7 @@ public class ClusterState implements IClusterConfig {
 	 * 
 	 * @param force true to forcibly close the client
 	 */
-	public synchronized void close(boolean force) {
+	public void close(boolean force) {
 		switch (connectionState) {
 		case LIVE:
 		case DISCONNECTED:
@@ -888,7 +882,7 @@ public class ClusterState implements IClusterConfig {
 	 */
 	public MqttClient getLiveClient() {
 		MqttClient client = null;
-		synchronized (liveClientSet) {
+		synchronized (lock) {
 			Iterator<MqttClient> iterator = liveClientSet.iterator();
 			while (iterator.hasNext()) {
 				client = iterator.next();
@@ -921,13 +915,13 @@ public class ClusterState implements IClusterConfig {
 	 * @return An empty array if no live clients exist.
 	 */
 	public String[] getLiveClientIds() {
-		String[] clientIds;
-		synchronized (liveClientSet) {
-			MqttClient[] clients = liveClientSet.toArray(new MqttClient[0]);
-			clientIds = new String[clients.length];
-			for (int i = 0; i < clients.length; i++) {
-				clientIds[i] = clients[i].getClientId();
-			}
+		MqttClient[] clients = new MqttClient[0];
+		synchronized (lock) {
+			clients = liveClientSet.toArray(new MqttClient[0]);
+		}
+		String[] clientIds = new String[clients.length];
+		for (int i = 0; i < clients.length; i++) {
+			clientIds[i] = clients[i].getClientId();
 		}
 		return clientIds;
 	}
@@ -938,13 +932,13 @@ public class ClusterState implements IClusterConfig {
 	 * @return An empty array if no disconnected (dead) clients exist.
 	 */
 	public String[] getDeadClientIds() {
-		String[] clientIds;
-		synchronized (deadClientSet) {
-			MqttClient[] clients = deadClientSet.toArray(new MqttClient[0]);
-			clientIds = new String[clients.length];
-			for (int i = 0; i < clients.length; i++) {
-				clientIds[i] = clients[i].getClientId();
-			}
+		MqttClient[] clients = new MqttClient[0];
+		synchronized (lock) {
+			clients = deadClientSet.toArray(new MqttClient[0]);
+		}
+		String[] clientIds = new String[clients.length];
+		for (int i = 0; i < clients.length; i++) {
+			clientIds[i] = clients[i].getClientId();
 		}
 		return clientIds;
 	}
@@ -955,17 +949,17 @@ public class ClusterState implements IClusterConfig {
 	 */
 	public String[] getServerURIs() {
 		ArrayList<String> list = new ArrayList<String>(allEndpointSet.size());
-		synchronized (liveClientSet) {
-			MqttClient[] clients = liveClientSet.toArray(new MqttClient[0]);
-			for (MqttClient client : clients) {
-				list.add(client.getServerURI());
-			}
+		MqttClient[] liveClients = new MqttClient[0];
+		MqttClient[] deadClients = new MqttClient[0];
+		synchronized (lock) {
+			liveClients = liveClientSet.toArray(new MqttClient[0]);
+			deadClients = deadClientSet.toArray(new MqttClient[0]);
 		}
-		synchronized (deadClientSet) {
-			MqttClient[] clients = deadClientSet.toArray(new MqttClient[0]);
-			for (MqttClient client : clients) {
-				list.add(client.getServerURI());
-			}
+		for (MqttClient client : liveClients) {
+			list.add(client.getServerURI());
+		}
+		for (MqttClient client : deadClients) {
+			list.add(client.getServerURI());
 		}
 		return list.toArray(new String[0]);
 	}
@@ -978,13 +972,13 @@ public class ClusterState implements IClusterConfig {
 	 * @see MqttClient#getCurrentServerURI()
 	 */
 	public String[] getCurrentServerURIs() {
-		String[] clientIds;
-		synchronized (liveClientSet) {
-			MqttClient[] clients = liveClientSet.toArray(new MqttClient[0]);
-			clientIds = new String[clients.length];
-			for (int i = 0; i < clients.length; i++) {
-				clientIds[i] = clients[i].getCurrentServerURI();
-			}
+		MqttClient[] clients = new MqttClient[0];
+		synchronized (lock) {
+			clients = liveClientSet.toArray(new MqttClient[0]);
+		}
+		String[] clientIds = new String[clients.length];
+		for (int i = 0; i < clients.length; i++) {
+			clientIds[i] = clients[i].getCurrentServerURI();
 		}
 		return clientIds;
 	}
@@ -1053,14 +1047,12 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	public void setTimeToWait(long timeToWaitInMillis) throws IllegalArgumentException {
-		synchronized (liveClientSet) {
+		synchronized (lock) {
 			MqttClient[] clients = liveClientSet.toArray(new MqttClient[0]);
 			for (MqttClient client : clients) {
 				client.setTimeToWait(initialEndpointCount);
 			}
-		}
-		synchronized (deadClientSet) {
-			MqttClient[] clients = deadClientSet.toArray(new MqttClient[0]);
+			clients = deadClientSet.toArray(new MqttClient[0]);
 			for (MqttClient client : clients) {
 				client.setTimeToWait(initialEndpointCount);
 			}
@@ -1069,16 +1061,14 @@ public class ClusterState implements IClusterConfig {
 
 	public long getTimeToWait() {
 		long timeToWaitInMillis = 0;
-		synchronized (liveClientSet) {
+		synchronized (lock) {
 			MqttClient[] clients = liveClientSet.toArray(new MqttClient[0]);
 			for (MqttClient client : clients) {
 				timeToWaitInMillis = client.getTimeToWait();
 				break;
 			}
-		}
-		if (timeToWaitInMillis == 0) {
-			synchronized (deadClientSet) {
-				MqttClient[] clients = deadClientSet.toArray(new MqttClient[0]);
+			if (timeToWaitInMillis == 0) {
+				clients = deadClientSet.toArray(new MqttClient[0]);
 				for (MqttClient client : clients) {
 					client.setTimeToWait(initialEndpointCount);
 				}
