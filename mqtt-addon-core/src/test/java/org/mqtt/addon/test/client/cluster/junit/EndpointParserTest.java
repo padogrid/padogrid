@@ -140,4 +140,12 @@ public class EndpointParserTest implements IClusterConfig {
 		List<String> endpointList = ConfigUtil.parseEndpoints(endpoints);
 		assertArrayEquals(expectedList.toArray(), endpointList.toArray());
 	}
+	
+	@Test
+	public void testEnpointParser11() {
+		String[] endpoints = new String[] { "tcp://p-1.newco.com:1883-1885" };
+		List<String> expectedList = buildExpectedEnpointList("p-1.newco.com", 1883, 1885);
+		List<String> endpointList = ConfigUtil.parseEndpoints(endpoints);
+		assertArrayEquals(expectedList.toArray(), endpointList.toArray());
+	}
 }

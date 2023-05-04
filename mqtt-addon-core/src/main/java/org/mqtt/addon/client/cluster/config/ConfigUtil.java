@@ -101,7 +101,20 @@ public class ConfigUtil {
 					portRange = endpoint.replaceAll(".*:", "");
 				}
 
-				String[] addressParts = addressRange.split("-");
+				// Determine whether IP address or host name.
+				String[] addressParts = addressRange.split("\\.");
+				boolean isHostName = false;
+				String hostName = null;
+				for (int i = 0; i < addressParts.length; i++) {
+					try {
+						int octet = Integer.parseInt(addressParts[i]);
+					} catch (NumberFormatException ex) {
+						if (i != 3) {
+							isHostName = true;
+							hostName = addressRange;
+						}
+					}
+				}
 
 				// Determine port range
 				int startPort = -1;
@@ -125,21 +138,8 @@ public class ConfigUtil {
 					}
 				}
 
-				int index = addressParts[0].lastIndexOf(".");
-
-				// Determine whether IP address or host name.
-				boolean isHostName = index == -1;
-				int startOctet = -1;
-				if (isHostName == false) {
-					String startOctetStr = addressParts[0].substring(index + 1);
-					try {
-						startOctet = Integer.parseInt(startOctetStr);
-					} catch (NumberFormatException ex) {
-						isHostName = true;
-					}
-				}
 				if (isHostName) {
-					String address = addressParts[0];
+					String address = hostName;
 					if (startPort == -1) {
 						String ep = String.format("%s://%s", protocol, address);
 						endpointList.add(ep);
@@ -150,18 +150,33 @@ public class ConfigUtil {
 						}
 					}
 				} else {
-					String firstPart = addressParts[0].substring(0, index);
-					int endOctet = startOctet;
-					if (addressParts.length == 2) {
-						endOctet = Integer.parseInt(addressParts[1]);
+					// Set firstPart without the last octet
+					String firstPart = "";
+					for (int i = 0; i < addressParts.length - 1; i++) {
+						firstPart += addressParts[i] + ".";
 					}
+
+					// Set last octet
+					String lastOctet = addressParts[addressParts.length - 1];
+
+					// Determine start and end octets
+					int startOctet;
+					int endOctet;
+					String octets[] = lastOctet.split("-");
+					startOctet = Integer.parseInt(octets[0]);
+					endOctet = startOctet;
+					if (octets.length > 1) {
+						endOctet = Integer.parseInt(octets[1]);
+					}
+
+					// Set endpoints
 					for (int octet = startOctet; octet <= endOctet; octet++) {
 						if (startPort == -1) {
-							String ep = String.format("%s://%s.%d", protocol, firstPart, octet);
+							String ep = String.format("%s://%s%d", protocol, firstPart, octet);
 							endpointList.add(ep);
 						} else {
 							for (int port = startPort; port <= endPort; port++) {
-								String ep = String.format("%s://%s.%d:%d", protocol, firstPart, octet, port);
+								String ep = String.format("%s://%s%d:%d", protocol, firstPart, octet, port);
 								endpointList.add(ep);
 							}
 						}
