@@ -209,8 +209,7 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
-	 * Returns the cluster name. A unique cluster name is assigned if it is not
-	 * specified when this object was initially created.
+	 * {@inheritDoc}
 	 */
 	public String getClusterName() {
 		return clusterName;
@@ -220,7 +219,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 * IMqttClient: {@inheritDoc}
 	 */
 	@Override
-	public void publish(String topicFilter, MqttMessage message) throws MqttException {
+	public void publish(String topic, MqttMessage message) throws MqttException {
 		if (isDisconnected()) {
 			throw new HaMqttException(-101, "Cluster disconnected");
 		}
@@ -236,7 +235,7 @@ public class HaMqttClient implements IHaMqttClient {
 			throw new HaMqttException(-100, String.format("Cluster unreachable"));
 		}
 		try {
-			client.publish(topicFilter, message);
+			client.publish(topic, message);
 		} catch (MqttException e) {
 
 			if (client.isConnected() == false) {
@@ -256,11 +255,20 @@ public class HaMqttClient implements IHaMqttClient {
 					cleanupThreadLocals();
 					throw e;
 				} else {
-					publish(topicFilter, message);
+					publish(topic, message);
 				}
 			} else {
 				throw e;
 			}
+		}
+
+		// TODO: Move it to another thread
+		try {
+			clusterState.publishBridgeClusters(topic, message);
+		} catch (Exception ex) {
+			logger.warn(String.format(
+					"Error occurred while publishing to bridge cluster(s) [topic=%s, qos=%d, retained=%s, exception=%s]. ",
+					topic, message.getQos(), message.isRetained(), ex.getMessage()));
 		}
 	}
 
@@ -308,6 +316,15 @@ public class HaMqttClient implements IHaMqttClient {
 			} else {
 				throw e;
 			}
+		}
+
+		// TODO: Move it to another thread
+		try {
+			clusterState.publishBridgeClusters(topic, payload, qos, retained);
+		} catch (Exception ex) {
+			logger.warn(String.format(
+					"Error occurred while publishing to bridge cluster(s) [topic=%s, qos=%d, retained=%s, exception=%s]. ",
+					topic, qos, retained, ex.getMessage()));
 		}
 	}
 

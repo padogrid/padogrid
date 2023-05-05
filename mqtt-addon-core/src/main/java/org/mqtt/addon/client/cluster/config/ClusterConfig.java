@@ -101,8 +101,14 @@ public class ClusterConfig {
 		private boolean enabled = true;
 		private boolean autoConnect = true;
 		private int initialEndpointCount = -1;
+		private long timeToWait = IClusterConfig.DEFAULT_TIME_TO_WAIT_IN_MSEC;
 		private MqttConnectionOptions connection;
+		private Bridge[] pubBridges;
+		private Bridge[] subBridges;
 
+		/**
+		 * Returns the cluster name.
+		 */
 		public String getName() {
 			if (name == null) {
 				name = IClusterConfig.DEFAULT_CLUSTER_NAME;
@@ -173,6 +179,23 @@ public class ClusterConfig {
 			this.connection = connection;
 		}
 
+		/**
+		 * Returns the connection time to wait in milliseconds. Default:
+		 * {@linkplain IClusterConfig#DEFAULT_TIME_TO_WAIT_IN_MSEC}
+		 */
+		public long getTimeToWait() {
+			return timeToWait;
+		}
+
+		/**
+		 * Sets the connection time to wait.
+		 * 
+		 * @param timeToWait Time to wait in milliseconds
+		 */
+		public void setTimeToWait(long timeToWait) {
+			this.timeToWait = timeToWait;
+		}
+
 		public PublisherType getPublisherType() {
 			return publisherType;
 		}
@@ -187,6 +210,22 @@ public class ClusterConfig {
 
 		public void setPrimaryServerURI(String primaryServerURI) {
 			this.primaryServerURI = primaryServerURI;
+		}
+
+		public Bridge[] getPubBridges() {
+			return pubBridges;
+		}
+
+		public void setPubBridges(Bridge[] pubBridges) {
+			this.pubBridges = pubBridges;
+		}
+
+		public Bridge[] getSubBridges() {
+			return subBridges;
+		}
+
+		public void setSubBridges(Bridge[] subBridges) {
+			this.subBridges = subBridges;
 		}
 	}
 
@@ -267,6 +306,36 @@ public class ClusterConfig {
 
 		public void setValue(String value) {
 			this.value = value;
+		}
+	}
+
+	public static class Bridge {
+		private String cluster;
+		private String[] topicFilters;
+		private int qos = -1;
+
+		public String getCluster() {
+			return cluster;
+		}
+
+		public void setCluster(String cluster) {
+			this.cluster = cluster;
+		}
+
+		public String[] getTopicFilters() {
+			return topicFilters;
+		}
+
+		public void setTopicFilters(String[] topicFilters) {
+			this.topicFilters = topicFilters;
+		}
+
+		public int getQos() {
+			return qos;
+		}
+
+		public void setQos(int qos) {
+			this.qos = qos;
 		}
 	}
 }

@@ -80,6 +80,12 @@ clusters:
     # Default: true
     autoConnect: true
     
+    # Connection time to wait in milliseconds. Each client in the cluster waits
+    # for this amount of time before they timeout. Timed out clients are moved
+    # to the dead client list.
+    # Default: 5000
+    timeToWait: 5000
+    
     # Initial number of endpoints to connect. If intialEndpointCount is set,
     # then the cluster service first makes connections up to that number of
     # endpoints and defers the rest of the endpoints to the next probing cycycle.
@@ -100,6 +106,48 @@ clusters:
     # For other publisherType values, it has no effect. The primary server
     # is automatically added to connection.serverURIs if not included.
     primaryServerURI: null
+    
+    # subBridges fowards received messages to the target clusters.
+    # Note that subBridges is a single point of failure. If the application
+    # fails, then so do the subBridges.
+    subBridges:
+        # Target cluster name. Undefined cluster names are logged and discarded.
+        # If the target cluster name is this cluster name, then it is logged and
+        # dicarded.
+      - cluster: null
+        # A list of topic filters from which the topics are to be filtered
+        # and forwarded to the target cluster.
+        topicFilters: []
+        
+        # Set qos to override the caller's qos value. It must be a valid number,
+        # i.e., 0, 1, or 2; otherwise, it is ignored and the caller's qos is used.
+        # Note that qos for publishing messages.
+        # Default: -1
+        qos: -1
+    
+    # pubBridges sends published messages to the target clusters. 
+    # Note that unlike subBridges, pubBridges does not suffer from a single point
+    # of failure since the application directly publishes data to the target
+    # clusters. Drawbacks are as follows.
+    # 1) It puts additional load on the application. Each publish() call 
+    #    makes additional calls to the target clusters defined under pubBridges.
+    # 2) The target clusters must be exposed to the application. Normally,
+    #    a bridge serves as a proxy to overcome firewalls, but pubBridges
+    #    requires direct access to the targer clusters.
+    pubBridges:
+        # Target cluster name. Undefined cluster names are logged and discarded.
+        # If the target cluster name is this cluster name, then it is logged and
+        # dicarded.
+      - cluster: null
+        # A list of topic filters from which the topics are to be filtered
+        # before publishing messages.
+        topicFilters: []
+        
+        # Set qos to override the caller's qos value. It must be a valid number,
+        # i.e., 0, 1, or 2; otherwise, it is ignored and the caller's qos is used.
+        # Note that qos for publishing messages.
+        # Default: -1
+        qos: -1
 
     # MqttClientConnectionOptions attributes. Each attribute defined in this
     # file represents the corresponding attribute in MqttConnectionOptions.

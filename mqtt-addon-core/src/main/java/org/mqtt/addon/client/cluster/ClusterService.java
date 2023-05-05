@@ -20,8 +20,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -33,9 +35,9 @@ import org.apache.logging.log4j.Logger;
 import org.eclipse.paho.mqttv5.client.MqttClientPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
-import org.mqtt.addon.client.cluster.config.ClusterConfig.Persistence;
-import org.mqtt.addon.client.cluster.config.ClusterConfig.Property;
-import org.yaml.snakeyaml.TypeDescription;
+import org.mqtt.addon.client.cluster.config.ClusterConfig.Bridge;
+import org.mqtt.addon.client.cluster.config.ClusterConfig.Cluster;
+import org.mqtt.addon.client.cluster.internal.BridgeCluster;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.introspector.BeanAccess;
@@ -62,7 +64,13 @@ public class ClusterService {
 	private String defaultClusterName;
 
 	private ScheduledExecutorService ses;
-	private ConcurrentHashMap<HaMqttClient, ClusterState> haclientMap = new ConcurrentHashMap<HaMqttClient, ClusterState>();
+
+	// <clusterName, ClusterState>
+	private ConcurrentHashMap<String, ClusterState> clusterStateMap = new ConcurrentHashMap<String, ClusterState>();
+
+	// <clusterName, endpointSet>
+	private ConcurrentHashMap<String, Set<BridgeCluster>> pubBridgeMap = new ConcurrentHashMap<String, Set<BridgeCluster>>();
+	private ConcurrentHashMap<String, Set<BridgeCluster>> subBridgeMap = new ConcurrentHashMap<String, Set<BridgeCluster>>();
 
 	private volatile boolean isStarted = false;
 
@@ -96,7 +104,8 @@ public class ClusterService {
 	 * @return ClusterService instance
 	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
-	public static synchronized ClusterService initialize(ClusterConfig clusterConfig, boolean isStart) throws IOException {
+	public static synchronized ClusterService initialize(ClusterConfig clusterConfig, boolean isStart)
+			throws IOException {
 		if (clusterService == null) {
 			if (clusterConfig == null) {
 				String configFile = System.getProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE);
@@ -152,7 +161,7 @@ public class ClusterService {
 						clusterName = IClusterConfig.DEFAULT_CLUSTER_NAME;
 					}
 				}
-				
+
 				// Create HaMqttClient. Connect only if autoConnect is enabled.
 				try {
 					HaMqttClient client = HaClusters.getOrCreateHaMqttClient(cluster);
@@ -165,9 +174,23 @@ public class ClusterService {
 			}
 		}
 
-		if (logger != null) {
-			logger.info(
-					String.format("initialized [isServiceEnabled=%s, delayInMsec=%s]", isServiceEnabled, delayInMsec));
+		// Build pub/sub bridge clusters for all ClusterState instances
+		buildBridgeClusters();
+
+		logger.info(String.format("initialized [isServiceEnabled=%s, delayInMsec=%s]", isServiceEnabled, delayInMsec));
+	}
+
+	/**
+	 * Builds both pub and sub bridge clusters for all ClusterState instances.
+	 */
+	private void buildBridgeClusters() {
+		Cluster[] clusters = clusterConfig.getClusters();
+		for (Cluster cluster : clusters) {
+			String clusterName = cluster.getName();
+			ClusterState state = clusterStateMap.get(clusterName);
+			if (state != null) {
+				state.buildBridgeClusters(cluster);
+			}
 		}
 	}
 
@@ -198,10 +221,13 @@ public class ClusterService {
 
 	ClusterState addHaClient(HaMqttClient haclient, ClusterConfig.Cluster clusterConfig,
 			MqttClientPersistence persistence, ScheduledExecutorService executorService) {
-		ClusterState state = haclientMap.get(haclient);
-		if (state == null) {
-			state = new ClusterState(haclient, clusterConfig, persistence, executorService);
-			haclientMap.put(haclient, state);
+		ClusterState state = null;
+		if (haclient != null) {
+			state = clusterStateMap.get(haclient.getClusterName());
+			if (state == null) {
+				state = new ClusterState(haclient, clusterConfig, persistence, executorService);
+				clusterStateMap.put(haclient.getClusterName(), state);
+			}
 		}
 		return state;
 	}
@@ -217,7 +243,7 @@ public class ClusterService {
 		if (haclient == null) {
 			return;
 		}
-		ClusterState state = haclientMap.remove(haclient);
+		ClusterState state = clusterStateMap.remove(haclient.getClusterName());
 		if (state != null) {
 			state.close(force);
 		}
@@ -246,15 +272,13 @@ public class ClusterService {
 			ses.scheduleWithFixedDelay(new Runnable() {
 				@Override
 				public void run() {
-					for (Map.Entry<HaMqttClient, ClusterState> entry : haclientMap.entrySet()) {
+					for (Map.Entry<String, ClusterState> entry : clusterStateMap.entrySet()) {
 						entry.getValue().reviveDeadEndpoints();
 					}
 				}
 			}, initialDelayInMsec, delayInMsec, TimeUnit.MILLISECONDS);
 			isStarted = true;
-			if (logger != null) {
-				logger.info(String.format("ClusterService started: %s", this));
-			}
+			logger.info(String.format("ClusterService started: %s", this));
 		}
 	}
 
@@ -265,9 +289,7 @@ public class ClusterService {
 	public synchronized void stop() {
 		if (ses != null) {
 			ses.shutdown();
-			if (logger != null) {
-				logger.info("ClusterService stopped. No longer operational.");
-			}
+			logger.info("ClusterService stopped. No longer operational.");
 		}
 	}
 
@@ -296,7 +318,10 @@ public class ClusterService {
 	}
 
 	public ClusterState getClusterState(HaMqttClient haclient) {
-		return haclientMap.get(haclient);
+		if (haclient == null) {
+			return null;
+		}
+		return clusterStateMap.get(haclient.getClusterName());
 	}
 
 	/**

@@ -27,6 +27,8 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.mqttv5.client.IMqttClient;
 import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
 import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttCallback;
@@ -42,12 +44,15 @@ import org.eclipse.paho.mqttv5.common.MqttSecurityException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
+import org.mqtt.addon.client.cluster.config.ClusterConfig.Bridge;
+import org.mqtt.addon.client.cluster.internal.BridgeCluster;
 import org.mqtt.addon.client.cluster.internal.ConfigUtil;
 
 /**
  * {@linkplain ClusterState} probes a collection of MQTT endpoints. The endpoint
  * string format must be compliant with the Mosquitto server URI format, e.g.,
- * tcp://localhost:1883, ssl://localhost:8883, ws://localhost:8083, wss://localhost:8443.
+ * tcp://localhost:1883, ssl://localhost:8883, ws://localhost:8083,
+ * wss://localhost:8443.
  * 
  * @author dpark
  *
@@ -61,6 +66,7 @@ public class ClusterState implements IClusterConfig {
 	// to reduce the connection blocking time.
 	private boolean isFirstConnectionAttempt = true;
 	private int initialEndpointCount = -1;
+	private long timeToWaitInMsec = DEFAULT_TIME_TO_WAIT_IN_MSEC;
 	private boolean isEnabled = true;
 
 	// Mutex lock to synchronize endpoint sets.
@@ -72,6 +78,9 @@ public class ClusterState implements IClusterConfig {
 	private final Set<MqttClient> liveClientSet = Collections.synchronizedSet(new HashSet<MqttClient>(5));
 	private final Set<MqttClient> deadClientSet = Collections.synchronizedSet(new HashSet<MqttClient>(5));
 	private final Set<String> deadEndpointSet = Collections.synchronizedSet(new HashSet<String>(5));
+
+	private final Set<BridgeCluster> pubBridgeSet = Collections.synchronizedSet(new HashSet<BridgeCluster>(5));
+	private final Set<BridgeCluster> subBridgeSet = Collections.synchronizedSet(new HashSet<BridgeCluster>(5));
 
 	private Logger logger;
 	private String clientIdPrefix;
@@ -95,6 +104,7 @@ public class ClusterState implements IClusterConfig {
 		this.haclient = haclient;
 		this.isEnabled = clusterConfig.isEnabled();
 		this.initialEndpointCount = clusterConfig.getInitialEndpointCount();
+		this.timeToWaitInMsec = clusterConfig.getTimeToWait();
 		this.primaryServerURI = clusterConfig.getPrimaryServerURI();
 		this.persistence = persistence;
 		this.executorService = executorService;
@@ -165,6 +175,9 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * Returns a comma separated list of live server URIs.
+	 */
 	private String getLiveEndpoints() {
 		StringBuffer buffer = new StringBuffer();
 		int count = 0;
@@ -178,6 +191,11 @@ public class ClusterState implements IClusterConfig {
 		return buffer.toString();
 	}
 
+	/**
+	 * Creates a unique client ID for the specified endpoint.
+	 * 
+	 * @param endpoint Endpoint, aka, serverURI.
+	 */
 	private String createClientId(String endpoint) {
 		if (endpoint == null) {
 			return clientIdPrefix;
@@ -186,9 +204,37 @@ public class ClusterState implements IClusterConfig {
 		return clientId;
 	}
 
+	/**
+	 * Publishes a test message on a private metadata topic managed by HaMqttClient.
+	 * This method is used to "warm up" the client connections during the cluster
+	 * initialization phase. Otherwise, MqttClient fails while connecting multiple
+	 * instances.
+	 * 
+	 * @param client
+	 * @throws MqttPersistenceException
+	 * @throws MqttException
+	 */
 	private void publishConnectionTestMessage(MqttClient client) throws MqttPersistenceException, MqttException {
 		String message = "connection test";
 		client.publish("/__padogrid/__test", message.getBytes(), 0, false);
+	}
+
+	/**
+	 * Publishes to the pub bridge clusters.
+	 */
+	void publishBridgeClusters(String topic, byte[] payload, int qos, boolean retained) throws MqttException {
+		for (BridgeCluster bridgeCluster : pubBridgeSet) {
+			bridgeCluster.publish(topic, payload, qos, retained);
+		}
+	}
+
+	/**
+	 * Publishes to the pub bridge clusters.
+	 */
+	void publishBridgeClusters(String topic, MqttMessage message) throws MqttException {
+		for (BridgeCluster bridgeCluster : pubBridgeSet) {
+			bridgeCluster.publish(topic, message);
+		}
 	}
 
 	/**
@@ -226,7 +272,7 @@ public class ClusterState implements IClusterConfig {
 					} else {
 						client = new MqttClient(endpoint, clientId, persistence, executorService);
 					}
-					client.setTimeToWait(DEFAULT_TIME_TO_WAIT_IN_MSEC);
+					client.setTimeToWait(timeToWaitInMsec);
 					client.setCallback(new MqttCallbackImpl(client));
 					IMqttToken token = client.connectWithResult(connectionOptions);
 					tokenList.add(token);
@@ -264,10 +310,15 @@ public class ClusterState implements IClusterConfig {
 		return tokenList.toArray(new IMqttToken[0]);
 	}
 
+	/**
+	 * Connects dead endpoints.
+	 * 
+	 * @return
+	 */
 	private IMqttToken[] connectDeadEndpoints() {
 
 		// Application can control the initial number of endpoints to connect during the
-		// first probing cycle reduce the initial connection latency.
+		// first probing cycle to reduce the initial connection latency.
 		IMqttToken[] tokens = null;
 		synchronized (lock) {
 			if (isFirstConnectionAttempt) {
@@ -414,6 +465,9 @@ public class ClusterState implements IClusterConfig {
 		connectionInProgress = false;
 	}
 
+	/**
+	 * Logs the current connection status.
+	 */
 	private void logConnectionStatus() {
 		if (liveClientSet.size() == allEndpointSet.size()) {
 			logger.info(String.format("All endpoints connected."));
@@ -581,6 +635,61 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * Invoked by ClusterService. This method must be invoked after creating all
+	 * clusters.
+	 * 
+	 * @param clusterConfig Cluster config
+	 */
+	void buildBridgeClusters(ClusterConfig.Cluster clusterConfig) {
+		buildBridgeClusterSet(clusterConfig, pubBridgeSet, "pubBridges");
+		buildBridgeClusterSet(clusterConfig, subBridgeSet, "subBridges");
+
+		// Add callback to forward messages to the bridge clusters.
+		if (subBridgeSet.size() > 0) {
+			addCallbackCluster(new BridgeCallbackImpl());
+		}
+	}
+
+	/**
+	 * Builds the specified bridge cluster.
+	 * 
+	 * @param cluster          Cluster config
+	 * @param bridgeClusterSet Bridge cluster set (either this.pubBridgeSet or
+	 *                         this.subBridgeSet).
+	 */
+	private void buildBridgeClusterSet(ClusterConfig.Cluster cluster, Set<BridgeCluster> bridgeClusterSet,
+			String bridgeName) {
+		Bridge[] pubBridges = cluster.getPubBridges();
+		if (pubBridges != null && pubBridges.length > 0) {
+			String clusterName = cluster.getName();
+			for (Bridge bridge : pubBridges) {
+				// Ignore the same bridge cluster name as its own.
+				String bridgeClusterName = bridge.getCluster();
+				if (bridgeClusterName == null) {
+					continue;
+				}
+				if (bridgeClusterName.equals(clusterName)) {
+					logger.info(String.format(
+							"Reference to the parent cluster is not allowed [%s: parent=%s, bridge=%s]. Discarded.",
+							bridgeName, clusterName, bridgeClusterName));
+					continue;
+				}
+				HaMqttClient client = HaClusters.getHaMqttClient(bridgeClusterName);
+				if (client == null) {
+					logger.info(String.format("Bride cluster undefined [%s: parent=%s, bridge=%s]. Discarded.",
+							bridgeName, clusterName, bridgeClusterName));
+				} else {
+					BridgeCluster bridgeCluster = new BridgeCluster(client, bridge.getTopicFilters(), bridge.getQos());
+					bridgeClusterSet.add(bridgeCluster);
+				}
+			}
+		}
+	}
+
+	/**
+	 * @see IMqttClient#connect(MqttConnectOptions)
+	 */
 	public IMqttToken[] connectWithResult(MqttConnectionOptions options) throws MqttSecurityException, MqttException {
 		IMqttToken[] tokens = null;
 		if (isEnabled) {
@@ -771,22 +880,41 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * Enables or disables this cluster state object. If false, then it effectively
+	 * ceases all dead endpoint revival activities. Default is true.
+	 * 
+	 * @param enabled
+	 */
 	public void setEnabled(boolean enabled) {
 		this.isEnabled = enabled;
 	}
 
+	/**
+	 * Returns true if this cluster state object is enabled. If false, then this
+	 * object is disabled and no revival activities take place. Default is true.
+	 */
 	public boolean isEnabled() {
 		return isEnabled;
 	}
 
+	/**
+	 * Returns true if the current connection state is live.
+	 */
 	public boolean isLive() {
 		return connectionState == ConnectionState.LIVE;
 	}
 
+	/**
+	 * Returns true if the current connection state is disconnected.
+	 */
 	public boolean isDisconnected() {
 		return connectionState == ConnectionState.DISCONNECTED;
 	}
 
+	/**
+	 * Returns true if there is at least one live client.
+	 */
 	public boolean isConnected() {
 		return liveClientSet.size() > 0;
 	}
@@ -983,15 +1111,30 @@ public class ClusterState implements IClusterConfig {
 		return clientIds;
 	}
 
+	/**
+	 * Sets the MqttClient callback.
+	 * 
+	 * @param callback
+	 */
 	public void setCallback(MqttCallback callback) {
 		this.callback = callback;
 	}
 
+	/**
+	 * Adds the specified cluster callback.
+	 * 
+	 * @param haCallback Cluster callback
+	 */
 	public void addCallbackCluster(IHaMqttCallback haCallback) {
 		haCallbackList.add(haCallback);
 		haCallbacks = haCallbackList.toArray(new IHaMqttCallback[0]);
 	}
 
+	/**
+	 * Removes the specified cluster callback.
+	 * 
+	 * @param haCallback Cluster callback
+	 */
 	public void removeCallbackCluster(IHaMqttCallback haCallback) {
 		haCallbackList.remove(haCallback);
 		haCallbacks = haCallbackList.toArray(new IHaMqttCallback[0]);
@@ -1018,47 +1161,81 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * Stores the specified topic filter for reinstating connection failures.
+	 */
 	public void subscribe(String topicFilter, int qos) {
 		subscribedTopics.add(new TopicFilter(topicFilter, qos));
 	}
 
+	/**
+	 * Stores the specified topic filters for reinstating connection failures.
+	 */
 	public void subscribe(String[] topicFilters, int[] qos) {
 		subscribedTopics.add(new TopicFilters(topicFilters, qos));
 	}
 
+	/**
+	 * Stores the specified subscriptions for reinstating connection failures.
+	 */
 	public void subscribe(MqttSubscription[] subscriptions) {
 		subscribedTopics.add(new TopicSubscriptions(subscriptions));
 	}
 
+	/**
+	 * Stores the specified topic filter for reinstating connection failures.
+	 */
 	public void subscribe(String topicFilter, int qos, IMqttMessageListener messageListener) {
 		subscribedTopics.add(new TopicFilter(topicFilter, qos, messageListener));
 	}
 
+	/**
+	 * Stores the specified subscriptions for reinstating connection failures.
+	 */
 	public void subscribe(MqttSubscription[] subscriptions, IMqttMessageListener[] messageListeners) {
 		subscribedTopics.add(new TopicSubscriptions(subscriptions, messageListeners));
 	}
 
+	/**
+	 * Removes the specified topic filter from the storage.
+	 */
 	public void unsubscribe(String topicFilter) {
 		subscribedTopics.remove(new TopicFilter(topicFilter));
 	}
 
+	/**
+	 * Removes the specified topic filters from the storage.
+	 */
 	public void unsubscribe(String[] topicFilters) {
 		subscribedTopics.remove(new TopicFilters(topicFilters));
 	}
 
+	/**
+	 * Sets time to wait to all of the clients including the dead clients.
+	 * 
+	 * @param timeToWaitInMillis Time to wait in milliseconds
+	 * @throws IllegalArgumentException Thrown if timeToWaitInMillis is invalid
+	 * @see MqttClient#setTimeToWait(long)
+	 */
 	public void setTimeToWait(long timeToWaitInMillis) throws IllegalArgumentException {
 		synchronized (lock) {
 			MqttClient[] clients = liveClientSet.toArray(new MqttClient[0]);
 			for (MqttClient client : clients) {
-				client.setTimeToWait(initialEndpointCount);
+				client.setTimeToWait(timeToWaitInMsec);
 			}
 			clients = deadClientSet.toArray(new MqttClient[0]);
 			for (MqttClient client : clients) {
-				client.setTimeToWait(initialEndpointCount);
+				client.setTimeToWait(timeToWaitInMsec);
 			}
 		}
 	}
 
+	/**
+	 * Returns the time to wait in milliseconds. The default value is
+	 * {@link IClusterConfig#DEFAULT_CLUSTER_PROBE_DELAY_IN_MSEC}.
+	 * 
+	 * @return
+	 */
 	public long getTimeToWait() {
 		long timeToWaitInMillis = 0;
 		synchronized (lock) {
@@ -1070,7 +1247,7 @@ public class ClusterState implements IClusterConfig {
 			if (timeToWaitInMillis == 0) {
 				clients = deadClientSet.toArray(new MqttClient[0]);
 				for (MqttClient client : clients) {
-					client.setTimeToWait(initialEndpointCount);
+					client.setTimeToWait(timeToWaitInMsec);
 				}
 			}
 		}
@@ -1085,6 +1262,13 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * TopicInfo contains subscription details for a given topic filter. It is used
+	 * to revive dead endpoints.
+	 * 
+	 * @author dpark
+	 *
+	 */
 	class TopicFilter extends TopicInfo {
 		String topicFilter;
 		int qos;
@@ -1153,6 +1337,13 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * TopicInfos contains subscription details for an array of topic filters. It is
+	 * used to revive dead endpoints.
+	 * 
+	 * @author dpark
+	 *
+	 */
 	class TopicFilters extends TopicInfo {
 		String[] topicFilters;
 		int[] qos;
@@ -1215,6 +1406,13 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * TopicSubscriptions contains subscription details for an array of
+	 * subscriptions. It is used to revive dead endpoints.
+	 * 
+	 * @author dpark
+	 *
+	 */
 	class TopicSubscriptions extends TopicInfo {
 		MqttSubscription[] subscriptions;
 		IMqttMessageListener[] messageListeners;
@@ -1272,6 +1470,12 @@ public class ClusterState implements IClusterConfig {
 		}
 	}
 
+	/**
+	 * MqttCallbackImpl delivers received messages to the client callbacks.
+	 * 
+	 * @author dpark
+	 *
+	 */
 	class MqttCallbackImpl implements MqttCallback {
 
 		private MqttClient client;
@@ -1318,8 +1522,6 @@ public class ClusterState implements IClusterConfig {
 				for (IHaMqttCallback hacallback : hacb) {
 					hacallback.disconnected(client, disconnectResponse);
 				}
-//				removeLiveClient(client);
-//				haclient.updateLiveClients(getLiveClients());
 				logger.warn(String.format("MqttCallbackImpl().disconnected() - Client disconnected [%s]. %s.",
 						client.getServerURI(), disconnectResponse));
 				logger.debug("MqttCallbackImpl().disconnected() - Client disconnected.",
@@ -1367,6 +1569,52 @@ public class ClusterState implements IClusterConfig {
 			for (IHaMqttCallback hacallback : hacb) {
 				hacallback.authPacketArrived(client, reasonCode, properties);
 			}
+		}
+	}
+
+	/**
+	 * BridgeCallbackImpl delivers bridged messages to the bridge clusters.
+	 * 
+	 * @author dpark
+	 *
+	 */
+	class BridgeCallbackImpl implements IHaMqttCallback {
+
+		BridgeCluster[] bridgeClusters = subBridgeSet.toArray(new BridgeCluster[0]);
+
+		BridgeCallbackImpl() {
+		}
+
+		@Override
+		public void disconnected(MqttClient client, MqttDisconnectResponse disconnectResponse) {
+			// Ignore
+		}
+
+		@Override
+		public void mqttErrorOccurred(MqttClient client, MqttException exception) {
+			// Ignore
+		}
+
+		@Override
+		public void messageArrived(MqttClient client, String topic, MqttMessage message) throws Exception {
+			for (BridgeCluster bridgeCluster : bridgeClusters) {
+				bridgeCluster.publish(topic, message);
+			}
+		}
+
+		@Override
+		public void deliveryComplete(MqttClient client, IMqttToken token) {
+			// Ignore
+		}
+
+		@Override
+		public void connectComplete(MqttClient client, boolean reconnect, String serverURI) {
+			// Ignore
+		}
+
+		@Override
+		public void authPacketArrived(MqttClient client, int reasonCode, MqttProperties properties) {
+			// Ignore
 		}
 	}
 }
