@@ -38,7 +38,7 @@ import org.yaml.snakeyaml.introspector.BeanAccess;
 public class ClusterConfigTest implements IClusterConfig {
 	@Test
 	public void testConfig() {
-		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-publisher.yaml");
+		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "src/main/resources/mqttv5-client.yaml");
 		String configFile = System.getProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE);
 		File file = new File(configFile);
 		if (file.exists() == false) {

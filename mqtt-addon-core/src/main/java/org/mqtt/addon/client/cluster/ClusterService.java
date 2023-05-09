@@ -68,10 +68,6 @@ public class ClusterService {
 	// <clusterName, ClusterState>
 	private ConcurrentHashMap<String, ClusterState> clusterStateMap = new ConcurrentHashMap<String, ClusterState>();
 
-	// <clusterName, endpointSet>
-	private ConcurrentHashMap<String, Set<BridgeCluster>> pubBridgeMap = new ConcurrentHashMap<String, Set<BridgeCluster>>();
-	private ConcurrentHashMap<String, Set<BridgeCluster>> subBridgeMap = new ConcurrentHashMap<String, Set<BridgeCluster>>();
-
 	private volatile boolean isStarted = false;
 
 	/**

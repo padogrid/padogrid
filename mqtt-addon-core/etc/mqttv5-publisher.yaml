@@ -1,0 +1,54 @@
+enabled: true
+defaultCluster: publisher
+tag: mytag
+probeDelay: 5000
+
+# Define persistence class that persists messages for QoS 1 and 2.
+persistence:
+  # Persistence type. Specify the fully-qualified class name and
+  # the constructor argument list. Paho provides the following
+  # persistence classes:
+  #
+  #   MemoryPersistence, MqttDefaultFilePersistence
+  #
+  # MqttDefaultFilePersistence takes the 'path' property for the directory path
+  # where the persistence data is to be stored. If the 'path' property is not
+  # defined the working directory is used. All other properties are ignored.
+  #
+  # MemoryPersistence does not take properties. All properties are ignored.
+  #
+  # A custom persistence class must implement MqttClientPersistence and include
+  # a constuctor with a single argument with the Properties type if the properties
+  # are required. If such a constructor does not exist then the default no-arg
+  # constructor is used to instantiate the class. In that case, the properties
+  # are ignored. Unlike the Paho's builtin persistence classes described above,
+  # a custom class requires the fully-quailifed class name. 
+  #
+  # Default:
+  #   className: MqttDefaultFilePersistence
+  #   properties:
+  #     - key: path
+  #       value: persist
+  className: MqttDefaultFilePersistence
+  properties:
+    - key: path
+      value: persist
+        
+clusters:
+  - name: publisher
+    enabled: true
+    
+    # Optional pulisherType. Valid values are STICKY, RANDOM, ROUND_ROBIN.
+    # If STICKY and primaryServerURI is defined, the client always uses
+    # that server for all operations.
+    # Default: STICKY
+    publisherType: ROUND_ROBIN
+    
+    # Optional primary server URI. For STICKY connection of publisherType, 
+    # the primary server takes a priority over other servers for all operations.
+    # For other publisherType values, it has no effect. The primary server
+    # is automatically added to connection.serverURIs if not included.
+    primaryServerURI: null
+    
+    connection:
+      serverURIs: [tcp://localhost:1883-1889]

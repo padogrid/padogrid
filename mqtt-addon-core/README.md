@@ -43,7 +43,7 @@ For topic publications, `HaMqttClient` publishes messages using only one of the 
 
 ### `HaMqttClient` QoS (Quality of Service)
 
-`HaMqttClient` maintains the same level of QoS as the underlying MQTT client API (Paho). The only difference is that there are multiple MQTT client instances under the hood, each maintaining the same QoS for a given topic. For publishing to topics, `HaMqttClient` publishes to only one of the brokers. For subscribing to topics, on the otherhand, `HaMqttClient` subscribes to all of the brokers. This fanout pattern effectively provides a load balancing service and gurantees the delivery of non-duplicate messages. Furthermore, since QoS is independently maintained by each broker, `HaMqttClient` also maintains the same lever of QoS provided by individual brokers. 
+`HaMqttClient` maintains the same level of QoS as the underlying MQTT client API (Paho). The only difference is that there are multiple MQTT client instances under the hood, each maintaining the same QoS for a given topic. For publishing to topics, `HaMqttClient` publishes to only one of the brokers. For subscribing to topics, on the otherhand, `HaMqttClient` subscribes to all of the brokers. This fanout pattern effectively provides a load balancing service and gurantees the delivery of non-duplicate messages. Furthermore, since QoS is independently maintained by each broker, `HaMqttClient` also maintains the same level of QoS provided by individual brokers. 
 
 ### `HaMqttClient` Limitations
 
@@ -134,9 +134,32 @@ client.connect();
 
 ## Configuring `HaMqttClient`
 
-`HaMqttClient` can be configured using the API or an YAML file. The following shows an example YAML file. Configuring `HaMqttClient` with an YAML file is preferred. It eliminates the complexity and rigidity of coding, and provides the portablity and simplicity of namespace-based clustering.
+`HaMqttClient` can be configured using the API or an YAML file. Configuring `HaMqttClient` with an YAML file is preferred. It eliminates the complexity and rigidity of coding, and provides the portablity and simplicity of namespace-based clustering. The following shows an example YAML file.
 
-For example, you can configure your application to host **multiple clusters** in the configuration file, each with a a unique cluster name assigned. In your application, you would simply invoke `HaCluster.getOrCreateHaMqttClient(String clusterName)` to get the `HaMqttClient` instance that has been configured with the specified cluster name.
+```yaml
+enabled: true
+defaultCluster: cluster-default
+probeDelay: 5000
+
+# Define persistence class that persists messages for QoS 1 and 2.
+persistence:
+  className: MqttDefaultFilePersistence
+  properties:
+    - key: path
+      value: persist
+
+clusters:
+  - name: cluster-default
+    publisherType: ROUND_ROBIN
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]
+  - name: mycluster
+    publisherType: STICKY
+    connection:
+      serverURIs: [tcp://localhost:32001-32010]
+```
+
+You can configure your application to host **multiple clusters** in the configuration file, each with a a unique cluster name assigned. In your application, you would invoke `HaCluster.getOrCreateHaMqttClient(String clusterName)` to get the `HaMqttClient` instance that has been configured with the specified cluster name.
 
 - To get the default cluster client (The default cluster has the name "cluster-default"):
 

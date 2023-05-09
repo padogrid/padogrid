@@ -96,15 +96,17 @@ public class ClusterConfig {
 
 	public static class Cluster {
 		private String name;
+		private int fos = -1;
 		private PublisherType publisherType = PublisherType.STICKY;
+		private int subscriberCount = -1;
 		private String primaryServerURI;
 		private boolean enabled = true;
 		private boolean autoConnect = true;
 		private int initialEndpointCount = -1;
+		private int liveEndpointCount = -1;
 		private long timeToWait = IClusterConfig.DEFAULT_TIME_TO_WAIT_IN_MSEC;
 		private MqttConnectionOptions connection;
-		private Bridge[] pubBridges;
-		private Bridge[] subBridges;
+		private Bridges bridges;
 
 		/**
 		 * Returns the cluster name.
@@ -138,6 +140,14 @@ public class ClusterConfig {
 			this.autoConnect = autoConnect;
 		}
 
+		public int getFos() {
+			return fos;
+		}
+
+		public void setFos(int fos) {
+			this.fos = fos;
+		}
+
 		/**
 		 * Returns the initial endpoint count. The default value is -1, i.e., all
 		 * endpoints.
@@ -159,6 +169,14 @@ public class ClusterConfig {
 			} else {
 				this.initialEndpointCount = initialEndpointCount;
 			}
+		}
+
+		public int getLiveEndpointCount() {
+			return liveEndpointCount;
+		}
+
+		public void setLiveEndpointCount(int liveEndpointCount) {
+			this.liveEndpointCount = liveEndpointCount;
 		}
 
 		public MqttConnectionOptions getConnection() {
@@ -204,6 +222,14 @@ public class ClusterConfig {
 			this.publisherType = publisherType;
 		}
 
+		public int getSubscriberCount() {
+			return subscriberCount;
+		}
+
+		public void setSubscriberCount(int subscriberCount) {
+			this.subscriberCount = subscriberCount;
+		}
+
 		public String getPrimaryServerURI() {
 			return primaryServerURI;
 		}
@@ -212,25 +238,16 @@ public class ClusterConfig {
 			this.primaryServerURI = primaryServerURI;
 		}
 
-		public Bridge[] getPubBridges() {
-			return pubBridges;
+		public Bridges getBridges() {
+			return bridges;
 		}
 
-		public void setPubBridges(Bridge[] pubBridges) {
-			this.pubBridges = pubBridges;
-		}
-
-		public Bridge[] getSubBridges() {
-			return subBridges;
-		}
-
-		public void setSubBridges(Bridge[] subBridges) {
-			this.subBridges = subBridges;
+		public void setBridges(Bridges bridges) {
+			this.bridges = bridges;
 		}
 	}
 
 	public static class Persistence {
-		private MqttClientPersistence mqttClientPersistence;
 		private String className;
 		private Properties props = new Properties();
 		private Property[] properties;
@@ -258,27 +275,27 @@ public class ClusterConfig {
 		public MqttClientPersistence getMqttClientPersistence()
 				throws ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException,
 				IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-			if (mqttClientPersistence == null) {
-				if (properties != null) {
-					for (Property property : properties) {
-						if (property != null && property.getKey() != null && property.getValue() != null) {
-							props.setProperty(property.getKey(), property.getValue());
-						}
+
+			MqttClientPersistence mqttClientPersistence = null;
+			if (properties != null) {
+				for (Property property : properties) {
+					if (property != null && property.getKey() != null && property.getValue() != null) {
+						props.setProperty(property.getKey(), property.getValue());
 					}
 				}
-				if (className != null) {
-					if (className.equals("MqttDefaultFilePersistence")) {
-						String path = props.getProperty("path");
-						if (path != null) {
-							mqttClientPersistence = new MqttDefaultFilePersistence(path);
-						}
-					} else if (className.equals("MemoryPersistence")) {
-						mqttClientPersistence = new MemoryPersistence();
-					} else {
-						Class<?> clazz = Class.forName(className);
-						Constructor<?> constructor = clazz.getConstructor(Properties.class);
-						mqttClientPersistence = (MqttClientPersistence) constructor.newInstance(props);
+			}
+			if (className != null) {
+				if (className.equals("MqttDefaultFilePersistence")) {
+					String path = props.getProperty("path");
+					if (path != null) {
+						mqttClientPersistence = new MqttDefaultFilePersistence(path);
 					}
+				} else if (className.equals("MemoryPersistence")) {
+					mqttClientPersistence = new MemoryPersistence();
+				} else {
+					Class<?> clazz = Class.forName(className);
+					Constructor<?> constructor = clazz.getConstructor(Properties.class);
+					mqttClientPersistence = (MqttClientPersistence) constructor.newInstance(props);
 				}
 			}
 			return mqttClientPersistence;
@@ -306,6 +323,27 @@ public class ClusterConfig {
 
 		public void setValue(String value) {
 			this.value = value;
+		}
+	}
+
+	public static class Bridges {
+		private Bridge[] in;
+		private Bridge[] out;
+
+		public Bridge[] getIn() {
+			return in;
+		}
+
+		public void setIn(Bridge[] in) {
+			this.in = in;
+		}
+
+		public Bridge[] getOut() {
+			return out;
+		}
+
+		public void setOut(Bridge[] out) {
+			this.out = out;
 		}
 	}
 

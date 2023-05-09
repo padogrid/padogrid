@@ -1,0 +1,73 @@
+enabled: true
+defaultCluster: cluster-edge
+tag: mytag
+probeDelay: 5000
+
+# Define persistence class that persists messages for QoS 1 and 2.
+persistence:
+  # Persistence type. Specify the fully-qualified class name and
+  # the constructor argument list. Paho provides the following
+  # persistence classes:
+  #
+  #   MemoryPersistence, MqttDefaultFilePersistence
+  #
+  # MqttDefaultFilePersistence takes the 'path' property for the directory path
+  # where the persistence data is to be stored. If the 'path' property is not
+  # defined the working directory is used. All other properties are ignored.
+  #
+  # MemoryPersistence does not take properties. All properties are ignored.
+  #
+  # A custom persistence class must implement MqttClientPersistence and include
+  # a constuctor with a single argument with the Properties type if the properties
+  # are required. If such a constructor does not exist then the default no-arg
+  # constructor is used to instantiate the class. In that case, the properties
+  # are ignored. Unlike the Paho's builtin persistence classes described above,
+  # a custom class requires the fully-quailifed class name. 
+  #
+  # All cluster clients use the top-level ''persistence'' element unless they have
+  # their own ''persistence'' element defined.
+  #
+  # Default:
+  #   className: MqttDefaultFilePersistence
+  #   properties:
+  #     - key: path
+  #       value: persist
+  className: MqttDefaultFilePersistence
+  properties:
+    - key: path
+      value: persist
+      
+clusters:
+
+  # cluster-edge forwards received messages to cluster-enterprise
+  - name: cluster-edge
+    enabled: true
+    connection:
+      serverURIs: [tcp://localhost:1883,tcp://localhost:1884,tcp://localhost:1885]
+
+    bridges:
+      # 'in' fowards incoming messages to the target clusters.
+      # Note that this bridge is a single point of failure. If the application
+      # fails, then so do this bridge.
+      in:
+        - cluster: cluster-enterprise
+          topicFilters: [test/#]
+          qos: -1
+      # 'out' sends outgoing messages to the target clusters. 
+      # Note that unlike 'in', 'out' does not suffer from a single point
+      # of failure since the application directly sends data to the target
+      # clusters. Drawbacks are as follows.
+      # 1) It puts additional load on the application. Each publish() call 
+      #    makes additional calls to the target clusters defined under 'out'.
+      # 2) The target clusters must be exposed to the application. Normally,
+      #    a bridge serves as a proxy to overcome firewalls, but 'out'
+      #    requires direct access to the target clusters.
+      out:
+        - cluster: cluster-enterprise
+          topicFilters: [test/#]
+          qos: -1
+          
+  - name: cluster-enterprise
+    enabled: true 
+    connection:
+      serverURIs: [tcp://localhost:32001-32003]

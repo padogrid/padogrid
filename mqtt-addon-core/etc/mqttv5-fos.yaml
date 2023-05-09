@@ -1,0 +1,55 @@
+enabled: true
+defaultCluster: proxy0
+tag: mytag
+probeDelay: 5000
+
+# Define persistence class that persists messages for QoS 1 and 2.
+persistence:
+  className: MqttDefaultFilePersistence
+  properties:
+    - key: path
+      value: persist
+      
+clusters:
+  - name: proxy0
+    fos: 0
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]
+  - name: proxy1
+    fos: 1
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]
+  - name: proxy2
+    fos: 2
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]
+  
+  # custom0 = proxy0
+  - name: custom0
+    fos: 2
+    # Make connections to 2 of serverURIs
+    liveEndpointCount: 2
+    # Make subscriptions to 1 of live endpoints
+    subscriberCount: 1
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]
+      
+  # custom1 = proxy1
+  - name: custom1
+    fos: 2
+    # Make connections to 2 of serverURIs
+    liveEndpointCount: 2
+    # Make subscriptions to 2 of live endpoints
+    subscriberCount: 2
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]
+      
+   # custom2 = proxy2
+  - name: custom2
+    fos: -1
+    # Make connections to 3 (all) of serverURIs
+    liveEndpointCount: 3
+    # Make subscriptions to 3 (all) of live endpoints
+    subscriberCount: 3
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]

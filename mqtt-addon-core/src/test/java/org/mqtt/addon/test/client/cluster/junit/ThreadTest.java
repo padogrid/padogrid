@@ -28,6 +28,9 @@ import org.mqtt.addon.client.cluster.IClusterConfig;
  * <li>Mosquitto log message: Client thread_test disconnected due to protocol
  * error.</li>
  * </ul>
+ * <p>
+ * This test case requires a cluster with the following endpoints:
+ * <ul><li>tcp://loccalhost:1883-1884</li></ul>
  * 
  * @author dpark
  *
@@ -36,18 +39,18 @@ public class ThreadTest implements IClusterConfig {
 	static MqttClient client;
 	static MqttClient client2;
 	static int publisherThreadCount = 10;
-	static boolean useExecutiveService = true;
+	static boolean useExecutiveService = false;
 	static String protocol = "ws";
 	static String serverURI1;
 	static String serverURI2;
 
 	@BeforeClass
 	public static void setUp() {
-		int port1 = 32000;
-		int port2 = 32001;
+		int port1 = 1883;
+		int port2 = 1884;
 		if (protocol == "ws") {
-			port1 = 8080;
-			port2 = 8081;
+			port1 = 8083;
+			port2 = 8084;
 		}
 		serverURI1 = protocol + "://localhost:" + port1;
 		serverURI2 = protocol + "://localhost:" + port2;

@@ -58,6 +58,7 @@ public class PublisherTest {
 					haclient.publish(TOPIC, message);
 					isRetry = false;
 				} catch (MqttException e) {
+					e.printStackTrace();
 					System.err.printf("testPublish(): %s%n", e.getMessage());
 					isRetry = true;
 					Thread.sleep(1000L);
