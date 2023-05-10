@@ -458,12 +458,20 @@ __padogrid_complete()
       type_list="$(whoami)"
       ;;
 
-   -file | -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -config | -file | -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
       is_path="true"
      ;;
 
    -scan)
       type_list=3
+      ;;
+
+   -fos)
+      type_list="0 1 2 3"
+      ;;
+
+   -qos)
+      type_list="0 1 2"
       ;;
 
    *)
@@ -1204,12 +1212,20 @@ __command_complete()
       type_list="$(whoami)"
       ;;
 
-   -file | -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
+   -config | -file | -path | -java | -save | -load | -vm-java | -vm-product | -vm-padogrid | -vm-workspaces | -vm-key)
      is_path="true"
      ;;
 
    -scan)
       type_list=3
+      ;;
+
+   -fos)
+      type_list="0 1 2 3"
+      ;;
+
+   -qos)
+      type_list="0 1 2"
       ;;
 
    *)

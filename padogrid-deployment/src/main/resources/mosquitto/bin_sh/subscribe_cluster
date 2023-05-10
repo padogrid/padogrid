@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -endpoints -config -t -fos -qos -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+ENDPOINTS=""
+if [ "$CLUSTER" != "" ]; then
+   if [ "$(isClusterExist $CLUSTER)" != "true" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified cluster does not exist in this workspace: [$CLUSTER]. Command aborted."
+      exit 1
+   fi
+   if [ ! -f "$CLUSTER_DIR/etc/template-mosquitto.conf" ]; then
+      ENDPOINTS="tcp://localhost:1883-1885"
+      echo "Specified cluster is not an MQTT cluster: [$CLUSTER]."
+      echo "Using default endpoints instead: $ENDPOINTS"
+   fi
+fi
+if [ "$ENDPOINTS" == "" ]; then
+   POD=`getClusterProperty "pod.name" "local"`
+   __HOSTNAME=`hostname`
+   OS_ENV=`getOsEnv $__HOSTNAME`
+   NODE=`getOsNodeName`
+   POD_TYPE=`getClusterProperty "pod.type" $POD_TYPE`
+   __NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+   RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
+   NODE_NAME_PRIMARY=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
+   NODE_NAME_PREFIX=$__NODE_NAME_PREFIX
+   MEMBER_PREFIX=`getMemberPrefix`
+   MEMBER_COUNT=`getMemberCount`
+   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   MEMBER_END_PORT=$MEMBER_START_PORT
+
+   if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
+      ( [ "$OS_ENV" == "hh" ] && [ "$POD" == "local" ] )  ||
+      ( [ "$OS_ENV" == "gg" ] && [ "$OS_POD" == "$POD" ] );  then
+      pushd $RUN_DIR > /dev/null 2>&1
+      for i in ${MEMBER_PREFIX}*; do
+         MEMBER=$i
+         MEMBER_NUM=${MEMBER##$MEMBER_PREFIX}
+         MEMBER_NUM_NO_LEADING_ZERO=$((10#$MEMBER_NUM))
+         MEMBER_DIR=$RUN_DIR/$MEMBER
+         if ( [ "$OS_ENV" == "hg" ] || [ "$OS_ENV" == "gh" ] ) ||
+            ( [ "$OS_ENV" == "gg" ] );  then
+            # TODO: Fix this. Add support for pods and VMs
+            # Same port number for guest OS
+            MEMBER_PORT=$MEMBER_START_PORT
+         else
+            # Increment port numbers for host OS
+            let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
+         fi
+         if [ $MEMBER_PORT -gt $MEMBER_END_PORT ]; then
+            MEMBER_END_PORT=$MEMBER_PORT
+         fi
+      done
+      popd > /dev/null 2>&1
+   fi
+   ENDPOINTS="tcp://localhost:$MEMBER_START_PORT-$MEMBER_END_PORT"
+fi
+
+JAVA_OPTS="$JAVA_OPTS -Dexecutable.name=$EXECUTABLE"
+if [ "$ENDPOINTS" != "" ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dcluster.endpoints=$ENDPOINTS"
+   JAVA_OPTS="$JAVA_OPTS -Dcluster.name=$CLUSTER"
+fi
+
+"$JAVA" $JAVA_OPTS org.mqtt.addon.client.console.ClusterSubscriber "$@"

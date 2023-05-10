@@ -107,6 +107,11 @@ public class TopicSubscriber {
 			usage();
 			System.exit(0);
 		}
+		
+		if (topicFilter == null) {
+			System.err.println("Topic filter not specified.");
+			System.exit(1);
+		}
 
 		HaMqttClient client = HaClusters.getOrCreateHaMqttClient(clusterName);
 		client.addCallbackCluster(new IHaMqttCallback() {

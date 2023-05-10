@@ -89,17 +89,17 @@ clusters:
     # Failover Service (FoS). Valid values are -1, 0, 1, 2. Similar to QoS,
     # HaMqttClient provides a subscriber failover service in four (4) levels.
     #
-    # -1 - all subscribers, all connections. This level is default. It makes
+    # 0 - all subscribers, all connections. This level is default. It makes
     #      subscriptions and connections to all endpoints.
     #
-    #  0 - one subscriber, two connections. This level opens connections to two
+    #  1 - one subscriber, two connections. This level opens connections to two
     #      endpoints, but sticks topic subscriptions only to one endpoint. No
     #      subscriptions are made to the other endpoint. Only when the sticky
     #      endpoint fails, subscriptions are made to the other endpoint at that
     #      time. Failover is quick but there is a subscription delay which could
     #      lead to data loss.
     #
-    #  1 - two subscribers, two connections. Like FoS 0, this level opens two (2)
+    #  2 - two subscribers, two connections. Like FoS 0, this level opens two (2)
     #      connections but increases the number of endpoints that make subscriptions
     #      to two (2). That means, with FoS 2, HaMqttClient receives duplicate messages,
     #      one from each endpoint. HaMqttClient sticks to one of the endpoints and
@@ -107,14 +107,14 @@ clusters:
     #      the data from the other endpoint. The other endpoint replaces the sticky
     #      endpoint upon failure. Failover is immediate with no data loss.
     #
-    #  2 - select subscribers, select connections. FoS 2 allows configuration of both
+    #  3 - select subscribers, select connections. FoS 2 allows configuration of both
     #      subscriberCount and liveEndpointCount. By default, FoS 2 makes subscriptions
     #      to all of the endpoints. This is rather expensive and wasteful if there are
     #      many endpoints. The higher the numbers the higher the HA at the expense of
     #      higher volume of duplicate data and higher network traffic.
     #
-    # Default: -1
-    fos: -1
+    # Default: 0
+    fos: 0
     
     # Initial number of endpoints to connect. If intialEndpointCount is set,
     # then the cluster service first makes connections up to that number of

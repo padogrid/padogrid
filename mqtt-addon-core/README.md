@@ -49,16 +49,15 @@ For topic publications, `HaMqttClient` publishes messages using only one of the 
 
 #### Multiple retained messages
 
-Since `HaMqttClient` subscribes to multiple brokers, it receives the retained messages from all of them. `HaMqttClient` does not determine which message is the lastest retained message and treats all brokers as standalone servers. This means it is the application's responsibility to determine the latest retained message. 
+Since `HaMqttClient` subscribes to multiple brokers, it receives the retained messages from all of them. `HaMqttClient` does not determine which message is the lastest retained message and treats all brokers as standalone servers. This limitation can be lifted by using one of the following methods.
 
-There are workarounds to the limitations.
+1. **Create a sticky cluster with the primary broker defined.** A sticky cluster sticks to one broker for all subscriptions. By sticking to one broker, it blocks the delivery of messages from other brokers in the cluster. If we use the primary broker for the sticky broker, then the applications will always receive the last retained messages from that broker. A sticky cluster requires bridged brokers supported by the underlying MQTT product. Bridged brokers are capable of forwarding messages from broker to broker. For example, Mostquitto supports bridged brokers, but unfortunately, as of writing (v2.0.15), the use of bridged brokers is thwarted by a bug that delivers cyclic (looping) messages endlessly back to the originated broker.
 
-1. **Create a cluster with a single endpoint (server URI).** This essentially disables HA but guarantees one retained message per topic per `HaMqttClient` instance. To offload the single endpoint, you can create additional clusters for the topics that do not require retained messages.
+2. **Create a cluster with a single endpoint (server URI).** This essentially disables HA but guarantees one retained message per topic per `HaMqttClient` instance. To offload the single endpoint, you can create additional clusters for the topics that do not require retained messages.
 
+3. The previous workaround, of course, defeats the purpose of `HaMqttClient`. If you need to keep HA intact, then you can include a timestamp as part of the payload and determine the latest retained message based on the latest timestamp. This workaround assumes that the publishers are synchronized with the network clock that properly handles time drift.
 
-2. The previous workaround, of course, defeats the purpose of `HaMqttClient`. If you need to keep HA intact, then you can include a timestamp as part of the payload and determine the latest retained message based on the latest timestamp. This workaround assumes that the publishers are synchronized with the network clock that properly handles time drift.
-
-3. For edge devices scattered everywhere, however, it might be impossible to synchronize them with the network clock. In that case, depending on data consistency requirements, the application can designate one broker for providing all retained messages. If that broker fails then the application selects the next reliable one from the endpoint list. This approach is not for all applications but those that weigh more on receiving data in a consistent manner and can tolerate a small window of retained data inconsistency.
+4. For edge devices scattered everywhere, however, it might be impossible to synchronize them with the network clock. In that case, depending on data consistency requirements, the application can designate one broker for providing all retained messages. If that broker fails then the application selects the next reliable one from the endpoint list. This approach is not for all applications but those that weigh more on receiving data in a consistent manner and can tolerate a small window of retained data inconsistency.
 
 ## Using `HaMqttClient`
 

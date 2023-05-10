@@ -64,7 +64,7 @@ class HaMqttClientFactory {
 			throws IOException {
 
 		// Initialize the cluster service. Initialization is done once.
-		ClusterService.initialize(null, true);
+		ClusterService.initialize(true);
 		if (clusterConfig == null) {
 			clusterConfig = new ClusterConfig.Cluster();
 		}
@@ -108,7 +108,7 @@ class HaMqttClientFactory {
 	 */
 	final static HaMqttClient getHaMqttClient() throws IOException {
 		// Initialize the cluster service. Initialization is done once.
-		ClusterService.initialize(null, true);
+		ClusterService.initialize(true);
 		String clusterName = ClusterService.getClusterService().getDefaultClusterName();
 		return getOrCreateHaMqttClient(clusterName);
 	}
@@ -124,7 +124,7 @@ class HaMqttClientFactory {
 		HaMqttClient client = clusterMap.get(clusterName);
 		if (client == null) {
 			// Initialize the cluster service. Initialization is done once.
-			ClusterService.initialize(null, true);
+			ClusterService.initialize(true);
 			// Check if the initialization created the client
 			client = clusterMap.get(clusterName);
 			if (client == null) {

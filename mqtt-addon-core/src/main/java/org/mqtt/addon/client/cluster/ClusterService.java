@@ -20,10 +20,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,9 +33,7 @@ import org.apache.logging.log4j.Logger;
 import org.eclipse.paho.mqttv5.client.MqttClientPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
-import org.mqtt.addon.client.cluster.config.ClusterConfig.Bridge;
 import org.mqtt.addon.client.cluster.config.ClusterConfig.Cluster;
-import org.mqtt.addon.client.cluster.internal.BridgeCluster;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.introspector.BeanAccess;
@@ -71,11 +67,11 @@ public class ClusterService {
 	private volatile boolean isStarted = false;
 
 	/**
-	 * Returns the singleton instance of BrokerProbeManager. The
+	 * Returns the singleton instance of ClusterService. The
 	 * {@link #initialize(Properties)} method must be invoked once prior to invoking
 	 * this method. Otherwise, it will return null.
 	 */
-	public static ClusterService getClusterService() {
+	static ClusterService getClusterService() {
 		return clusterService;
 	}
 
@@ -83,8 +79,21 @@ public class ClusterService {
 	}
 
 	/**
-	 * Initializes and starts the BrokerProbeManager when invoked for the first
-	 * time. Subsequent invocations have no effect.
+	 * Initializes and starts the ClusterService with the default cluster when
+	 * invoked for the first time. Subsequent invocations have no effect.
+	 * 
+	 * @param isStart true to start the service. If false, then the {@link #start()}
+	 *                method must be invoked to start the service.
+	 * @return ClusterService instance
+	 * @throws IOException
+	 */
+	static synchronized ClusterService initialize(boolean isStart) throws IOException {
+		return initialize((ClusterConfig) null, isStart);
+	}
+
+	/**
+	 * Initializes and starts the ClusterService when invoked for the first time.
+	 * Subsequent invocations have no effect.
 	 * 
 	 * @param clusterConfig Cluster configuration. If null, then the configuration
 	 *                      file (yaml) defined by the system property,
@@ -100,8 +109,7 @@ public class ClusterService {
 	 * @return ClusterService instance
 	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
-	public static synchronized ClusterService initialize(ClusterConfig clusterConfig, boolean isStart)
-			throws IOException {
+	static synchronized ClusterService initialize(ClusterConfig clusterConfig, boolean isStart) throws IOException {
 		if (clusterService == null) {
 			if (clusterConfig == null) {
 				String configFile = System.getProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE);
@@ -119,6 +127,51 @@ public class ClusterService {
 						yaml.setBeanAccess(BeanAccess.FIELD);
 						clusterConfig = yaml.load(inputStream);
 					}
+				}
+			}
+
+			clusterService = new ClusterService();
+			clusterService.init(clusterConfig);
+			if (isStart) {
+				clusterService.start();
+			}
+		}
+		return clusterService;
+	}
+
+	/**
+	 * Initializes and starts the ClusterService when invoked for the first time.
+	 * Subsequent invocations have no effect.
+	 * 
+	 * @param configFile Cluster configuration file. If null, then the configuration
+	 *                   file (yaml) defined by the system property,
+	 *                   {@linkplain IClusterConfig#PROPERTY_CLIENT_CONFIG_FILE}, is
+	 *                   read. If the system property is not defined, then
+	 *                   {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE} in
+	 *                   the class path is read. If all fails, then the default
+	 *                   settings are applied.
+	 * @param isStart    true to start the service. If false, then the
+	 *                   {@link #start()} method must be invoked to start the
+	 *                   service.
+	 * 
+	 * @return ClusterService instance
+	 * @throws IOException Thrown if unable to read the configuration source.
+	 */
+	static synchronized ClusterService initialize(File configFile, boolean isStart) throws IOException {
+		if (clusterService == null) {
+			ClusterConfig clusterConfig = null;
+			if (configFile != null) {
+				Yaml yaml = new Yaml(new Constructor(ClusterConfig.class));
+				yaml.setBeanAccess(BeanAccess.FIELD);
+				FileReader reader = new FileReader(configFile);
+				clusterConfig = yaml.load(reader);
+			} else {
+				InputStream inputStream = ClusterService.class.getClassLoader()
+						.getResourceAsStream(IClusterConfig.DEFAULT_CLIENT_CONFIG_FILE);
+				if (inputStream != null) {
+					Yaml yaml = new Yaml(new Constructor(ClusterConfig.class));
+					yaml.setBeanAccess(BeanAccess.FIELD);
+					clusterConfig = yaml.load(inputStream);
 				}
 			}
 
@@ -284,8 +337,29 @@ public class ClusterService {
 	 */
 	public synchronized void stop() {
 		if (ses != null) {
+			close();
 			ses.shutdown();
 			logger.info("ClusterService stopped. No longer operational.");
+		}
+	}
+
+	/**
+	 * Disconnects all {@linkplain ClusterState} objects.
+	 */
+	public synchronized void disconnect() {
+		for (ClusterState clusterState : clusterStateMap.values()) {
+			clusterState.disconnect();
+		}
+	}
+
+	/**
+	 * Closes the cluster service by disconnecting and closing all
+	 * {@linkplain ClusterState} objects.
+	 */
+	public synchronized void close() {
+		for (ClusterState clusterState : clusterStateMap.values()) {
+			clusterState.disconnect();
+			clusterState.close(false);
 		}
 	}
 

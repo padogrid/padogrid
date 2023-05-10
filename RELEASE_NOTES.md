@@ -6,9 +6,12 @@ https://github.com/padogrid
 
 ## Version 0.9.25-SNAPSHOT
 
-### Release Date: 05/08/23
+### Release Date: 05/10/23
 
+- With this release, PadoGrid introduces MQTT *virtual clusters*. A virtual cluster is a cluster that can be formed by a client application on the fly by dropping in any endpoints that are accessible. For example, a client application can create a virtual cluster comprised of 1000's of edge brokers or comprised of brokers on the Internet everywhere. A client application can create any number of virtual clusters, bridge them, and dynamically scale out as needed. See [Clustering MQTT](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT) for details.
 - Added clustering support for [Eclipse Mosquitto](https://mosquitto.org/), an open source MQTT broker. PadoGrid clusters Mosquitto brokers as standalone servers and provides HA services via the client API, `HaMqttClient`, which wraps the [Paho API](https://www.eclipse.org/paho/) providing seamless application migration. This release supports MQTT v5. See [Mosquitto Overview](https://github.com/padogrid/padogrid/wiki/Mosquitto-Overview) for details.
+- Added support for FoS (Failover Service) in creating MQTT virtual clusters. FoS provides four (4) levels of service for clustering bridged MQTT brokers. See [Clustering MQTT](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT) for details.
+- Added `publish_cluster` and `subscribe_cluster` for sending/receiving messages to/from virtual clusters. These commands are fully integrated with PadoGrid's MQTT clusters.
 - Fixed a version parsing bug in `install_bundle`. If a bundle name has more than 2 versions, then this bug prevented installing the bundle. A workaround is to use the `install_bundle -force` option.
 - Fixed Hazelast 3 and 4 scripts that incorrectly set CLASSPATH for excluding PadoGrid lib which includes log4j binaries. Without this fix, PadoGrid fails to start Hazelast 3/4 clusters.
 - Updated the `start_padogrid` script for the latest OpenShift Local.

@@ -15,6 +15,7 @@
  */
 package org.mqtt.addon.client.cluster;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -65,8 +66,8 @@ public final class HaClusters {
 	}
 
 	/**
-	 * Returns the {@linkplain HaMqttClient} instance identified by the specified cluster
-	 * name. If not found, then it creates and returns a new instance.
+	 * Returns the {@linkplain HaMqttClient} instance identified by the specified
+	 * cluster name. If not found, then it creates and returns a new instance.
 	 * 
 	 * @param clusterName Cluster name
 	 * @throws IOException Thrown if unable to read the configuration source.
@@ -112,5 +113,86 @@ public final class HaClusters {
 	public final static HaMqttClient getOrCreateHaMqttClient(ClusterConfig.Cluster clusterConfig,
 			MqttClientPersistence persistence, ScheduledExecutorService executorService) throws IOException {
 		return HaMqttClientFactory.getOrCreateHaMqttClient(clusterConfig, persistence, executorService);
+	}
+
+	/**
+	 * Initializes and starts the cluster service with the default cluster when
+	 * invoked for the first time. Subsequent invocations have no effect. Invoking
+	 * this method is not necessary as it is lazily invoked by the
+	 * {@link #getOrCreateHaMqttClient()} methods. However, it is recommended that
+	 * the application should eagerly invoke this method to start the cluster
+	 * initialization process to reduce the overall cluster creation latency.
+	 * 
+	 * @param isStart true to start the service. If false, then the {@link #start()}
+	 *                method must be invoked to start the service.
+	 * @return ClusterService instance
+	 * @throws IOException
+	 */
+	static final void initialize(boolean isStart) throws IOException {
+		ClusterService.initialize(isStart);
+	}
+
+	/**
+	 * Initializes and starts the cluster service when invoked for the first time.
+	 * Subsequent invocations have no effect. Invoking this method is not necessary
+	 * as it is lazily invoked by the {@link #getOrCreateHaMqttClient()} methods.
+	 * However, it is recommended that the application should eagerly invoke this
+	 * method to start the cluster initialization process to reduce the overall
+	 * cluster creation latency.
+	 * 
+	 * @param clusterConfig Cluster configuration. If null, then the configuration
+	 *                      file (yaml) defined by the system property,
+	 *                      {@linkplain IClusterConfig#PROPERTY_CLIENT_CONFIG_FILE},
+	 *                      is read. If the system property is not defined, then
+	 *                      {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE}
+	 *                      in the class path is read. If all fails, then the
+	 *                      default settings are applied.
+	 * 
+	 * @return ClusterService instance
+	 * @throws IOException Thrown if unable to read the configuration source.
+	 */
+	public final static void initialize(ClusterConfig clusterConfig) throws IOException {
+		ClusterService.initialize(clusterConfig, true);
+	}
+
+	/**
+	 * Initializes and starts the cluster service when invoked for the first time.
+	 * Subsequent invocations have no effect. Invoking this method is not necessary
+	 * as it is lazily invoked by the {@link #getOrCreateHaMqttClient()} methods.
+	 * However, it is recommended that the application should eagerly invoke this
+	 * method to start the cluster initialization process to reduce the overall
+	 * cluster creation latency.
+	 * 
+	 * @param configFile Cluster configuration file. If null, then the configuration
+	 *                   file (yaml) defined by the system property,
+	 *                   {@linkplain IClusterConfig#PROPERTY_CLIENT_CONFIG_FILE}, is
+	 *                   read. If the system property is not defined, then
+	 *                   {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE} in
+	 *                   the class path is read. If all fails, then the default
+	 *                   settings are applied.
+	 * @param isStart    true to start the service. If false, then the
+	 *                   {@link #start()} method must be invoked to start the
+	 *                   service.
+	 * 
+	 * @return ClusterService instance
+	 * @throws IOException Thrown if unable to read the configuration source.
+	 */
+	public final static void initialize(File clusterConfigFile) throws IOException {
+		ClusterService.initialize(clusterConfigFile, true);
+	}
+
+	/**
+	 * Disconnects and closes all the clusters.
+	 */
+	public final static void closeClusters() {
+		ClusterService.getClusterService().close();
+	}
+
+	/**
+	 * Closes all the clusters and then stops the cluster service. Once stopped, the
+	 * cluster service is no longer operational.
+	 */
+	public final static void stop() {
+		ClusterService.getClusterService().stop();
 	}
 }

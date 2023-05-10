@@ -96,7 +96,7 @@ public class ClusterConfig {
 
 	public static class Cluster {
 		private String name;
-		private int fos = -1;
+		private int fos = 0;
 		private PublisherType publisherType = PublisherType.STICKY;
 		private int subscriberCount = -1;
 		private String primaryServerURI;

@@ -69,7 +69,7 @@ public class ClusterState implements IClusterConfig {
 	private int liveEndpointCount = -1;
 	private long timeToWaitInMsec = DEFAULT_TIME_TO_WAIT_IN_MSEC;
 	private boolean isEnabled = true;
-	private int fos = 2;
+	private int fos = 0;
 	private int subscriberCount = -1;
 
 	// Mutex lock to synchronize endpoint sets.
@@ -132,17 +132,17 @@ public class ClusterState implements IClusterConfig {
 
 		// Set FoS dependent parameters
 		switch (this.fos) {
-		case 0:
+		case 1:
 			this.subscriberCount = 1;
 			this.liveEndpointCount = 2;
 			break;
-		case 1:
+		case 2:
 			this.subscriberCount = 2;
 			this.liveEndpointCount = 2;
 			break;
-		case 2:
+		case 3:
 			break;
-		case -1:
+		case 0:
 		default:
 			this.subscriberCount = -1;
 			this.liveEndpointCount = -1;
@@ -268,8 +268,8 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
-	 * Connects to all dead endpoints listed in the specified deadEndpointSet, which becomes
-	 * empty upon successful connections.
+	 * Connects to all dead endpoints listed in the specified deadEndpointSet, which
+	 * becomes empty upon successful connections.
 	 * 
 	 * @return A non-empty array of user tokens.
 	 */
@@ -290,13 +290,10 @@ public class ClusterState implements IClusterConfig {
 								.createMqttClientPersistence();
 						// Paho's use of ExecutorService is extremely limited. It blocks indefinitely
 						// if the application exceeds the thread pool size. Its use is discouraged.
-						if (persistence == null) {
-							// Note: the following creates MqttDefaultFilePersistence.
-							client = new MqttClient(endpoint, clientId);
-						} else {
-							// Note: Passing null value for persistence creates MemoryPersistence.
-							client = new MqttClient(endpoint, clientId, persistence, executorService);
-						}
+						// Note: Passing null value for persistence creates MemoryPersistence.
+						//       Passing null value for executorService defaults to a non-scheduled
+						//       independent thread.
+						client = new MqttClient(endpoint, clientId, persistence, executorService);
 					} else {
 						client = new MqttClient(endpoint, clientId, persistence, executorService);
 					}
@@ -560,7 +557,7 @@ public class ClusterState implements IClusterConfig {
 		}
 		return revivedEndpointSet;
 	}
-	
+
 	private IMqttToken[] doFosOnEndpoints() {
 		IMqttToken[] mqttTokens = null;
 		synchronized (lock) {
@@ -1617,14 +1614,14 @@ public class ClusterState implements IClusterConfig {
 
 			// Deliver messages to only sticky subscriber for FoS 0, 1, 2.
 			switch (fos) {
-			case 0:
 			case 1:
 			case 2:
+			case 3:
 				if (client != stickySubscriber) {
 					return;
 				}
 				break;
-			case -1:
+			case 0:
 			default:
 				break;
 			}
