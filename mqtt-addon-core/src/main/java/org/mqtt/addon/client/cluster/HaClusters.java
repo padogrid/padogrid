@@ -182,9 +182,29 @@ public final class HaClusters {
 	}
 
 	/**
+	 * Connects all clusters. Normally, the application connects each cluster
+	 * individually. This is a convenience method that connects all clusters without
+	 * having the application to connect each cluster. If the cluster service has
+	 * not been initialized then it silently returns and there is no effect.
+	 * 
+	 * @see #initialize(boolean)
+	 * @see #initialize(ClusterConfig)
+	 * @see #initialize(File)
+	 */
+	public final static void connect() {
+		if (ClusterService.getClusterService() == null) {
+			return;
+		}
+		ClusterService.getClusterService().connect();
+	}
+
+	/**
 	 * Disconnects and closes all the clusters.
 	 */
 	public final static void closeClusters() {
+		if (ClusterService.getClusterService() == null) {
+			return;
+		}
 		ClusterService.getClusterService().close();
 	}
 
@@ -193,6 +213,9 @@ public final class HaClusters {
 	 * cluster service is no longer operational.
 	 */
 	public final static void stop() {
+		if (ClusterService.getClusterService() == null) {
+			return;
+		}
 		ClusterService.getClusterService().stop();
 	}
 }

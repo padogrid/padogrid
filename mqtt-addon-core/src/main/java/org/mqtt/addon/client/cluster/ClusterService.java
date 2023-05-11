@@ -344,6 +344,17 @@ public class ClusterService {
 	}
 
 	/**
+	 * Connects all clusters. Normally, the application connects each cluster
+	 * individually. This is a convenience method that connects all clusters without
+	 * having the application to connect each cluster.
+	 */
+	public synchronized void connect() {
+		for (ClusterState clusterState : clusterStateMap.values()) {
+			clusterState.connect();
+		}
+	}
+
+	/**
 	 * Disconnects all {@linkplain ClusterState} objects.
 	 */
 	public synchronized void disconnect() {

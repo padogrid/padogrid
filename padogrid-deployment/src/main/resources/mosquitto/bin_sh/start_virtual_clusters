@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-config -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+# Set MQTT addon class path. This is to handle 'none' product.
+if [[ "$CLASSPATH" != *"$PADOGRID_HOME/mosquitto/plugins"* ]]; then
+   CLASSPATH="$PADOGRID_HOME/mosquitto/plugins/*:$PADOGRID_HOME/mosquitto/lib/*:$CLASSPATH"
+fi
+
+# Log files are kept in the user home directory
+LOG_DIR=~/.padogrid/log
+if [ ! -d "$LOG_DIR/paho" ]; then
+   mkdir -p "$LOG_DIR/paho"
+fi
+
+LOG_CONFIG_FILE="$PADOGRID_HOME/mosquitto/etc/template-log4j2.properties"
+LOG_FILE=$LOG_DIR/$EXECUTABLE.log
+PAHO_LOG_CONFIG_FILE="$PADOGRID_HOME/mosquitto/etc/paho-logging-$EXECUTABLE.properties"
+
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   LOG_DIR="$(cygpath -wp "$LOG_DIR")"
+   LOG_CONFIG_FILE="$(cygpath -wp "$LOG_CONFIG_FILE")"
+   LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   PAHO_LOG_CONFIG_FILE="$(cygpath -wp "$PAHO_LOG_CONFIG_FILE")"
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+# Required by LOG4J_CONFIG_FILE
+export LOG_FILE
+#
+# Application executable name. Useful for displaying usage.
+JAVA_OPTS="$JAVA_OPTS -Dexecutable.name=$EXECUTABLE"
+
+# Paho logging
+JAVA_OPTS="$JAVA_OPTS -Djava.util.logging.config.file=$PAHO_LOG_CONFIG_FILE"
+
+# Log properties for log4j2.
+JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=file:$LOG_CONFIG_FILE"
+JAVA_OPTS="$JAVA_OPTS -Dorg.mqtt.addon.logfile=$LOG_FILE"
+#JAVA_OPTS="$JAVA_OPTS -Dlog4j2.debug=true"
+
+echo "LOG_FILE: $LOG_FILE"
+"$JAVA" $JAVA_OPTS org.mqtt.addon.client.console.VirtualClusters "$@"

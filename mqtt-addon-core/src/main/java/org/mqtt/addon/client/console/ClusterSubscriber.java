@@ -208,7 +208,9 @@ public class ClusterSubscriber implements Constants {
 		if (configFilePath == null) {
 			ClusterConfig clusterConfig = new ClusterConfig();
 			clusterConfig.setDefaultCluster(virtualClusterName);
-			MqttConnectionOptions options = new MqttConnectionOptionsBuilder().serverURI(endpoints).build();
+			MqttConnectionOptions options = new MqttConnectionOptionsBuilder().build();
+			endpoints = endpoints.replaceAll(" ", "");
+			options.setServerURIs(endpoints.split(","));
 			ClusterConfig.Cluster cluster = new ClusterConfig.Cluster();
 			cluster.setName(virtualClusterName);
 			cluster.setFos(fos);
@@ -255,7 +257,7 @@ public class ClusterSubscriber implements Constants {
 			@Override
 			public void messageArrived(MqttClient client, String topic, MqttMessage message) throws Exception {
 				byte[] payload = message.getPayload();
-				System.out.println(String.format("%s: %s", topic, new String(payload, StandardCharsets.UTF_8)));
+				System.out.println(String.format("%s - %s: %s", client.getServerURI(), topic, new String(payload, StandardCharsets.UTF_8)));
 			}
 
 			@Override
