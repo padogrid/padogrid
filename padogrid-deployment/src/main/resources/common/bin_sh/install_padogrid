@@ -262,8 +262,17 @@ echo -e "      - Eclipse Mosquitto           ${CUrl}$MOSQUITTO_DOWNLOAD_URL${CNo
 cat <<EOF
   
    Mosquitto installation downloads a source distribution which requires a manual build.
-   The build instructions are given upon completion of installation. If you prefer a binary
-   distribution then you can manually download it from the following link:
+   The build instructions are provided in the following link as well as printed upon
+   completion of installation.
+
+EOF
+echo -e "      ${CUrl}https://github.com/padogrid/padogrid/wiki/Installing-Building-Mosquitto${CNone}"
+
+cat <<EOF
+
+   If you prefer a binary distribution then you can manually download it from the following link.
+   Note that binary distributions are limited to macOS, Ubuntu, and Windows. You will need to
+   build for other OS's.
 
 EOF
 
@@ -3224,12 +3233,13 @@ if [ "$MOSQUITTO_VERSION" != "" ]; then
       echo -e "   ${CGo}export OPENSSL_ROOT_DIR=/usr/local/opt/openssl${CNone}"
       echo -e "   ${CGo}cmake install -DDOCUMENTATION=NO -DWITH_PLUGINS=NO -DWITH_WEBSOCKETS=YES .${CNone}"
       echo -e "   ${CGo}make${CNone}"
-      echo -e "   ${CGo}cd -${CNone}"
+      echo -e "   ${CGo}sudo make install${CNone}"
    else
       echo -e "Linux (Debian, Ubuntu):"
       echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
       echo -e "   ${CGo}sudo apt install -y g++ libc-ares-dev libssl-dev libcjson-dev libwebsockets-dev${CNone}"
       echo -e "   ${CGo}make${CNone}"
+      echo -e "   ${CGo}sudo make install${CNone}"
       echo ""
       echo -e "Linux (Alpine):"
       echo -e "   ${CGo}cd $PADOGRID_PRODUCTS_PATH/mosquitto-$MOSQUITTO_RELEASE${CNone}"
@@ -3242,16 +3252,18 @@ if [ "$MOSQUITTO_VERSION" != "" ]; then
       echo -e "   ${CGo}cmake ..${CNone}"
       echo -e "   ${CGo}make${CNone}"
       echo -e "   ${CGo}sudo make install${CNone}"
+
       echo -e "   ${CGo}sudo vi /etc/ld.so.conf${CNone}"
       echo -e "   # Add the following line in /etc/ld.so.conf:"
       echo -e "      /usr/local/lib64"
-      echo -e "   ${CGo}cd ../..${CNone}"
+      echo -e "   ${CGo}cd ..${CNone}"
 
       echo -e "   ${CGo}vi config.mk${CNone}"
       echo -e "   # Enable websockets in config.mk"
       echo -e "      WITH_WEBSOCKETS:=yes"
 
       echo -e "   ${CGo}make${CNone}"
+      echo -e "   ${CGo}sudo make install${CNone}"
       echo ""
 
       echo -e "Linux (RedHat,Oracle Linux, Fedora, CentOS):"
@@ -3281,6 +3293,7 @@ if [ "$MOSQUITTO_VERSION" != "" ]; then
       echo -e "      WITH_WEBSOCKETS:=yes"
 
       echo -e "   ${CGo}make${CNone}"
+      echo -e "   ${CGo}sudo make install${CNone}"
    fi
    echo ""
    echo "If you are unable to build, then you can install a binary package by following"
