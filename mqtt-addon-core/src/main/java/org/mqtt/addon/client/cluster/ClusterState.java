@@ -179,8 +179,8 @@ public class ClusterState implements IClusterConfig {
 					}
 					buffer.append(endpoints[i]);
 				}
-				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints %s.",
-						buffer.toString(), getAllEndpoints()));
+				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints %s. Dead endpoints [%s]",
+						buffer.toString(), getAllEndpoints(), getDeadEndpoints()));
 			}
 		}
 	}
@@ -206,8 +206,8 @@ public class ClusterState implements IClusterConfig {
 				}
 			}
 			if (logger != null) {
-				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints [%s].", endpoints,
-						getAllEndpoints()));
+				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints [%s]. Dead endpoints [%s].", endpoints,
+						getAllEndpoints(), getDeadEndpoints()));
 			}
 		}
 	}
@@ -223,6 +223,29 @@ public class ClusterState implements IClusterConfig {
 				buffer.append(", ");
 			}
 			buffer.append(client.getServerURI());
+			count++;
+		}
+		return buffer.toString();
+	}
+	
+	/**
+	 * Returns a comma separated list of dead server URIs.
+	 */
+	private String getDeadEndpoints() {
+		StringBuffer buffer = new StringBuffer();
+		int count = 0;
+		for (MqttClient client : deadClientSet) {
+			if (count > 0) {
+				buffer.append(", ");
+			}
+			buffer.append(client.getServerURI());
+			count++;
+		}
+		for (String endpoint : deadEndpointSet) {
+			if (count > 0) {
+				buffer.append(", ");
+			}
+			buffer.append(endpoint);
 			count++;
 		}
 		return buffer.toString();
@@ -388,8 +411,8 @@ public class ClusterState implements IClusterConfig {
 		// Log revived endpoints
 		if (revivedEndpointSet.size() > 0) {
 			haclient.updateLiveClients(getLiveClients());
-			logger.info(String.format("Revived endpoints %s. Live endpoints [%s]. Dead endpoints %s.",
-					revivedEndpointSet, getLiveEndpoints(), deadEndpointSet));
+			logger.info(String.format("Revived endpoints %s. Live endpoints [%s]. Dead endpoints [%s].",
+					revivedEndpointSet, getLiveEndpoints(), getDeadEndpoints()));
 			logConnectionStatus();
 		}
 

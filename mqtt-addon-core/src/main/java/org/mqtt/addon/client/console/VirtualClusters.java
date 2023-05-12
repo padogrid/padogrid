@@ -84,10 +84,18 @@ public class VirtualClusters implements Constants {
 			// Connect
 			HaClusters.initialize(new File(configFilePath));
 			HaClusters.connect();
+			
+			// Register a shutdown hook thread to gracefull shutdown
+			Runtime.getRuntime().addShutdownHook(new Thread()
+		    {
+		      public void run()
+		      {
+		        HaClusters.stop();
+		        writeLine("Virtual clusters stopped.");
+		      }
+		    });
+
 			writeLine("VirtualClusters started: [" + configFilePath + "].");
-			while (true) {
-				Thread.sleep(5000);
-			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.err.printf(

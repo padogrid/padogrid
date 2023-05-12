@@ -40,14 +40,6 @@ public class ConfigUtil {
 	public static String parseStringValue(String value) {
 		String pvalue = value;
 		if (pvalue != null) {
-			if (pvalue.contains("${")) {
-				String property = pvalue.replaceAll("^.*\\$\\{", "");
-				property = property.replaceAll("}.*", "");
-				if (property != "") {
-					String value2 = System.getProperty(property, "");
-					pvalue = pvalue.replaceAll("\\$\\{.*\\}", value2);
-				}
-			}
 			if (pvalue.contains("${env:")) {
 				String envvar = pvalue.replaceAll("^.*\\$\\{env:", "");
 				envvar = envvar.replaceAll("}.*", "");
@@ -59,6 +51,15 @@ public class ConfigUtil {
 					pvalue = pvalue.replaceAll("\\$\\{env:.*\\}", value2);
 				}
 			}
+			if (pvalue.contains("${")) {
+				String property = pvalue.replaceAll("^.*\\$\\{", "");
+				property = property.replaceAll("}.*", "");
+				if (property != "") {
+					String value2 = System.getProperty(property, "");
+					pvalue = pvalue.replaceAll("\\$\\{.*\\}", value2);
+				}
+			}
+			
 			pvalue = pvalue.trim();
 		}
 		return pvalue;

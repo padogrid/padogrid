@@ -182,6 +182,11 @@ public class ClusterConfig {
 		public MqttConnectionOptions getConnection() {
 			if (connection != null) {
 				String[] serverURIs = connection.getServerURIs();
+				// Replace system properties and env vars with values.
+				for (int i = 0; i < serverURIs.length; i++) {
+					serverURIs[i] = ConfigUtil.parseStringValue(serverURIs[i]);
+				}
+				// Set serverURIs
 				if (serverURIs != null && serverURIs.length > 0) {
 					List<String> serverList = ConfigUtil.parseEndpoints(serverURIs);
 					if (primaryServerURI != null && serverList.contains(primaryServerURI) == false) {
