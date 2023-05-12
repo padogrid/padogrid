@@ -172,8 +172,15 @@ public class ClusterState implements IClusterConfig {
 				}
 			}
 			if (logger != null) {
-				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints [%s].", endpoints,
-						getAllEndpoints()));
+				StringBuffer buffer = new StringBuffer();
+				for (int i = 0; i < endpoints.length; i++) {
+					if (i > 0) {
+						buffer.append(",");
+					}
+					buffer.append(endpoints[i]);
+				}
+				logger.info(String.format("Added/updated endpoints [endpoints=%s]. All endpoints %s.",
+						buffer.toString(), getAllEndpoints()));
 			}
 		}
 	}
@@ -291,8 +298,8 @@ public class ClusterState implements IClusterConfig {
 						// Paho's use of ExecutorService is extremely limited. It blocks indefinitely
 						// if the application exceeds the thread pool size. Its use is discouraged.
 						// Note: Passing null value for persistence creates MemoryPersistence.
-						//       Passing null value for executorService defaults to a non-scheduled
-						//       independent thread.
+						// Passing null value for executorService defaults to a non-scheduled
+						// independent thread.
 						client = new MqttClient(endpoint, clientId, persistence, executorService);
 					} else {
 						client = new MqttClient(endpoint, clientId, persistence, executorService);
@@ -380,17 +387,9 @@ public class ClusterState implements IClusterConfig {
 
 		// Log revived endpoints
 		if (revivedEndpointSet.size() > 0) {
-			StringBuffer buffer = new StringBuffer();
-			for (String endpoint : revivedEndpointSet) {
-				if (count > 0) {
-					buffer.append(",");
-				}
-				buffer.append(endpoint);
-			}
-
 			haclient.updateLiveClients(getLiveClients());
-			logger.info(String.format("Revived endpoint [%s]. Live endpoints [%s]. Dead endpoints %s.",
-					buffer.toString(), getLiveEndpoints(), deadEndpointSet));
+			logger.info(String.format("Revived endpoints %s. Live endpoints [%s]. Dead endpoints %s.",
+					revivedEndpointSet, getLiveEndpoints(), deadEndpointSet));
 			logConnectionStatus();
 		}
 
@@ -398,9 +397,13 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
-	 * Connects dead endpoints. -- New
+	 * Connects to dead endpoints.
 	 * 
-	 * @return
+	 * @param connectionCount      Maximum number of connections to make
+	 * @param maxSubscriptionCount Maximum number of subscribers
+	 * @param revivedEndpointSet   Output of revived endpoint collection made by
+	 *                             this method
+	 * @return Connected MqttClient instance tokens
 	 */
 	private IMqttToken[] connectDeadEndpoints(int connectionCount, int maxSubscriptionCount,
 			Set<String> revivedEndpointSet) {
