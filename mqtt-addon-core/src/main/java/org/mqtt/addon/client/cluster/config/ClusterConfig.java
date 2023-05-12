@@ -47,7 +47,7 @@ public class ClusterConfig {
 	}
 
 	public String getDefaultCluster() {
-		return defaultCluster;
+		return ConfigUtil.parseStringValue(defaultCluster);
 	}
 
 	public void setDefaultCluster(String defaultCluster) {
@@ -55,7 +55,7 @@ public class ClusterConfig {
 	}
 
 	public String getTag() {
-		return tag;
+		return ConfigUtil.parseStringValue(tag);
 	}
 
 	public boolean isEnabled() {
@@ -253,7 +253,7 @@ public class ClusterConfig {
 		private Property[] properties;
 
 		public String getClassName() {
-			return className;
+			return ConfigUtil.parseStringValue(className);
 		}
 
 		public void setClassName(String className) {
@@ -307,7 +307,7 @@ public class ClusterConfig {
 		private String value;
 
 		public String getKey() {
-			return key;
+			return ConfigUtil.parseStringValue(key);
 		}
 
 		public void setKey(String key) {
@@ -315,10 +315,7 @@ public class ClusterConfig {
 		}
 
 		public String getValue() {
-			if (value != null) {
-				return ConfigUtil.parseStringValue(value);
-			}
-			return value;
+			return ConfigUtil.parseStringValue(value);
 		}
 
 		public void setValue(String value) {
@@ -353,7 +350,7 @@ public class ClusterConfig {
 		private int qos = -1;
 
 		public String getCluster() {
-			return cluster;
+			return ConfigUtil.parseStringValue(cluster);
 		}
 
 		public void setCluster(String cluster) {

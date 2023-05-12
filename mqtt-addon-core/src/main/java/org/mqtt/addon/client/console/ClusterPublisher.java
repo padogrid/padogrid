@@ -237,7 +237,7 @@ public class ClusterPublisher implements Constants {
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.err.printf(
-						"ERROR: Exception occurred while creating the virtual cluster: [%s]. Command aborted.%n",
+						"ERROR: Exception occurred while creating a virtual cluster: [%s]. Command aborted.%n",
 						virtualClusterName);
 				System.exit(-1);
 			}
@@ -247,7 +247,7 @@ public class ClusterPublisher implements Constants {
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.err.printf(
-						"ERROR: Exception occurred while creating the virtual cluster: [file=%s]. Command aborted.%n",
+						"ERROR: Exception occurred while creating a virtual cluster: [file=%s]. Command aborted.%n",
 						configFilePath);
 				System.exit(-1);
 			}

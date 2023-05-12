@@ -31,6 +31,7 @@ import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.mqtt.addon.client.cluster.HaClusters;
 import org.mqtt.addon.client.cluster.HaMqttClient;
+import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.IHaMqttCallback;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
 
@@ -77,7 +78,8 @@ public class ClusterSubscriber implements Constants {
 		writeLine("   - If '-cluster', '-config', and '-endpoints' are not specified, then the PadoGrid's");
 		writeLine("     current context cluster is used.");
 		writeLine();
-		writeLine("   - If PadoGrid cluster is not an MQTT cluster it defaults to endpoints, 'tcp://localhost:1883-1885'.");
+		writeLine(
+				"   - If PadoGrid cluster is not an MQTT cluster it defaults to endpoints, 'tcp://localhost:1883-1885'.");
 		writeLine();
 		writeLine("OPTIONS");
 		writeLine("   -cluster cluster_name");
@@ -176,7 +178,7 @@ public class ClusterSubscriber implements Constants {
 			System.exit(3);
 		}
 
-		// Collection system properties - passed in by the invoking script.
+		// Collect system properties - passed in by the invoking script.
 		if (endpoints == null) {
 			clusterName = System.getProperty("cluster.name");
 			endpoints = System.getProperty("cluster.endpoints");
@@ -189,10 +191,30 @@ public class ClusterSubscriber implements Constants {
 		String virtualClusterName;
 		if (configFilePath != null) {
 			virtualClusterName = clusterName;
+			try {
+				// We need to do this here in order to get the default
+				// cluster name.
+				HaClusters.initialize(new File(configFilePath));
+				if (virtualClusterName == null) {
+					virtualClusterName = HaClusters.getDefaultClusterName();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.printf(
+						"ERROR: Exception occurred while initializing virtual clusters: [file=%s]. Command aborted.%n",
+						configFilePath);
+				System.exit(-1);
+			}
 		} else {
 			virtualClusterName = createVirtualClusterName();
 		}
 		writeLine("cluster: " + virtualClusterName + " (virtual)");
+
+		// If endpoints is not set, then default
+		// IClusterConfig.DEFAULT_CLIENT_SERVER_URIS.
+		if (configFilePath == null && endpoints == null) {
+			endpoints = IClusterConfig.DEFAULT_CLIENT_SERVER_URIS;
+		}
 		if (endpoints != null) {
 			writeLine("endpoints: " + endpoints);
 		}
@@ -222,17 +244,17 @@ public class ClusterSubscriber implements Constants {
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.err.printf(
-						"ERROR: Exception occurred while creating the virtual cluster: [%s]. Command aborted.%n",
+						"ERROR: Exception occurred while creating a virtual cluster: [%s]. Command aborted.%n",
 						virtualClusterName);
 				System.exit(-1);
 			}
 		} else {
 			try {
-				HaClusters.initialize(new File(configFilePath));
+				client = HaClusters.getOrCreateHaMqttClient(virtualClusterName);
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.err.printf(
-						"ERROR: Exception occurred while creating the virtual cluster: [file=%s]. Command aborted.%n",
+						"ERROR: Exception occurred while creating a virtual cluster: [file=%s]. Command aborted.%n",
 						configFilePath);
 				System.exit(-1);
 			}
@@ -257,7 +279,8 @@ public class ClusterSubscriber implements Constants {
 			@Override
 			public void messageArrived(MqttClient client, String topic, MqttMessage message) throws Exception {
 				byte[] payload = message.getPayload();
-				System.out.println(String.format("%s - %s: %s", client.getServerURI(), topic, new String(payload, StandardCharsets.UTF_8)));
+				System.out.println(String.format("%s - %s: %s", client.getServerURI(), topic,
+						new String(payload, StandardCharsets.UTF_8)));
 			}
 
 			@Override

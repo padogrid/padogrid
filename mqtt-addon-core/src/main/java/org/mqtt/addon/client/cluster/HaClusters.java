@@ -218,4 +218,11 @@ public final class HaClusters {
 		}
 		ClusterService.getClusterService().stop();
 	}
+	
+	/**
+	 * Returns the default cluster name.
+	 */
+	public final static String getDefaultClusterName() {
+		return ClusterService.getClusterService().getDefaultClusterName();
+	}
 }

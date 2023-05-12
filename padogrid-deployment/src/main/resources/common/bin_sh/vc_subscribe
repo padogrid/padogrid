@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -endpoints -config -m -r -t -fos -qos -?"
+   echo "-cluster -endpoints -config -t -fos -qos -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -43,7 +43,7 @@ if [ "$CLUSTER" != "" ]; then
       echo "Using default endpoints instead: $ENDPOINTS"
    fi
 fi
-if [ "$ENDPOINTS" == "" ]; then
+if [ "$ENDPOINTS" == "" ] && [ "$CLUSTER" != "" ]; then
    POD=`getClusterProperty "pod.name" "local"`
    __HOSTNAME=`hostname`
    OS_ENV=`getOsEnv $__HOSTNAME`
@@ -85,13 +85,23 @@ if [ "$ENDPOINTS" == "" ]; then
    ENDPOINTS="tcp://localhost:$MEMBER_START_PORT-$MEMBER_END_PORT"
 fi
 
+# Set MQTT addon class path. This is to handle 'none' product.
+if [[ "$CLASSPATH" != *"$PADOGRID_HOME/mosquitto/plugins"* ]]; then
+   CLASSPATH="$PADOGRID_HOME/mosquitto/plugins/*:$PADOGRID_HOME/mosquitto/lib/*:$CLASSPATH"
+fi
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+
 JAVA_OPTS="$JAVA_OPTS -Dexecutable.name=$EXECUTABLE"
 if [ "$ENDPOINTS" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS -Dcluster.endpoints=$ENDPOINTS"
+fi
+if [ "$CLUSTER" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS -Dcluster.name=$CLUSTER"
 fi
 
-"$JAVA" $JAVA_OPTS org.mqtt.addon.client.console.ClusterPublisher "$@"
+"$JAVA" $JAVA_OPTS org.mqtt.addon.client.console.ClusterSubscriber "$@"
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
