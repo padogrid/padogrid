@@ -223,69 +223,6 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	private void publishAll(String topic, MqttMessage message) throws MqttException {
-		if (isDisconnected()) {
-			throw new HaMqttException(-101, "Cluster disconnected");
-		}
-		if (clusterState.isClosed()) {
-			throw new HaMqttException(-102, "Cluster closed");
-		}
-		// Live client variables are updated from another thread. We reassign them to
-		// local variables to handle a race condition.
-		MqttClient client = getPublisher();
-
-		if (client == null || liveClients.length == 0) {
-			cleanupThreadLocals();
-			throw new HaMqttException(-100, String.format("Cluster unreachable"));
-		}
-		try {
-			client.publish(topic, message);
-		} catch (MqttException e) {
-
-			if (client.isConnected() == false) {
-				// If publish() fails, then we assume the connection is
-				// no longer valid. Remove the client from the live list
-				// so that the discovery service can probe and reconnect.
-				removeMqttClient(client);
-
-				logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-						client.getServerURI()), e);
-
-				// Upon removal, a new live client list is obtained.
-				// Publish it again with the new publisherClient.
-				MqttClient[] clients = liveClients;
-
-				if (clients.length == 0) {
-					cleanupThreadLocals();
-					throw e;
-				} else {
-					publish(topic, message);
-				}
-			} else {
-				throw e;
-			}
-		}
-
-		// TODO: Move it to another thread
-		try {
-			clusterState.publishBridgeClusters(topic, message);
-		} catch (Exception ex) {
-			logger.warn(String.format(
-					"Error occurred while publishing to bridge cluster(s) [topic=%s, qos=%d, retained=%s, exception=%s]. ",
-					topic, message.getQos(), message.isRetained(), ex.getMessage()));
-		}
-	}
-
-	/**
-	 * IMqttClient: {@inheritDoc}
-	 */
-	@Override
-	public void publish(String topic, MqttMessage message) throws MqttException {
-
-		// Handle ALL
-		if (publisherType == PublisherType.ALL) {
-			publishAll(topic, message);
-			return;
-		}
 
 		if (isDisconnected()) {
 			throw new HaMqttException(-101, "Cluster disconnected");
@@ -326,6 +263,69 @@ public class HaMqttClient implements IHaMqttClient {
 				} else {
 					throw e;
 				}
+			}
+		}
+
+		// TODO: Move it to another thread
+		try {
+			clusterState.publishBridgeClusters(topic, message);
+		} catch (Exception ex) {
+			logger.warn(String.format(
+					"Error occurred while publishing to bridge cluster(s) [topic=%s, qos=%d, retained=%s, exception=%s]. ",
+					topic, message.getQos(), message.isRetained(), ex.getMessage()));
+		}
+	}
+
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
+	@Override
+	public void publish(String topic, MqttMessage message) throws MqttException {
+
+		// Handle ALL
+		if (publisherType == PublisherType.ALL) {
+			publishAll(topic, message);
+			return;
+		}
+
+		if (isDisconnected()) {
+			throw new HaMqttException(-101, "Cluster disconnected");
+		}
+		if (clusterState.isClosed()) {
+			throw new HaMqttException(-102, "Cluster closed");
+		}
+		// Live client variables are updated from another thread. We reassign them to
+		// local variables to handle a race condition.
+		MqttClient client = getPublisher();
+
+		if (client == null || liveClients.length == 0) {
+			cleanupThreadLocals();
+			throw new HaMqttException(-100, String.format("Cluster unreachable"));
+		}
+		try {
+			client.publish(topic, message);
+		} catch (MqttException e) {
+			if (client.isConnected() == false) {
+				// If publish() fails, then we assume the connection is
+				// no longer valid. Remove the client from the live list
+				// so that the discovery service can probe and reconnect.
+				removeMqttClient(client);
+
+				logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
+						client.getServerURI()), e);
+
+				// Upon removal, a new live client list is obtained.
+				// Publish it again with the new publisherClient.
+				MqttClient[] clients = liveClients;
+
+				if (clients.length == 0) {
+					cleanupThreadLocals();
+					throw e;
+				} else {
+					publish(topic, message);
+				}
+			} else {
+				throw e;
 			}
 		}
 
