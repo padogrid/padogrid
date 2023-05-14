@@ -46,5 +46,10 @@ public enum PublisherType {
 	 * publisher operation. The live endpoint list is initially shuffled once to provide
 	 * randomness. This is a round-robin load balancer.
 	 */
-	ROUND_ROBIN
+	ROUND_ROBIN,
+	
+	/**
+	 * Selects all brokers from the live endpoint list for every publisher operations.
+	 */
+	ALL
 }

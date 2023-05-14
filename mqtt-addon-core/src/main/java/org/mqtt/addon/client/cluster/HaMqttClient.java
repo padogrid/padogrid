@@ -35,6 +35,7 @@ import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.MqttSecurityException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
+import org.hibernate.query.criteria.internal.predicate.IsEmptyPredicate;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
 import org.mqtt.addon.client.cluster.internal.ConfigUtil;
 
@@ -161,9 +162,9 @@ public class HaMqttClient implements IHaMqttClient {
 	 * <ul>
 	 * <li>May return a different publisher instance per invocation.</li>
 	 * </ul>
-	 * <b>STICKY</b>
+	 * <b>STICKY, ALL</b>
 	 * <ul>
-	 * <li>Always returns the same the publisher instance until the publisher
+	 * <li>Always returns the same publisher instance until the publisher
 	 * fails.</li>
 	 * <li>If the publisher fails, then it returns another instance retrieved from
 	 * the live list. The new instance becomes sticky.</li>
@@ -172,6 +173,11 @@ public class HaMqttClient implements IHaMqttClient {
 	 * instance is returned instead. The new instance becomes sticky until the
 	 * primary publisher becomes available again.</li>
 	 * </ul>
+	 * Note that {@linkplain PublisherType#ALL} returns a sticky publisher even
+	 * though {@link #publish(String, MqttMessage)} and
+	 * {@link #publish(String, byte[], int, boolean)} publishes each message to all
+	 * live endpoints.
+	 * <p>
 	 * 
 	 * @return null if the publisher is not available.
 	 */
@@ -191,6 +197,7 @@ public class HaMqttClient implements IHaMqttClient {
 				roundRobinThreadLocal.set(roundRobinIndex);
 				break;
 			case STICKY:
+			case ALL:
 			default:
 				client = clusterState.getPrimaryClient();
 				if (client == null || client.isConnected() == false) {
@@ -215,11 +222,7 @@ public class HaMqttClient implements IHaMqttClient {
 		return clusterName;
 	}
 
-	/**
-	 * IMqttClient: {@inheritDoc}
-	 */
-	@Override
-	public void publish(String topic, MqttMessage message) throws MqttException {
+	private void publishAll(String topic, MqttMessage message) throws MqttException {
 		if (isDisconnected()) {
 			throw new HaMqttException(-101, "Cluster disconnected");
 		}
@@ -276,7 +279,133 @@ public class HaMqttClient implements IHaMqttClient {
 	 * IMqttClient: {@inheritDoc}
 	 */
 	@Override
+	public void publish(String topic, MqttMessage message) throws MqttException {
+
+		// Handle ALL
+		if (publisherType == PublisherType.ALL) {
+			publishAll(topic, message);
+			return;
+		}
+
+		if (isDisconnected()) {
+			throw new HaMqttException(-101, "Cluster disconnected");
+		}
+		if (clusterState.isClosed()) {
+			throw new HaMqttException(-102, "Cluster closed");
+		}
+		// Live client variables are updated from another thread. We reassign them to
+		// local variables to handle a race condition.
+		MqttClient[] clients = liveClients;
+
+		if (clients.length == 0) {
+			cleanupThreadLocals();
+			throw new HaMqttException(-100, String.format("Cluster unreachable"));
+		}
+		for (MqttClient client : clients) {
+			try {
+				client.publish(topic, message);
+			} catch (MqttException e) {
+
+				if (client.isConnected() == false) {
+					// If publish() fails, then we assume the connection is
+					// no longer valid. Remove the client from the live list
+					// so that the discovery service can probe and reconnect.
+					removeMqttClient(client);
+
+					logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
+							client.getServerURI()), e);
+
+					// Upon removal, a new live client list is obtained.
+					// Publish it again with the new publisherClient.
+					if (liveClients.length == 0) {
+						cleanupThreadLocals();
+						throw e;
+					} else {
+						publish(topic, message);
+					}
+				} else {
+					throw e;
+				}
+			}
+		}
+
+		// TODO: Move it to another thread
+		try {
+			clusterState.publishBridgeClusters(topic, message);
+		} catch (Exception ex) {
+			logger.warn(String.format(
+					"Error occurred while publishing to bridge cluster(s) [topic=%s, qos=%d, retained=%s, exception=%s]. ",
+					topic, message.getQos(), message.isRetained(), ex.getMessage()));
+		}
+	}
+
+	private void publishAll(String topic, byte[] payload, int qos, boolean retained) throws MqttException {
+
+		if (isDisconnected()) {
+			throw new HaMqttException(-101, "Cluster disconnected");
+		}
+		if (clusterState.isClosed()) {
+			throw new HaMqttException(-102, "Cluster closed");
+		}
+		// Live client variables are updated from another thread. We reassign them to
+		// local variables to handle a race condition.
+		MqttClient[] clients = liveClients;
+		if (clients.length == 0) {
+			cleanupThreadLocals();
+			throw new HaMqttException(-100,
+					String.format("Cluster unreachable [liveClients.length=%d]", liveClients.length));
+		}
+		for (MqttClient client : clients) {
+			try {
+				client.publish(topic, payload, qos, retained);
+			} catch (MqttException e) {
+				if (client.isConnected() == false) {
+					// If publish() fails, then we assume the connection is
+					// no longer valid. Remove the client from the live list
+					// so that the discovery service can probe and reconnect.
+					removeMqttClient(client);
+					stickyThreadLocal.set(null);
+
+					logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
+							client.getServerURI()), e);
+
+					// Upon removal, a new live client list is obtained.
+					// Publish it again with the new publisherClient.
+					if (liveClients.length == 0) {
+						cleanupThreadLocals();
+						throw e;
+					} else {
+						publish(topic, payload, qos, retained);
+					}
+				} else {
+					throw e;
+				}
+			}
+		}
+
+		// TODO: Move it to another thread
+		try {
+			clusterState.publishBridgeClusters(topic, payload, qos, retained);
+		} catch (Exception ex) {
+			logger.warn(String.format(
+					"Error occurred while publishing to bridge cluster(s) [topic=%s, qos=%d, retained=%s, exception=%s]. ",
+					topic, qos, retained, ex.getMessage()));
+		}
+
+	}
+
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
+	@Override
 	public void publish(String topic, byte[] payload, int qos, boolean retained) throws MqttException {
+
+		// Handle ALL
+		if (publisherType == PublisherType.ALL) {
+			publishAll(topic, payload, qos, retained);
+			return;
+		}
+
 		if (isDisconnected()) {
 			throw new HaMqttException(-101, "Cluster disconnected");
 		}
