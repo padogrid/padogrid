@@ -39,11 +39,11 @@ persistence:
   #
   #   MemoryPersistence, MqttDefaultFilePersistence
   #
+  # MemoryPersistence does not take properties. All properties are ignored.
+  #
   # MqttDefaultFilePersistence takes the 'path' property for the directory path
   # where the persistence data is to be stored. If the 'path' property is not
   # defined the working directory is used. All other properties are ignored.
-  #
-  # MemoryPersistence does not take properties. All properties are ignored.
   #
   # A custom persistence class must implement MqttClientPersistence and include
   # a constuctor with a single argument with the Properties type if the properties
@@ -55,11 +55,14 @@ persistence:
   # All cluster clients use the top-level 'persistence' element unless they have
   # their own 'persistence' element defined.
   #
+  # Example: Persist in 'persist' directory.
+  # className: MqttDefaultFilePersistence
+  # properties:
+  #  - key: path
+  #    value: persist
+  #
   # Default:
-  #   className: MqttDefaultFilePersistence
-  #   properties:
-  #     - key: path
-  #       value: persist
+  #   className: MemoryPersistence
   className: MqttDefaultFilePersistence
   properties:
     - key: path
@@ -86,47 +89,47 @@ clusters:
     # Default: 5000
     timeToWait: 5000
     
-    # Failover Service (FoS). Valid values are -1, 0, 1, 2. Similar to QoS,
-    # HaMqttClient provides a subscriber failover service in four (4) levels.
+    # Failover Service (FoS). Valid values are 0, 1, 2, 3. HaMqttClient provides
+    # a subscriber failover service in four (4) levels.
     #
-    # -1 - all subscribers, all connections. This level is default. It makes
-    #      subscriptions and connections to all endpoints.
+    # 0 - all subscribers, all connections. This level is default. It makes
+    #     subscriptions and connections to all endpoints.
     #
-    #  0 - one subscriber, two connections. This level opens connections to two
-    #      endpoints, but sticks topic subscriptions only to one endpoint. No
-    #      subscriptions are made to the other endpoint. Only when the sticky
-    #      endpoint fails, subscriptions are made to the other endpoint at that
-    #      time. Failover is quick but there is a subscription delay which could
-    #      lead to data loss.
+    # 1 - one subscriber, two connections. This level opens connections to two
+    #     endpoints, but sticks topic subscriptions only to one endpoint. No
+    #     subscriptions are made to the other endpoint. Only when the sticky
+    #     endpoint fails, subscriptions are made to the other endpoint at that
+    #     time. Failover is quick but there is a subscription delay which could
+    #     lead to data loss.
     #
-    #  1 - two subscribers, two connections. Like FoS 0, this level opens two (2)
-    #      connections but increases the number of endpoints that make subscriptions
-    #      to two (2). That means, with FoS 2, HaMqttClient receives duplicate messages,
-    #      one from each endpoint. HaMqttClient sticks to one of the endpoints and
-    #      delivers data only from that sticky endpoint to the application. It discards
-    #      the data from the other endpoint. The other endpoint replaces the sticky
-    #      endpoint upon failure. Failover is immediate with no data loss.
+    # 2 - two subscribers, two connections. Like FoS 1, this level opens two (2)
+    #     connections but increases the number of endpoints that make subscriptions
+    #     to two (2). That means, with FoS 2, HaMqttClient receives duplicate messages,
+    #     one from each endpoint. HaMqttClient sticks to one of the endpoints and
+    #     delivers data only from that sticky endpoint to the application. It discards
+    #     the data from the other endpoint. The other endpoint replaces the sticky
+    #     endpoint upon failure. Failover is immediate with no data loss.
     #
-    #  2 - select subscribers, select connections. FoS 2 allows configuration of both
-    #      subscriberCount and liveEndpointCount. By default, FoS 2 makes subscriptions
-    #      to all of the endpoints. This is rather expensive and wasteful if there are
-    #      many endpoints. The higher the numbers the higher the HA at the expense of
-    #      higher volume of duplicate data and higher network traffic.
+    # 3 - select subscribers, select connections. FoS 3 allows configuration of both
+    #     subscriberCount and liveEndpointCount. By default, FoS 3 makes subscriptions
+    #     to all of the endpoints. This is rather expensive and wasteful if there are
+    #     many endpoints. The higher the numbers the higher the HA at the expense of
+    #     higher volume of duplicate data and higher network traffic.
     #
-    # Default: -1
-    fos: -1
+    # Default: 0
+    fos: 0
     
     # Initial number of endpoints to connect. If intialEndpointCount is set,
     # then the cluster service first makes connections up to that number of
-    # endpoints and defers the rest of the endpoints to the next probing cycycle.
+    # endpoints and defers the rest of the endpoints to the next probing cycle.
     # This can significantly reduce the time to complete HaMqttClient.connect()
-    # call if there are a large number of endpoints. Less than 0 is equivalent to
-    # all endpoints.
+    # call if there are a large number of endpoints. A negative value is equivalent
+    # to all endpoints.
     # Default: -1
     initialEndpointCount: -1
     
     # Number of live endpoints to maintain. -1 for all endpoints. This parameter is
-    # configurable only for FoS 2. For other FoS levels, it is hard wired as follows.
+    # configurable only for FoS 3. For other FoS levels, it is hard wired as follows.
     #    FoS 0: -1
     #    FoS 1: 2
     #    FoS 2: 2 
@@ -134,16 +137,20 @@ clusters:
     liveEndpointCount: -1
     
     # Maximum number of subscribers. -1 for all endpoints. This parameter is
-    # configurable only for FoS 2. For other FoS levels, it is hard wired as follows.
+    # configurable only for FoS 3. For other FoS levels, it is hard wired as follows.
     #    FoS 0: -1
     #    FoS 1: 1
     #    FoS 2: 2 
     # Default: -1
     subscriberCount: -1
     
-    # Publisher Type. Valid values are STICKY, RANDOM, ROUND_ROBIN.
+    # Publisher Type. Valid values are STICKY, RANDOM, ROUND_ROBIN, ALL.
+    #   STICKY - Use one server for all publications.
+    #   RANDOM - Randomly select one server from the live list for each publication.
+    #   ROUND_ROBIN - Select the next server from the live list for each publication.
+    #   ALL - Publish each message to all servers in the live list.
     # If STICKY and primaryServerURI is defined, the cluster client always uses
-    # that server for all operations. For FoS 0, publisherType is always STICKY.
+    # that server for all operations.
     # Default: STICKY
     publisherType: ROUND_ROBIN
     
@@ -153,6 +160,30 @@ clusters:
     # is automatically added to connection.serverURIs if not included.
     primaryServerURI: null
     
+    # Default topic base to bound topics publshed by all publishers. Each publisher
+    # (endpoint) can override this value by setting 'endpoints.topicBase'. If it
+    # is not defined, then by default, the publisher is determined by 'publisherType'.
+    defaultTopicBase: null
+    
+    # 'endpoints' defines a list of named endpoints that can be directly invoked
+    # by the HaMqttClient API. By default, each endpoint name begins with the
+    # cluster name followed by a sequenced number starting from 1. This element
+    # allows you to rename them. Note that endpoints that do not match
+    # 'connection.serverURIs' are also included in the endpoint pool for probing.
+    endpoints:
+        # Name of the endpoint. It must be unique with this cluster. Otherewise,
+        # the last endpoint that defines the same name overrides all.
+      - name: null
+        # A single endpoint. 
+        endpoint: null
+        # Topic base to bound topics published to this endpoint. It overrides
+        # publisherTopicBase.
+        topicBase: null
+    
+    # HaMqttClient provides a bridge service incomming and outgoing messages.
+    # Incoming messages are the ones that are received by this application from
+    # the endpoints. Outgoing messages are the ones that are sent (published) by
+    # this application.
     bridges:
     
       # 'in' fowards incoming messages to the target clusters.
@@ -162,7 +193,7 @@ clusters:
       
           # Target cluster name. Undefined cluster names are logged and discarded.
           # If the target cluster name is the parent cluster name, then it is logged
-          # and dicarded.
+          # and discarded.
         - cluster: null
         
           # A list of topic filters from which the topics are to be filtered
@@ -188,7 +219,7 @@ clusters:
       
           # Target cluster name. Undefined cluster names are logged and discarded.
           # If the target cluster name is this cluster name, then it is logged and
-          # dicarded.
+          # discarded.
         - cluster: null
         
           # A list of topic filters from which the topics are to be filtered

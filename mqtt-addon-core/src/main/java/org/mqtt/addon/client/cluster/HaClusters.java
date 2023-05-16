@@ -123,10 +123,8 @@ public final class HaClusters {
 	 * the application should eagerly invoke this method to start the cluster
 	 * initialization process to reduce the overall cluster creation latency.
 	 * 
-	 * @param isStart true to start the service. If false, then the {@link #start()}
-	 *                method must be invoked to start the service.
 	 * @return ClusterService instance
-	 * @throws IOException
+	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
 	static final void initialize(boolean isStart) throws IOException {
 		ClusterService.initialize(isStart);
@@ -170,9 +168,6 @@ public final class HaClusters {
 	 *                   {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE} in
 	 *                   the class path is read. If all fails, then the default
 	 *                   settings are applied.
-	 * @param isStart    true to start the service. If false, then the
-	 *                   {@link #start()} method must be invoked to start the
-	 *                   service.
 	 * 
 	 * @return ClusterService instance
 	 * @throws IOException Thrown if unable to read the configuration source.
@@ -182,10 +177,31 @@ public final class HaClusters {
 	}
 
 	/**
+	 * Initializes and starts the cluster service when invoked for the first time.
+	 * Subsequent invocations have no effect. Invoking this method is not necessary
+	 * as it is lazily invoked by the {@link #getOrCreateHaMqttClient()} methods.
+	 * However, it is recommended that the application should eagerly invoke this
+	 * method to start the cluster initialization process to reduce the overall
+	 * cluster creation latency.
+	 * <p>
+	 * This method should be invoked if the configuration file is specified by the
+	 * system property, {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE}. If
+	 * this property is not specified, then the default settings are applied.
+	 * 
+	 * @throws IOException Thrown if unable to read the configuration source
+	 *                     specified by the system property,
+	 *                     {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE}.
+	 */
+	public final static void initialize() throws IOException {
+		ClusterService.initialize(true);
+	}
+
+	/**
 	 * Connects all clusters. Normally, the application connects each cluster
 	 * individually. This is a convenience method that connects all clusters without
-	 * having the application to connect each cluster. If the cluster service has
-	 * not been initialized then it silently returns and there is no effect.
+	 * having the application to connect each cluster individually. If the cluster
+	 * service has not been initialized then it silently returns and there is no
+	 * effect.
 	 * 
 	 * @see #initialize(boolean)
 	 * @see #initialize(ClusterConfig)
@@ -218,7 +234,7 @@ public final class HaClusters {
 		}
 		ClusterService.getClusterService().stop();
 	}
-	
+
 	/**
 	 * Returns the default cluster name.
 	 */

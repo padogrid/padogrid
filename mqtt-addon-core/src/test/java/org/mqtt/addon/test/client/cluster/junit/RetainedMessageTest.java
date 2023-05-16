@@ -15,6 +15,8 @@
  */
 package org.mqtt.addon.test.client.cluster.junit;
 
+import static org.junit.Assert.assertTrue;
+
 import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
@@ -34,6 +36,7 @@ public class RetainedMessageTest {
 	private static final String TOPIC = "mytopic";
 	private static final int QOS = 2;
 	private static HaMqttClient haclient;
+	private static int retainedMessageReceivedCount = 0;
 
 	@BeforeClass
 	public static void setUp() throws Exception {
@@ -43,23 +46,27 @@ public class RetainedMessageTest {
 		haclient = HaClusters.getHaMqttClient();
 		haclient.addCallbackCluster(new SubscriberHaMqttClientCallback());
 		haclient.connect();
+
+		int messageCount = 100;
+		for (int i = 1; i <= messageCount; i++) {
+			byte[] message = ("Retained message " + i).getBytes();
+			haclient.publish(TOPIC, message, QOS, true);
+		}
+		Thread.sleep(1000);
+		haclient.disconnect();
+		haclient.close();
 	}
 
 	@Test
 	public void testSubscriber() throws Exception {
-		for (int i = 1; i <= 3; i++) {
-			byte[] message = ("Retained message " + i).getBytes();
-			haclient.publish(TOPIC, message, 2, true);
-		}
-		Thread.sleep(1000);
-		haclient.disconnect();
+		int messageCount = 3;
 		Thread.sleep(1000);
 		
 		// Should receive three (3) retained messages
 		haclient.subscribe(TOPIC, QOS);
 		haclient.connect();
 		Thread.sleep(1000);
-		haclient.close();
+		assertTrue(messageCount == retainedMessageReceivedCount);
 	}
 
 	@AfterClass
@@ -88,6 +95,7 @@ public class RetainedMessageTest {
 					"SubscriberHaMqttClientCallback.messageArrived(): client=%s, topic=%s, message=%s, payload=%s, id=%d, qos=%d, props=%s%n",
 					client, topic, message, message.getPayload(), message.getId(), message.getQos(),
 					message.getProperties());
+			retainedMessageReceivedCount++;
 //			System.out.printf(
 //					"SubscriberHaMqttClientCallback.messageArrived(): topic=%s, message=%s%n", topic, message);
 		}

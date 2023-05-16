@@ -230,7 +230,7 @@ public class ClusterService {
 	}
 
 	/**
-	 * Builds both pub and sub bridge clusters for all ClusterState instances.
+	 * Builds both incoming and outgoing bridge clusters for all ClusterState instances.
 	 */
 	private void buildBridgeClusters() {
 		Cluster[] clusters = clusterConfig.getClusters();
@@ -318,6 +318,8 @@ public class ClusterService {
 					return thread;
 				}
 			});
+			
+			// Periodic probing entry point
 			ses.scheduleWithFixedDelay(new Runnable() {
 				@Override
 				public void run() {
@@ -326,6 +328,7 @@ public class ClusterService {
 					}
 				}
 			}, initialDelayInMsec, delayInMsec, TimeUnit.MILLISECONDS);
+			
 			isStarted = true;
 			logger.info(String.format("ClusterService started: %s", this));
 		}

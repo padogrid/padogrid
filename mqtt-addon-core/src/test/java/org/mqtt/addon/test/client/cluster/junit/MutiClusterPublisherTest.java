@@ -24,6 +24,21 @@ import org.mqtt.addon.client.cluster.HaClusters;
 import org.mqtt.addon.client.cluster.HaMqttClient;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 
+/**
+ * MutiClusterPublisherTest tests multiple clusters. To run the test case,
+ * follow the steps below.
+ * <ul>
+ * <li>Start publisher-multi-01 with 1883-1885 ports</li>
+ * <li>Start publisher-multi-02 with 32001-32003 ports</li>
+ * </ul>
+ * <p>
+ * The following configuration files is used for this test case: <br>
+ * <ul>
+ * <li>etc/mqttv5-multi-publishers.yaml</li>
+ * </ul>
+ * @author dpark
+ *
+ */
 public class MutiClusterPublisherTest {
 
 	private static final String TOPIC1 = "mytopic1";
@@ -34,41 +49,47 @@ public class MutiClusterPublisherTest {
 
 	@BeforeClass
 	public static void setUp() throws Exception {
-		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-publisher-multi.yaml");
+		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-multi-publishers.yaml");
 		System.setProperty("java.util.logging.config.file", "etc/publisher-logging.properties");
 		TestUtil.setEnv("LOG_FILE", "log/publisher.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
-		haclient1 = HaClusters.getOrCreateHaMqttClient("publisher-multi-01");
+		haclient1 = HaClusters.getOrCreateHaMqttClient("multi-publishers-01");
 		haclient1.connect();
 		
-		haclient2 = HaClusters.getOrCreateHaMqttClient("publisher-multi-02");
+		haclient2 = HaClusters.getOrCreateHaMqttClient("multi-publishers-02");
 		haclient2.connect();
 	}
 
 	@Test
 	public void testPublish() throws InterruptedException {
-		for (long i = 0; i < 1000; i++) {
+		int messageCount = 1000;
+		for (long i = 0; i < messageCount; i++) {
 			byte[] payload = ("my message " + i).getBytes();
 			MqttMessage message = new MqttMessage(payload);
 			message.setQos(QOS);
 			message.setRetained(true);
 			boolean isRetry = false;
+			String topic = TOPIC1;
 			do {
 				try {
-					haclient1.publish(TOPIC1, message);
-					haclient2.publish(TOPIC2, message);
+					topic = TOPIC1;
+					haclient1.publish(topic, message);
+					System.out.printf("Published [%s]: %s%n", topic, message);
+					topic = TOPIC2;
+					haclient2.publish(topic, message);
+					System.out.printf("Published [%s]: %s%n", topic, message);
 					isRetry = false;
 				} catch (MqttException e) {
-					System.err.printf("testPublish(): %s%n", e.getMessage());
+					System.err.printf("testPublish() [%s]: %s%n", topic, e.getMessage());
 					isRetry = true;
 					Thread.sleep(1000L);
 				}
 			} while (isRetry);
-			System.out.println("Published " + message);
+			
 			
 			Thread.sleep(1000L);
 		}
-		System.out.printf("Successfully produced 10 messages to a topic called %s%n", TOPIC1);
+		System.out.printf("Successfully published %d messages to topics [%s, %s]%n", messageCount, TOPIC1, TOPIC2);
 	}
 
 	@AfterClass

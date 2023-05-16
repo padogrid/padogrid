@@ -105,6 +105,8 @@ public class ClusterConfig {
 		private int initialEndpointCount = -1;
 		private int liveEndpointCount = -1;
 		private long timeToWait = IClusterConfig.DEFAULT_TIME_TO_WAIT_IN_MSEC;
+		private String defaultTopicBase;
+		private Endpoint[] endpoints;
 		private MqttConnectionOptions connection;
 		private Bridges bridges;
 
@@ -242,6 +244,22 @@ public class ClusterConfig {
 		public void setPrimaryServerURI(String primaryServerURI) {
 			this.primaryServerURI = primaryServerURI;
 		}
+		
+		public String getDefaultTopicBase() {
+			return defaultTopicBase;
+		}
+
+		public void setDefaultTopicBase(String defaultTopicBase) {
+			this.defaultTopicBase = defaultTopicBase;
+		}
+
+		public Endpoint[] getEndpoints() {
+			return endpoints;
+		}
+
+		public void setEndpoints(Endpoint[] endpoints) {
+			this.endpoints = endpoints;
+		}
 
 		public Bridges getBridges() {
 			return bridges;
@@ -325,6 +343,30 @@ public class ClusterConfig {
 
 		public void setValue(String value) {
 			this.value = value;
+		}
+	}
+	
+	public static class Endpoint {
+		private String name;
+		private String endpoint;
+		private String topicBase;
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
+		}
+		public String getEndpoint() {
+			return endpoint;
+		}
+		public void setEndpoint(String endpoint) {
+			this.endpoint = endpoint;
+		}
+		public String getTopicBase() {
+			return topicBase;
+		}
+		public void setTopicBase(String topicBase) {
+			this.topicBase = topicBase;
 		}
 	}
 

@@ -15,135 +15,73 @@
  */
 package org.mqtt.addon.test.client.cluster.junit;
 
-import org.eclipse.paho.mqttv5.client.IMqttToken;
-import org.eclipse.paho.mqttv5.client.MqttCallback;
-import org.eclipse.paho.mqttv5.client.MqttClient;
-import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
-import org.eclipse.paho.mqttv5.common.MqttException;
-import org.eclipse.paho.mqttv5.common.MqttMessage;
-import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mqtt.addon.client.cluster.HaClusters;
 import org.mqtt.addon.client.cluster.HaMqttClient;
 import org.mqtt.addon.client.cluster.IClusterConfig;
-import org.mqtt.addon.client.cluster.IHaMqttCallback;
 
 /**
  * FosTest loads in etc/mqttv5-fos.yaml, which defines clusters with all
- * possible FoS options.
+ * possible FoS options. To run the test case, follow the steps below.
+ * <ul>
+ * <li>Start cluster with tcp://localhost:1883-1885 ports</li>
+ * </ul>
+ * <p>
+ * The following configuration files is used for this test case: <br>
+ * <ul>
+ * <li>etc/mqttv5-fos.yaml</li>
+ * </ul>
  * 
  * @author dpark
  *
  */
 public class FosTest {
 
-	private static final String TOPIC = "mytopic";
-	private static final int QOS = 2;
-	private static HaMqttClient haclient;
-
 	@BeforeClass
 	public static void setUp() throws Exception {
 		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-fos.yaml");
 		TestUtil.setEnv("LOG_FILE", "log/proxy.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
-		haclient = HaClusters.getHaMqttClient();
-		haclient.addCallbackCluster(new SubscriberHaMqttClientCallback());
-		haclient.connect();
-		haclient.subscribe(TOPIC, QOS);
+		HaClusters.initialize();
+		HaClusters.connect();
 	}
 
 	@Test
-	public void testSubscriber() throws Exception {
-		while (true) {
-			Thread.sleep(1000);
-		}
+	public void testFos1() throws Exception {
+		HaMqttClient proxy1 = HaClusters.getHaMqttClient("proxy1");
+		HaMqttClient custom1 = HaClusters.getHaMqttClient("custom1");
+		String[] proxy1URIs = proxy1.getCurrentServerURIs();
+		String[] custom1URIs = custom1.getCurrentServerURIs();
+		System.out.printf("proxy1=%d, custom1=%d%n", proxy1URIs.length, custom1URIs.length);
+		assertTrue(proxy1URIs.length == custom1URIs.length);
+	}
+
+	@Test
+	public void testFos2() throws Exception {
+		HaMqttClient proxy2 = HaClusters.getHaMqttClient("proxy2");
+		HaMqttClient custom2 = HaClusters.getHaMqttClient("custom2");
+		String[] proxy2URIs = proxy2.getCurrentServerURIs();
+		String[] custom2URIs = custom2.getCurrentServerURIs();
+		System.out.printf("proxy2=%d, custom2=%d%n", proxy2URIs.length, custom2URIs.length);
+		assertTrue(proxy2URIs.length == custom2URIs.length);
+	}
+
+	@Test
+	public void testFos3() throws Exception {
+		HaMqttClient proxy3 = HaClusters.getHaMqttClient("proxy3");
+		HaMqttClient custom3 = HaClusters.getHaMqttClient("custom3");
+		String[] proxy3URIs = proxy3.getCurrentServerURIs();
+		String[] custom3URIs = custom3.getCurrentServerURIs();
+		System.out.printf("proxy3=%d, custom3=%d%n", proxy3URIs.length, custom3URIs.length);
+		assertTrue(proxy3URIs.length == custom3URIs.length);
 	}
 
 	@AfterClass
 	public static void tearDown() throws Exception {
-		if (haclient != null) {
-			haclient.close();
-		}
-	}
-
-	static class SubscriberMqttCallback implements MqttCallback {
-		@Override
-		public void mqttErrorOccurred(MqttException exception) {
-			System.out.printf("SubscriberHaMqttClientCallback.mqttErrorOccurred():%n");
-			exception.printStackTrace();
-		}
-
-		@Override
-		public void messageArrived(String topic, MqttMessage message) throws Exception {
-			System.out.printf("SubscriberMqttCallback.messageArrived(): topic=%s, message=%s", topic, message);
-		}
-
-		@Override
-		public void disconnected(MqttDisconnectResponse disconnectResponse) {
-			System.out.printf("SubscriberMqttCallback.disconnected(): disconnectResponse=%s%n", disconnectResponse);
-		}
-
-		@Override
-		public void deliveryComplete(IMqttToken token) {
-			System.out.printf("SubscriberMqttCallback.deliveryComplete(): token=%s%n", token);
-		}
-
-		@Override
-		public void connectComplete(boolean reconnect, String serverURI) {
-			System.out.printf("SubscriberMqttCallback.connectComplete(): reconnect=%s, serverURI=%s%n", reconnect,
-					serverURI);
-		}
-
-		@Override
-		public void authPacketArrived(int reasonCode, MqttProperties properties) {
-			System.out.printf("SubscriberMqttCallback.authPacketArrived(): reasonCode=%s, properties=%s%n", reasonCode,
-					properties);
-		}
-	}
-
-	static class SubscriberHaMqttClientCallback implements IHaMqttCallback {
-
-		@Override
-		public void disconnected(MqttClient client, MqttDisconnectResponse disconnectResponse) {
-			System.out.printf("SubscriberHaMqttClientCallback.disconnected(): client=%s, disconnectResponse=%s%n",
-					client, disconnectResponse);
-		}
-
-		@Override
-		public void mqttErrorOccurred(MqttClient client, MqttException exception) {
-			System.out.printf("SubscriberHaMqttClientCallback.mqttErrorOccurred(): client=%s%n", client);
-			exception.printStackTrace();
-		}
-
-		@Override
-		public void messageArrived(MqttClient client, String topic, MqttMessage message) throws Exception {
-			System.out.printf(
-					"SubscriberHaMqttClientCallback.messageArrived(): client=%s, topic=%s, message=%s, payload=%s, id=%d, qos=%d, props=%s%n",
-					client, topic, message, message.getPayload(), message.getId(), message.getQos(),
-					message.getProperties());
-//			System.out.printf(
-//					"SubscriberHaMqttClientCallback.messageArrived(): topic=%s, message=%s%n", topic, message);
-		}
-
-		@Override
-		public void deliveryComplete(MqttClient client, IMqttToken token) {
-			System.out.printf("SubscriberMqttCallback.deliveryComplete(): client=%s, token=%s%n", client, token);
-		}
-
-		@Override
-		public void connectComplete(MqttClient client, boolean reconnect, String serverURI) {
-			System.out.printf(
-					"SubscriberHaMqttClientCallback.connectComplete(): client=%s, reconnect=%s, serverURI=%s%n", client,
-					reconnect, serverURI);
-		}
-
-		@Override
-		public void authPacketArrived(MqttClient client, int reasonCode, MqttProperties properties) {
-			System.out.printf(
-					"SubscriberHaMqttClientCallback.authPacketArrived(): client=%s, reasonCode=%s, properties=%s%n",
-					client, reasonCode, properties);
-		}
+		HaClusters.closeClusters();
 	}
 }

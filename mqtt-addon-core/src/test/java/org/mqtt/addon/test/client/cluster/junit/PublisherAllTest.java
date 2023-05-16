@@ -29,13 +29,24 @@ import org.mqtt.addon.client.cluster.HaMqttClient;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 
 /**
- * PublisherTest configures with "etc/mqttv5-publisher.yaml" to subscribe to
- * "test/mytopic". Run this test case with {@linkplain SubscriberTest}.
+ * PublisherAllTest configures with etc/mqttv5-publisher-all.yaml to set the
+ * publisher type to ALL. To run the test case, follow the steps below.
+ * 
+ * <ul>
+ * <li>Run subscriber listening on 1883-1885:</li>
+ * <ul>
+ * <li>mosquitto_sub -p 1883 -t test/#</li>
+ * <li>mosquitto_sub -p 1884 -t test/#</li>
+ * <li>mosquitto_sub -p 1885 -t test/#</li>
+ * </ul>
+ * <li>Run this test case</li>
+ * </ul>
+ * All of the subscribers should receive the same messages.
  * 
  * @author dpark
  *
  */
-public class PublisherTest {
+public class PublisherAllTest {
 
 	private static final String TOPIC = "test/mytopic";
 	private static final int QOS = 2;
@@ -43,9 +54,9 @@ public class PublisherTest {
 
 	@BeforeClass
 	public static void setUp() throws Exception {
-		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-publisher.yaml");
+		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-publisher-all.yaml");
 		System.setProperty("java.util.logging.config.file", "etc/publisher-logging.properties");
-		TestUtil.setEnv("LOG_FILE", "log/publisher.log");
+		TestUtil.setEnv("LOG_FILE", "log/publisher-all.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
 		haclient = HaClusters.getHaMqttClient();
 		haclient.setCallback(new PublisherMqttCallback());

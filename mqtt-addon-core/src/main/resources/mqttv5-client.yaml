@@ -157,6 +157,30 @@ clusters:
     # is automatically added to connection.serverURIs if not included.
     primaryServerURI: null
     
+    # Default topic base to bound topics publshed by all publishers. Each publisher
+    # (endpoint) can override this value by setting 'endpoints.topicBase'. If it
+    # is not defined, then by default, the publisher is determined by 'publisherType'.
+    defaultTopicBase: null
+    
+    # 'endpoints' defines a list of named endpoints that can be directly invoked
+    # by the HaMqttClient API. By default, each endpoint name begins with the
+    # cluster name followed by a sequenced number starting from 1. This element
+    # allows you to rename them. Note that endpoints that do not match
+    # 'connection.serverURIs' are also included in the endpoint pool for probing.
+    endpoints:
+        # Name of the endpoint. It must be unique with this cluster. Otherewise,
+        # the last endpoint that defines the same name overrides all.
+      - name: null
+        # A single endpoint. Must not include the range wildcard.
+        endpoint: null
+        # Topic base to bound topics published to this endpoint. It overrides
+        # publisherTopicBase.
+        topicBase: null
+    
+    # HaMqttClient provides a bridge service incomming and outgoing messages.
+    # Incoming messages are the ones that are received by this application from
+    # the endpoints. Outgoing messages are the ones that are sent (published) by
+    # this application.
     bridges:
     
       # 'in' fowards incoming messages to the target clusters.
@@ -242,6 +266,18 @@ clusters:
       #     tcp://192.168.1.10:1883-1885
       #     tcp://192.168.1.10-20:1883
       #     tcp://192.168.1.10-20
+      #
+      # Each endpoint is given a unique name in the following format:
+      #
+      #    <clusterName>-<endpointNumber> 
+      #
+      # where <clusterName> is this cluster's name defined by the 'name' attribute,
+      #       <endpointNumber> is a sequence number determined in the order 
+      #                        the endpoints are defined by the 'serverURIs'
+      #                        attribute. endpintNumber begins from 1.
+      #
+      # You can overwrite the default endpoint name by defining it in the 'endpoints'
+      # element.
       #
       # Default: [tcp://localhost:1883-1885]
       serverURIs: [tcp://localhost:1883-1885]

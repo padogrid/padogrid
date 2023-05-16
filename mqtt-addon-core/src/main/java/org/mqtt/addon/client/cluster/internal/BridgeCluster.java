@@ -5,17 +5,20 @@ import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.util.MqttTopicValidator;
 import org.mqtt.addon.client.cluster.HaMqttClient;
 
-public class BridgeCluster {
-	private HaMqttClient client;
-	private String[] topicFilters;
-	private int qos;
-	
+public class BridgeCluster extends TopicInfo {
+	protected HaMqttClient client;
+	protected String[] topicFilters;
+	protected int qos;
+
 	public BridgeCluster(HaMqttClient client, String[] topicFilters, int qos) {
 		this.client = client;
 		this.topicFilters = topicFilters;
 		this.qos = qos;
+		if (this.qos < 0 || this.qos > 2) {
+			this.qos = 0;
+		}
 	}
-	
+
 	public void publish(String topic, byte[] payload, int qos, boolean retained) throws MqttException {
 		for (int i = 0; i < topicFilters.length; i++) {
 			String topicFilter = topicFilters[i];
@@ -29,7 +32,7 @@ public class BridgeCluster {
 			}
 		}
 	}
-	
+
 	public void publish(String topic, MqttMessage message) throws MqttException {
 		for (int i = 0; i < topicFilters.length; i++) {
 			String topicFilter = topicFilters[i];
@@ -42,17 +45,5 @@ public class BridgeCluster {
 				break;
 			}
 		}
-	}
-	
-	public String getClusterName() {
-		return client.getClusterName();
-	}
-
-	public int getQos() {
-		return qos;
-	}
-
-	public void setQos(int qos) {
-		this.qos = qos;
 	}
 }

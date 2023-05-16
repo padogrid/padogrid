@@ -21,6 +21,7 @@ import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.common.MqttException;
+import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.MqttSecurityException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 
@@ -77,7 +78,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * Returns the currently connected Server URIs Implemented due to:
 	 * https://bugs.eclipse.org/bugs/show_bug.cgi?id=481097.
 	 * 
-	 * This method is analogous to {@link #getLiveClientIds()}.
+	 * This method is analogous to {@link #getServerURIs()}.
 	 *
 	 * @return the currently connected server URIs
 	 * @see MqttClient#getCurrentServerURI()
@@ -271,6 +272,71 @@ public interface IHaMqttClient extends IMqttClient {
 	 * longer operational and cannot be reconnected.
 	 */
 	boolean isClosed();
+
+	/**
+	 * Returns the publisher extracted from the live client list based on the
+	 * publisher type as follows.
+	 * <p>
+	 * <b>RANDOM, ROUND_ROBIN</b>
+	 * <ul>
+	 * <li>May return a different publisher instance per invocation.</li>
+	 * </ul>
+	 * <b>STICKY, ALL</b>
+	 * <ul>
+	 * <li>Always returns the same publisher instance until the publisher
+	 * fails.</li>
+	 * <li>If the publisher fails, then it returns another instance retrieved from
+	 * the live list. The new instance becomes sticky.</li>
+	 * <li>If the primary publisher has been configured then it always returns the
+	 * primary publisher instance. If the primary publisher fails, then another
+	 * instance is returned instead. The new instance becomes sticky until the
+	 * primary publisher becomes available again.</li>
+	 * </ul>
+	 * Note that {@linkplain PublisherType#ALL} returns a sticky publisher even
+	 * though {@link #publish(String, MqttMessage)} and
+	 * {@link #publish(String, byte[], int, boolean)} publishes each message to all
+	 * live endpoints.
+	 * <p>
+	 * 
+	 * @return null if the publisher is not available.
+	 */
+	public MqttClient getPublisher();
+		
+	/**
+	 * Returns the publisher with the topic base that matches the specified topic.
+	 * If the topic base is not defined or there is no match, then it returns the
+	 * publisher based on the publisher type, i.e., returns {@link #getPublisher()}.
+	 * 
+	 * @param topic Topic to find the publisher that has the matching topic base. If
+	 *              topic is null then it is equivalent to invoking
+	 *              {@link #getPublisher()}.
+	 * @return null if the publisher is not available.
+	 */
+	public MqttClient getPublisher(String topic);
+		
+	
+	/**
+	 * Publishes the specified message to the specified endpoint's topic.
+	 * 
+	 * @param endpointName Endpoint name
+	 * @param topic        Topic
+	 * @param message      Message to publish
+	 * @throws MqttException if there was an error publishing message
+	 */
+	public void publish(String endpointName, String topic, MqttMessage message) throws MqttException;
+
+	/**
+	 * PUblishes the specified payload to the spcified endpoint's topic.
+	 * 
+	 * @param endpointName Endpoint name
+	 * @param topic        Topic
+	 * @param payload      Payload
+	 * @param qos          QoS 0, 1, or 2
+	 * @param retained     true to retain payload
+	 * @throws MqttException if there was an error publishing message
+	 */
+	public void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained)
+			throws MqttException;
 
 	/**
 	 * Subscribes to the specified array of subscriptions.

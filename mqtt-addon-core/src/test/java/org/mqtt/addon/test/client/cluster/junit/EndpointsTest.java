@@ -16,7 +16,6 @@
 package org.mqtt.addon.test.client.cluster.junit;
 
 import org.eclipse.paho.mqttv5.client.IMqttToken;
-import org.eclipse.paho.mqttv5.client.MqttCallback;
 import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
 import org.eclipse.paho.mqttv5.common.MqttException;
@@ -31,34 +30,74 @@ import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.IHaMqttCallback;
 
 /**
- * SubscriberTest configures with "etc/mqttv5-subscriber.yaml" to subscribe to
- * "test/mytopic". Run this test case with {@linkplain PublisherTest}.
- * 
+ * EndpointsTest configures with "etc/mqttv5-endpoints.yaml" to subscribe to
+ * topics by endpoint names. To run the test case, follow the steps below.
+ * <ul>
+ * <li>Start endpoints-test with 1883-1885 ports</li>
+ * </ul>
+ * <p>
+ * The following configuration files is used for this test case: <br>
+ * <ul>
+ * <li>etc/mqttv5-endpoints.yaml</li>
+ * </ul>
+ * <p>
+ * The callback should report the following messages.
+ * <p>
+ * <code>
+ * SubscriberMqttCallback.deliveryComplete(): endpoint=tcp://localhost:1884, topics=test/edge-test/edge-2/1884 <br>
+ * SubscriberMqttCallback.deliveryComplete(): endpoint=tcp://localhost:1883, topics=test/edge/endpoints-test-1/1883<br>
+ * SubscriberMqttCallback.deliveryComplete(): endpoint=tcp://localhost:1884, topics=test/any/edge-2/1884
+ * </code>
  * @author dpark
  *
  */
-public class SubscriberTest {
+public class EndpointsTest {
 
-	private static final String TOPIC_FILTER = "test/mytopic";
 	private static final int QOS = 2;
 	private static HaMqttClient haclient;
 
 	@BeforeClass
 	public static void setUp() throws Exception {
-		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-subscriber.yaml");
+		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-endpoints.yaml");
 		System.setProperty("java.util.logging.config.file", "etc/publisher-logging.properties");
-		TestUtil.setEnv("LOG_FILE", "log/subscriber.log");
+		TestUtil.setEnv("LOG_FILE", "log/endpoints.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
 		haclient = HaClusters.getHaMqttClient();
-		haclient.addCallbackCluster(new SubscriberHaMqttClientCallback());
+		haclient.addCallbackCluster(new PublisherHaMqttClientCallback());
 		haclient.connect();
-		haclient.subscribe(TOPIC_FILTER, QOS);
 	}
 
 	@Test
-	public void testSubscriber() throws Exception {
-		while (true) {
-			Thread.sleep(1000);
+	public void testPublish() throws InterruptedException {
+		int messageCount = 1000;
+		for (long i = 0; i < messageCount; i++) {
+			byte[] payload = ("my message " + i).getBytes();
+			MqttMessage message = new MqttMessage(payload);
+			message.setQos(QOS);
+			boolean isRetry = false;
+			do {
+				try {
+					// Publish by default endpoint name: endpoints-test-1 -> tcp://localhost:1883,
+					// test/edge/endpoints-test-1/1883
+					haclient.publish("endpoints-test-1", "test/edge/endpoints-test-1/1883", message);
+
+					// Publish by endpoint name: edge-2 -> tcp://localhost:1884,
+					// test/any/edge-2/1884
+					haclient.publish("edge-2", "test/any/edge-2/1884", message);
+
+					// Publish by topic: tcp://localhost:1884, test/edge-test/edge-2/1884
+					haclient.publish("test/edge-test/edge-2/1884", message);
+					isRetry = false;
+				} catch (MqttException e) {
+					e.printStackTrace();
+					System.err.printf("testPublish(): %s%n", e.getMessage());
+					isRetry = true;
+					Thread.sleep(1000L);
+				}
+			} while (isRetry);
+			System.out.println("Published " + message);
+
+			Thread.sleep(1000L);
 		}
 	}
 
@@ -69,42 +108,7 @@ public class SubscriberTest {
 		}
 	}
 
-	static class SubscriberMqttCallback implements MqttCallback {
-		@Override
-		public void mqttErrorOccurred(MqttException exception) {
-			System.out.printf("SubscriberHaMqttClientCallback.mqttErrorOccurred():%n");
-			exception.printStackTrace();
-		}
-
-		@Override
-		public void messageArrived(String topic, MqttMessage message) throws Exception {
-			System.out.printf("SubscriberMqttCallback.messageArrived(): topic=%s, message=%s", topic, message);
-		}
-
-		@Override
-		public void disconnected(MqttDisconnectResponse disconnectResponse) {
-			System.out.printf("SubscriberMqttCallback.disconnected(): disconnectResponse=%s%n", disconnectResponse);
-		}
-
-		@Override
-		public void deliveryComplete(IMqttToken token) {
-			System.out.printf("SubscriberMqttCallback.deliveryComplete(): token=%s%n", token);
-		}
-
-		@Override
-		public void connectComplete(boolean reconnect, String serverURI) {
-			System.out.printf("SubscriberMqttCallback.connectComplete(): reconnect=%s, serverURI=%s%n", reconnect,
-					serverURI);
-		}
-
-		@Override
-		public void authPacketArrived(int reasonCode, MqttProperties properties) {
-			System.out.printf("SubscriberMqttCallback.authPacketArrived(): reasonCode=%s, properties=%s%n", reasonCode,
-					properties);
-		}
-	}
-
-	static class SubscriberHaMqttClientCallback implements IHaMqttCallback {
+	static class PublisherHaMqttClientCallback implements IHaMqttCallback {
 
 		@Override
 		public void disconnected(MqttClient client, MqttDisconnectResponse disconnectResponse) {
@@ -129,8 +133,15 @@ public class SubscriberTest {
 
 		@Override
 		public void deliveryComplete(MqttClient client, IMqttToken token) {
-			System.out.printf("SubscriberMqttCallback.deliveryComplete(): endpoint=%s, token=%s%n",
-					client.getServerURI(), token);
+			StringBuffer buffer = new StringBuffer();
+			for (int i = 0; i < token.getTopics().length; i++) {
+				if (i > 0) {
+					buffer.append(",");
+				}
+				buffer.append(token.getTopics()[i]);
+			}
+			System.out.printf("SubscriberMqttCallback.deliveryComplete(): endpoint=%s, topics=%s%n",
+					client.getServerURI(), buffer.toString());
 		}
 
 		@Override

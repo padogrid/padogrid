@@ -58,7 +58,7 @@ public class VirtualClusters implements Constants {
 		writeLine();
 	}
 
-	public static void main(String[] args) {
+	public static void main(String...args) {
 		String configFilePath = null;
 		String arg;
 		for (int i = 0; i < args.length; i++) {
@@ -85,7 +85,7 @@ public class VirtualClusters implements Constants {
 			HaClusters.initialize(new File(configFilePath));
 			HaClusters.connect();
 			
-			// Register a shutdown hook thread to gracefull shutdown
+			// Register a shutdown hook thread to gracefully shutdown
 			Runtime.getRuntime().addShutdownHook(new Thread()
 		    {
 		      public void run()

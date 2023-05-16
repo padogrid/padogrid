@@ -1,0 +1,22 @@
+defaultCluster: bridge-subscriber-edge
+      
+clusters:
+
+  # bridge-subscriber-edge forwards received messages to bridge-subscriber-enterprise
+  - name: bridge-subscriber-edge
+    # autoConnect is required unless connection is made by the app 
+    autoConnect: true
+    connection:
+      serverURIs: [tcp://localhost:1883-1885]
+
+    bridges:
+      # Forward incoming messages to bridge-subscriber-enterprise
+      in:
+        - cluster: bridge-subscriber-enterprise
+          topicFilters: [test/#]
+          qos: 0
+   
+  # bridge-subscriber-enterprise receives messages from bridge-subscriber-edge      
+  - name: bridge-subscriber-enterprise
+    connection:
+      serverURIs: [tcp://localhost:32001-32003]

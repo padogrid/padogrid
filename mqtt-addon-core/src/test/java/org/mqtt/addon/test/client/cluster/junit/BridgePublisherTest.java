@@ -29,19 +29,20 @@ import org.mqtt.addon.client.cluster.HaMqttClient;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 
 /**
- * This test case demonstrates a client publishes messages to the cluster,
- * "cluster-edge", which in turn publishes them to the cluster,
- * "cluster-enterprise". To run the test case, follow the steps below.
+ * This test case demonstrates a client publishing messages to the cluster,
+ * "bridge-publisher-edge", which in turn publishes them to the cluster,
+ * "bridge-publisher-enterprise". To run the test case, follow the steps below.
  * 
  * <ul>
- * <li>Start cluster-edge with 1883-1885 ports</li>
- * <li>Start cluster-enterprise with 32001-32003 ports</li>
+ * <li>Start bridge-publisher-edge 1883-1885 ports</li>
+ * <li>Start bridge-subscriber-enterprise with 32001-32003 ports</li>
  * <li>Run subscriber listening on 32001-32003</li>
  * <li>Run this test case</li>
  * </ul>
  * 
- * The subscriber listening on cluster-enterprise (32001-32003) should receive
- * messages that were published by this test case on cluster-edge (1883-1885).
+ * The subscriber listening on bridge-publisher-enterprise (32001-32003) should
+ * receive messages that were published by this test case on
+ * bridge-publisher-edge (1883-1885).
  * 
  * @author dpark
  *
@@ -54,8 +55,8 @@ public class BridgePublisherTest {
 
 	@BeforeClass
 	public static void setUp() throws Exception {
-		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-publisher-bridge.yaml");
-		System.setProperty("java.util.logging.config.file", "etc/publisher-bridge-logging.properties");
+		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-bridge-publisher.yaml");
+		System.setProperty("java.util.logging.config.file", "etc/publisher-publisher-logging.properties");
 		TestUtil.setEnv("LOG_FILE", "log/publisher.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
 		haclient = HaClusters.getHaMqttClient();
@@ -65,7 +66,8 @@ public class BridgePublisherTest {
 
 	@Test
 	public void testPublish() throws InterruptedException {
-		for (long i = 0; i < 1000; i++) {
+		int messageCount = 1000;
+		for (long i = 0; i < messageCount; i++) {
 			byte[] payload = ("my message " + i).getBytes();
 			MqttMessage message = new MqttMessage(payload);
 			message.setQos(QOS);
@@ -85,7 +87,7 @@ public class BridgePublisherTest {
 
 			Thread.sleep(1000L);
 		}
-		System.out.printf("Successfully produced 10 messages to a topic called %s%n", TOPIC);
+		System.out.printf("Successfully published %d messages to topics [%s]%n", messageCount, TOPIC);
 	}
 
 	@AfterClass
@@ -114,7 +116,8 @@ public class BridgePublisherTest {
 
 		@Override
 		public void deliveryComplete(IMqttToken token) {
-			System.out.println("PublisherMqttCallback.deliveryComplete(): " + token);
+			System.out.printf("PublisherMqttCallback.deliveryComplete(): serverURI=%s%n",
+					token.getClient().getServerURI());
 
 		}
 
