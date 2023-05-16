@@ -15,8 +15,6 @@
  */
 package org.mqtt.addon.test.client.cluster.junit;
 
-import static org.junit.Assert.assertTrue;
-
 import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
@@ -32,58 +30,68 @@ import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.IHaMqttCallback;
 
 /**
- * RetainedMessageTest configures with "etc/mqttv5-retained.yaml" to test
- * retained messages. To run the test case, follow the steps below.
+ * PublisherManyTest configures with "etc/mqttv5-publisher-many.yaml" to test
+ * 'initialEndpointCount'. To run the test case, follow the steps below.
  * 
  * <ul>
- * <li>Start cluster-default with 1883-1885 ports</li>
+ * <li>Start endpoints-test with 1883-1889 ports</li>
  * </ul>
  * <p>
  * The following configuration and log files are used for this test case: <br>
  * <ul>
- * <li>etc/mqttv5-retained.yaml</li>
- * <li>log/retained.log</li>
+ * <li>etc/mqttv5-endpoints.yaml</li>
+ * <li>log/publisher-many.log</li>
  * </ul>
+ * <p>
+ * Check the log file to see if there are two (2) passes to probing. The first
+ * pass should connect three(3) endpoints and the next pass should connect the
+ * remaining endpoints.
  * 
  * @author dpark
  *
  */
-public class RetainedMessageTest {
+public class PublisherManyTest {
 
-	private static final String TOPIC = "mytopic";
+	private static final String TOPIC = "test/mytopic";
 	private static final int QOS = 2;
 	private static HaMqttClient haclient;
-	private static int retainedMessageReceivedCount = 0;
 
 	@BeforeClass
 	public static void setUp() throws Exception {
-		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-retained.yaml");
-		TestUtil.setEnv("LOG_FILE", "log/retained.log");
+		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-publisher-many.yaml");
+		System.setProperty("java.util.logging.config.file", "etc/publisher-logging.properties");
+		TestUtil.setEnv("LOG_FILE", "log/publisher-many.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
 		haclient = HaClusters.getHaMqttClient();
-		haclient.addCallbackCluster(new SubscriberHaMqttClientCallback());
+		haclient.addCallbackCluster(new PublisherHaMqttClientCallback());
 		haclient.connect();
-
-		int messageCount = 100;
-		for (int i = 1; i <= messageCount; i++) {
-			byte[] message = ("Retained message " + i).getBytes();
-			haclient.publish(TOPIC, message, QOS, true);
-		}
-		Thread.sleep(1000);
-		haclient.disconnect();
-		haclient.close();
 	}
 
 	@Test
-	public void testSubscriber() throws Exception {
-		int messageCount = 3;
-		Thread.sleep(1000);
+	public void testPublish() throws InterruptedException {
+		int messageCount = 1000;
+		for (long i = 0; i < messageCount; i++) {
+			byte[] payload = ("my message " + i).getBytes();
+			MqttMessage message = new MqttMessage(payload);
+			message.setQos(QOS);
+			message.setRetained(true);
+			boolean isRetry = false;
+			do {
+				try {
+					haclient.publish(TOPIC, message);
+					isRetry = false;
+				} catch (MqttException e) {
+					e.printStackTrace();
+					System.err.printf("testPublish(): %s%n", e.getMessage());
+					isRetry = true;
+					Thread.sleep(1000L);
+				}
+			} while (isRetry);
+			System.out.println("Published " + message);
 
-		// Should receive three (3) retained messages
-		haclient.subscribe(TOPIC, QOS);
-		haclient.connect();
-		Thread.sleep(1000);
-		assertTrue(messageCount == retainedMessageReceivedCount);
+			Thread.sleep(1000L);
+		}
+		System.out.printf("Successfully published %d messages to topics [%s]%n", messageCount, TOPIC);
 	}
 
 	@AfterClass
@@ -93,32 +101,40 @@ public class RetainedMessageTest {
 		}
 	}
 
-	static class SubscriberHaMqttClientCallback implements IHaMqttCallback {
+	static class PublisherHaMqttClientCallback implements IHaMqttCallback {
 
 		@Override
 		public void disconnected(MqttClient client, MqttDisconnectResponse disconnectResponse) {
-			System.out.printf("SubscriberHaMqttClientCallback.disconnected(): client=%s, disconnectResponse=%s%n",
-					client, disconnectResponse);
+			System.out.printf("SubscriberHaMqttClientCallback.disconnected(): endpoint=%s, disconnectResponse=%s%n",
+					client.getServerURI(), disconnectResponse);
 		}
 
 		@Override
 		public void mqttErrorOccurred(MqttClient client, MqttException exception) {
-			System.out.printf("SubscriberHaMqttClientCallback.mqttErrorOccurred(): client=%s%n", client);
+			System.out.printf("SubscriberHaMqttClientCallback.mqttErrorOccurred(): endpoint=%s%n",
+					client.getServerURI());
 			exception.printStackTrace();
 		}
 
 		@Override
 		public void messageArrived(MqttClient client, String topic, MqttMessage message) throws Exception {
 			System.out.printf(
-					"SubscriberHaMqttClientCallback.messageArrived(): client=%s, topic=%s, message=%s, payload=%s, id=%d, qos=%d, props=%s%n",
-					client, topic, message, message.getPayload(), message.getId(), message.getQos(),
+					"SubscriberHaMqttClientCallback.messageArrived(): endpoint=%s, topic=%s, message=%s, payload=%s, id=%d, qos=%d, props=%s%n",
+					client.getServerURI(), topic, message, message.getPayload(), message.getId(), message.getQos(),
 					message.getProperties());
-			retainedMessageReceivedCount++;
 		}
 
 		@Override
 		public void deliveryComplete(MqttClient client, IMqttToken token) {
-			System.out.printf("SubscriberMqttCallback.deliveryComplete(): client=%s, token=%s%n", client, token);
+			StringBuffer buffer = new StringBuffer();
+			for (int i = 0; i < token.getTopics().length; i++) {
+				if (i > 0) {
+					buffer.append(",");
+				}
+				buffer.append(token.getTopics()[i]);
+			}
+			System.out.printf("SubscriberMqttCallback.deliveryComplete(): endpoint=%s, topics=%s%n",
+					client.getServerURI(), buffer.toString());
 		}
 
 		@Override
@@ -131,8 +147,8 @@ public class RetainedMessageTest {
 		@Override
 		public void authPacketArrived(MqttClient client, int reasonCode, MqttProperties properties) {
 			System.out.printf(
-					"SubscriberHaMqttClientCallback.authPacketArrived(): client=%s, reasonCode=%s, properties=%s%n",
-					client, reasonCode, properties);
+					"SubscriberHaMqttClientCallback.authPacketArrived(): endpoint=%s, reasonCode=%s, properties=%s%n",
+					client.getServerURI(), reasonCode, properties);
 		}
 	}
 }

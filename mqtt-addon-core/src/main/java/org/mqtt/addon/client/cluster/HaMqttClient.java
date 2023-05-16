@@ -173,6 +173,11 @@ public class HaMqttClient implements IHaMqttClient {
 		this.liveClientMap = liveClientMap;
 		this.liveClients = shuffleEndpoints(clients);
 		this.defaultTopicBase = defaultTopicBase;
+		if (defaultTopicBase != null && defaultTopicBase.endsWith("/") == false) {
+			this.defaultTopicBase = defaultTopicBase + "/";
+		} else {
+			this.defaultTopicBase = defaultTopicBase + "";
+		}
 		this.topicBaseMap = topicBaseMap;
 		this.logger.debug("Live client list recevied [size=%d].", liveClientMap.size());
 	}
@@ -213,19 +218,21 @@ public class HaMqttClient implements IHaMqttClient {
 		// calls to prevent scanning the map again.
 		if (topic != null) {
 			String endpointName = invertedTopicBaseMap.get(topic);
-			if (endpointName == null && invertedTopicBaseScannedMap.get(topic) == null) {
-				for (Map.Entry<String, String> entry : topicBaseMap.entrySet()) {
-					String t = entry.getValue();
-					if (topic.startsWith(t)) {
-						endpointName = entry.getKey();
-						invertedTopicBaseMap.put(topic, endpointName);
-						return getMqttClient(endpointName);
+			if (endpointName == null) {
+				if (invertedTopicBaseScannedMap.get(topic) == null) {
+					for (Map.Entry<String, String> entry : topicBaseMap.entrySet()) {
+						String t = entry.getValue();
+						if (topic.startsWith(t)) {
+							endpointName = entry.getKey();
+							invertedTopicBaseMap.put(topic, endpointName);
+							return getMqttClient(endpointName);
+						}
 					}
-				}
-				invertedTopicBaseScannedMap.put(topic, true);
-				if (defaultTopicBase != null && defaultTopicBase.startsWith(endpointName)) {
-					invertedTopicBaseMap.put(topic, endpointName);
-					return getMqttClient(endpointName);
+					invertedTopicBaseScannedMap.put(topic, true);
+//					if (defaultTopicBase != null && defaultTopicBase.startsWith(endpointName)) {
+//						invertedTopicBaseMap.put(topic, endpointName);
+//						return getMqttClient(endpointName);
+//					}
 				}
 			} else {
 				return getMqttClient(endpointName);

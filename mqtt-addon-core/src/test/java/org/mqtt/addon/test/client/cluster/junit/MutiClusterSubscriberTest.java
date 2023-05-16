@@ -37,7 +37,7 @@ import org.mqtt.addon.client.cluster.IHaMqttCallback;
  * <li>Start multi-02 with 32001-32003 ports</li>
  * </ul>
  * <p>
- * The following configuration files is used for this test case: <br>
+ * The following configuration file is used for this test case: <br>
  * <ul>
  * <li>etc/mqttv5-multi-subscribers.yaml</li>
  * </ul>

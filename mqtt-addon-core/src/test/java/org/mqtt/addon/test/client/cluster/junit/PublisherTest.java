@@ -29,7 +29,7 @@ import org.mqtt.addon.client.cluster.HaMqttClient;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 
 /**
- * PublisherTest configures with "etc/mqttv5-publisher.yaml" to subscribe to
+ * PublisherTest configures with "etc/mqttv5-publisher.yaml" to publish to
  * "test/mytopic". Run this test case with {@linkplain SubscriberTest}.
  * 
  * @author dpark

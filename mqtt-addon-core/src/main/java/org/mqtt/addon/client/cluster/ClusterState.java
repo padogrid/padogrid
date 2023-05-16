@@ -87,6 +87,7 @@ public class ClusterState implements IClusterConfig {
 	private MqttClient stickySubscriber;
 
 	private final List<String> allEndpointList = Collections.synchronizedList(new ArrayList<String>(10));
+	// <endpointName, endpoint>
 	private final Map<String, String> allEndpointMap = Collections.synchronizedMap(new HashMap<String, String>(10));
 	private final Map<String, MqttClient> liveClientMap = Collections
 			.synchronizedMap(new HashMap<String, MqttClient>(10));
@@ -134,10 +135,16 @@ public class ClusterState implements IClusterConfig {
 		this.timeToWaitInMsec = clusterConfig.getTimeToWait();
 		this.primaryServerURI = clusterConfig.getPrimaryServerURI();
 		this.defaultTopicBase = clusterConfig.getDefaultTopicBase();
+		if (this.defaultTopicBase != null) {
+			this.defaultTopicBase = this.defaultTopicBase.trim();
+			if (this.defaultTopicBase.endsWith("/") == false) {
+				this.defaultTopicBase = this.defaultTopicBase + "/";
+			}
+		}
 		this.persistence = persistence;
 		this.executorService = executorService;
 		this.logger = LogManager.getLogger(String.format("ClusterState[%s]", haclient.getClusterName()));
-		clientIdPrefix = haclient.getClusterName();
+		this.clientIdPrefix = haclient.getClusterName();
 
 		MqttConnectionOptions options = clusterConfig.getConnection();
 		if (options == null) {
@@ -152,6 +159,16 @@ public class ClusterState implements IClusterConfig {
 		}
 
 		// Build topicBaseMap, invertedTopicBaseMap
+		if (defaultTopicBase != null && defaultTopicBase.length() > 0) {
+			Iterator<Map.Entry<String, String>> iterator = allEndpointMap.entrySet().iterator();
+			while (iterator.hasNext()) {
+				Map.Entry<String, String> entry = iterator.next();
+				String endpointName = entry.getKey();
+				String topicBase = defaultTopicBase + endpointName + "/";
+				topicBaseMap.put(endpointName, topicBase);
+				invertedTopicBaseMap.put(topicBase, endpointName);
+			}
+		}
 		if (clusterConfig.getEndpoints() != null) {
 			for (ClusterConfig.Endpoint endpoint : clusterConfig.getEndpoints()) {
 				if (endpoint.getEndpoint() != null) {
@@ -169,20 +186,25 @@ public class ClusterState implements IClusterConfig {
 							Map.Entry<String, String> entry = iterator.next();
 							if (endpoint.getEndpoint().equals(entry.getValue())) {
 								iterator.remove();
-								deadEndpointMap.remove(entry.getKey());
+								String ename = entry.getKey();
+								deadEndpointMap.remove(ename);
+								String ep = topicBaseMap.remove(ename);
+								invertedTopicBaseMap.remove(ep);
 							}
 						}
 						allEndpointMap.put(endpointName, endpoint.getEndpoint());
 						deadEndpointMap.put(endpointName, endpoint.getEndpoint());
-						if (endpoint.getTopicBase() != null) {
-							if (endpoint.getTopicBase().endsWith("/")) {
-								topicBaseMap.put(endpointName, endpoint.getTopicBase());
-								invertedTopicBaseMap.put(endpoint.getTopicBase(), endpointName);
-							} else {
-								topicBaseMap.put(endpointName, endpoint.getTopicBase() + "/");
-								invertedTopicBaseMap.put(endpoint.getTopicBase() + "/", endpointName);
-
+						String topicBase = endpoint.getTopicBase();
+						if (topicBase == null) {
+							topicBase = defaultTopicBase + endpointName + "/";
+							topicBaseMap.put(endpointName, topicBase);
+							invertedTopicBaseMap.put(topicBase, endpointName);
+						} else {
+							if (topicBase.endsWith("/") == false) {
+								topicBase = topicBase + "/";
 							}
+							topicBaseMap.put(endpointName, topicBase);
+							invertedTopicBaseMap.put(topicBase, endpointName);
 						}
 					}
 				}
@@ -503,7 +525,8 @@ public class ClusterState implements IClusterConfig {
 	/**
 	 * Connects to dead endpoints.
 	 * 
-	 * @param connectionCount      Maximum number of connections to make
+	 * @param connectionCount      Maximum number of connections to make. -1 for all
+	 *                             endpoints.
 	 * @param maxSubscriptionCount Maximum number of subscribers
 	 * @param revivedEndpointSet   Output of revived endpoint collection made by
 	 *                             this method
@@ -679,10 +702,27 @@ public class ClusterState implements IClusterConfig {
 		synchronized (lock) {
 			int maxRevivalCount = liveEndpointCount - liveClientMap.size();
 			int maxSubscriptionCount = subscriberCount - liveClientMap.size();
+
+			// Handle initalEndpointCount. This occurs only once during initialization.
+			// TODO: see if we can speed up the connection process by introducing threads
+			if (isFirstConnectionAttempt) {
+				if (initialEndpointCount >= 0) {
+					if (maxRevivalCount < 0 || initialEndpointCount < maxRevivalCount) {
+						maxRevivalCount = initialEndpointCount;
+					}
+				}
+				isFirstConnectionAttempt = false;
+			}
+
+			// Connect dead endpoints which are usually the ones being connected for the
+			// first time.
 			IMqttToken[] mqttTokens = connectDeadEndpoints(maxRevivalCount, maxSubscriptionCount, revivedEndpointSet);
 			if (mqttTokens != null) {
 				maxRevivalCount -= mqttTokens.length;
 			}
+
+			// Revive the dead clients which are the ones that were connected once but
+			// failed after.
 			reviveDeadClients(maxRevivalCount, maxSubscriptionCount, revivedEndpointSet);
 		}
 		return revivedEndpointSet;
