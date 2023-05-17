@@ -179,7 +179,7 @@ public class ClusterSubscriber implements Constants {
 		}
 
 		// Collect system properties - passed in by the invoking script.
-		if (endpoints == null) {
+		if (configFilePath == null && clusterName == null && endpoints == null) {
 			clusterName = System.getProperty("cluster.name");
 			endpoints = System.getProperty("cluster.endpoints");
 		}
@@ -210,7 +210,7 @@ public class ClusterSubscriber implements Constants {
 		}
 		writeLine("cluster: " + virtualClusterName + " (virtual)");
 
-		// If endpoints is not set, then default
+		// If endpoints is not set, then default to
 		// IClusterConfig.DEFAULT_CLIENT_SERVER_URIS.
 		if (configFilePath == null && endpoints == null) {
 			endpoints = IClusterConfig.DEFAULT_CLIENT_SERVER_URIS;
@@ -272,8 +272,7 @@ public class ClusterSubscriber implements Constants {
 
 			@Override
 			public void mqttErrorOccurred(MqttClient client, MqttException exception) {
-				// TODO Auto-generated method stub
-
+				// do nothing
 			}
 
 			@Override
@@ -285,33 +284,29 @@ public class ClusterSubscriber implements Constants {
 
 			@Override
 			public void disconnected(MqttClient client, MqttDisconnectResponse disconnectResponse) {
-				// TODO Auto-generated method stub
-
+				// do nothing
 			}
 
 			@Override
 			public void deliveryComplete(MqttClient client, IMqttToken token) {
-				// TODO Auto-generated method stub
-
+				// do nothing
 			}
 
 			@Override
 			public void connectComplete(MqttClient client, boolean reconnect, String serverURI) {
-				// TODO Auto-generated method stub
-
+				// do nothing
 			}
 
 			@Override
 			public void authPacketArrived(MqttClient client, int reasonCode, MqttProperties properties) {
-				// TODO Auto-generated method stub
-
+				// do nothing
 			}
 		});
 
 		// Connect
 		try {
-			client.subscribe(topicFilter, qos);
 			client.connect();
+			client.subscribe(topicFilter, qos);
 			if (client.isConnected() == false) {
 				System.err
 						.printf("ERROR: Unable to connect to any of the endpoints in the cluster. Command aborted.%n");

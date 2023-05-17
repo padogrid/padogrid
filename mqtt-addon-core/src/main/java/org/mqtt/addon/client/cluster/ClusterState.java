@@ -1879,16 +1879,9 @@ public class ClusterState implements IClusterConfig {
 				synchronized (lock) {
 					// Mosquitto broker may have disconnected with a severe error
 					// such as a protocol error. Once disconnected by the broke, it
-					// is seen that the client is unable to reconnect. Let's close
-					// the client and move it to the dead enpoint list so that
-					// we have a new client instance.
-					liveClientMap.remove(endpointName);
-					try {
-						client.close();
-					} catch (Exception ex) {
-						// ignore
-					}
-					deadEndpointMap.put(endpointName, client.getCurrentServerURI());
+					// is seen that the client is unable to reconnect. Mark the
+					// client for revival.
+					ClusterState.this.markClientForRevival(endpointName, client);
 				}
 				logger.warn(String.format(
 						"MqttCallbackImpl().disconnected() - Client disconnected: [%s]. disconnectResponse: [%s]. Moved to dead client list: [endpointName=%s, endpoint=%s].",

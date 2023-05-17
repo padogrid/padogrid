@@ -18,21 +18,13 @@ package org.mqtt.addon.client.console;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-import org.eclipse.paho.mqttv5.client.IMqttToken;
-import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptionsBuilder;
-import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
-import org.eclipse.paho.mqttv5.common.MqttException;
-import org.eclipse.paho.mqttv5.common.MqttMessage;
-import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.mqtt.addon.client.cluster.HaClusters;
 import org.mqtt.addon.client.cluster.HaMqttClient;
 import org.mqtt.addon.client.cluster.IClusterConfig;
-import org.mqtt.addon.client.cluster.IHaMqttCallback;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
 
 public class ClusterPublisher implements Constants {
@@ -77,7 +69,8 @@ public class ClusterPublisher implements Constants {
 		writeLine("   - If '-cluster', '-config', and '-endpoints' are not specified, then the PadoGrid's");
 		writeLine("     current context cluster is used.");
 		writeLine();
-		writeLine("   - If PadoGrid cluster is not an MQTT cluster it defaults to endpoints, 'tcp://localhost:1883-1885'.");
+		writeLine(
+				"   - If PadoGrid cluster is not an MQTT cluster it defaults to endpoints, 'tcp://localhost:1883-1885'.");
 		writeLine();
 		writeLine("OPTIONS");
 		writeLine("   -cluster cluster_name");
@@ -92,16 +85,8 @@ public class ClusterPublisher implements Constants {
 		writeLine("             Optional configuration file. Default: current cluster's etc/mqtt5-client.yaml");
 		writeLine();
 		writeLine("   -fos fos");
-		writeLine("             Optional FoS value. Valid values are 0, 1, 2, 3. Default: 0.");writeLine();
+		writeLine("             Optional FoS value. Valid values are 0, 1, 2, 3. Default: 0.");
 		writeLine();
-		writeLine("   -qos qos");
-		writeLine("             Optional QoS value. Valid values are 0, 1, 2. Default: 0.");
-		writeLine();
-		writeLine("   -config config_file");
-		writeLine("             Optional configuration file.");
-		writeLine();
-		writeLine("   -fos fos");
-		writeLine("             Optional FoS value. Valid values are 0, 1, 2, 3. Default: 0.");writeLine();
 		writeLine();
 		writeLine("   -qos qos");
 		writeLine("             Optional QoS value. Valid values are 0, 1, 2. Default: 0.");
@@ -192,13 +177,17 @@ public class ClusterPublisher implements Constants {
 			System.err.printf("ERROR: -config, -endpoints are not allowed together. Command aborted.%n");
 			System.exit(2);
 		}
+		if (topic == null) {
+			System.err.printf("ERROR: Topic not specified: [-t]. Command aborted.%n");
+			System.exit(3);
+		}
 		if (message == null) {
 			System.err.printf("ERROR: Message not specified: [-m]. Command aborted.%n");
 			System.exit(3);
 		}
 
 		// Collection system properties - passed in by the invoking script.
-		if (endpoints == null) {
+		if (configFilePath == null && clusterName == null && endpoints == null) {
 			clusterName = System.getProperty("cluster.name");
 			endpoints = System.getProperty("cluster.endpoints");
 		}
@@ -207,8 +196,33 @@ public class ClusterPublisher implements Constants {
 		if (clusterName != null) {
 			writeLine("PadoGrid Cluster: " + clusterName);
 		}
-		String virtualClusterName = createVirtualClusterName();
+		String virtualClusterName;
+		if (configFilePath != null) {
+			virtualClusterName = clusterName;
+			try {
+				// We need to do this here in order to get the default
+				// cluster name.
+				HaClusters.initialize(new File(configFilePath));
+				if (virtualClusterName == null) {
+					virtualClusterName = HaClusters.getDefaultClusterName();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.printf(
+						"ERROR: Exception occurred while initializing virtual clusters: [file=%s]. Command aborted.%n",
+						configFilePath);
+				System.exit(-1);
+			}
+		} else {
+			virtualClusterName = createVirtualClusterName();
+		}
 		writeLine("cluster: " + virtualClusterName + " (virtual)");
+
+		// If endpoints is not set, then default to
+		// IClusterConfig.DEFAULT_CLIENT_SERVER_URIS.
+		if (configFilePath == null && endpoints == null) {
+			endpoints = IClusterConfig.DEFAULT_CLIENT_SERVER_URIS;
+		}
 		if (endpoints != null) {
 			writeLine("endpoints: " + endpoints);
 		}
@@ -243,7 +257,7 @@ public class ClusterPublisher implements Constants {
 			}
 		} else {
 			try {
-				HaClusters.initialize(new File(configFilePath));
+				client = HaClusters.getOrCreateHaMqttClient(virtualClusterName);
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.err.printf(
