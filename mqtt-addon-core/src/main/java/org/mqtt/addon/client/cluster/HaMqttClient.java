@@ -16,7 +16,9 @@
 package org.mqtt.addon.client.cluster;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -130,16 +132,33 @@ public class HaMqttClient implements IHaMqttClient {
 	}
 
 	/**
-	 * Removes the specified client from the live client list. A removed client is
-	 * disconnected and placed in the dead client list for revival in the next
-	 * probing cycle.
+	 * Marks the specified client for revival. It removes the client form the local
+	 * live list and notifies {@linkplain ClusterState} revival in the next probing
+	 * cycle.
 	 * 
-	 * @param client
+	 * @param client Client to mark for revival
 	 */
-	private void removeMqttClient(MqttClient client) {
-		clusterState.removeLiveClient(client);
-		liveClientMap = clusterState.getLiveClientMap();
-		liveClients = liveClientMap.values().toArray(new MqttClient[0]);
+	private void markMqttClientForRevival(MqttClient client) {
+
+		// Remove the client from the local lists.
+		HashMap<String, MqttClient> map = new HashMap<String, MqttClient>(liveClientMap);
+		Iterator<Map.Entry<String, MqttClient>> iterator = map.entrySet().iterator();
+		String endpointName = null;
+		while (iterator.hasNext()) {
+			Map.Entry<String, MqttClient> entry = iterator.next();
+			if (client == entry.getValue()) {
+				iterator.remove();
+				endpointName = entry.getKey();
+				break;
+			}
+		}
+		if (endpointName != null) {
+			liveClientMap = Collections.unmodifiableMap(map);
+			liveClients = map.values().toArray(new MqttClient[0]);
+
+			// Notify ClusterState for revival
+			clusterState.markClientForRevival(endpointName, client);
+		}
 	}
 
 	/**
@@ -179,7 +198,9 @@ public class HaMqttClient implements IHaMqttClient {
 			this.defaultTopicBase = defaultTopicBase + "";
 		}
 		this.topicBaseMap = topicBaseMap;
-		this.logger.debug("Live client list recevied [size=%d].", liveClientMap.size());
+		if (logger.isDebugEnabled()) {
+			this.logger.debug(String.format("Live client list received [size=%d].", liveClientMap.size()));
+		}
 	}
 
 	private void cleanupThreadLocals() {
@@ -311,10 +332,11 @@ public class HaMqttClient implements IHaMqttClient {
 					// If publish() fails, then we assume the connection is
 					// no longer valid. Remove the client from the live list
 					// so that the discovery service can probe and reconnect.
-					removeMqttClient(client);
-
-					logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-							client.getServerURI()), e);
+					markMqttClientForRevival(client);
+					if (logger.isDebugEnabled()) {
+						logger.debug(String.format("client.publish() failed. Marked client for revival: [%s].",
+								client.getServerURI()), e);
+					}
 
 					// Upon removal, a new live client list is obtained.
 					// Publish it again with the new publisherClient.
@@ -368,11 +390,11 @@ public class HaMqttClient implements IHaMqttClient {
 				// If publish() fails, then we assume the connection is
 				// no longer valid. Remove the client from the live list
 				// so that the discovery service can probe and reconnect.
-				removeMqttClient(client);
-
-				logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-						client.getServerURI()), e);
-
+				markMqttClientForRevival(client);
+				if (logger.isDebugEnabled()) {
+					logger.debug(String.format("client.publish() failed. Marked client for revival [%s].",
+							client.getServerURI()), e);
+				}
 				// Upon removal, a new live client list is obtained.
 				// Publish it again with the new publisherClient.
 				MqttClient[] clients = liveClients;
@@ -454,12 +476,12 @@ public class HaMqttClient implements IHaMqttClient {
 					// If publish() fails, then we assume the connection is
 					// no longer valid. Remove the client from the live list
 					// so that the discovery service can probe and reconnect.
-					removeMqttClient(client);
+					markMqttClientForRevival(client);
 					stickyThreadLocal.set(null);
-
-					logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-							client.getServerURI()), e);
-
+					if (logger.isDebugEnabled()) {
+						logger.debug(String.format("client.publish() failed. Marked client for revival: [%s].",
+								client.getServerURI()), e);
+					}
 					// Upon removal, a new live client list is obtained.
 					// Publish it again with the new publisherClient.
 					if (liveClients.length == 0) {
@@ -504,11 +526,12 @@ public class HaMqttClient implements IHaMqttClient {
 				// If publish() fails, then we assume the connection is
 				// no longer valid. Remove the client from the live list
 				// so that the discovery service can probe and reconnect.
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 				stickyThreadLocal.set(null);
-
-				logger.debug(String.format("publish() failed. Removed %s[%s]", HaMqttClient.class.getSimpleName(),
-						client.getServerURI()), e);
+				if (logger.isDebugEnabled()) {
+					logger.debug(String.format("client.publish() failed. Marked client for revival: [%s].",
+							client.getServerURI()), e);
+				}
 
 				// Upon removal, a new live client list is obtained.
 				// Publish it again with the new publisherClient.
@@ -604,7 +627,7 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				tokens[index++] = client.subscribe(topicFilter, qos);
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 		return tokens;
@@ -660,7 +683,7 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				tokens[index++] = client.subscribe(topicFilters, qos);
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 		return tokens;
@@ -729,7 +752,7 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				tokens[index++] = client.subscribe(subscriptions, messageListeners);
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 		return tokens;
@@ -758,7 +781,7 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				tokens[index++] = client.subscribe(subscriptions);
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 		return tokens;
@@ -826,7 +849,7 @@ public class HaMqttClient implements IHaMqttClient {
 				tokens[index++] = client.subscribe(new MqttSubscription[] { subscription },
 						new IMqttMessageListener[] { messageListener });
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 		return tokens;
@@ -854,7 +877,7 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				tokens[index++] = client.subscribe(subscriptions, messageListeners);
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 		return tokens;
@@ -875,7 +898,7 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				client.unsubscribe(topicFilter);
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 	}
@@ -895,7 +918,7 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				client.unsubscribe(topicFilters);
 			} catch (MqttException e) {
-				removeMqttClient(client);
+				markMqttClientForRevival(client);
 			}
 		}
 	}
