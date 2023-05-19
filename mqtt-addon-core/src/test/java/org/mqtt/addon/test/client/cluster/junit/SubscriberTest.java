@@ -32,7 +32,7 @@ import org.mqtt.addon.client.cluster.IHaMqttCallback;
 
 /**
  * SubscriberTest configures with "etc/mqttv5-subscriber.yaml" to subscribe to
- * "test/mytopic". Run this test case with {@linkplain PublisherTest}.
+ * "test/mytopic". Run this test case with {@linkplain PublisherSharedTest}.
  * 
  * @author dpark
  *

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.logging.log4j.LogManager;
@@ -49,6 +50,7 @@ import org.mqtt.addon.client.cluster.config.ClusterConfig.Bridge;
 import org.mqtt.addon.client.cluster.internal.ConfigUtil;
 import org.mqtt.addon.client.cluster.internal.InBridgeCluster;
 import org.mqtt.addon.client.cluster.internal.OutBridgeCluster;
+import org.mqtt.addon.client.cluster.internal.SharedMqttToken;
 import org.mqtt.addon.client.cluster.internal.TopicFilter;
 import org.mqtt.addon.client.cluster.internal.TopicFilters;
 import org.mqtt.addon.client.cluster.internal.TopicInfo;
@@ -76,6 +78,7 @@ public class ClusterState implements IClusterConfig {
 	private int liveEndpointCount = -1;
 	private long timeToWaitInMsec = DEFAULT_TIME_TO_WAIT_IN_MSEC;
 	private boolean isEnabled = true;
+	private boolean liveEndpointPoolEnabled = true;
 	private int fos = 0;
 	private int subscriberCount = -1;
 	private String defaultTopicBase;
@@ -90,6 +93,17 @@ public class ClusterState implements IClusterConfig {
 	private final List<String> allEndpointList = Collections.synchronizedList(new ArrayList<String>(10));
 	// <endpointName, endpoint>
 	private final Map<String, String> allEndpointMap = Collections.synchronizedMap(new HashMap<String, String>(10));
+
+	/*
+	 * liveClientPoolMap <endpoint, MqttClient> - contains live MqttClient instances
+	 * shared across all ClusterState instances.
+	 */
+	private final static Map<String, SharedToken> s_liveClientPoolMap = Collections
+			.synchronizedMap(new HashMap<String, SharedToken>(10));
+
+	/*
+	 * <endpointName, MqttClient>
+	 */
 	private final Map<String, MqttClient> liveClientMap = Collections
 			.synchronizedMap(new HashMap<String, MqttClient>(10));
 	private final Map<String, MqttClient> deadClientMap = Collections
@@ -110,7 +124,7 @@ public class ClusterState implements IClusterConfig {
 	private final Set<InBridgeCluster> inBridgeSet = Collections.synchronizedSet(new HashSet<InBridgeCluster>(5));
 
 	private Logger logger;
-	private String clientIdPrefix;
+	private String clientId;
 
 	private Set<TopicInfo> subscribedTopicSet = Collections.synchronizedSet(new HashSet<TopicInfo>());
 	private MqttCallback callback;
@@ -131,6 +145,7 @@ public class ClusterState implements IClusterConfig {
 		this.haclient = haclient;
 		this.clusterName = clusterConfig.getName();
 		this.isEnabled = clusterConfig.isEnabled();
+		this.liveEndpointPoolEnabled = clusterConfig.isLiveEndpointPoolEnabled();
 		this.initialEndpointCount = clusterConfig.getInitialEndpointCount();
 		this.liveEndpointCount = clusterConfig.getLiveEndpointCount();
 		this.fos = clusterConfig.getFos();
@@ -147,7 +162,7 @@ public class ClusterState implements IClusterConfig {
 		this.persistence = persistence;
 		this.executorService = executorService;
 		this.logger = LogManager.getLogger(String.format("ClusterState[%s]", haclient.getClusterName()));
-		this.clientIdPrefix = haclient.getClusterName();
+		this.clientId = getClientId();
 
 		MqttConnectionOptions options = clusterConfig.getConnection();
 		if (options == null) {
@@ -317,10 +332,43 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
+	 * Returns a comma separated, sorted list of live subscriber server URIs.
+	 */
+	private String getLiveSubscriberEndpoints() {
+		ArrayList<String> endpointList = new ArrayList<String>(liveSubscriptionClientSet.size());
+		for (MqttClient client : liveSubscriptionClientSet) {
+			endpointList.add(client.getServerURI());
+		}
+		Collections.sort(endpointList);
+		return endpointList.toString();
+	}
+
+	/**
+	 * Returns the all endpoint count including live and dead endpoints.
+	 */
+	private int getAllEndpointCount() {
+		return allEndpointMap.size();
+	}
+
+	/**
+	 * Returns the live endpoint count.
+	 */
+	private int getLiveEndpointCount() {
+		return liveClientMap.size();
+	}
+
+	/**
 	 * Returns the dead endpoint count.
 	 */
 	private int getDeadEndpointCount() {
 		return deadClientMap.size() + deadEndpointMap.size() + markedForDeadClientMap.size();
+	}
+
+	/**
+	 * Returns the live subscriber count.
+	 */
+	private int getLiveSubscriberCount() {
+		return liveSubscriptionClientSet.size();
 	}
 
 	/**
@@ -346,11 +394,10 @@ public class ClusterState implements IClusterConfig {
 	 * 
 	 * @param endpoint Endpoint, aka, serverURI.
 	 */
-	private String getClientId(String endpoint) {
-		if (endpoint == null) {
-			return clientIdPrefix;
+	private String getClientId() {
+		if (clientId == null) {
+			clientId = clusterName + "-" + UUID.randomUUID().toString();
 		}
-		String clientId = clientIdPrefix + "-" + endpoint.replace("/", "").replaceAll(":", "-");
 		return clientId;
 	}
 
@@ -398,6 +445,116 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
+	 * Returns the {@linkplain{SharedToken} instance from the pool if
+	 * liveEndpointPoolEnabled is true.
+	 * 
+	 * @param endpoint server URI
+	 */
+	private SharedToken getMqttClientPool(String endpoint) {
+		if (liveEndpointPoolEnabled) {
+			return s_liveClientPoolMap.get(endpoint);
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Adds the specified {@linkplain{SharedToken} object in the pool only if it is
+	 * absent.
+	 * 
+	 * @param sharedToken shared token
+	 */
+	private void putMqttClientPool(SharedToken sharedToken) {
+		if (liveEndpointPoolEnabled && sharedToken != null && sharedToken.client != null) {
+			s_liveClientPoolMap.putIfAbsent(sharedToken.client.getServerURI(), sharedToken);
+		}
+	}
+
+	/**
+	 * Removes the specified {@linkplain{SharedToken} object from the pool.
+	 * 
+	 * @param endpoint server URI
+	 * @return Removed shared token
+	 * @return null if not found
+	 */
+	private SharedToken removeMqttClientPool(String endpoint) {
+		if (liveEndpointPoolEnabled) {
+			return s_liveClientPoolMap.remove(endpoint);
+		} else {
+			return null;
+		}
+	}
+
+	/**
+	 * Removes the specified endpoint from the pool if it is not shared with other
+	 * clusters.
+	 * 
+	 * @param endpoint server URI
+	 * @return Removed shared token. null if the client is not removed or not found.
+	 */
+	private SharedToken removeMqttClientPoolIfNotShared(String endpoint) {
+		SharedToken sharedToken = null;
+		if (liveEndpointPoolEnabled) {
+			sharedToken = getMqttClientPool(endpoint);
+			if (sharedToken != null) {
+				MqttClient client = sharedToken.client;
+				ClusterState[] clusterStates = ClusterService.getClusterService().getClusterStates();
+				for (ClusterState cs : clusterStates) {
+					if (cs != this) {
+						if (cs.getLiveClients().contains(client)) {
+							return sharedToken;
+						}
+					}
+				}
+			}
+		}
+		return sharedToken;
+	}
+
+	/**
+	 * Removes the specified endpoints from the pool if they are not shared with
+	 * other clusters.
+	 * 
+	 * @param endpoints server URIs
+	 * @return An arrary of removed shared tokens
+	 */
+	private SharedToken[] removeMqttClientPoolIfNotShared(String[] endpoints) {
+		ArrayList<MqttClient> clientList = new ArrayList<MqttClient>(endpoints.length);
+		if (liveEndpointPoolEnabled) {
+			SharedToken sharedToken = null;
+			for (String endpoint : endpoints) {
+				sharedToken = getMqttClientPool(endpoint);
+				if (sharedToken != null) {
+					break;
+				}
+			}
+			if (sharedToken != null) {
+				ClusterState[] clusterStates = ClusterService.getClusterService().getClusterStates();
+				HashSet<Set<MqttClient>> set = new HashSet<Set<MqttClient>>(clusterStates.length - 1);
+				for (ClusterState cs : clusterStates) {
+					if (cs != this) {
+						set.add(cs.getLiveClients());
+					}
+				}
+				for (String endpoint : endpoints) {
+					boolean found = false;
+					for (Set<MqttClient> set2 : set) {
+						sharedToken = getMqttClientPool(endpoint);
+						if (sharedToken != null && set2.contains(sharedToken)) {
+							found = true;
+							break;
+						}
+					}
+					if (found == false) {
+						removeMqttClientPool(endpoint);
+					}
+				}
+			}
+		}
+		return clientList.toArray(new SharedToken[0]);
+	}
+
+	/**
 	 * Connects to all dead endpoints listed in the specified deadEndpointSet, which
 	 * becomes empty upon successful connections.
 	 * 
@@ -411,71 +568,81 @@ public class ClusterState implements IClusterConfig {
 				Map.Entry<String, String> entry = iterator.next();
 				String endpointName = entry.getKey();
 				String endpoint = entry.getValue();
+				SharedToken sharedToken = getMqttClientPool(endpoint);
 				MqttClient client = null;
-				try {
-					String clientId = getClientId(endpoint);
+				if (sharedToken == null) {
+					try {
+						String clientId = getClientId();
 
-					// Use the global persistence if defined. The global persistence is initialized
-					// and kept in ClusterService.
-					if (persistence == null) {
-						MqttClientPersistence persistence = ClusterService.getClusterService()
-								.createMqttClientPersistence();
-						// Paho's use of ExecutorService is extremely limited. It blocks indefinitely
-						// if the application exceeds the thread pool size. Its use is discouraged.
-						// Note: Passing null value for persistence creates MemoryPersistence.
-						// Passing null value for executorService defaults to a non-scheduled
-						// independent thread.
-						client = new MqttClient(endpoint, clientId, persistence, executorService);
-					} else {
-						client = new MqttClient(endpoint, clientId, persistence, executorService);
-					}
-					client.setTimeToWait(timeToWaitInMsec);
-					if (logger.isDebugEnabled()) {
-						logger.debug(String.format("connectDeadEndpoints() - connecting [%s]...", endpoint));
-					}
-					IMqttToken token = client.connectWithResult(connectionOptions);
-					if (logger.isDebugEnabled()) {
-						logger.debug(String.format("connectDeadEndpoints() - connected [%s]", endpoint));
-					}
-					tokenList.add(token);
+						// Use the global persistence if defined. The global persistence is initialized
+						// and kept in ClusterService.
+						if (persistence == null) {
+							MqttClientPersistence persistence = ClusterService.getClusterService()
+									.createMqttClientPersistence();
+							// Paho's use of ExecutorService is extremely limited. It blocks indefinitely
+							// if the application exceeds the thread pool size. Its use is discouraged.
+							// Note: Passing null value for persistence creates MemoryPersistence.
+							// Passing null value for executorService defaults to a non-scheduled
+							// independent thread.
+							client = new MqttClient(endpoint, clientId, persistence, executorService);
+						} else {
+							client = new MqttClient(endpoint, clientId, persistence, executorService);
+						}
+						client.setTimeToWait(timeToWaitInMsec);
+						if (logger.isDebugEnabled()) {
+							logger.debug(
+									String.format("connectDeadEndpoints() - connecting [serverURI=%s]...", endpoint));
+						}
+						IMqttToken token = client.connectWithResult(connectionOptions);
+						if (logger.isDebugEnabled()) {
+							logger.debug(String.format("connectDeadEndpoints() - connected [serverURI=%s]", endpoint));
+						}
+						tokenList.add(token);
+						sharedToken = new SharedToken(client, token);
 
-					// Test connection
-					String message = publishConnectionTestMessage(client);
-					if (logger.isDebugEnabled()) {
-						logger.debug(String.format("connectDeadEndpoints() - published a test message [%s]", message));
-					}
+						// Test connection
+						String message = publishConnectionTestMessage(client);
+						if (logger.isDebugEnabled()) {
+							logger.debug(
+									String.format("connectDeadEndpoints() - published a test message [%s]", message));
+						}
 
+					} catch (Exception e) {
+						if (logger.isDebugEnabled()) {
+							logger.debug(
+									String.format("Exception raised while making initial connection [%s].", endpoint),
+									e);
+						}
+						if (client != null) {
+							try {
+								client.close();
+							} catch (MqttException e1) {
+								// ignore
+							}
+						}
+					}
+				} else {
+					client = sharedToken.client;
+					tokenList.add(sharedToken.token);
+				}
+
+				if (client != null && client.isConnected()) {
 					// Make subscriptions
 					if (maxSubscriptionCount < 0 || maxSubscriptionCount > liveSubscriptionClientSet.size()) {
-						client.setCallback(new MqttCallbackImpl(endpointName, client));
-						TopicInfo[] subscriptions = subscribedTopicSet.toArray(new TopicInfo[0]);
-						for (TopicInfo subscription : subscriptions) {
-							subscription.subscribe(client);
-						}
-						liveSubscriptionClientSet.add(client);
 						stickySubscriber = selectStickySubscriber();
 					}
 
 					// Update live list
 					liveClientMap.put(endpointName, client);
+					putMqttClientPool(sharedToken);
 					if (endpoint.equals(primaryServerURI)) {
 						primaryClient = client;
 					}
+
 					iterator.remove();
-				} catch (MqttException e) {
-					if (logger.isDebugEnabled()) {
-						logger.debug(String.format("Exception raised while making initial connection [%s].", endpoint),
-								e);
-					}
-					if (client != null) {
-						try {
-							client.close();
-						} catch (MqttException e1) {
-							// ignore
-						}
-					}
 				}
 			}
+
 		}
 		if (logger.isDebugEnabled()) {
 			logger.debug(String.format("connectDeadEndpoints() - complete"));
@@ -483,11 +650,107 @@ public class ClusterState implements IClusterConfig {
 		return tokenList.toArray(new IMqttToken[0]);
 	}
 
+	/**
+	 * Replenishes live subscribers by adding the new subscribers to
+	 * {@linkplain #liveSubscriptionClientSet}.
+	 * 
+	 * @throws MqttException Thrown if an error occurs while making subscriptions
+	 */
+	private boolean replenishLiveSubscribers() throws MqttException {
+
+		// Remove all disconnected subcribers
+		Iterator<MqttClient> iterator = liveSubscriptionClientSet.iterator();
+		while (iterator.hasNext()) {
+			MqttClient client = iterator.next();
+			if (client.isConnected() == false) {
+				iterator.remove();
+			}
+		}
+
+		// Determine the number of subscribers to be replenished
+		int replenishCount;
+		if (subscriberCount < 0) {
+			replenishCount = getLiveEndpointCount() - getLiveSubscriberCount();
+		} else {
+			replenishCount = subscriberCount - getLiveSubscriberCount();
+		}
+		if (replenishCount <= 0) {
+			return false;
+		}
+
+		// Replenish subscribers into liveSubscriptionClientSet
+		if (logger.isDebugEnabled()) {
+			logger.debug(String.format(
+					"Replenishing subscribers [liveClientCount=%d, subscriberCount=%d, replenishCount=%d]...",
+					liveClientMap.size(), subscriberCount, replenishCount));
+		}
+		int count = 0;
+		Iterator<Map.Entry<String, MqttClient>> iterator2 = getLiveClientMap().entrySet().iterator();
+		while (iterator2.hasNext() && count < replenishCount) {
+			Map.Entry<String, MqttClient> entry = iterator2.next();
+			String endpointName = entry.getKey();
+			MqttClient client = entry.getValue();
+			if (liveSubscriptionClientSet.contains(client) == false) {
+				client.setCallback(new MqttCallbackImpl(endpointName, client));
+				TopicInfo[] subscriptions = subscribedTopicSet.toArray(new TopicInfo[0]);
+				for (TopicInfo subscription : subscriptions) {
+					subscription.subscribe(client);
+				}
+				liveSubscriptionClientSet.add(client);
+				count++;
+			}
+		}
+		if (logger.isDebugEnabled()) {
+			logger.debug(String.format(
+					"Replenished subscribers [liveClientCount=%d, subscriberCount=%d, replenishCount=%d, replenished=%d]...",
+					liveClientMap.size(), subscriberCount, replenishCount, count));
+		}
+		return true;
+	}
+
+	/**
+	 * Selects a sticky subscriber from the live subscription client list if the
+	 * current skicky subscriber is null, not connected, or not in the live
+	 * subscription client list.
+	 * 
+	 * @throws MqttException
+	 */
 	private MqttClient selectStickySubscriber() {
-		if (liveSubscriptionClientSet.contains(stickySubscriber) == false) {
-			for (MqttClient subscriber : liveSubscriptionClientSet) {
-				stickySubscriber = subscriber;
+		// Replenish live subscribers and then select one from the list
+		try {
+			replenishLiveSubscribers();
+		} catch (MqttException ex) {
+			// ignore
+		}
+		if (stickySubscriber == null || stickySubscriber.isConnected() == false
+				|| liveSubscriptionClientSet.contains(stickySubscriber) == false) {
+
+			if (logger.isDebugEnabled()) {
+				if (stickySubscriber == null) {
+					logger.debug(
+							String.format("Sticky subscriber undefined: [null], Selecting a new sticky subscriber..."));
+				} else {
+					logger.debug(String.format(
+							"Sticky subscriber removed from the subscriber list: [%s], Selecting a new sticky subscriber...",
+							stickySubscriber.getServerURI()));
+				}
+			}
+
+			stickySubscriber = null;
+			for (MqttClient client : liveSubscriptionClientSet) {
+				stickySubscriber = client;
 				break;
+			}
+
+			if (logger.isDebugEnabled()) {
+				String serverURI;
+				if (stickySubscriber == null) {
+					serverURI = "null";
+				} else {
+					serverURI = stickySubscriber.getServerURI();
+				}
+				logger.debug(String.format("Sticky subscriber selected: [%s]. Subscriber list replenished: %s.",
+						serverURI, getLiveSubscriberEndpoints()));
 			}
 		}
 		return stickySubscriber;
@@ -506,9 +769,13 @@ public class ClusterState implements IClusterConfig {
 
 		connectionInProgress = true;
 		if (logger.isDebugEnabled()) {
-			logger.debug(String.format("Probing [%s]. [All: %d, Live: %d, Dead: %d]. Dead endpoints %s...", clusterName,
-					allEndpointMap.size(), liveClientMap.size(), getDeadEndpointCount(), getDeadEndpoints()));
+			logger.debug(String.format(
+					"Probing [%s]. [Pool: %d, All: %d, Live: %d, Dead: %d, Subscribers: %d]. Dead endpoints %s...",
+					clusterName, s_liveClientPoolMap.size(), allEndpointMap.size(), liveClientMap.size(),
+					getDeadEndpointCount(), getLiveSubscriberCount(), getDeadEndpoints()));
 		}
+
+		int beforeLiveCount = getLiveEndpointCount();
 
 		// Iterate live list and remove all disconnected clients.
 		// The live list normally contains only connected clients, but there is a
@@ -520,10 +787,40 @@ public class ClusterState implements IClusterConfig {
 			Map.Entry<String, MqttClient> entry = iterator.next();
 			String entrypointName = entry.getKey();
 			MqttClient client = entry.getValue();
-			if (client.isConnected() == false) {
+			if (client.isConnected()) {
+				if (s_liveClientPoolMap.containsKey(entrypointName) == false) {
+					putMqttClientPool(new SharedToken(client, new SharedMqttToken()));
+				}
+			} else {
 				iterator.remove();
+				removeMqttClientPoolIfNotShared(client.getServerURI());
 				liveSubscriptionClientSet.remove(client);
 				deadClientMap.remove(entrypointName);
+			}
+		}
+
+		// Sync live pool
+		Iterator<Map.Entry<String, SharedToken>> iterator3 = s_liveClientPoolMap.entrySet().iterator();
+		while (iterator3.hasNext()) {
+			Map.Entry<String, SharedToken> entry = iterator3.next();
+			SharedToken sharedToken = entry.getValue();
+			if (sharedToken.client.isConnected() == false) {
+				iterator3.remove();
+			}
+		}
+
+		// Sync dead endpoints
+		Iterator<Map.Entry<String, String>> iterator2 = allEndpointMap.entrySet().iterator();
+		while (iterator2.hasNext()) {
+			Map.Entry<String, String> entry = iterator2.next();
+			String endpointName = entry.getKey();
+			String endpoint = entry.getValue();
+			if (deadClientMap.containsKey(endpointName) || deadEndpointMap.containsKey(endpointName)
+					|| markedForDeadClientMap.containsKey(endpointName)) {
+				continue;
+			}
+			if (liveClientMap.containsKey(endpointName) == false) {
+				deadEndpointMap.put(endpointName, endpoint);
 			}
 		}
 
@@ -535,18 +832,27 @@ public class ClusterState implements IClusterConfig {
 		// Log revived endpoints
 		if (revivedEndpointSet.size() > 0) {
 			if (logger.isDebugEnabled()) {
-				logger.debug(String.format("reviveDeadEndpoints() - updating HaMqttClient.updateLiveClients() [Live: %d]...",
-						liveClientMap.size()));
+				logger.debug(
+						String.format("reviveDeadEndpoints() - updating HaMqttClient.updateLiveClients() [Live: %d]...",
+								liveClientMap.size()));
 			}
 			haclient.updateLiveClients(getLiveClientMap(), getDefaultTopicBase(), getTopicBaseMap());
 			logger.info(String.format("Revived endpoints %s. Live endpoints %s. Dead endpoints %s.", revivedEndpointSet,
 					getLiveEndpoints(), getDeadEndpoints()));
-			logConnectionStatus();
 		}
 		if (logger.isDebugEnabled()) {
-			logger.debug(String.format("Probed [%s]. [All: %d, Live: %d, Dead: %d]. Dead endpoints %s...", clusterName,
-					allEndpointMap.size(), liveClientMap.size(), getDeadEndpointCount(), getDeadEndpoints()));
+			logger.debug(String.format(
+					"Probed [%s]. [Pool: %d, All: %d, Live: %d, Dead: %d, Subscribers: %d]. Dead endpoints %s.",
+					clusterName, s_liveClientPoolMap.size(), allEndpointMap.size(), liveClientMap.size(),
+					getDeadEndpointCount(), getLiveSubscriberCount(), getDeadEndpoints()));
 		}
+
+		int afterLiveCount = getLiveEndpointCount();
+
+		if (beforeLiveCount != afterLiveCount) {
+			logConnectionStatus();
+		}
+
 		connectionInProgress = false;
 	}
 
@@ -575,7 +881,6 @@ public class ClusterState implements IClusterConfig {
 			List<IMqttToken> tokenList = new ArrayList<IMqttToken>(condensedMinCount + 1);
 			Map<String, String> deadEndpointMapCopy = new HashMap<String, String>(deadEndpointMap);
 			condensedDeadEndpointMap = Collections.synchronizedMap(new HashMap<String, String>(condensedMinCount, 1f));
-			int count = 0;
 			if (primaryClient == null && primaryServerURI != null) {
 				// Find the primary server URI
 				Iterator<Map.Entry<String, String>> iterator = deadEndpointMapCopy.entrySet().iterator();
@@ -585,18 +890,18 @@ public class ClusterState implements IClusterConfig {
 					if (serverURI.equals(primaryServerURI)) {
 						condensedDeadEndpointMap.put(entry.getKey(), primaryServerURI);
 						iterator.remove();
-						count++;
 						break;
 					}
 				}
 			}
 			while (tokenList.size() < condensedMinCount && deadEndpointMapCopy.size() > 0) {
 				Iterator<Map.Entry<String, String>> iterator = deadEndpointMapCopy.entrySet().iterator();
-				while (count < condensedMinCount && iterator.hasNext()) {
+				int remainingCount = condensedMinCount - tokenList.size();
+				while (remainingCount > 0 && iterator.hasNext()) {
 					Map.Entry<String, String> entry = iterator.next();
 					condensedDeadEndpointMap.put(entry.getKey(), entry.getValue());
 					iterator.remove();
-					count++;
+					remainingCount--;
 				}
 //				if (logger.isDebugEnabled()) {
 //					logger.debug(String.format(
@@ -679,15 +984,12 @@ public class ClusterState implements IClusterConfig {
 					publishConnectionTestMessage(client);
 
 					// Make subscriptions
-					if (maxSubscriptionCount < 0 || maxSubscriptionCount > liveSubscriptionClientSet.size()) {
-						for (TopicInfo subscription : subscriptions) {
-							subscription.subscribe(client);
-						}
-						liveSubscriptionClientSet.add(client);
-					}
+//					addLiveSubscriber(endpointName, client);
+					stickySubscriber = selectStickySubscriber();
 
 					// Update live list
 					liveClientMap.put(endpointName, client);
+					putMqttClientPool(new SharedToken(client, new SharedMqttToken()));
 
 					revivedEndpointSet.add(client.getServerURI());
 					iterator.remove();
@@ -720,6 +1022,7 @@ public class ClusterState implements IClusterConfig {
 						}
 						failedEndpointMap.put(endpointName, client.getServerURI());
 						liveClientMap.remove(endpointName);
+						removeMqttClientPoolIfNotShared(client.getServerURI());
 						liveSubscriptionClientSet.remove(client);
 						client.disconnectForcibly(0, 0, false);
 						client.close();
@@ -787,6 +1090,7 @@ public class ClusterState implements IClusterConfig {
 					// ignore
 				}
 				liveClientMap.remove(endpointName);
+				removeMqttClientPool(client.getServerURI());
 				deadEndpointMap.put(endpointName, client.getServerURI());
 				if (logger.isDebugEnabled()) {
 					logger.debug(String.format("Moved marked client to dead endpoint list [%s]. Dead endpoints %s",
@@ -816,6 +1120,8 @@ public class ClusterState implements IClusterConfig {
 //						"doFos() - invoked reviveDeadClients() [maxRevivalCount=%d, maxSubscriptionCount=%d, revivedEndpointSet.size()=%d]",
 //						maxRevivalCount, maxSubscriptionCount, revivedEndpointSet.size()));
 //			}
+
+			stickySubscriber = selectStickySubscriber();
 		}
 		return revivedEndpointSet;
 	}
@@ -838,12 +1144,15 @@ public class ClusterState implements IClusterConfig {
 	 * Logs the current connection status.
 	 */
 	private void logConnectionStatus() {
+		String header;
 		if (liveClientMap.size() == allEndpointMap.size()) {
-			logger.info(String.format("All endpoints connected [Connected: %d].", liveClientMap.size()));
+			header = "All endpoints connected";
 		} else {
-			logger.info(String.format("[Connected: %d, Not Connected: %d]", liveClientMap.size(),
-					getDeadEndpointCount()));
+			header = "Some endpoints not connected";
 		}
+		logger.info(String.format("%s [%s]. [Pool: %d, All: %d, Live: %d, Dead: %d, Subscribers: %d]. Dead endpoints %s.",
+				header, clusterName, s_liveClientPoolMap.size(), allEndpointMap.size(), liveClientMap.size(),
+				getDeadEndpointCount(), getLiveSubscriberCount(), getDeadEndpoints()));
 	}
 
 	/**
@@ -895,6 +1204,7 @@ public class ClusterState implements IClusterConfig {
 				MqttClient c = entry.getValue();
 				if (c.getServerURI().equals(serverURI)) {
 					iterator.remove();
+					removeMqttClientPoolIfNotShared(serverURI);
 					liveSubscriptionClientSet.remove(client);
 					client = c;
 					break;
@@ -1229,6 +1539,7 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
+					removeMqttClientPoolIfNotShared(client.getServerURI());
 					liveSubscriptionClientSet.remove(client);
 					disconnectedClientMap.put(endpointName, client);
 				}
@@ -1269,6 +1580,7 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
+					removeMqttClientPoolIfNotShared(client.getServerURI());
 					liveSubscriptionClientSet.remove(client);
 					disconnectedClientMap.put(endpointName, client);
 				}
@@ -1309,6 +1621,7 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
+					removeMqttClientPoolIfNotShared(client.getServerURI());
 					liveSubscriptionClientSet.remove(client);
 					disconnectedClientMap.put(endpointName, client);
 				}
@@ -1349,6 +1662,7 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
+					removeMqttClientPoolIfNotShared(client.getServerURI());
 					liveSubscriptionClientSet.remove(client);
 					disconnectedClientMap.put(endpointName, client);
 				}
@@ -1389,6 +1703,7 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
+					removeMqttClientPoolIfNotShared(client.getServerURI());
 					liveSubscriptionClientSet.remove(client);
 					disconnectedClientMap.put(endpointName, client);
 				}
@@ -1481,6 +1796,7 @@ public class ClusterState implements IClusterConfig {
 						}
 					}
 					iterator.remove();
+					removeMqttClientPoolIfNotShared(client.getServerURI());
 					liveSubscriptionClientSet.remove(client);
 					disconnectedClientMap.put(endpointName, client);
 				}
@@ -1536,7 +1852,14 @@ public class ClusterState implements IClusterConfig {
 	 */
 	public void markClientForRevival(String endpointName, MqttClient client) {
 		if (endpointName != null && client != null) {
+			if (logger.isDebugEnabled()) {
+				logger.debug(String.format("Marked client (endpoint) for revival: [%s]", client.getServerURI()));
+			}
 			markedForDeadClientMap.put(endpointName, client);
+			// If sticky subscriber then pick a new one.
+//			if (client == stickySubscriber) {
+			stickySubscriber = selectStickySubscriber();
+//			}
 		}
 	}
 
@@ -1832,7 +2155,7 @@ public class ClusterState implements IClusterConfig {
 		@Override
 		public void messageArrived(String topic, MqttMessage message) throws Exception {
 
-			// Deliver messages to only sticky subscriber for FoS 0, 1, 2.
+			// Deliver messages to only sticky subscriber for FoS 1, 2, 3.
 			switch (fos) {
 			case 1:
 			case 2:
@@ -1860,12 +2183,6 @@ public class ClusterState implements IClusterConfig {
 		public void disconnected(MqttDisconnectResponse disconnectResponse) {
 			// Client may have been reconnected by the discovery service.
 			if (client.isConnected() == false) {
-
-				// If sticky subscriber then pick a new one.
-				if (client == stickySubscriber) {
-					stickySubscriber = selectStickySubscriber();
-				}
-
 				// Notify callbacks and log.
 				MqttCallback cb = callback;
 				if (cb != null) {
@@ -1876,17 +2193,16 @@ public class ClusterState implements IClusterConfig {
 					hacallback.disconnected(client, disconnectResponse);
 				}
 				// Move client from the live list to the dead list
-				synchronized (lock) {
-					// Mosquitto broker may have disconnected with a severe error
-					// such as a protocol error. Once disconnected by the broke, it
-					// is seen that the client is unable to reconnect. Mark the
-					// client for revival.
-					ClusterState.this.markClientForRevival(endpointName, client);
+				// Mosquitto broker may have disconnected with a severe error
+				// such as a protocol error. Once disconnected by the broke, it
+				// is seen that the client is unable to reconnect. Mark the
+				// client for revival.
+				ClusterState.this.markClientForRevival(endpointName, client);
+				if (logger.isDebugEnabled()) {
+					logger.debug(String.format(
+							"MqttCallbackImpl().disconnected() - Client disconnected: [%s]. disconnectResponse: [%s]. Moved to dead client list: [endpointName=%s, endpoint=%s].",
+							client.getServerURI(), disconnectResponse, endpointName, client.getServerURI()));
 				}
-				logger.warn(String.format(
-						"MqttCallbackImpl().disconnected() - Client disconnected: [%s]. disconnectResponse: [%s]. Moved to dead client list: [endpointName=%s, endpoint=%s].",
-						client.getServerURI(), disconnectResponse, endpointName, client.getServerURI()));
-				logConnectionStatus();
 			}
 		}
 
@@ -1973,6 +2289,16 @@ public class ClusterState implements IClusterConfig {
 		@Override
 		public void authPacketArrived(MqttClient client, int reasonCode, MqttProperties properties) {
 			// Ignore
+		}
+	}
+
+	class SharedToken {
+		MqttClient client;
+		IMqttToken token;
+
+		SharedToken(MqttClient client, IMqttToken token) {
+			this.client = client;
+			this.token = token;
 		}
 	}
 }

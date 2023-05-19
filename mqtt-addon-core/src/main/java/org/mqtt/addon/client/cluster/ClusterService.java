@@ -407,6 +407,14 @@ public class ClusterService {
 		}
 		return clusterStateMap.get(haclient.getClusterName());
 	}
+	
+	/**
+	 * Returns all ClusterState instances.
+	 * @return Non-null array
+	 */
+	public ClusterState[] getClusterStates() {
+		return clusterStateMap.values().toArray(new ClusterState[clusterStateMap.size()]);
+	}
 
 	/**
 	 * Returns true if the service has been started, i.e., the {@link #start} method

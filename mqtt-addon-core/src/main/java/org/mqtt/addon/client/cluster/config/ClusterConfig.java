@@ -102,6 +102,7 @@ public class ClusterConfig {
 		private String primaryServerURI;
 		private boolean enabled = true;
 		private boolean autoConnect = true;
+		private boolean liveEndpointPoolEnabled = true;
 		private int initialEndpointCount = -1;
 		private int liveEndpointCount = -1;
 		private long timeToWait = IClusterConfig.DEFAULT_TIME_TO_WAIT_IN_MSEC;
@@ -140,6 +141,14 @@ public class ClusterConfig {
 
 		public void setAutoConnect(boolean autoConnect) {
 			this.autoConnect = autoConnect;
+		}
+
+		public boolean isLiveEndpointPoolEnabled() {
+			return liveEndpointPoolEnabled;
+		}
+
+		public void setLiveEndpointPoolEnabled(boolean liveEndpointPoolEnabled) {
+			this.liveEndpointPoolEnabled = liveEndpointPoolEnabled;
 		}
 
 		public int getFos() {

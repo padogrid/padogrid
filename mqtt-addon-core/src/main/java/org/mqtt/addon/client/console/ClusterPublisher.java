@@ -196,9 +196,8 @@ public class ClusterPublisher implements Constants {
 		if (clusterName != null) {
 			writeLine("PadoGrid Cluster: " + clusterName);
 		}
-		String virtualClusterName;
+		String virtualClusterName = clusterName;
 		if (configFilePath != null) {
-			virtualClusterName = clusterName;
 			try {
 				// We need to do this here in order to get the default
 				// cluster name.
@@ -213,8 +212,9 @@ public class ClusterPublisher implements Constants {
 						configFilePath);
 				System.exit(-1);
 			}
-		} else {
-			virtualClusterName = createVirtualClusterName();
+		}
+		if (virtualClusterName == null) {
+			virtualClusterName = "subscriber";
 		}
 		writeLine("cluster: " + virtualClusterName + " (virtual)");
 

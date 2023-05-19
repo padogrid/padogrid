@@ -19,7 +19,6 @@ package org.mqtt.addon.client.console;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 
 import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttClient;
@@ -104,11 +103,6 @@ public class ClusterSubscriber implements Constants {
 		writeLine();
 	}
 
-	private static String createVirtualClusterName() {
-		UUID uuid = UUID.randomUUID();
-		return uuid.toString();
-	}
-
 	public static void main(String[] args) {
 		String clusterName = null;
 		String endpoints = null;
@@ -188,9 +182,8 @@ public class ClusterSubscriber implements Constants {
 		if (clusterName != null) {
 			writeLine("PadoGrid Cluster: " + clusterName);
 		}
-		String virtualClusterName;
+		String virtualClusterName = clusterName;
 		if (configFilePath != null) {
-			virtualClusterName = clusterName;
 			try {
 				// We need to do this here in order to get the default
 				// cluster name.
@@ -205,8 +198,9 @@ public class ClusterSubscriber implements Constants {
 						configFilePath);
 				System.exit(-1);
 			}
-		} else {
-			virtualClusterName = createVirtualClusterName();
+		}
+		if (virtualClusterName == null) {
+			virtualClusterName = "subscriber";
 		}
 		writeLine("cluster: " + virtualClusterName + " (virtual)");
 
@@ -306,7 +300,6 @@ public class ClusterSubscriber implements Constants {
 		// Connect
 		try {
 			client.connect();
-			client.subscribe(topicFilter, qos);
 			if (client.isConnected() == false) {
 				System.err
 						.printf("ERROR: Unable to connect to any of the endpoints in the cluster. Command aborted.%n");
@@ -314,6 +307,8 @@ public class ClusterSubscriber implements Constants {
 				System.exit(-1);
 			}
 			writeLine("Waiting for messages...");
+			client.subscribe(topicFilter, qos);
+			
 			while (true) {
 				Thread.sleep(5000);
 			}
