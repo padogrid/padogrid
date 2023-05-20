@@ -31,7 +31,7 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
-# The following line is required by help_padogrid
+# The following line is required by help_padogrid. Do NOT remove!
 # $EXECUTABLE - Subscribe to the specified topic filter in the specified MQTT virtual cluster
 
 ENDPOINTS=""
@@ -96,7 +96,28 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"
 fi
 
+# Log files are kept in the user home directory
+LOG_DIR=~/.padogrid/log
+if [ ! -d "$LOG_DIR/paho" ]; then
+   mkdir -p "$LOG_DIR/paho"
+fi
+
+LOG_CONFIG_FILE="$PADOGRID_HOME/mosquitto/etc/template-log4j2.properties"
+LOG_FILE=$LOG_DIR/$EXECUTABLE.log
+PAHO_LOG_CONFIG_FILE="$PADOGRID_HOME/mosquitto/etc/paho-logging-$EXECUTABLE.properties"
+
+if [[ ${OS_NAME} == CYGWIN* ]]; then
+   LOG_DIR="$(cygpath -wp "$LOG_DIR")"
+   LOG_CONFIG_FILE="$(cygpath -wp "$LOG_CONFIG_FILE")"
+   LOG_FILE="$(cygpath -wp "$LOG_FILE")"
+   PAHO_LOG_CONFIG_FILE="$(cygpath -wp "$PAHO_LOG_CONFIG_FILE")"
+   CLASSPATH="$(cygpath -wp "$CLASSPATH")"
+fi
+# Required by LOG4J_CONFIG_FILE
+export LOG_FILE
+
 JAVA_OPTS="$JAVA_OPTS -Dexecutable.name=$EXECUTABLE"
+
 if [ "$ENDPOINTS" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS -Dcluster.endpoints=$ENDPOINTS"
 fi
@@ -104,6 +125,15 @@ if [ "$CLUSTER" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS -Dcluster.name=$CLUSTER"
 fi
 
+# Paho logging
+JAVA_OPTS="$JAVA_OPTS -Djava.util.logging.config.file=$PAHO_LOG_CONFIG_FILE"
+
+# Log properties for log4j2.
+JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=file:$LOG_CONFIG_FILE"
+JAVA_OPTS="$JAVA_OPTS -Dorg.mqtt.addon.logfile=$LOG_FILE"
+#JAVA_OPTS="$JAVA_OPTS -Dlog4j2.debug=true"
+
+echo "LOG_FILE: $LOG_FILE"
 "$JAVA" $JAVA_OPTS org.mqtt.addon.client.console.ClusterSubscriber "$@"
 
 if [ "$HELP" == "true" ]; then
