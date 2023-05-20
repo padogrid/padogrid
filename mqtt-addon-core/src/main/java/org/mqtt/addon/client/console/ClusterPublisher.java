@@ -196,8 +196,10 @@ public class ClusterPublisher implements Constants {
 		}
 
 		// Collection system properties - passed in by the invoking script.
-		if (configFilePath == null && clusterName == null && endpoints == null) {
+		if (configFilePath == null && clusterName == null) {
 			clusterName = System.getProperty("cluster.name");
+		}
+		if (endpoints == null) {
 			endpoints = System.getProperty("cluster.endpoints");
 		}
 
