@@ -50,7 +50,7 @@ public class ClusterPublisher implements Constants {
 		writeLine();
 		writeLine("SNOPSIS");
 		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-fos fos] [-qos qos] [-r] -t topic_filter -m message [-?]");
+				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-name endpoint_name] [-fos fos] [-qos qos] [-r] -t topic_filter -m message [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Publishes the specified message to the specified topic.");
@@ -81,6 +81,10 @@ public class ClusterPublisher implements Constants {
 		writeLine("             Connects to the specified endpoints. Exits if none of the endpoints exist.");
 		writeLine("             Default: tcp://localhost:1883-1885");
 		writeLine();
+		writeLine("   -name endpoint_name");
+		writeLine("             Optional endpoint name that identifies and targets the endpoint to which the message");
+		writeLine("             is published. If the endpoint name is not to found then the command aborts.");
+		writeLine();
 		writeLine("   -config config_file");
 		writeLine("             Optional configuration file. Default: current cluster's etc/mqtt5-client.yaml");
 		writeLine();
@@ -107,6 +111,7 @@ public class ClusterPublisher implements Constants {
 
 	public static void main(String[] args) {
 		String clusterName = null;
+		String endpointName = null;
 		String endpoints = null;
 		String configFilePath = null;
 		int qos = 0;
@@ -124,6 +129,10 @@ public class ClusterPublisher implements Constants {
 			} else if (arg.equals("-cluster")) {
 				if (i < args.length - 1) {
 					clusterName = args[++i].trim();
+				}
+			} else if (arg.equals("-name")) {
+				if (i < args.length - 1) {
+					endpointName = args[++i].trim();
 				}
 			} else if (arg.equals("-endpoints")) {
 				if (i < args.length - 1) {
@@ -232,6 +241,9 @@ public class ClusterPublisher implements Constants {
 			writeLine("config: " + configFilePath);
 		}
 		writeLine("topic: " + topic);
+		if (endpointName != null) {
+			writeLine("name: " + endpointName);
+		}
 		writeLine("message: " + message);
 
 		// Create cluster
@@ -282,12 +294,17 @@ public class ClusterPublisher implements Constants {
 				HaClusters.stop();
 				System.exit(-1);
 			}
-			client.publish(topic, message.getBytes(), qos, isRetained);
+			if (endpointName != null) {
+				client.publish(endpointName, topic, message.getBytes(), qos, isRetained);
+			} else {
+				client.publish(topic, message.getBytes(), qos, isRetained);
+			}
 			HaClusters.stop();
 			System.exit(0);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.printf("ERROR: Error occured while publishing data. %s Command aborted.%n", e.getMessage());
+			HaClusters.stop();
+			System.exit(-2);
 		}
 	}
 }

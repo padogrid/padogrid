@@ -449,7 +449,15 @@ public class HaMqttClient implements IHaMqttClient {
 	 * IMqttClient: {@inheritDoc}
 	 */
 	public void publish(String endpointName, String topic, MqttMessage message) throws MqttException {
-		publish(getMqttClient(endpointName), topic, message);
+		MqttClient client = getMqttClient(endpointName);
+		if (client == null) {
+			if (client == null) {
+				cleanupThreadLocals();
+				throw new HaMqttException(-101, String.format("Endpoint not found [endpointName=%s]",
+						endpointName));
+			}
+		}
+		publish(client, topic, message);
 	}
 
 	private void publishAll(String topic, byte[] payload, int qos, boolean retained) throws MqttException {
@@ -579,7 +587,15 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	public void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained)
 			throws MqttException {
-		publish(getMqttClient(endpointName), topic, payload, qos, retained);
+		MqttClient client = getMqttClient(endpointName);
+		if (client == null) {
+			if (client == null) {
+				cleanupThreadLocals();
+				throw new HaMqttException(-101, String.format("Endpoint not found [endpointName=%s]",
+						endpointName));
+			}
+		}
+		publish(client, topic, payload, qos, retained);
 	}
 
 	/**

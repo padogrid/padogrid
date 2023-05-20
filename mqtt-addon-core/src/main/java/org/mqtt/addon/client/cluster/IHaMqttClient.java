@@ -301,7 +301,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @return null if the publisher is not available.
 	 */
 	public MqttClient getPublisher();
-		
+
 	/**
 	 * Returns the publisher with the topic base that matches the specified topic.
 	 * If the topic base is not defined or there is no match, then it returns the
@@ -313,15 +313,15 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @return null if the publisher is not available.
 	 */
 	public MqttClient getPublisher(String topic);
-		
-	
+
 	/**
 	 * Publishes the specified message to the specified endpoint's topic.
 	 * 
 	 * @param endpointName Endpoint name
 	 * @param topic        Topic
 	 * @param message      Message to publish
-	 * @throws MqttException if there was an error publishing message
+	 * @throws MqttException if the specified endpoint name is not found or there
+	 *                       was an error publishing message
 	 */
 	public void publish(String endpointName, String topic, MqttMessage message) throws MqttException;
 
@@ -333,7 +333,8 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @param payload      Payload
 	 * @param qos          QoS 0, 1, or 2
 	 * @param retained     true to retain payload
-	 * @throws MqttException if there was an error publishing message
+	 * @throws MqttException if the specified endpoint name is not found or there
+	 *                       was an error publishing message
 	 */
 	public void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained)
 			throws MqttException;
