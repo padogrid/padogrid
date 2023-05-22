@@ -253,7 +253,7 @@ public class ClusterConfig {
 		public void setPrimaryServerURI(String primaryServerURI) {
 			this.primaryServerURI = primaryServerURI;
 		}
-		
+
 		public String getDefaultTopicBase() {
 			return defaultTopicBase;
 		}

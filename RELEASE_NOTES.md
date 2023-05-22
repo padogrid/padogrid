@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.25-SNAPSHOT
 
-### Release Date: 05/10/23
+### Release Date: 05/22/23
 
 - With this release, PadoGrid introduces MQTT *virtual clusters*. A virtual cluster is a cluster that can be formed by a client application on the fly by dropping in any endpoints that are accessible. For example, a client application can create a virtual cluster comprised of 1000's of edge brokers or comprised of brokers on the Internet everywhere. A client application can create any number of virtual clusters, bridge them, and dynamically scale out as needed. See [Clustering MQTT](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT) for details.
 - Added clustering support for [Eclipse Mosquitto](https://mosquitto.org/), an open source MQTT broker. PadoGrid clusters Mosquitto brokers as standalone servers and provides HA services via the client API, `HaMqttClient`, which wraps the [Paho API](https://www.eclipse.org/paho/) providing seamless application migration. This release supports MQTT v5. See [Mosquitto Overview](https://github.com/padogrid/padogrid/wiki/Mosquitto-Overview) for details.

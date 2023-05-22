@@ -100,6 +100,28 @@ public interface IHaMqttClient extends IMqttClient {
 	String[] getServerURIs();
 
 	/**
+	 * Returns serverURI of the live publisher identified by the specified endpoint
+	 * name.
+	 * 
+	 * @param endpointName Endpoint name
+	 * @return null if publisher not found
+	 */
+	public String getServerURIByName(String endpointName);
+
+	/**
+	 * Returns the server URI (endpoint) of the publisher with the topic base that
+	 * matches the specified topic. If the topic base is not defined or there is no
+	 * match, then it returns the server URI of the publisher determined based on
+	 * the publisher type, i.e., returns {@link #getPublisher()}.
+	 * 
+	 * @param topic Topic to find the publisher that has the matching topic base. If
+	 *              topic is null then it is equivalent to invoking
+	 *              {@link #getServerURI()}.
+	 * @return if the publisher is not available
+	 */
+	public String getServerURIByTopic(String topic);
+
+	/**
 	 * Subscribes to all the live cluster endpoints (brokers).
 	 * 
 	 * @param topicFilter the topic to subscribe to, which can include wildcards.
@@ -303,6 +325,14 @@ public interface IHaMqttClient extends IMqttClient {
 	public MqttClient getPublisher();
 
 	/**
+	 * Returns the live publisher identified by the specified endpoint name.
+	 * 
+	 * @param endpointName Endpoint name
+	 * @return null if publisher not found
+	 */
+	public MqttClient getPublisherByName(String endpointName);
+
+	/**
 	 * Returns the publisher with the topic base that matches the specified topic.
 	 * If the topic base is not defined or there is no match, then it returns the
 	 * publisher based on the publisher type, i.e., returns {@link #getPublisher()}.
@@ -312,7 +342,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 *              {@link #getPublisher()}.
 	 * @return null if the publisher is not available.
 	 */
-	public MqttClient getPublisher(String topic);
+	public MqttClient getPublisherByTopic(String topic);
 
 	/**
 	 * Publishes the specified message to the specified endpoint's topic.

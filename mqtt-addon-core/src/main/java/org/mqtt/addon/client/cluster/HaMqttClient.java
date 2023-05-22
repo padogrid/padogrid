@@ -224,13 +224,20 @@ public class HaMqttClient implements IHaMqttClient {
 	 * {@inheritDoc}
 	 */
 	public MqttClient getPublisher() {
-		return getPublisher(null);
+		return getPublisherByTopic(null);
+	}
+	
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
+	public MqttClient getPublisherByName(String endpointName) {
+		return liveClientMap.get(endpointName);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	public MqttClient getPublisher(String topic) {
+	public MqttClient getPublisherByTopic(String topic) {
 		MqttClient client = null;
 
 		// If topic is specified then return the publisher that matches the topic base
@@ -246,7 +253,7 @@ public class HaMqttClient implements IHaMqttClient {
 						if (topic.startsWith(t)) {
 							endpointName = entry.getKey();
 							invertedTopicBaseMap.put(topic, endpointName);
-							return getMqttClient(endpointName);
+							return getPublisherByName(endpointName);
 						}
 					}
 					invertedTopicBaseScannedMap.put(topic, true);
@@ -256,7 +263,7 @@ public class HaMqttClient implements IHaMqttClient {
 //					}
 				}
 			} else {
-				return getMqttClient(endpointName);
+				return getPublisherByName(endpointName);
 			}
 		}
 
@@ -433,28 +440,42 @@ public class HaMqttClient implements IHaMqttClient {
 
 		// Live client variables are updated from another thread. We reassign them to
 		// local variables to handle a race condition.
-		publish(getPublisher(topic), topic, message);
+		publish(getPublisherByTopic(topic), topic, message);
 	}
 
 	/**
-	 * Returns live MqttClient identified by the specified endpoint name
-	 * 
-	 * @param endpointName Endpoint name
+	 * IMqttClient: {@inheritDoc}
 	 */
-	private MqttClient getMqttClient(String endpointName) {
-		return liveClientMap.get(endpointName);
+	public String getServerURIByName(String endpointName) {
+		MqttClient client = getPublisherByName(endpointName);
+		if (client == null) {
+			return null;
+		} else {
+			return client.getServerURI();
+		}
+	}
+	
+	/**
+	 * IMqttClient: {@inheritDoc}
+	 */
+	public String getServerURIByTopic(String topic) {
+		MqttClient client = getPublisherByTopic(topic);
+		if (client == null) {
+			return null;
+		} else {
+			return client.getServerURI();
+		}
 	}
 
 	/**
 	 * IMqttClient: {@inheritDoc}
 	 */
 	public void publish(String endpointName, String topic, MqttMessage message) throws MqttException {
-		MqttClient client = getMqttClient(endpointName);
+		MqttClient client = getPublisherByName(endpointName);
 		if (client == null) {
 			if (client == null) {
 				cleanupThreadLocals();
-				throw new HaMqttException(-101, String.format("Endpoint not found [endpointName=%s]",
-						endpointName));
+				throw new HaMqttException(-101, String.format("Endpoint not found [endpointName=%s]", endpointName));
 			}
 		}
 		publish(client, topic, message);
@@ -579,7 +600,7 @@ public class HaMqttClient implements IHaMqttClient {
 
 		// Live client variables are updated from another thread. We reassign them to
 		// local variables to handle a race condition.
-		publish(getPublisher(topic), topic, payload, qos, retained);
+		publish(getPublisherByTopic(topic), topic, payload, qos, retained);
 	}
 
 	/**
@@ -587,12 +608,11 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	public void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained)
 			throws MqttException {
-		MqttClient client = getMqttClient(endpointName);
+		MqttClient client = getPublisherByName(endpointName);
 		if (client == null) {
 			if (client == null) {
 				cleanupThreadLocals();
-				throw new HaMqttException(-101, String.format("Endpoint not found [endpointName=%s]",
-						endpointName));
+				throw new HaMqttException(-101, String.format("Endpoint not found [endpointName=%s]", endpointName));
 			}
 		}
 		publish(client, topic, payload, qos, retained);
@@ -610,7 +630,7 @@ public class HaMqttClient implements IHaMqttClient {
 	public IMqttToken subscribe(String topicFilter, int qos) throws MqttException {
 		IMqttToken[] tokens = subscribeCluster(topicFilter, qos);
 		IMqttToken token = null;
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null) {
 			for (IMqttToken t : tokens) {
 				if (client.getClientId().equals(t.getClient().getClientId())) {
@@ -666,7 +686,7 @@ public class HaMqttClient implements IHaMqttClient {
 	public IMqttToken subscribe(String[] topicFilters, int[] qos) throws MqttException {
 		IMqttToken[] tokens = subscribeCluster(topicFilters, qos);
 		IMqttToken token = null;
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null) {
 			for (IMqttToken t : tokens) {
 				if (client.getClientId().equals(t.getClient().getClientId())) {
@@ -718,7 +738,7 @@ public class HaMqttClient implements IHaMqttClient {
 			throws MqttException {
 		IMqttToken[] tokens = subscribeCluster(topicFilters, qos);
 		IMqttToken token = null;
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null) {
 			for (IMqttToken t : tokens) {
 				if (client.getClientId().equals(t.getClient().getClientId())) {
@@ -816,7 +836,7 @@ public class HaMqttClient implements IHaMqttClient {
 			throws MqttException {
 		IMqttToken[] tokens = subscribeCluster(topicFilter, qos, messageListener);
 		IMqttToken token = null;
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null) {
 			for (IMqttToken t : tokens) {
 				if (client.getClientId().equals(t.getClient().getClientId())) {
@@ -1028,7 +1048,7 @@ public class HaMqttClient implements IHaMqttClient {
 		IMqttToken[] tokens = connectWithResultCluster(options);
 		IMqttToken token = null;
 		for (IMqttToken t : tokens) {
-			MqttClient client = getPublisher(null);
+			MqttClient client = getPublisherByTopic(null);
 			if (client != null && client.getClientId().equals(t.getClient().getClientId())) {
 				token = t;
 				break;
@@ -1190,7 +1210,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public MqttTopic getTopic(String topic) {
-		MqttClient client = getPublisher(topic);
+		MqttClient client = getPublisherByTopic(topic);
 		if (client != null) {
 			return client.getTopic(topic);
 		} else {
@@ -1216,7 +1236,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public String getClientId() {
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null) {
 			return client.getClientId();
 		} else {
@@ -1232,7 +1252,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public String getServerURI() {
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null) {
 			return client.getServerURI();
 		} else {
@@ -1248,7 +1268,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public IMqttToken[] getPendingTokens() {
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null) {
 			return client.getPendingTokens();
 		} else {
@@ -1296,7 +1316,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public void messageArrivedComplete(int messageId, int qos) throws MqttException {
-		MqttClient client = getPublisher(null);
+		MqttClient client = getPublisherByTopic(null);
 		if (client != null && clusterState.getAllEndpoints().size() == 1) {
 			client.messageArrivedComplete(messageId, qos);
 		} else {
@@ -1344,7 +1364,7 @@ public class HaMqttClient implements IHaMqttClient {
 
 	@Override
 	public String toString() {
-		return "HaMqttClient [clusterName=" + clusterName + ", currentThreadPublisher=" + getPublisher(null)
+		return "HaMqttClient [clusterName=" + clusterName + ", currentThreadPublisher=" + getPublisherByTopic(null)
 				+ ", publisherType=" + publisherType + "]";
 	}
 

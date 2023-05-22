@@ -55,6 +55,7 @@ FILE_ARG=
 JAR_ARG=
 TAR_SPECIFIED=false
 CLASSPATH_ARG=
+CONFIG_ARG=
 JET_ARG=
 NAME_ARG=
 PORT_ARG=
@@ -219,6 +220,8 @@ do
          JAR_ARG=$i
       elif [ "$PREV" == "-classpath" ]; then
          CLASSPATH_ARG=$i
+      elif [ "$PREV" == "-config" ]; then
+         CONFIG_ARG=$i
       elif [ "$PREV" == "-jet" ]; then
          JET_ARG=$i
       elif [ "$PREV" == "-name" ]; then

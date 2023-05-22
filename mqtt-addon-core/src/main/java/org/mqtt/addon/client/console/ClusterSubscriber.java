@@ -308,15 +308,16 @@ public class ClusterSubscriber implements Constants {
 				HaClusters.stop();
 				System.exit(-1);
 			}
-			writeLine("Waiting for messages...");
 			client.subscribe(topicFilter, qos);
+			writeLine("Waiting for messages...");
 			
 			while (true) {
 				Thread.sleep(5000);
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.printf("ERROR: Error occured while subscribing to the topic filter. %s Command aborted.%n", e.getMessage());
+			HaClusters.stop();
+			System.exit(-3);
 		}
 	}
 }

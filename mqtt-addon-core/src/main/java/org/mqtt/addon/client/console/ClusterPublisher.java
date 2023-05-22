@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptionsBuilder;
 import org.mqtt.addon.client.cluster.HaClusters;
@@ -139,6 +140,10 @@ public class ClusterPublisher implements Constants {
 					endpoints = args[++i].trim();
 				}
 			} else if (arg.equals("-config")) {
+				if (i < args.length - 1) {
+					configFilePath = args[++i].trim();
+				}
+			} else if (arg.equals("-name")) {
 				if (i < args.length - 1) {
 					configFilePath = args[++i].trim();
 				}
@@ -296,17 +301,25 @@ public class ClusterPublisher implements Constants {
 				HaClusters.stop();
 				System.exit(-1);
 			}
+			MqttClient mc;
 			if (endpointName != null) {
-				client.publish(endpointName, topic, message.getBytes(), qos, isRetained);
+				mc = client.getPublisherByName(endpointName);
 			} else {
-				client.publish(topic, message.getBytes(), qos, isRetained);
+				mc = client.getPublisherByTopic(topic);
 			}
+			
+			if (mc == null) {
+				System.err.printf("ERROR: Cluster unreachable. Command aborted.%n");
+				System.exit(-2);
+			}
+			mc.publish(topic, message.getBytes(), qos, isRetained);
+			writeLine("published to: " + mc.getServerURI());
 			HaClusters.stop();
 			System.exit(0);
 		} catch (Exception e) {
 			System.err.printf("ERROR: Error occured while publishing data. %s Command aborted.%n", e.getMessage());
 			HaClusters.stop();
-			System.exit(-2);
+			System.exit(-3);
 		}
 	}
 }

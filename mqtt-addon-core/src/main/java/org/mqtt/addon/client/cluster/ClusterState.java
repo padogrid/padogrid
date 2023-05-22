@@ -88,6 +88,8 @@ public class ClusterState implements IClusterConfig {
 
 	private String primaryServerURI;
 	private MqttClient primaryClient;
+	private String[] secondaryServerURIs;
+	private boolean roundRobinEnabled = false;
 	private MqttClient stickySubscriber;
 
 	private final List<String> allEndpointList = Collections.synchronizedList(new ArrayList<String>(10));
@@ -1972,6 +1974,13 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
+	 * Returns the subscriberCount value. Default: -1.
+	 */
+	public int getSubscriberCount() {
+		return this.subscriberCount;
+	}
+	
+	/**
 	 * Sets the MqttClient callback.
 	 * 
 	 * @param callback
@@ -2026,42 +2035,60 @@ public class ClusterState implements IClusterConfig {
 	/**
 	 * Stores the specified topic filter for reinstating connection failures.
 	 */
-	public void subscribe(OutBridgeCluster bridgeCluster) {
+	public void subscribe(OutBridgeCluster bridgeCluster) throws HaMqttException {
+		if (subscriberCount == 0) {
+			throw new HaMqttException(-110, "Subscripitions disallowed: [subscriberCount=0].");
+		}
 		subscribedTopicSet.add(bridgeCluster);
 	}
 
 	/**
 	 * Stores the specified topic filter for reinstating connection failures.
 	 */
-	public void subscribe(String topicFilter, int qos) {
+	public void subscribe(String topicFilter, int qos) throws HaMqttException {
+		if (subscriberCount == 0) {
+			throw new HaMqttException(-110, "Subscripitions disallowed: [subscriberCount=0].");
+		}
 		subscribedTopicSet.add(new TopicFilter(topicFilter, qos));
 	}
 
 	/**
 	 * Stores the specified topic filters for reinstating connection failures.
 	 */
-	public void subscribe(String[] topicFilters, int[] qos) {
+	public void subscribe(String[] topicFilters, int[] qos) throws HaMqttException {
+		if (subscriberCount == 0) {
+			throw new HaMqttException(-110, "Subscripitions disallowed: [subscriberCount=0].");
+		}
 		subscribedTopicSet.add(new TopicFilters(topicFilters, qos));
 	}
 
 	/**
 	 * Stores the specified subscriptions for reinstating connection failures.
 	 */
-	public void subscribe(MqttSubscription[] subscriptions) {
+	public void subscribe(MqttSubscription[] subscriptions) throws HaMqttException {
+		if (subscriberCount == 0) {
+			throw new HaMqttException(-110, "Subscripitions disallowed: [subscriberCount=0].");
+		}
 		subscribedTopicSet.add(new TopicSubscriptions(subscriptions));
 	}
 
 	/**
 	 * Stores the specified topic filter for reinstating connection failures.
 	 */
-	public void subscribe(String topicFilter, int qos, IMqttMessageListener messageListener) {
+	public void subscribe(String topicFilter, int qos, IMqttMessageListener messageListener) throws HaMqttException {
+		if (subscriberCount == 0) {
+			throw new HaMqttException(-110, "Subscripitions disallowed: [subscriberCount=0].");
+		}
 		subscribedTopicSet.add(new TopicFilter(topicFilter, qos, messageListener));
 	}
 
 	/**
 	 * Stores the specified subscriptions for reinstating connection failures.
 	 */
-	public void subscribe(MqttSubscription[] subscriptions, IMqttMessageListener[] messageListeners) {
+	public void subscribe(MqttSubscription[] subscriptions, IMqttMessageListener[] messageListeners) throws HaMqttException {
+		if (subscriberCount == 0) {
+			throw new HaMqttException(-110, "Subscripitions disallowed: [subscriberCount=0].");
+		}
 		subscribedTopicSet.add(new TopicSubscriptions(subscriptions, messageListeners));
 	}
 

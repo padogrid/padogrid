@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -endpoints -config -m -r -t -fos -qos -?"
+   echo "-cluster -endpoints -config -name -m -r -t -fos -qos -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -35,7 +35,7 @@ fi
 # $EXECUTABLE - Publish messages to an MQTT virtual cluster
 
 ENDPOINTS=""
-if [ "$CLUSTER" != "" ]; then
+if [ "$CONFIG_ARG" == "" ] && [ "$CLUSTER" != "" ]; then
    if [ "$(isClusterExist $CLUSTER)" != "true" ]; then
       echo -e >&2 "${CError}ERROR:${CNone} Specified cluster does not exist in this workspace: [$CLUSTER]. Command aborted."
       exit 1
@@ -46,7 +46,7 @@ if [ "$CLUSTER" != "" ]; then
       echo "Using default endpoints instead: $ENDPOINTS"
    fi
 fi
-if [ "$ENDPOINTS" == "" ] && [ "$CLUSTER" != "" ]; then
+if [ "$ENDPOINTS" == "" ] && [ "$CONFIG_ARG" == "" ] && [ "$CLUSTER" != "" ]; then
    POD=`getClusterProperty "pod.name" "local"`
    __HOSTNAME=`hostname`
    OS_ENV=`getOsEnv $__HOSTNAME`
