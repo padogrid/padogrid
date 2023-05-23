@@ -282,12 +282,14 @@ else
 fi
 export LOG_FILE_NAME=${MEMBER}.log
 export LOG_FILE=$LOG_DIR/${LOG_FILE_NAME}
+MEMBER_CONFIG_FILE=$MEMBER_DIR/mosquitto.conf
 
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
    CONFIG_FILE="$(cygpath -wp "$CONFIG_FILE")"
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
    MEMBER_DIR="$(cygpath -wp "$MEMBER_DIR")"
+   MEMBER_CONFI_FILE="$(cygpath -wp "$MEMBER_CONFI_FILE")"
 fi
 
 MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
@@ -336,28 +338,29 @@ else
 fi
 
 echo "----------------------------------------------------------------"
-echo "       WORKSPACE: $PADOGRID_WORKSPACE"
-echo "         Cluster: $CLUSTER"
+echo "         WORKSPACE: $PADOGRID_WORKSPACE"
+echo "           Cluster: $CLUSTER"
 if [ "$VM_SPECIFIED" == "true" ] || [ "$VM_ENABLED" == "true" ]; then
-echo "      Deployment: VM"
+echo "        Deployment: VM"
 else
-echo "             Pod: $POD"
+echo "               Pod: $POD"
 fi
-echo "          Member: $MEMBER"
+echo "            Member: $MEMBER"
 if [ "$FG_SPECIFIED" == "true" ]; then
-echo "             PID: $PID"
+echo "               PID: $PID"
 fi
-echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
-echo "       NOTE_TYPE: $NODE_TYPE"
-echo "     WORKING_DIR: $MEMBER_DIR"
-echo "      CONFIG_DIR: $ETC_DIR"
-echo "     CONFIG_FILE: $CONFIG_FILE"
-echo "         LOG_DIR: $LOG_DIR"
-echo "        LOG_FILE: $LOG_FILE"
-echo "     MEMBER_PORT: $MEMBER_PORT"
-echo "MEMBER_HTTP_PORT: $MEMBER_HTTP_PORT"
+echo "      CLUSTER_TYPE: $CLUSTER_TYPE"
+echo "         NOTE_TYPE: $NODE_TYPE"
+echo "       WORKING_DIR: $MEMBER_DIR"
+echo "        CONFIG_DIR: $ETC_DIR"
+echo "       CONFIG_FILE: $CONFIG_FILE"
+echo "MEMBER_CONFIG_FILE: $MEMBER_CONFIG_FILE"
+echo "           LOG_DIR: $LOG_DIR"
+echo "          LOG_FILE: $LOG_FILE"
+echo "       MEMBER_PORT: $MEMBER_PORT"
+echo "  MEMBER_HTTP_PORT: $MEMBER_HTTP_PORT"
 if [ "$RUN_SCRIPT" != "" ]; then
-echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
+echo -e "        RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
 fi
 echo "----------------------------------------------------------------"
 

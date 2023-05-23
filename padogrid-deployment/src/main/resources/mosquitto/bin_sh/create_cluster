@@ -27,7 +27,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -pod -vm -port -?"
+   echo "-cluster -pod -vm -port -bridge -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -49,6 +49,8 @@ SYNOPSIS
                [-pod pod_name]
                [-vm [comma_separated_hosts]]
                [-port first_port_number]
+               [-count member_count]
+               [-bridge]
 
 DESCRIPTION
    Creates a new cluster in the current workspace. Once the cluster is created,
@@ -80,6 +82,18 @@ OPTIONS
              for creating non-local pod and VM clusters.
              
              Default: $DEFAULT_MEMBER_START_PORT
+
+   -count member_count
+             Number of members in the cluster. If not specified, creates a cluster with
+             three (3) members. If '-bridge' is specified and '-count' is not specified,
+             then creates four (2) members.
+
+   -bridge
+             If specified, then Mosquitto brokers are bridged in pairs. The odd numbered
+             members bridge even numbered members, e.g., Member 01 bridges Member 02,
+             Member 03 bridges Member 04, etc. The member specific configuration files
+             are located in the member working (run) directories. If '-count' is not
+             specified then it creates only two (2) members.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
@@ -130,6 +144,30 @@ if [ "`isPodExist $POD`" == "false" ]; then
    echo >&2 "----------------------------------------------------------------"
    exit 1
 fi
+
+if [ "$COUNT" != "" ]; then
+   if [ "$(isNumber $COUNT)" == "false" ]; then
+      echo -e "${CLightRed}ERROR:${CNone} Invalid number [$COUNT]. Command aborted."
+      exit 1
+   fi
+   if [ $COUNT -le 0 ]; then
+      echo -e "${CLightRed}ERROR:${CNone} Member count must be greater than 0 [$COUNT]. Command aborted."
+      exit 1
+   fi
+   if [ $COUNT -gt 99 ]; then
+      echo -e "${CLightRed}ERROR:${CNone} Member count must be less than 100 [$COUNT]. Command aborted."
+      exit 1
+   fi
+   MEMBER_COUNT=$COUNT
+else
+   if [ "$BRIDGE_SPECIFIED" == "true" ]; then
+      MEMBER_COUNT=2
+   else
+      MEMBER_COUNT=3
+   fi
+fi
+
+
 
 # If -product (hidden option) is specified then make it default. This effectively
 # provides a way to create any product clusters in the same workspace.
@@ -199,6 +237,18 @@ function writeCluster()
    echo "http.enabled=$DEFAULT_MEMBER_HTTP_ENABLED" >> $ETC_DIR/cluster.properties
    echo "# Member websocket start port number. The port number is incremented starting from this number." >> $ETC_DIR/cluster.properties
    echo "http.startPort=$NEW_MEMBER_HTTP_START_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
+   
+   # Bridge property
+   echo "# Bridge property. If true, then odd numbered members bridge even numbered members." >> $ETC_DIR/cluster.properties
+   echo "# See member specific Mosquitto configuration file in the member's run directory." >> $ETC_DIR/cluster.properties
+   echo "# Changing this property requires recreating all members and restarting the cluster." >> $ETC_DIR/cluster.properties
+   echo "# Default: false" >> $ETC_DIR/cluster.properties
+   if [ "$BRIDGE_SPECIFIED" == "true" ]; then
+      echo "bridge.enabled=true" >> $ETC_DIR/cluster.properties
+   else
+      echo "bridge.enabled=false" >> $ETC_DIR/cluster.properties
+   fi
    echo "" >> $ETC_DIR/cluster.properties
 
    # VM
@@ -417,7 +467,6 @@ writeCluster
 
 # Add initial members
 if [ "$VM_ENABLED" != "true" ] && [ "$POD" == "local" ]; then
-   let MEMBER_COUNT=3
    for i in $(seq 1 $MEMBER_COUNT); do
       add_member -product mosquitto -cluster $CLUSTER
      # MEMBER_NUM=$i

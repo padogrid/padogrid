@@ -52,6 +52,7 @@ JAVA_HOME_ARG=
 PATH_ARG=
 FILE_SPECIFIED=false
 FILE_ARG=
+BRIDGE_SPECIFIED=false
 JAR_ARG=
 TAR_SPECIFIED=false
 CLASSPATH_ARG=
@@ -75,6 +76,7 @@ HOST_SPECIFIED=false
 IP_ADDRESS=
 IP_SPECIFIED=false
 COUNT=
+COUNT_ARG=
 INIT_SPECIFIED=false
 VERSION_SPECIFIED=false
 VERSION_ARG=
@@ -247,6 +249,7 @@ do
          NM=$i
       elif [ "$PREV" == "-count" ]; then
          COUNT=$i
+         COUNT_ARG=$i
       elif [ "$PREV" == "-cluster" ]; then
          CLUSTER=$i
          CLUSTER_ARG=$i
@@ -519,6 +522,8 @@ do
          PRODUCT_SPECIFIED=true
       elif [ "$i" == "-file" ]; then
          FILE_SPECIFIED=true
+      elif [ "$i" == "-bridge" ]; then
+         BRIDGE_SPECIFIED=true
       fi
    fi
    PREV=$i
