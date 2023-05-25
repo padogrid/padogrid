@@ -158,15 +158,16 @@ if [ "$COUNT" != "" ]; then
       echo -e "${CLightRed}ERROR:${CNone} Member count must be less than 100 [$COUNT]. Command aborted."
       exit 1
    fi
+   # Note that MEMBER_COUNT is overwritten later by "node.count" of pod if the -pod option is specified.
    MEMBER_COUNT=$COUNT
 else
+   # Note that MEMBER_COUNT is overwritten later by "node.count" of pod if the -pod option is specified.
    if [ "$BRIDGE_SPECIFIED" == "true" ]; then
       MEMBER_COUNT=2
    else
       MEMBER_COUNT=3
    fi
 fi
-
 
 
 # If -product (hidden option) is specified then make it default. This effectively
@@ -314,7 +315,7 @@ if [ "$VM_ENABLED" == "true" ]; then
       VM_HOSTS="$VM_HOSTS_ARG"
    fi
    if [ "$VM_HOSTS" == "" ]; then
-      echo "WARNING: VM hosts undefined. Configuring with this host."
+      echo -e "${CWarning}WARNING:${CNone} VM hosts undefined. Configuring with this host."
       VM_HOSTS=`hostname`
    fi
 else
@@ -383,6 +384,7 @@ if [ "$POD" != "local" ]; then
 
    AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" false`
    NODE_COUNT=`getPodProperty "node.count" "0"`
+   MEMBER_COUNT=$NODE_COUNT
    VM_USER="vagrant"
    POD_TYPE="vagrant"
    VM_HOSTS=""
@@ -428,7 +430,7 @@ if [ "$POD" != "local" ]; then
       if [ "$HOST_PRIVATE_IP" == "" ]; then
          AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
          if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
-            echo >&2 "ERROR: Private IP address not specified and unable to determine. Please add"
+            echo -e >&2 "${CLightRed}ERROR:${CNone} Private IP address not specified and unable to determine. Please add"
             echo >&2 "       a host-only ethernet adapter to VirtualBox. Command aborted."
             exit 1
          fi
@@ -466,9 +468,10 @@ CLUSTER_TYPE="mosquitto"
 writeCluster
 
 # Add initial members
-if [ "$VM_ENABLED" != "true" ] && [ "$POD" == "local" ]; then
+if ( [ "$VM_ENABLED" != "true" ] && [ "$POD" == "local" ] ) ||
+   ( [ "$VM_ENABLED" == "true" ] && [ "$POD" != "local" ] ); then
    for i in $(seq 1 $MEMBER_COUNT); do
-      add_member -product mosquitto -cluster $CLUSTER
+      add_member -product mosquitto -cluster -num $i
      # MEMBER_NUM=$i
      # MEMBER=`getMemberName $i`
      # MEMBER_DIR=$CLUSTER_DIR/run/$MEMBER

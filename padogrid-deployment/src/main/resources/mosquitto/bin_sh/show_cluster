@@ -108,6 +108,7 @@ function displayVmClusterShort()
 
    # Members
    MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   BRIDGE_ENABLED=`getClusterProperty "bridge.enabled" false`
    MEMBER_COUNT=0
    RUNNING_MEMBER_COUNT=0
    for VM_HOST in ${VM_HOSTS}; do
@@ -126,6 +127,7 @@ function displayVmClusterShort()
    echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "  BRIDGE_ENABLED: $BRIDGE_ENABLED"
    echo "      Deployment: VM"
    fi
    if [ $RUNNING_MEMBER_COUNT -eq $MEMBER_COUNT ]; then
@@ -146,6 +148,7 @@ function displayVmClusterLong()
    MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    MEMBER_HTTP_ENABLED=`getClusterProperty "http.enabled" $DEFAULT_MEMBER_HTTP_ENABLED`
    MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
+   BRIDGE_ENABLED=`getClusterProperty "bridge.enabled" false`
    # If pod cluster, then source in the pod env vars to set the VM specific variables
    OS_ENV=`getOsEnv $NODE`
    if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
@@ -167,12 +170,11 @@ function displayVmClusterLong()
    fi
    echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
+   echo "  BRIDGE_ENABLED: $BRIDGE_ENABLED"
    echo "      Deployment: VM"
    echo ""
 
-
    # Members
-
    MEMBER_COUNT=0
    RUNNING_MEMBER_COUNT=0
    DOWN_MEMBER_COUNT=0
@@ -233,6 +235,7 @@ function displayClusterShort()
    MEMBER_PREFIX=`getMemberPrefix`
    MEMBER_COUNT=`getMemberCount`
    MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
+   BRIDGE_ENABLED=`getClusterProperty "bridge.enabled" false`
 
    RUNNING_MEMBER_COUNT=-1
    if ( [ "$POD_TYPE" == "local" ] && [ "$POD" == "local" ] )  ||
@@ -277,6 +280,7 @@ function displayClusterShort()
    echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "  BRIDGE_ENABLED: $BRIDGE_ENABLED"
    echo "             POD: $POD"
    echo "        POD_TYPE: $POD_TYPE"
    fi
@@ -308,6 +312,7 @@ function displayClusterLong()
    MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    HOST_NAME=`hostname`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" $HOST_NAME`
+   BRIDGE_ENABLED=`getClusterProperty "bridge.enabled" false`
 
    OS_ENV=`getOsEnv $NODE`
    RUN_DIR=$CLUSTERS_DIR/$CLUSTER/run
@@ -324,6 +329,7 @@ function displayClusterLong()
    echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
    echo "         PRODUCT: $PRODUCT"
    echo "    CLUSTER_TYPE: $CLUSTER_TYPE"
+   echo "  BRIDGE_ENABLED: $BRIDGE_ENABLED"
    echo "             POD: $POD"
    echo "        POD_TYPE: $POD_TYPE"
    echo ""

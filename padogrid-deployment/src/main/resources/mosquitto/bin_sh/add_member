@@ -121,6 +121,7 @@ if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
 fi
 
 POD=`getClusterProperty "pod.name" "local"`
+OS_ENV=`getOsEnv`
 
 #
 # VM cluster
@@ -137,7 +138,6 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
       fi
 
       # If pod cluster, then source in the pod env vars to set the VM specific variables
-      OS_ENV=`getOsEnv`
       if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
          if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
             . "$PODS_DIR/$POD/.nodeenv.sh"
@@ -187,9 +187,11 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
    fi
 fi
 
+
 #
 # Local cluster
 #
+AVAHI_ENABLED=`getPodProperty "pod.avahi.enabled" "false"`
 NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
 
 MEMBER_PREFIX=`getMemberPrefix`
@@ -207,9 +209,8 @@ if  [ ! -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-
 if [ "$MEMBER_NUM_SPECIFIED" == "true" ]; then
-   NEW_MEMBER_NUMBER=$MEMBER_NUM
+   NEW_MEMBER_NUMBER=$MEMBER_NUM_NO_LEADING_ZERO
 else
    if [ "$REMOTE_SPECIFIED" == "true" ]; then
       NEW_MEMBER_NUMBER=1
@@ -279,7 +280,14 @@ fi
 # The "include_dir" parameter points to $NEW_MEMBER_DIR/etc to pickup config
 # files that are specific to each member.
 BRIDGE_ENABLED=`getClusterProperty "bridge.enabled" false`
+VM_HOSTS=`getClusterProperty "vm.hosts"`
+# Replace , with space
+__VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
 NEW_MEMBER_CONFIG_FILE="$NEW_MEMBER_DIR/mosquitto.conf"
+if [ "$POD" != "local" ]; then
+   MEMBER_PORT=$MEMBER_START_PORT 
+   HTTP_PORT=$MEMBER_HTTP_START_PORT
+fi
 if [ ! -f "$NEW_MEMBER_CONFIG_FILE" ]; then
    echo "#" > "$NEW_MEMBER_CONFIG_FILE"
    echo "# This file contains parameters specific to member $MEMBER_NUMBER." >> "$NEW_MEMBER_CONFIG_FILE"
@@ -291,14 +299,33 @@ if [ ! -f "$NEW_MEMBER_CONFIG_FILE" ]; then
    echo "log_dest file $LOG_FILE" >> "$NEW_MEMBER_CONFIG_FILE"
    let ODD_NUM=NEW_MEMBER_NUMBER%2
    if [ "$ODD_NUM" == "1" ] && "$BRIDGE_ENABLED" == "true" ]; then
-      HOST_ADDRESS="localhost"
-      let BRIDGE_PORT=MEMBER_PORT+1
+      if [ "$POD" == "local" ]; then
+         let BRIDGE_PORT=MEMBER_PORT+1
+         NEXT_HOST_ADDRESS="localhost"
+      else
+         BRIDGE_PORT=$MEMBER_PORT
+         # Set the next host
+         let NEXT_MEMBER_NUMBER=NEW_MEMBER_NUMBER+1
+         NUM=0
+         NEXT_HOST_ADDRESS=""
+         for i in $__VM_HOSTS; do
+            let NUM=NUM+1
+            if [ $NUM -eq $NEXT_MEMBER_NUMBER ]; then
+               NEXT_HOST_ADDRESS=$i
+               break;
+            fi
+         done
+      fi
       BRIDGE_NAME="$CLUSTER-$MEMBER_NUMBER"
-      BRIDGE_ADDRESS="$HOST_ADDRESS:$BRIDGE_PORT"
+      BRIDGE_ADDRESS="$NEXT_HOST_ADDRESS:$BRIDGE_PORT"
       echo "" >> "$NEW_MEMBER_CONFIG_FILE"
       echo "# bridge: $BRIDGE_NAME" >> "$NEW_MEMBER_CONFIG_FILE"
       echo "connection $BRIDGE_NAME" >> "$NEW_MEMBER_CONFIG_FILE"
-      echo "address $BRIDGE_ADDRESS" >> "$NEW_MEMBER_CONFIG_FILE"
+      if [ "$NEXT_HOST_ADDRESS" == "" ]; then
+         echo "#address <not available>" >> "$NEW_MEMBER_CONFIG_FILE"
+      else
+         echo "address $BRIDGE_ADDRESS" >> "$NEW_MEMBER_CONFIG_FILE"
+      fi
       echo "remote_clientid $BRIDGE_NAME" >> "$NEW_MEMBER_CONFIG_FILE"
       echo "cleansession false" >> "$NEW_MEMBER_CONFIG_FILE"
       echo "notifications false" >> "$NEW_MEMBER_CONFIG_FILE"
