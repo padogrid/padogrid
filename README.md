@@ -183,13 +183,6 @@ podman run --name padogrid --rm -d -p 8888:8888 -e PADOGRID_HTTPS_ENABLED=true p
 - PadoGrid URL: https://0.0.0.0:8888
 - Password: `padogrid`
 
-If you are logged in the container and your container version is 0.9.9 and older, then you must intialize Padogrid as follows. Versions 0.9.10 and later do not require this step.
-
-```bash
-./padogrid_start -init
-. ~/.bashrc
-```
-
 ## Running PadoGrid in Kubernetes
 
 You can run PadoGrid in Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
