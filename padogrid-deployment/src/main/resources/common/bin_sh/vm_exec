@@ -130,25 +130,25 @@ else
          echo "----------------------------------------------------------------"
          exit 1
       fi
-      VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
-      if [ "$VM_ENABLED" == "false" ]; then
+   fi
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "false" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
+      echo >&2 "       in the 'etc/cluster.properties' file."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+   VM_HOSTS=`getClusterProperty "vm.hosts"`
+   if [ "$VM_HOSTS" == "" ]; then
+      if [ "$VM_HOSTS" == "" ]; then
          echo "----------------------------------------------------------------"
          echo "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo >&2 "ERROR: Not a VM cluster [$CLUSTER]. To enable VMs, set the 'vm.enabled' property"
-         echo >&2 "       in the 'etc/cluster.properties' file."
+         echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
+         echo >&2 "           file. Command aborted."
          echo "----------------------------------------------------------------"
          exit 1
-      fi
-      VM_HOSTS=`getClusterProperty "vm.hosts"`
-      if [ "$VM_HOSTS" == "" ]; then
-         if [ "$VM_HOSTS" == "" ]; then
-            echo "----------------------------------------------------------------"
-            echo "WORKSPACE: $PADOGRID_WORKSPACE"
-            echo >&2 "    ERROR: The 'vm.hosts' property is not set in the 'etc/cluster.properties' file."
-            echo >&2 "           file. Command aborted."
-            echo "----------------------------------------------------------------"
-            exit 1
-         fi
       fi
    fi
 fi

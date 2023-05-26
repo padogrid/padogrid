@@ -58,7 +58,7 @@ public class ClusterSubscriber implements Constants {
 		writeLine();
 		writeLine("SNOPSIS");
 		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-fos fos] [-qos qos] -t topic_filter [-?]");
+				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-fos fos] [-qos qos] [-quiet] -t topic_filter [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Subscribes to the specified topic filter in the specified virtual cluster.");
@@ -97,6 +97,9 @@ public class ClusterSubscriber implements Constants {
 		writeLine();
 		writeLine("   -qos qos");
 		writeLine("             Optional QoS value. Valid values are 0, 1, 2. Default: 0.");
+		writeLine("");
+		writeLine("   -quiet");
+		writeLine("             If specified, then outputs received messages only.");
 		writeLine();
 		writeLine("   -t topic_filter");
 		writeLine("             Topic filter.");
@@ -109,6 +112,7 @@ public class ClusterSubscriber implements Constants {
 		String configFilePath = null;
 		int qos = 0;
 		int fos = 0;
+		boolean isQuietTmp = false;
 		String topicFilter = null;
 
 		String arg;
@@ -155,8 +159,13 @@ public class ClusterSubscriber implements Constants {
 						System.exit(1);
 					}
 				}
+			} else if (arg.equals("-quiet")) {
+				isQuietTmp = true;
 			}
 		}
+
+		// final var for callback
+		final boolean isQuiet = isQuietTmp;
 
 		// Validate inputs
 		if (clusterName != null && endpoints != null) {
@@ -181,7 +190,7 @@ public class ClusterSubscriber implements Constants {
 		}
 
 		// Display all options
-		if (clusterName != null) {
+		if (isQuiet == false && clusterName != null) {
 			writeLine("PadoGrid Cluster: " + clusterName);
 		}
 		String virtualClusterName = clusterName;
@@ -204,22 +213,28 @@ public class ClusterSubscriber implements Constants {
 		if (virtualClusterName == null) {
 			virtualClusterName = "subscriber";
 		}
-		writeLine("cluster: " + virtualClusterName + " (virtual)");
+
+		if (isQuiet == false) {
+			writeLine("cluster: " + virtualClusterName + " (virtual)");
+		}
 
 		// If endpoints is not set, then default to
 		// IClusterConfig.DEFAULT_CLIENT_SERVER_URIS.
 		if (configFilePath == null && endpoints == null) {
 			endpoints = IClusterConfig.DEFAULT_CLIENT_SERVER_URIS;
 		}
-		if (endpoints != null) {
-			writeLine("endpoints: " + endpoints);
+
+		if (isQuiet == false) {
+			if (endpoints != null) {
+				writeLine("endpoints: " + endpoints);
+			}
+			writeLine("fos: " + fos);
+			writeLine("qos: " + qos);
+			if (configFilePath != null) {
+				writeLine("config: " + configFilePath);
+			}
+			writeLine("topicFilter: " + topicFilter);
 		}
-		writeLine("fos: " + fos);
-		writeLine("qos: " + qos);
-		if (configFilePath != null) {
-			writeLine("config: " + configFilePath);
-		}
-		writeLine("topicFilter: " + topicFilter);
 
 		// Create cluster
 		HaMqttClient client = null;
@@ -274,8 +289,12 @@ public class ClusterSubscriber implements Constants {
 			@Override
 			public void messageArrived(MqttClient client, String topic, MqttMessage message) throws Exception {
 				byte[] payload = message.getPayload();
-				System.out.println(String.format("%s - %s: %s", client.getServerURI(), topic,
-						new String(payload, StandardCharsets.UTF_8)));
+				if (isQuiet) {
+					System.out.println(String.format("%s", new String(payload, StandardCharsets.UTF_8)));
+				} else {
+					System.out.println(String.format("%s - %s: %s", client.getServerURI(), topic,
+							new String(payload, StandardCharsets.UTF_8)));
+				}
 			}
 
 			@Override
@@ -309,13 +328,16 @@ public class ClusterSubscriber implements Constants {
 				System.exit(-1);
 			}
 			client.subscribe(topicFilter, qos);
-			writeLine("Waiting for messages...");
-			
+			if (isQuiet == false) {
+				writeLine("Waiting for messages...");
+			}
+
 			while (true) {
 				Thread.sleep(5000);
 			}
 		} catch (Exception e) {
-			System.err.printf("ERROR: Error occured while subscribing to the topic filter. %s Command aborted.%n", e.getMessage());
+			System.err.printf("ERROR: Error occured while subscribing to the topic filter. %s Command aborted.%n",
+					e.getMessage());
 			HaClusters.stop();
 			System.exit(-3);
 		}

@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -endpoints -config -name -m -r -t -fos -qos -?"
+   echo "-cluster -endpoints -config -name -m -r -t -fos -qos -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -133,7 +133,9 @@ JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=file:$LOG_CONFIG_FILE"
 JAVA_OPTS="$JAVA_OPTS -Dorg.mqtt.addon.logfile=$LOG_FILE"
 #JAVA_OPTS="$JAVA_OPTS -Dlog4j2.debug=true"
 
-echo "LOG_FILE: $LOG_FILE"
+if [ "$QUIET" != "true" ]; then
+   echo "LOG_FILE: $LOG_FILE"
+fi
 "$JAVA" $JAVA_OPTS org.mqtt.addon.client.console.ClusterPublisher "$@"
 
 if [ "$HELP" == "true" ]; then

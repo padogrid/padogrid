@@ -51,7 +51,7 @@ public class ClusterPublisher implements Constants {
 		writeLine();
 		writeLine("SNOPSIS");
 		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-name endpoint_name] [-fos fos] [-qos qos] [-r] -t topic_filter -m message [-?]");
+				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-name endpoint_name] [-fos fos] [-qos qos] [-r] [-quiet] -t topic_filter -m message [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Publishes the specified message to the specified topic.");
@@ -96,6 +96,9 @@ public class ClusterPublisher implements Constants {
 		writeLine("   -qos qos");
 		writeLine("             Optional QoS value. Valid values are 0, 1, 2. Default: 0.");
 		writeLine();
+		writeLine("   -quiet");
+		writeLine("             If specified, then header information is not displayed.");
+		writeLine();
 		writeLine("   -m message");
 		writeLine("             Message to publish.");
 		writeLine();
@@ -120,6 +123,7 @@ public class ClusterPublisher implements Constants {
 		String topic = null;
 		String message = null;
 		boolean isRetained = false;
+		boolean isQuiet = false;
 
 		String arg;
 		for (int i = 0; i < args.length; i++) {
@@ -179,6 +183,8 @@ public class ClusterPublisher implements Constants {
 						System.exit(1);
 					}
 				}
+			} else if (arg.equals("-quiet")) {
+				isQuiet = true;
 			}
 		}
 
@@ -209,7 +215,7 @@ public class ClusterPublisher implements Constants {
 		}
 
 		// Display all options
-		if (clusterName != null) {
+		if (isQuiet == false && clusterName != null) {
 			writeLine("PadoGrid Cluster: " + clusterName);
 		}
 		String virtualClusterName = clusterName;
@@ -232,26 +238,30 @@ public class ClusterPublisher implements Constants {
 		if (virtualClusterName == null) {
 			virtualClusterName = "subscriber";
 		}
-		writeLine("cluster: " + virtualClusterName + " (virtual)");
+		if (isQuiet == false) {
+			writeLine("cluster: " + virtualClusterName + " (virtual)");
+		}
 
 		// If endpoints is not set, then default to
 		// IClusterConfig.DEFAULT_CLIENT_SERVER_URIS.
 		if (configFilePath == null && endpoints == null) {
 			endpoints = IClusterConfig.DEFAULT_CLIENT_SERVER_URIS;
 		}
-		if (endpoints != null) {
-			writeLine("endpoints: " + endpoints);
+		if (isQuiet == false) {
+			if (endpoints != null) {
+				writeLine("endpoints: " + endpoints);
+			}
+			writeLine("fos: " + fos);
+			writeLine("qos: " + qos);
+			if (configFilePath != null) {
+				writeLine("config: " + configFilePath);
+			}
+			writeLine("topic: " + topic);
+			if (endpointName != null) {
+				writeLine("name: " + endpointName);
+			}
+			writeLine("message: " + message);
 		}
-		writeLine("fos: " + fos);
-		writeLine("qos: " + qos);
-		if (configFilePath != null) {
-			writeLine("config: " + configFilePath);
-		}
-		writeLine("topic: " + topic);
-		if (endpointName != null) {
-			writeLine("name: " + endpointName);
-		}
-		writeLine("message: " + message);
 
 		// Create cluster
 		HaMqttClient client = null;
@@ -307,13 +317,15 @@ public class ClusterPublisher implements Constants {
 			} else {
 				mc = client.getPublisherByTopic(topic);
 			}
-			
+
 			if (mc == null) {
 				System.err.printf("ERROR: Cluster unreachable. Command aborted.%n");
 				System.exit(-2);
 			}
 			mc.publish(topic, message.getBytes(), qos, isRetained);
-			writeLine("published to: " + mc.getServerURI());
+			if (isQuiet == false) {
+				writeLine("published to: " + mc.getServerURI());
+			}
 			HaClusters.stop();
 			System.exit(0);
 		} catch (Exception e) {

@@ -140,6 +140,8 @@ function getMemberNumWithLeadingZero
 #  gh       guest on host  guest os viewed from host os
 #  gg       guest on guest guest os viewed from itself
 #
+# @pod HOST_OS_HOSTNAME This environment variable is set by pod to provide
+#                       the host name of the host OS.
 function getOsEnv
 {
    __HOSTNAME=`hostname`
@@ -169,6 +171,8 @@ function getOsEnv
 #  gg       guest on guest (guest os viewed from guest os)
 #  gh       guest on host  (guest os viewed from host os)
 #
+# @pod HOST_OS_HOSTNAME This environment variable is set by pod to provide
+#                       the host name of the host OS.
 function getOsEnv2
 {
    __HOSTNAME=`hostname`
@@ -225,6 +229,8 @@ function isGuestOs
 # @required POD               Pod name.
 # @required POD_TYPE          Pod type.
 # @required NODE_NAME_PREFIX  Node name prefix.
+# @pod HOST_OS_HOSTNAME       This environment variable is set by pod to provide
+#                             the host name of the host OS.
 # @param    nodeName          Optional. Node name without the .local extension.
 #                             If not specified then it default to the OS host name.
 #
@@ -1181,7 +1187,12 @@ function getProperty2
 #
 function getPodProperty
 {
-   __PROPERTIES_FILE="$PODS_DIR/$POD/etc/pod.properties"
+   local OS_ENV="$(getOsEnv)"
+   if [ "$OS_ENV" == "gg" ]; then
+      __PROPERTIES_FILE="/vagrant/etc/pod.properties"
+   else
+      __PROPERTIES_FILE="$PODS_DIR/$POD/etc/pod.properties"
+   fi
    echo `getProperty $__PROPERTIES_FILE $1 $2`
 }
 
