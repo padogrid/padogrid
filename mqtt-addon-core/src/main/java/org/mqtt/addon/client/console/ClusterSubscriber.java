@@ -22,14 +22,13 @@ import java.nio.charset.StandardCharsets;
 
 import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttClient;
-import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
-import org.eclipse.paho.mqttv5.client.MqttConnectionOptionsBuilder;
 import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.mqtt.addon.client.cluster.HaClusters;
 import org.mqtt.addon.client.cluster.HaMqttClient;
+import org.mqtt.addon.client.cluster.HaMqttConnectionOptions;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.IHaMqttCallback;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
@@ -241,13 +240,13 @@ public class ClusterSubscriber implements Constants {
 		if (configFilePath == null) {
 			ClusterConfig clusterConfig = new ClusterConfig();
 			clusterConfig.setDefaultCluster(virtualClusterName);
-			MqttConnectionOptions options = new MqttConnectionOptionsBuilder().build();
+			HaMqttConnectionOptions options = new HaMqttConnectionOptions();
 			endpoints = endpoints.replaceAll(" ", "");
-			options.setServerURIs(endpoints.split(","));
+			options.getConnection().setServerURIs(endpoints.split(","));
 			ClusterConfig.Cluster cluster = new ClusterConfig.Cluster();
 			cluster.setName(virtualClusterName);
 			cluster.setFos(fos);
-			cluster.setConnection(options);
+			cluster.setConnections(options);
 			clusterConfig.setClusters(new ClusterConfig.Cluster[] { cluster });
 			try {
 				HaClusters.initialize(clusterConfig);

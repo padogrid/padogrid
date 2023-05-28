@@ -1108,7 +1108,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public void close() throws MqttException {
-		close(false);
+		close(false);	
 	}
 
 	/**
@@ -1122,6 +1122,11 @@ public class HaMqttClient implements IHaMqttClient {
 	public void close(boolean force) throws MqttException {
 		ClusterService.getClusterService().removeHaClient(this, force);
 		roundRobinThreadLocal.remove();
+		liveClients = new MqttClient[0];
+		liveClientMap = new HashMap<String, MqttClient>(1);
+		topicBaseMap = new HashMap<String, String>(1);
+		invertedTopicBaseMap.clear();
+		invertedTopicBaseScannedMap.clear();
 	}
 
 	/**
@@ -1129,6 +1134,13 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	public boolean isClosed() {
 		return clusterState.isClosed();
+	}
+	
+	/**
+	 * HaMqttClient: {@inheritDoc}
+	 */
+	public void reopen() {
+		clusterState.reopen();
 	}
 
 	/**

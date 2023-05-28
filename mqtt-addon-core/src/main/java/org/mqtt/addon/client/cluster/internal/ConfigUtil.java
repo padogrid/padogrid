@@ -15,10 +15,38 @@
  */
 package org.mqtt.addon.client.cluster.internal;
 
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Security;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+
+import org.apache.logging.log4j.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMDecryptorProvider;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
+import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.mqtt.addon.client.cluster.HaMqttClient;
 
 /**
@@ -28,7 +56,7 @@ import org.mqtt.addon.client.cluster.HaMqttClient;
  * @author dpark
  *
  */
-public class ConfigUtil {
+public final class ConfigUtil {
 	/**
 	 * Replaces a system property defined by <code>${property}</code> and
 	 * environment variable defined by <code>${env:envar}</code> with the respective
@@ -37,7 +65,7 @@ public class ConfigUtil {
 	 * 
 	 * @param value String value with a system property and/or environment variable.
 	 */
-	public static String parseStringValue(String value) {
+	public final static String parseStringValue(String value) {
 		String pvalue = value;
 		if (pvalue != null) {
 			if (pvalue.contains("${env:")) {
@@ -59,7 +87,7 @@ public class ConfigUtil {
 					pvalue = pvalue.replaceAll("\\$\\{.*\\}", value2);
 				}
 			}
-			
+
 			pvalue = pvalue.trim();
 		}
 		return pvalue;
@@ -74,7 +102,7 @@ public class ConfigUtil {
 	 *                  IPv4 octect in a range in addition to a range of port
 	 *                  numbers, e.g., <code>tcp://10.1.2.10-12:32000-32010</code>.
 	 */
-	public static List<String> parseEndpoints(String endpoints) {
+	public final static List<String> parseEndpoints(String endpoints) {
 		String[] split = endpoints.split(",");
 		ArrayList<String> list = new ArrayList<String>(split.length);
 		for (String endpoint : split) {
@@ -95,7 +123,7 @@ public class ConfigUtil {
 	 *                  octect in a range in addition to a range of port numbers,
 	 *                  e.g., <code>tcp://10.1.2.10-12:32000-32010</code>.
 	 */
-	public static List<String> parseEndpoints(String[] endpoints) {
+	public final static List<String> parseEndpoints(String[] endpoints) {
 		List<String> endpointList = new ArrayList<String>(10);
 
 		if (endpoints != null) {
@@ -204,7 +232,7 @@ public class ConfigUtil {
 	 * @param count Number of integer values.
 	 * @return An empty array if the specified count is less than or equal to 0.
 	 */
-	public static int[] shuffleRandom(int count) {
+	public final static int[] shuffleRandom(int count) {
 		if (count <= 0) {
 			return new int[0];
 		}
@@ -224,5 +252,123 @@ public class ConfigUtil {
 			}
 		}
 		return shuffled;
+	}
+
+	public final static SSLSocketFactory getSocketFactory(final Logger logger, final String sslProtocol,
+			final String caCertFile, final String certFile, final String keyFile, final String password)
+			throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException,
+			UnrecoverableKeyException, KeyManagementException {
+		Security.addProvider(new BouncyCastleProvider());
+
+		// load CA certificate
+		X509Certificate caCert = null;
+
+		FileInputStream fis = new FileInputStream(caCertFile);
+		BufferedInputStream bis = new BufferedInputStream(fis);
+		CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+		while (bis.available() > 0) {
+			caCert = (X509Certificate) cf.generateCertificate(bis);
+			// System.out.println(caCert.toString());
+		}
+
+		// load client certificate
+		bis = new BufferedInputStream(new FileInputStream(certFile));
+		X509Certificate cert = null;
+		while (bis.available() > 0) {
+			cert = (X509Certificate) cf.generateCertificate(bis);
+			// System.out.println(caCert.toString());
+		}
+
+		// load client private key
+		PEMParser pemParser = new PEMParser(new FileReader(keyFile));
+		Object object = pemParser.readObject();
+		String pwd = password;
+		if (pwd == null) {
+			pwd = "";
+		}
+		PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder().build(pwd.toCharArray());
+		JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
+		KeyPair key;
+		if (object instanceof PEMEncryptedKeyPair) {
+			if (logger.isDebugEnabled())
+				logger.debug("SSLSocketFactory: Encrypted key - Provided password used");
+			key = converter.getKeyPair(((PEMEncryptedKeyPair) object).decryptKeyPair(decProv));
+		} else {
+			if (logger.isDebugEnabled())
+				logger.debug("SSLSocketFactory: Unencrypted key - no password needed");
+			key = converter.getKeyPair((PEMKeyPair) object);
+		}
+		pemParser.close();
+
+		// CA certificate is used to authenticate server
+		KeyStore caKs = KeyStore.getInstance(KeyStore.getDefaultType());
+		caKs.load(null, null);
+		caKs.setCertificateEntry("ca-certificate", caCert);
+		TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
+		tmf.init(caKs);
+
+		// client key and certificates are sent to server so it can authenticate
+		// us
+		KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+		ks.load(null, null);
+		ks.setCertificateEntry("certificate", cert);
+		ks.setKeyEntry("private-key", key.getPrivate(), pwd.toCharArray(),
+				new java.security.cert.Certificate[] { cert });
+		KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+		kmf.init(ks, pwd.toCharArray());
+
+		// finally, create SSL socket factory
+		String protocol;
+		if (sslProtocol == null) {
+			protocol = "TLSv1.2";
+		} else {
+			protocol = sslProtocol;
+		}
+		SSLContext context = SSLContext.getInstance(protocol);
+		context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
+		return context.getSocketFactory();
+	}
+
+	/**
+	 * Returns a shallow copy of the specified options.
+	 * @param options MqttConnectionOptions object to clone
+	 * @return null if the specified options is null
+	 */
+	public final static MqttConnectionOptions cloneMqttConnectionOptions(MqttConnectionOptions options) {
+		if (options == null) {
+			return null;
+		}
+		MqttConnectionOptions cloned = new MqttConnectionOptions();
+		cloned.setAuthData(options.getAuthData());
+		cloned.setAuthMethod(options.getAuthMethod());
+		cloned.setAutomaticReconnect(options.isAutomaticReconnect());
+		cloned.setAutomaticReconnectDelay(options.getAutomaticReconnectMaxDelay(), options.getAutomaticReconnectMaxDelay());
+		cloned.setCleanStart(options.isCleanStart());
+		cloned.setConnectionTimeout(options.getConnectionTimeout());
+		cloned.setCustomWebSocketHeaders(options.getCustomWebSocketHeaders());
+		cloned.setExecutorServiceTimeout(options.getExecutorServiceTimeout());
+		cloned.setHttpsHostnameVerificationEnabled(options.isHttpsHostnameVerificationEnabled());
+		cloned.setKeepAliveInterval(options.getKeepAliveInterval());
+		cloned.setMaximumPacketSize(options.getMaximumPacketSize());
+		cloned.setMaxReconnectDelay(options.getMaxReconnectDelay());
+		cloned.setPassword(options.getPassword());
+		cloned.setReceiveMaximum(options.getReceiveMaximum());
+		cloned.setRequestProblemInfo(options.getRequestProblemInfo());
+		cloned.setRequestResponseInfo(options.getRequestResponseInfo());
+		cloned.setSendReasonMessages(options.isSendReasonMessages());
+		cloned.setServerURIs(options.getServerURIs());
+		cloned.setSessionExpiryInterval(options.getSessionExpiryInterval());
+		cloned.setSocketFactory(options.getSocketFactory());
+		cloned.setSSLHostnameVerifier(options.getSSLHostnameVerifier());
+		cloned.setSSLProperties(options.getSSLProperties());
+		cloned.setTopicAliasMaximum(options.getTopicAliasMaximum());
+		cloned.setUserName(options.getUserName());
+		cloned.setUserProperties(options.getUserProperties());
+		cloned.setUseSubscriptionIdentifiers(options.useSubscriptionIdentifiers());
+		cloned.setWill(options.getWillDestination(), options.getWillMessage());
+		cloned.setWillMessageProperties(options.getWillMessageProperties());
+		return cloned;
 	}
 }

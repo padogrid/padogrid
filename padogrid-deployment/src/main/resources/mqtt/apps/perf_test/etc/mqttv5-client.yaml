@@ -85,7 +85,9 @@ clusters:
     
     # Connection time to wait in milliseconds. Each client in the cluster waits
     # for this amount of time before they timeout. Timed out clients are moved
-    # to the dead client list.
+    # to the dead client list. This parameter only applies to the connections
+    # created by this cluster. If liveEndpointPoolEnabled is true (default), then
+    # this parameter will not be applied to the connections created by other clusters.
     # Default: 5000
     timeToWait: 5000
     
@@ -174,7 +176,7 @@ clusters:
         # Name of the endpoint. It must be unique with this cluster. Otherewise,
         # the last endpoint that defines the same name overrides all.
       - name: null
-        # A single endpoint. 
+        # A single endpoint. Must not include the range wildcard.
         endpoint: null
         # Topic base to bound topics published to this endpoint. It overrides
         # publisherTopicBase.
@@ -216,7 +218,7 @@ clusters:
       #    a bridge serves as a proxy to overcome firewalls, but 'out'
       #    requires direct access to the target clusters.
       out:
-      
+
           # Target cluster name. Undefined cluster names are logged and discarded.
           # If the target cluster name is this cluster name, then it is logged and
           # discarded.
@@ -231,85 +233,122 @@ clusters:
           # Note that qos is for forwarding (publishing) messages.
           # Default: -1
           qos: -1
-   
-    # MqttClientConnectionOptions attributes. Each attribute defined in this
-    # file represents the corresponding attribute in MqttConnectionOptions.
-    # Please see MqttConnectionOptions for details.
-    # Attribute values shown below are default values.
-    connection:
-      automaticReconnect: false
-      automaticReconnectMaxDelay: 120
-      automaticReconnectMinDelay: 1
-      cleanStart: true
-      connectionTimeout: 30
-      customWebSocketHeaders: null
-      executorServiceTimeout: 1
-      httpsHostnameVerificationEnabled: true
-      keepAliveInterval: 60
-      maxReconnectDelay: 128000
-      maximumPacketSize: null
-      password: null
-      receiveMaximum: null
-      requestProblemInfo: null
-      requestResponseInfo: null
-      sendReasonMessages: false
       
-      # serverURIs defines a list of brokers that make up the cluster. URI ranges
-      # are supported for the last IP address octet and the port numbers. If the port
-      # number is not specified then defaults to 1883 for tcp, 8883 for ssl,
-      # 8083 for ws, and 8443 for wss.
-      #
-      #   tcp|ssl|ws|wss://<host-name>[:<port-range>]
-      #     tcp://mqtt.org:1883-1885
-      #     tcp://mqtt.org:1883
-      #     tcp://mqtt.org
-      #
-      #   tcp|ssl|ws|wss://<IPv3>.<octet-range>[:port-range]   
-      #     tcp://192.168.1.10-20:1883-1885
-      #     tcp://192.168.1.10:1883-1885
-      #     tcp://192.168.1.10-20:1883
-      #     tcp://192.168.1.10-20
-      #
-      # Default: [tcp://localhost:1883-1885]
-      serverURIs: [tcp://localhost:1883-1885]
-      
-      sessionExpiryInterval: null
-      socketFactory: null
-      sslClientProps: null
-      sslHostnameVerifier: null
-      topicAliasMaximum: null
-      useSubscriptionIdentifiers: true
-      userName: null
-      userProperties: null
-      willDestination: null
-      willMessage: null
-      willMessageProperties:
-        assignedClientIdentifier: null
-        authenticationData: null
-        authenticationMethod: null
-        contentType: null
-        correlationData: null
-        maximumPacketSize: null
-        maximumQoS: null
-        messageExpiryInterval: null
-        payloadFormat: false
-        publishSubscriptionIdentifiers: []
-        reasonString: null
-        receiveMaximum: null
-        requestProblemInfo: null
-        requestResponseInfo: null
-        responseInfo: null
-        responseTopic: null
-        retainAvailable: null
-        serverKeepAlive: null
-        serverReference: null
-        sessionExpiryInterval: null
-        sharedSubscriptionAvailable: null
-        subscribeSubscriptionIdentifier: null
-        subscriptionIdentifiersAvailable: null
-        topicAlias: null
-        topicAliasMaximum: null
-        userProperties: []
-        validProperties: null
-        wildcardSubscriptionsAvailable: null
-        willDelayInterval: null
+    connections:
+      # tls uses an internal socket factory for SSL connections
+      - tls:
+          # TLS protocol version. Valid values are TLSv1.1, TLSv1.2, TLSv1.3
+          # Default: tlsv1.2
+          tlsVersion: tlsv1.2
+          # Path to path to a file containing trusted CA certificates to enable encrypted
+          # communication.
+          cafile: null
+          # client certificate for authentication, if required by server.
+          certfile: null
+          # client private key for authentication, if required by server.
+          keyfile: null
+          # Password to the private key if required.
+          password: null
+
+        # MqttClientConnectionOptions attributes. Each attribute defined in this
+        # file represents the corresponding attribute in MqttConnectionOptions.
+        # Please see MqttConnectionOptions for details.
+        # Attribute values shown below are default values.
+        connection:
+          automaticReconnect: false
+          automaticReconnectMaxDelay: 120
+          automaticReconnectMinDelay: 1
+          cleanStart: true
+          connectionTimeout: 30
+          customWebSocketHeaders: null
+          executorServiceTimeout: 1
+          httpsHostnameVerificationEnabled: true
+          keepAliveInterval: 60
+          maxReconnectDelay: 128000
+          maximumPacketSize: null
+          password: null
+          receiveMaximum: null
+          requestProblemInfo: null
+          requestResponseInfo: null
+          sendReasonMessages: false
+          
+          # serverURIs defines a list of brokers that make up the cluster. URI ranges
+          # are supported for the last IP address octet and the port numbers. If the port
+          # number is not specified then defaults to 1883 for tcp, 8883 for ssl,
+          # 8083 for ws, and 8443 for wss.
+          #
+          #   tcp|ssl|ws|wss://<host-name>[:<port-range>]
+          #     tcp://mqtt.org:1883-1885
+          #     tcp://mqtt.org:1883
+          #     tcp://mqtt.org
+          #
+          #   tcp|ssl|ws|wss://<IPv3>.<octet-range>[:port-range]   
+          #     tcp://192.168.1.10-20:1883-1885
+          #     tcp://192.168.1.10:1883-1885
+          #     tcp://192.168.1.10-20:1883
+          #     tcp://192.168.1.10-20
+          #
+          # Each endpoint is given a unique name in the following format:
+          #
+          #    <clusterName>-<endpointNumber> 
+          #
+          # where <clusterName> is this cluster's name defined by the 'name' attribute,
+          #       <endpointNumber> is a sequence number determined in the order 
+          #                        the endpoints are defined by the 'serverURIs'
+          #                        attribute. endpintNumber begins from 1.
+          #
+          # You can overwrite the default endpoint name by defining it in the 'endpoints'
+          # element.
+          #
+          # Default: [tcp://localhost:1883-1885]
+          serverURIs: [tcp://localhost:1883-1885]
+          
+          sessionExpiryInterval: null
+
+          # sslClientProps:
+          #   - key: key
+          #     value: value
+          sslClientProps: null
+          
+          sslHostnameVerifier: null
+          topicAliasMaximum: null
+          useSubscriptionIdentifiers: true
+          userName: null
+        
+          # userProperties:
+          #   - key: key
+          #     value: value
+          userProperties: null
+          
+          willDestination: null
+          willMessage: null
+          willMessageProperties:
+            assignedClientIdentifier: null
+            authenticationData: null
+            authenticationMethod: null
+            contentType: null
+            correlationData: null
+            maximumPacketSize: null
+            maximumQoS: null
+            messageExpiryInterval: null
+            payloadFormat: false
+            publishSubscriptionIdentifiers: []
+            reasonString: null
+            receiveMaximum: null
+            requestProblemInfo: null
+            requestResponseInfo: null
+            responseInfo: null
+            responseTopic: null
+            retainAvailable: null
+            serverKeepAlive: null
+            serverReference: null
+            sessionExpiryInterval: null
+            sharedSubscriptionAvailable: null
+            subscribeSubscriptionIdentifier: null
+            subscriptionIdentifiersAvailable: null
+            topicAlias: null
+            topicAliasMaximum: null
+            userProperties: []
+            validProperties: null
+            wildcardSubscriptionsAvailable: null
+            willDelayInterval: null

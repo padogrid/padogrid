@@ -35,6 +35,7 @@ import org.mqtt.addon.client.cluster.IHaMqttCallback;
  * <ul>
  * <li>Start multi-01 with 1883-1885 ports</li>
  * <li>Start multi-02 with 32001-32003 ports</li>
+ * <li>Run {@linkplain MultiClusterPublisherTest}</li>
  * </ul>
  * <p>
  * The following configuration file is used for this test case: <br>
@@ -44,7 +45,7 @@ import org.mqtt.addon.client.cluster.IHaMqttCallback;
  * @author dpark
  *
  */
-public class MutiClusterSubscriberTest {
+public class MultiClusterSubscriberTest {
 
 	private static final String TOPIC1 = "mytopic1";
 	private static final String TOPIC2 = "mytopic2";

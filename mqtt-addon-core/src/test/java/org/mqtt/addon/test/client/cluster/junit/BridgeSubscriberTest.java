@@ -32,7 +32,7 @@ import org.mqtt.addon.client.cluster.IHaMqttCallback;
 /**
  * This test case demonstrates the cluster, "bridge-subscriber-edge", bridges
  * the cluster, "bridge-subscriber-enterprise", by forwarding subscribed
- * messages. To run the test case, following the steps below.
+ * messages. To run the test case, follow the steps below.
  * 
  * <ul>
  * <li>Start bridge-subscriber-edge with 1883-1885 ports</li>

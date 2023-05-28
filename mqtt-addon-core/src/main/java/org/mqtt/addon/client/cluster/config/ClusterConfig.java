@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.Properties;
 
 import org.eclipse.paho.mqttv5.client.MqttClientPersistence;
-import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.client.persist.MqttDefaultFilePersistence;
+import org.mqtt.addon.client.cluster.HaMqttConnectionOptions;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.PublisherType;
 import org.mqtt.addon.client.cluster.internal.ConfigUtil;
@@ -108,7 +108,7 @@ public class ClusterConfig {
 		private long timeToWait = IClusterConfig.DEFAULT_TIME_TO_WAIT_IN_MSEC;
 		private String defaultTopicBase;
 		private Endpoint[] endpoints;
-		private MqttConnectionOptions connection;
+		private HaMqttConnectionOptions[] connections;
 		private Bridges bridges;
 
 		/**
@@ -189,10 +189,23 @@ public class ClusterConfig {
 		public void setLiveEndpointCount(int liveEndpointCount) {
 			this.liveEndpointCount = liveEndpointCount;
 		}
+		
+		public HaMqttConnectionOptions[] getConnections() {
+			if (connections != null) {
+				for (int i = 0; i < connections.length; i++) {
+					connections[i] = getConnection(connections[i]);
+				}
+			}
+			return connections;
+		}
+		
+		public void setConnections(HaMqttConnectionOptions...connections) {
+			this.connections = connections;
+		}
 
-		public MqttConnectionOptions getConnection() {
-			if (connection != null) {
-				String[] serverURIs = connection.getServerURIs();
+		private HaMqttConnectionOptions getConnection(HaMqttConnectionOptions connection) {
+			if (connection != null && connection.getConnection() != null) {
+				String[] serverURIs = connection.getConnection().getServerURIs();
 				// Replace system properties and env vars with values.
 				for (int i = 0; i < serverURIs.length; i++) {
 					serverURIs[i] = ConfigUtil.parseStringValue(serverURIs[i]);
@@ -200,17 +213,14 @@ public class ClusterConfig {
 				// Set serverURIs
 				if (serverURIs != null && serverURIs.length > 0) {
 					List<String> serverList = ConfigUtil.parseEndpoints(serverURIs);
+					String primaryServerURI = getPrimaryServerURI();
 					if (primaryServerURI != null && serverList.contains(primaryServerURI) == false) {
 						serverList.add(primaryServerURI);
 					}
-					connection.setServerURIs(serverList.toArray(new String[0]));
+					connection.getConnection().setServerURIs(serverList.toArray(new String[0]));
 				}
 			}
 			return connection;
-		}
-
-		public void setConnection(MqttConnectionOptions connection) {
-			this.connection = connection;
 		}
 
 		/**
@@ -247,7 +257,7 @@ public class ClusterConfig {
 		}
 
 		public String getPrimaryServerURI() {
-			return primaryServerURI;
+			return ConfigUtil.parseStringValue(primaryServerURI);
 		}
 
 		public void setPrimaryServerURI(String primaryServerURI) {
@@ -255,7 +265,7 @@ public class ClusterConfig {
 		}
 
 		public String getDefaultTopicBase() {
-			return defaultTopicBase;
+			return ConfigUtil.parseStringValue(defaultTopicBase);
 		}
 
 		public void setDefaultTopicBase(String defaultTopicBase) {
@@ -316,6 +326,7 @@ public class ClusterConfig {
 					}
 				}
 			}
+			String className = getClassName();
 			if (className != null) {
 				if (className.equals("MqttDefaultFilePersistence")) {
 					String path = props.getProperty("path");
@@ -354,26 +365,32 @@ public class ClusterConfig {
 			this.value = value;
 		}
 	}
-	
+
 	public static class Endpoint {
 		private String name;
 		private String endpoint;
 		private String topicBase;
+
 		public String getName() {
-			return name;
+			return ConfigUtil.parseStringValue(name);
 		}
+
 		public void setName(String name) {
 			this.name = name;
 		}
+
 		public String getEndpoint() {
-			return endpoint;
+			return ConfigUtil.parseStringValue(endpoint);
 		}
+
 		public void setEndpoint(String endpoint) {
 			this.endpoint = endpoint;
 		}
+
 		public String getTopicBase() {
-			return topicBase;
+			return ConfigUtil.parseStringValue(topicBase);
 		}
+
 		public void setTopicBase(String topicBase) {
 			this.topicBase = topicBase;
 		}
@@ -427,6 +444,60 @@ public class ClusterConfig {
 
 		public void setQos(int qos) {
 			this.qos = qos;
+		}
+	}
+	
+	public static class Tls {
+		String tlsVersion;
+		String cafile;
+		String certfile;
+		String keyfile;
+		String password;
+
+		public String getTlsVersion() {
+			return ConfigUtil.parseStringValue(tlsVersion);
+		}
+
+		public void setTlsVersion(String tlsVersion) {
+			this.tlsVersion = tlsVersion;
+		}
+
+		public String getCafile() {
+			return ConfigUtil.parseStringValue(cafile);
+		}
+
+		public void setCafile(String cafile) {
+			this.cafile = cafile;
+		}
+
+		public String getCertfile() {
+			return ConfigUtil.parseStringValue(certfile);
+		}
+
+		public void setCertfile(String certfile) {
+			this.certfile = certfile;
+		}
+
+		public String getKeyfile() {
+			return ConfigUtil.parseStringValue(keyfile);
+		}
+
+		public void setKeyfile(String keyfile) {
+			this.keyfile = keyfile;
+		}
+
+		public String getPassword() {
+			return ConfigUtil.parseStringValue(password);
+		}
+
+		public void setPassword(String password) {
+			this.password = password;
+		}
+
+		@Override
+		public String toString() {
+			return "Tls [getTlsVersion()=" + getTlsVersion() + ", getCafile()=" + getCafile() + ", getCertfile()="
+					+ getCertfile() + ", getKeyfile()=" + getKeyfile() + ", getPassword()=" + getPassword() + "]";
 		}
 	}
 }

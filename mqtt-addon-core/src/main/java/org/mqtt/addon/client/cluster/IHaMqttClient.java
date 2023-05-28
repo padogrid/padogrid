@@ -296,6 +296,15 @@ public interface IHaMqttClient extends IMqttClient {
 	boolean isClosed();
 
 	/**
+	 * Reopens the cluster if the cluster connection is closed, i.e.,
+	 * {@linkplain #isClosed()} is true. The cluster is reconnected after invoking
+	 * {@linkplain #close()} by invoking this method. A reopened cluster starts from
+	 * a clean state as if the cluster is freshly initialized. The previous
+	 * subscriptions and callbacks are lost.
+	 */
+	void reopen();
+
+	/**
 	 * Returns the publisher extracted from the live client list based on the
 	 * publisher type as follows.
 	 * <p>

@@ -71,7 +71,6 @@ public class RetainedMessageTest {
 		}
 		Thread.sleep(1000);
 		haclient.disconnect();
-		haclient.close();
 	}
 
 	@Test
@@ -80,8 +79,8 @@ public class RetainedMessageTest {
 		Thread.sleep(1000);
 
 		// Should receive three (3) retained messages
-		haclient.subscribe(TOPIC, QOS);
 		haclient.connect();
+		haclient.subscribe(TOPIC, QOS);
 		Thread.sleep(1000);
 		assertTrue(messageCount == retainedMessageReceivedCount);
 	}

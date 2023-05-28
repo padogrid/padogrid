@@ -21,10 +21,9 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.eclipse.paho.mqttv5.client.MqttClient;
-import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
-import org.eclipse.paho.mqttv5.client.MqttConnectionOptionsBuilder;
 import org.mqtt.addon.client.cluster.HaClusters;
 import org.mqtt.addon.client.cluster.HaMqttClient;
+import org.mqtt.addon.client.cluster.HaMqttConnectionOptions;
 import org.mqtt.addon.client.cluster.IClusterConfig;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
 
@@ -268,11 +267,13 @@ public class ClusterPublisher implements Constants {
 		if (configFilePath == null) {
 			ClusterConfig clusterConfig = new ClusterConfig();
 			clusterConfig.setDefaultCluster(virtualClusterName);
-			MqttConnectionOptions options = new MqttConnectionOptionsBuilder().serverURI(endpoints).build();
+//			HaMqttConnectionOptions options = new MqttConnectionOptionsBuilder().serverURI(endpoints).build();
+			HaMqttConnectionOptions options = new HaMqttConnectionOptions();
+			options.getConnection().setServerURIs(new String[] { endpoints });
 			ClusterConfig.Cluster cluster = new ClusterConfig.Cluster();
 			cluster.setName(virtualClusterName);
 			cluster.setFos(fos);
-			cluster.setConnection(options);
+			cluster.setConnections(options);
 			clusterConfig.setClusters(new ClusterConfig.Cluster[] { cluster });
 			try {
 				HaClusters.initialize(clusterConfig);

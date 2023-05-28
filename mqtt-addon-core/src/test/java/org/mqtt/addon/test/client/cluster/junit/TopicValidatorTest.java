@@ -39,6 +39,6 @@ public class TopicValidatorTest implements IClusterConfig {
 	public void testTopicValidator() {
 		String topicFilter = "city/+/house/+";
 		validate(topicFilter, "city/street/house/livingroom", true);
-		validate(topicFilter, "nyc/street/house/kitchen", true);
+		validate(topicFilter, "nyc/street/house/kitchen", false);
 	}
 }

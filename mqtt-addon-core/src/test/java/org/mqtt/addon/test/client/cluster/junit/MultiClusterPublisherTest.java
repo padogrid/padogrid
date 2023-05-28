@@ -30,6 +30,7 @@ import org.mqtt.addon.client.cluster.IClusterConfig;
  * <ul>
  * <li>Start publisher-multi-01 with 1883-1885 ports</li>
  * <li>Start publisher-multi-02 with 32001-32003 ports</li>
+ * <li>Run {@linkplain MultiClusterSubscriberTest}</li>
  * </ul>
  * <p>
  * The following configuration file is used for this test case: <br>
@@ -39,7 +40,7 @@ import org.mqtt.addon.client.cluster.IClusterConfig;
  * @author dpark
  *
  */
-public class MutiClusterPublisherTest {
+public class MultiClusterPublisherTest {
 
 	private static final String TOPIC1 = "mytopic1";
 	private static final String TOPIC2 = "mytopic2";
