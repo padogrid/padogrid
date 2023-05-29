@@ -35,7 +35,7 @@
 JAVA_OPTS="-Xms1g -Xmx1g"
 
 # MQTT_CLIENT_CLUSTER_CONFIG_FILE defaults to etc/mqttv5-client.yaml
-JAVA_OPTS="$JAVA_OPTS -Dorg.mqtt.addon.client.cluster.config.file=$MQTT_CLIENT_CONFIG_FILE"
+JAVA_OPTS="$JAVA_OPTS -Dpadogrid.mqtt.client.cluster.config.file=$MQTT_CLIENT_CONFIG_FILE"
 
 # PERSISTENCE_DIR is required by the cluster config file, i.e., MQTT_CLIENT_CLUSTER_CONFIG_FILE
 # along with the system property "cluster.name".
