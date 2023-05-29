@@ -712,7 +712,7 @@ public class ClusterState implements IClusterConfig {
 	 */
 	private boolean replenishLiveSubscribers() throws MqttException {
 
-		// Remove all disconnected subcribers
+		// Remove all disconnected subscribers
 		Iterator<MqttClient> iterator = liveSubscriptionClientSet.iterator();
 		while (iterator.hasNext()) {
 			MqttClient client = iterator.next();
@@ -1929,15 +1929,17 @@ public class ClusterState implements IClusterConfig {
 	 * @see #doFos(Set)
 	 */
 	public void markClientForRevival(String endpointName, MqttClient client) {
-		if (endpointName != null && client != null) {
-			if (logger.isDebugEnabled()) {
-				logger.debug(String.format("Marked client (endpoint) for revival: [%s]", client.getServerURI()));
+		synchronized (lock) {
+			if (endpointName != null && client != null) {
+				if (logger.isDebugEnabled()) {
+					logger.debug(String.format("Marked client (endpoint) for revival: [%s]", client.getServerURI()));
+				}
+				markedForDeadClientMap.put(endpointName, client);
+				// If sticky subscriber then pick a new one.
+	//			if (client == stickySubscriber) {
+				stickySubscriber = selectStickySubscriber();
+	//			}
 			}
-			markedForDeadClientMap.put(endpointName, client);
-			// If sticky subscriber then pick a new one.
-//			if (client == stickySubscriber) {
-			stickySubscriber = selectStickySubscriber();
-//			}
 		}
 	}
 
