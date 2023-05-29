@@ -12,6 +12,12 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ---
 
+## Announcements
+
+- *May 29, 2023 - [PadoGrid v0.9.25 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.25) This release introduces MQTT virtual clusters for clustering Mosquitto brokers with support for High Availability.*
+
+---
+
 ## Installation
 
 You can install PadoGrid and the supported data grid products by running the interactive [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script. Copy and paste the following command into your terminal.
