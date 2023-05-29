@@ -219,6 +219,13 @@ public class HaMqttClient implements IHaMqttClient {
 	public boolean isEnabled() {
 		return clusterState.isEnabled();
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	public PublisherType getPublisherType() {
+		return publisherType;
+	}
 
 	/**
 	 * {@inheritDoc}

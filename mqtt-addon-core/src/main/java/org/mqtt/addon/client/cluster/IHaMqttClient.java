@@ -106,7 +106,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @param endpointName Endpoint name
 	 * @return null if publisher not found
 	 */
-	public String getServerURIByName(String endpointName);
+	String getServerURIByName(String endpointName);
 
 	/**
 	 * Returns the server URI (endpoint) of the publisher with the topic base that
@@ -119,7 +119,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 *              {@link #getServerURI()}.
 	 * @return if the publisher is not available
 	 */
-	public String getServerURIByTopic(String topic);
+	String getServerURIByTopic(String topic);
 
 	/**
 	 * Subscribes to all the live cluster endpoints (brokers).
@@ -305,6 +305,11 @@ public interface IHaMqttClient extends IMqttClient {
 	void reopen();
 
 	/**
+	 * Returns the publisher type. Default: {@linkplain PublisherType#STICKY}.
+	 */
+	PublisherType getPublisherType();
+	
+	/**
 	 * Returns the publisher extracted from the live client list based on the
 	 * publisher type as follows.
 	 * <p>
@@ -331,7 +336,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * 
 	 * @return null if the publisher is not available.
 	 */
-	public MqttClient getPublisher();
+	MqttClient getPublisher();
 
 	/**
 	 * Returns the live publisher identified by the specified endpoint name.
@@ -339,7 +344,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @param endpointName Endpoint name
 	 * @return null if publisher not found
 	 */
-	public MqttClient getPublisherByName(String endpointName);
+	MqttClient getPublisherByName(String endpointName);
 
 	/**
 	 * Returns the publisher with the topic base that matches the specified topic.
@@ -351,7 +356,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 *              {@link #getPublisher()}.
 	 * @return null if the publisher is not available.
 	 */
-	public MqttClient getPublisherByTopic(String topic);
+	MqttClient getPublisherByTopic(String topic);
 
 	/**
 	 * Publishes the specified message to the specified endpoint's topic.
@@ -362,7 +367,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @throws MqttException if the specified endpoint name is not found or there
 	 *                       was an error publishing message
 	 */
-	public void publish(String endpointName, String topic, MqttMessage message) throws MqttException;
+	void publish(String endpointName, String topic, MqttMessage message) throws MqttException;
 
 	/**
 	 * PUblishes the specified payload to the spcified endpoint's topic.
@@ -375,7 +380,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @throws MqttException if the specified endpoint name is not found or there
 	 *                       was an error publishing message
 	 */
-	public void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained)
+	void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained)
 			throws MqttException;
 
 	/**

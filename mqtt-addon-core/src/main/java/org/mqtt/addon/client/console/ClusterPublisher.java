@@ -25,6 +25,7 @@ import org.mqtt.addon.client.cluster.HaClusters;
 import org.mqtt.addon.client.cluster.HaMqttClient;
 import org.mqtt.addon.client.cluster.HaMqttConnectionOptions;
 import org.mqtt.addon.client.cluster.IClusterConfig;
+import org.mqtt.addon.client.cluster.PublisherType;
 import org.mqtt.addon.client.cluster.config.ClusterConfig;
 
 public class ClusterPublisher implements Constants {
@@ -312,20 +313,30 @@ public class ClusterPublisher implements Constants {
 				HaClusters.stop();
 				System.exit(-1);
 			}
-			MqttClient mc;
-			if (endpointName != null) {
-				mc = client.getPublisherByName(endpointName);
+			if (client.getPublisherType() == PublisherType.ALL) {
+				client.publish(topic, message.getBytes(), qos, isRetained);
+				writeLine("published to: ALL endpoints");
 			} else {
-				mc = client.getPublisherByTopic(topic);
-			}
+				MqttClient mc;
+				if (endpointName != null) {
+					mc = client.getPublisherByName(endpointName);
+					if (mc == null) {
+						System.err.printf("ERROR: Error occured while publishing data. Endpoint not found [endpointName=%s]. Command aborted.%n", endpointName);
+						System.exit(-2);
+					}
+				} else {
+					mc = client.getPublisherByTopic(topic);
+					if (mc == null) {
+						System.err.printf("ERROR: Cluster unreachable. Command aborted.%n");
+						System.exit(-2);
+					}
+				}
 
-			if (mc == null) {
-				System.err.printf("ERROR: Cluster unreachable. Command aborted.%n");
-				System.exit(-2);
-			}
-			mc.publish(topic, message.getBytes(), qos, isRetained);
-			if (isQuiet == false) {
-				writeLine("published to: " + mc.getServerURI());
+				
+				mc.publish(topic, message.getBytes(), qos, isRetained);
+				if (isQuiet == false) {
+					writeLine("published to: " + mc.getServerURI());
+				}
 			}
 			HaClusters.stop();
 			System.exit(0);
