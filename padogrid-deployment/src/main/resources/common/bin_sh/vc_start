@@ -69,6 +69,11 @@ JAVA_OPTS="$JAVA_OPTS -Djava.util.logging.config.file=$PAHO_LOG_CONFIG_FILE"
 JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=file:$LOG_CONFIG_FILE"
 #JAVA_OPTS="$JAVA_OPTS -Dlog4j2.debug=true"
 
+# To suppress warning jdk11: "FileLock may stop working in future versions of Java #507"
+if [[ "$JAVA_VERSION" != "1.8"* ]]; then
+   JAVA_OPTS="$JAVA_OPTS --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+fi
+
 echo "LOG_FILE: $LOG_FILE"
 "$JAVA" $JAVA_OPTS padogrid.mqtt.client.console.VirtualClusters "$@"
 
