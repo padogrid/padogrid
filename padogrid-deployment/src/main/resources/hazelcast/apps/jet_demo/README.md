@@ -17,7 +17,7 @@ Upon successful build, you can submit any of the jar files in the `lib` director
 
 ## Jobs
 
-`WordCountJob` is a command-line version of `WordCount` sample code found in the `https://github.com/hazelcast/hazelcast-jet-code-samples.git` repo. It counts and outputs the most frequent words from the specified file(s). The `build_app` copies the downloaded books in the `books` directory. Try submitting the `WordCountJob` with some of the books as arguments.
+`WordCountJob` is a command-line version of `WordCount` sample code found in the <https://github.com/hazelcast/hazelcast-jet/tree/master/examples> repo. It counts and outputs the most frequent words from the specified file(s). The `build_app` copies the downloaded books in the `books` directory. Try submitting the `WordCountJob` with some of the books as arguments.
 
 ### Hazelcast 5.x
 

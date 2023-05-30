@@ -21,8 +21,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import org.hazelcast.addon.apps.jet.util.JetUtil;
-
+import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetService;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -43,13 +42,15 @@ public class WordCountJob {
 	private Pipeline[] pipelines;
 	private boolean outputWords = Boolean.getBoolean("outputWords");
 
+	public WordCountJob() {
+		hz = Hazelcast.bootstrappedInstance();
+	}
+
 	/**
 	 * This code illustrates a few more things about Jet, new in 0.5. See comments.
 	 */
 	private void go(File[] files) {
 		this.files = files;
-		
-		hz = JetUtil.getHazelcastInstance();
 		jet = hz.getJet();
 		setupFiles();
 		System.out.print("\nCounting words... ");
@@ -76,15 +77,16 @@ public class WordCountJob {
 		Pipeline p = Pipeline.create();
 		BatchStage<String> stage = p.readFrom(Sources.<Long, String>map(getTextMapName(fileNum)))
 				.flatMap(e -> traverseArray(delimiter.split(e.getValue().toLowerCase())));
-				
+
 		if (outputWords) {
-			stage = stage.filter(word -> {System.err.println("************Word: " + word); return !word.isEmpty();});
+			stage = stage.filter(word -> {
+				System.err.println("************Word: " + word);
+				return !word.isEmpty();
+			});
 		} else {
 			stage = stage.filter(word -> !word.isEmpty());
 		}
-		stage.groupingKey(wholeItem())
-			.aggregate(counting())
-			.writeTo(Sinks.map(getCountMapName(fileNum)));
+		stage.groupingKey(wholeItem()).aggregate(counting()).writeTo(Sinks.map(getCountMapName(fileNum)));
 		return p;
 	}
 
