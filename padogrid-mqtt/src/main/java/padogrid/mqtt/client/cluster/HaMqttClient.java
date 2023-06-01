@@ -670,7 +670,9 @@ public class HaMqttClient implements IHaMqttClient {
 		for (MqttClient client : clients) {
 			try {
 				tokens[index++] = client.subscribe(topicFilter, qos);
-			} catch (MqttException e) {
+			} catch (Exception e) {
+				// A bug in Paho 1.2.5. MqttClient throws an NPE if bad connection.
+				// Catch Exception rather than MqttEception. (6/1/2023)
 				markMqttClientForRevival(client);
 			}
 		}
@@ -726,7 +728,9 @@ public class HaMqttClient implements IHaMqttClient {
 		for (MqttClient client : clients) {
 			try {
 				tokens[index++] = client.subscribe(topicFilters, qos);
-			} catch (MqttException e) {
+			} catch (Exception e) {
+				// A bug in Paho 1.2.5. MqttClient throws an NPE if bad connection.
+				// Catch Exception rather than MqttEception. (6/1/2023)
 				markMqttClientForRevival(client);
 			}
 		}
@@ -795,7 +799,9 @@ public class HaMqttClient implements IHaMqttClient {
 		for (MqttClient client : clients) {
 			try {
 				tokens[index++] = client.subscribe(subscriptions, messageListeners);
-			} catch (MqttException e) {
+			} catch (Exception e) {
+				// A bug in Paho 1.2.5. MqttClient throws an NPE if bad connection.
+				// Catch Exception rather than MqttEception. (6/1/2023)
 				markMqttClientForRevival(client);
 			}
 		}
@@ -824,7 +830,9 @@ public class HaMqttClient implements IHaMqttClient {
 		for (MqttClient client : clients) {
 			try {
 				tokens[index++] = client.subscribe(subscriptions);
-			} catch (MqttException e) {
+			} catch (Exception e) {
+				// A bug in Paho 1.2.5. MqttClient throws an NPE if bad connection.
+				// Catch Exception rather than MqttEception. (6/1/2023)
 				markMqttClientForRevival(client);
 			}
 		}
@@ -892,7 +900,9 @@ public class HaMqttClient implements IHaMqttClient {
 			try {
 				tokens[index++] = client.subscribe(new MqttSubscription[] { subscription },
 						new IMqttMessageListener[] { messageListener });
-			} catch (MqttException e) {
+			} catch (Exception e) {
+				// A bug in Paho 1.2.5. MqttClient throws an NPE if bad connection.
+				// Catch Exception rather than MqttEception. (6/1/2023)
 				markMqttClientForRevival(client);
 			}
 		}
@@ -920,7 +930,9 @@ public class HaMqttClient implements IHaMqttClient {
 		for (MqttClient client : clients) {
 			try {
 				tokens[index++] = client.subscribe(subscriptions, messageListeners);
-			} catch (MqttException e) {
+			} catch (Exception e) {
+				// A bug in Paho 1.2.5. MqttClient throws an NPE if bad connection.
+				// Catch Exception rather than MqttEception. (6/1/2023)
 				markMqttClientForRevival(client);
 			}
 		}

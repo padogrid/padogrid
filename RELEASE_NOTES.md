@@ -6,9 +6,10 @@ https://github.com/padogrid
 
 ## Version 0.9.26-SNAPSHOT
 
-### Release Date: 05/29/23
+### Release Date: 06/01/23
 
-- Initial release.
+- Added a workaround to a Paho bug that throws an NPE instead of `MqttException` when it encounters a bad connection. `HaMqttClient` now catches and handles all exceptions accordingly. This workaround fixes `vc_subscribe` which exits when an NPE is raised by Paho. Paho v1.2.5.
+- Added `mosquitto` to `install_bundle`.
 
 ---
 

@@ -372,6 +372,20 @@ function isProductExist
       elif [ "$product" == "jet-enterprise" ] && [[ "$productHome" == *"jet-enterprise-$token"* ]]; then
          found="true"
          break;
+      elif [ "$product" == "mosquitto" ]; then
+         # Check if mosquitto is installed in the system directory
+         if [ "$MOSQUITTO_HOME" == "" ]; then
+            if [ "$(which mosquitto 2> /dev/null)" != "" ]; then
+               version=$(mosquitto -h | grep version | awk '{print $3}')
+               if [[ "$version" == "$productVersion"* ]]; then
+                  found="true"
+                  break;
+               fi
+            fi
+         elif [[ "$productHome" == *"$token"* ]]; then
+            found="true"
+            break;
+         fi
       elif [[ "$productHome" == *"$token"* ]]; then
          found="true"
          break;
@@ -667,6 +681,9 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             elif [ "$PRODUCT" == "confluent" ]; then
                found=$(isProductExist "$PRODUCT" "$CONFLUENT_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="confluent"
+            elif [ "$PRODUCT" == "mosquitto" ]; then
+               found=$(isProductExist "$PRODUCT" "$MOSQUITTO_HOME" "$PRODUCT_VERSIONS")
+               CLUSTER_TYPE="mosquitto"
             elif [ "$PRODUCT" == "none" ]; then
                found=true
                CLUSTER_TYPE="none"

@@ -58,7 +58,7 @@ public class ClusterSubscriber implements Constants {
 		writeLine();
 		writeLine("SNOPSIS");
 		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-fos fos] [-qos qos] [-quiet] -t topic_filter [-?]");
+				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]] [-fos fos] [-qos qos] [-quiet] -t topic_filter [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Subscribes to the specified topic filter in the specified virtual cluster.");
@@ -336,8 +336,8 @@ public class ClusterSubscriber implements Constants {
 				Thread.sleep(5000);
 			}
 		} catch (Exception e) {
-			System.err.printf("ERROR: Error occured while subscribing to the topic filter. %s Command aborted.%n",
-					e.getMessage());
+			System.err.printf("ERROR: Error occured while subscribing to the topic filter. Command aborted.%n");
+			e.printStackTrace();
 			HaClusters.stop();
 			System.exit(-3);
 		}

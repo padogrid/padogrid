@@ -52,7 +52,7 @@ public class ClusterPublisher implements Constants {
 		writeLine();
 		writeLine("SNOPSIS");
 		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | -endpoints serverURIs] [-name endpoint_name] [-fos fos] [-qos qos] [-r] [-quiet] -t topic_filter -m message [-?]");
+				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]] [-name endpoint_name] [-fos fos] [-qos qos] [-r] [-quiet] -t topic_filter -m message [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Publishes the specified message to the specified topic.");
@@ -342,7 +342,8 @@ public class ClusterPublisher implements Constants {
 			HaClusters.stop();
 			System.exit(0);
 		} catch (Exception e) {
-			System.err.printf("ERROR: Error occured while publishing data. %s Command aborted.%n", e.getMessage());
+			System.err.printf("ERROR: Error occured while publishing data. Command aborted.%n");
+			e.printStackTrace();
 			HaClusters.stop();
 			System.exit(-3);
 		}
