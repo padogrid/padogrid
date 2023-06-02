@@ -138,24 +138,7 @@ HAZELCAST_MC_VERSION=""
 IS_HAZELCAST_ENTERPRISE=false
 
 if [ "$CLUSTER_TYPE" == "jet" ]; then
-   if [ "$HAZELCAST_HOME" != "" ]; then
-     if [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
-         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"*; do
-            file=${file##*hazelcast\-enterprise\-all\-}
-            HAZELCAST_VERSION=${file%.jar}
-         done
-     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-"* 2>/dev/null | wc -l ` -gt 0 ]; then
-         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-"*; do
-            file=${file##*hazelcast\-enterprise\-}
-            HAZELCAST_VERSION=${file%.jar}
-         done
-     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
-         for file in "$HAZELCAST_HOME/lib/hazelcast-all-"*; do
-            file=${file##*hazelcast\-all\-}
-            HAZELCAST_VERSION=${file%.jar}
-         done
-      fi
-   elif [ "$JET_HOME" != "" ]; then
+   if [ "$JET_HOME" != "" ]; then
       if [ `ls -1 "$JET_HOME/lib/hazelcast-jet-enterprise-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
          for file in "$JET_HOME/lib/hazelcast-jet-enterprise-all-"*; do
             file=${file##*hazelcast\-jet\-enterprise\-all\-}
@@ -176,6 +159,23 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
             file=${file##*-}
             HAZELCAST_VERSION=${file%%.jar}
             break;
+         done
+      fi
+   elif [ "$HAZELCAST_HOME" != "" ]; then
+     if [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"*; do
+            file=${file##*hazelcast\-enterprise\-all\-}
+            HAZELCAST_VERSION=${file%.jar}
+         done
+     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-enterprise-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-enterprise-"*; do
+            file=${file##*hazelcast\-enterprise\-}
+            HAZELCAST_VERSION=${file%.jar}
+         done
+     elif [ `ls -1 "$HAZELCAST_HOME/lib/hazelcast-all-"* 2>/dev/null | wc -l ` -gt 0 ]; then
+         for file in "$HAZELCAST_HOME/lib/hazelcast-all-"*; do
+            file=${file##*hazelcast\-all\-}
+            HAZELCAST_VERSION=${file%.jar}
          done
       fi
    fi

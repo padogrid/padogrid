@@ -198,6 +198,7 @@ do
    if [[ "$i" != "-"* ]]; then
       # Options with previous value
       if [ "$PREV" == "-product" ]; then
+         PRODUCT=$i
          PRODUCT_ARG=$i
          PRODUCT_HOME_ARG=$i
       elif [ "$PREV" == "-product-cluster" ]; then
