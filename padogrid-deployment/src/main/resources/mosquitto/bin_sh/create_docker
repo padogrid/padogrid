@@ -47,27 +47,31 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   $EXECUTABLE - Create a Docker environment in the current padogrid workspace
+   $EXECUTABLE - Create a Docker environment in the current workspace
 
 SYNOPSIS
    $EXECUTABLE [-product $PRODUCT_OPTIONS]
-                 [-docker compose] [-host host_ip] [-port first_port_number]
+                 [-host host_ip] [-port first_port_number]
                  [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
-   Creates a Docker environment that includes Spark cluster configuration files for
+   Creates a Docker environment that includes Mosquitto cluster configuration files for
    one of the following Docker tools:
  
    compose  docker-compose Dockfile based cluster orchestration
 
-   To use the created environment, you must have the specified Docker tool installed.
+   Make sure your Docker version includes support for 'docker compose'.
+
+   This command generates the 'docker-compose.yaml' file configured with the current workspace's
+   PadoGrid version. If the product versions cannot be determined then it defaults to the
+   'latest' tag.
 
 OPTIONS
    -product $PRODUCT_OPTIONS
              Docker cluster product name. Supported products are $PRODUCTS_SUPPORTED.
 
    -docker compose
-             Docker compose driven Geode cluster.
+             Docker compose driven Hazelcast cluster.
 
    -host host_ip
              Host IP address that is acccessible from the Docker containers. If this option
@@ -79,17 +83,13 @@ OPTIONS
    -port first_port_number
              First member's port number. Port number is incremented
              starting from this port number for the subsquent members.
-
-             This option applies only for a cluster running locally. It is ignored
-             for creating non-local pod and VM clusters.
-
-             Default: $DEFAULT_MEMBER_START_PORT
+             Default: 1883
 
    -count member_count
-             Number of members (servers) in the cluster. Default: 2
+             Number of members (servers) in the cluster. Default: 3
 
    -cluster cluster_name
-             Required Geode cluster name. This name is used to create a Docker compose project,
+             Required Mosquitto cluster name. This name is used to create a Docker compose project,
              for example.
 
 EOF
@@ -125,13 +125,146 @@ if [ "$PRODUCT_ARG" != "" ]; then
       >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
       exit 1
    fi
-   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
-      if [ "$PRODUCT_ARG" == "jet" ]; then
-         PRODUCT_ARG="hazelcast"
-      fi
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ] && [ "$PRODUCT_ARG" != "jet" ]; then
       $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
       exit
    fi
 fi
+CLUSTER_TYPE="mosquitto"
 
-echo "$EXECUTABLE not supported for $THIS_PRODUCT in this PadoGrid release. Use '-product' to specify another product."
+if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+   >&2 echo "ERROR: The -cluster option is not specified. Command aborted."
+   exit 1
+fi
+
+if [ "$DOCKER" == "" ]; then
+   DOCKER=$DEFAULT_DOCKER
+fi
+if [ "$DOCKER" != "compose" ]; then
+   >&2 echo "ERROR: Unsupported Docker tool [$DOCKER]. Please use the '-?' option to see the usage. Command aborted."
+   exit 1
+fi
+if [ "$COUNT" == "" ]; then
+   COUNT=3
+fi
+if [ $COUNT -lt 1 ]; then
+   >&2 echo "ERROR: Inalid count [$COUNT]. Member (server) count cannot be less than 1. Command aborted."
+   exit 1
+fi
+
+if [ "$HOST" != "" ]; then
+   HOST_IP=$HOST
+fi
+
+#
+# docker directory
+#
+DOCKER_DIR=$PADOGRID_WORKSPACE/docker
+CLUSTER_DIR=$DOCKER_DIR/$CLUSTER
+
+if [ -d $CLUSTER_DIR ]; then
+   >&2 echo "ERROR: The specified Docker cluster exists. Command aborted."
+   exit
+fi
+   
+if [ ! -d $CLUSTER_DIR ]; then
+   mkdir -p $CLUSTER_DIR
+fi
+
+if [ "$DOCKER" == "compose" ]; then
+
+   ETC_DIR=$CLUSTER_DIR/padogrid/etc
+   LIB_DIR=$CLUSTER_DIR/padogrid/lib
+   PLUGINS_DIR=$CLUSTER_DIR/padogrid/plugins
+   DOCKER_DOC="README.md"
+   mkdir -p $ETC_DIR
+   mkdir -p $LIB_DIR
+   mkdir -p $PLUGINS_DIR
+
+   # Copy Docker doc and client config files
+   cp -rf $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
+   cp $BASE_DIR/docker/compose/mqttv5-client.yaml $ETC_DIR/mqttv5-client.yaml
+   cp $BASE_DIR/docker/compose/simulator.yaml $ETC_DIR/simulator.yaml
+
+   # Copy binary files
+   cp $PADOGRID_HOME/lib/*.jar $LIB_DIR/ > /dev/null 2>&1
+   cp $BASE_DIR/lib/*.jar $LIB_DIR/ > /dev/null 2>&1
+   cp -r $BASE_DIR/plugins/*.jar $PLUGINS_DIR/ > /dev/null 2>&1
+
+   # Update .env file
+   if [ "$PORT_ARG" != "" ]; then
+      START_PORT=$PORT_ARG
+   else
+      START_PORT=$DEFAULT_MEMBER_START_PORT
+   fi
+   SERVER_PORT=$START_PORT
+   let END_PORT=START_PORT+COUNT-1
+   TCP_MEMBERS=""
+   for i in $(seq 1 $COUNT); do   
+      if [ $i -gt 1 ]; then
+         TCP_MEMBERS="$TCP_MEMBERS,"
+      fi
+      TCP_MEMBERS="${TCP_MEMBERS}$HOST_IP:$SERVER_PORT"
+      let SERVER_PORT=SERVER_PORT+1
+   done
+   SERVER_URIS="tcp:\\/\\/localhost:$START_PORT-$END_PORT"
+   sed -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
+       $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-env > $CLUSTER_DIR/.env
+   sed -e "s/\${SERVER_URIS}/$SERVER_URIS/g" \
+       $BASE_DIR/docker/compose/template-mqttv5-client.yaml > $ETC_DIR/mqttv5-client.yaml
+
+   # Create docker-compose.yaml
+   cp $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml $CLUSTER_DIR/docker-compose.yaml
+   
+   # Append server services to docker-compose.yaml
+   IMAGE_NAME="padogrid-mqtt"
+   HOST_SERVER_PORT=$START_PORT
+   WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+   for i in $(seq 1 $COUNT); do   
+      SERVER_NAME="broker$i"
+      sed -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
+          -e "s/\${VERSION}/$PADOGRID_VERSION/g" \
+          -e "s/\${IMAGE_NAME}/$IMAGE_NAME/g" \
+          -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
+          -e "s/\${HOST_SERVER_PORT}/$HOST_SERVER_PORT/g" \
+          $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-server-docker-compose.yaml >> $CLUSTER_DIR/docker-compose.yaml
+      let HOST_SERVER_PORT=HOST_SERVER_PORT+1
+   done
+fi
+
+# Set group permissions for workspace owner
+if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+   chmod -R g+rw,o-rwx $CLUSTER_DIR
+fi
+
+#
+# Display DOCKER Environment
+#
+echo ""
+echo "         WORKSPACE: $PADOGRID_WORKSPACE"
+echo -e "           Product: ${CLightGreen}$CLUSTER_TYPE${CNone}"
+echo "            Docker: $DOCKER"
+echo "      Member Count: $COUNT"
+echo "Docker Environment:"
+echo "   $CLUSTER_DIR"
+
+cat <<EOF
+
+$CLUSTER
+$TTee .env
+$TTee README.md
+$TTee docker-compose.yaml
+$TLel padogrid
+    $TTee etc
+    $TTee lib
+    $TLel plugins
+
+EOF
+echo -e "Please follow the instructions in the ${CLightGreen}$DOCKER_DOC${CNone} document."
+echo -e "  - Change environment variables in the ${CLightGreen}.env${CNone} file as needed."
+echo -e "  - Configure locator(s) and servers (members) as needed in the ${CLightGreen}docker-compose.yaml${CNone} file as needed."
+echo "To start Docker cluster:"
+echo -e "   ${CLightGreen}cd_docker $CLUSTER${CNone}"
+echo -e "   ${CLightGreen}docker-compose up${CNone}"
+echo ""
+

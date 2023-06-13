@@ -97,6 +97,7 @@ DEFAULT_GEODE_START_PORT=10334
 DEFAULT_HADOOP_START_PORT=19000
 DEFAULT_HAZELCAST_START_PORT=5701
 DEFAULT_KAFKA_START_PORT=9092
+DEFAULT_MOSQUITTO_START_PORT=1883
 DEFAULT_REDIS_START_PORT=6379
 DEFAULT_SNAPPYDATA_START_PORT=10334
 DEFAULT_SPARK_START_PORT=7077
@@ -351,10 +352,10 @@ DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazel
 BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka confluent mosquitto none redis snappydata spark"
 
 # Supported Docker Products
-DOCKER_PRODUCT_LIST="geode hazelcast jet snappydata"
+DOCKER_PRODUCT_LIST="geode hazelcast jet mosquitto snappydata"
 
 # Supported Kubernetes Products
-K8S_PRODUCT_LIST="geode hazelcast jet"
+K8S_PRODUCT_LIST="geode hazelcast jet mosquitto"
 
 # Supported App Products (all cluster products)
 APP_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka mosquitto redis snappydata spark"

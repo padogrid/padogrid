@@ -61,8 +61,7 @@ class HaMqttClientFactory {
 	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
 	final static HaMqttClient getOrCreateHaMqttClient(ClusterConfig.Cluster clusterConfig,
-			MqttClientPersistence persistence, ScheduledExecutorService executorService)
-			throws IOException {
+			MqttClientPersistence persistence, ScheduledExecutorService executorService) throws IOException {
 
 		// Initialize the cluster service. Initialization is done once.
 		ClusterService.initialize(true);
@@ -92,19 +91,23 @@ class HaMqttClientFactory {
 		String clusterName = IClusterConfig.DEFAULT_CLUSTER_NAME_PREFIX + clusterNum.incrementAndGet();
 		return clusterName;
 	}
-	
+
 	/**
 	 * Returns the client identified by the specified cluster name.
 	 * 
-	 * @param clusterName
+	 * @param clusterName Cluster name. If null, returns the default client.
 	 * @return null if the client is not found.
 	 */
-	final static HaMqttClient getHaMqttClient(String clusterName) {
+	final static HaMqttClient getHaMqttClient(String clusterName) throws IOException {
+		if (clusterName == null) {
+			return getHaMqttClient();
+		}
 		return clusterMap.get(clusterName);
 	}
 
 	/**
 	 * Returns the default cluster client.
+	 * 
 	 * @throws IOException
 	 */
 	final static HaMqttClient getHaMqttClient() throws IOException {
@@ -118,10 +121,13 @@ class HaMqttClientFactory {
 	 * Returns the client identified by the specified cluster name. If the client is
 	 * not found then it creates and returns a new client with the default settings.
 	 * 
-	 * @param clusterName Cluster name.
+	 * @param clusterName Cluster name. If null, returns the default client.
 	 * @throws IOException
 	 */
 	final static HaMqttClient getOrCreateHaMqttClient(String clusterName) throws IOException {
+		if (clusterName == null) {
+			return getHaMqttClient();
+		}
 		HaMqttClient client = clusterMap.get(clusterName);
 		if (client == null) {
 			// Initialize the cluster service. Initialization is done once.
@@ -143,7 +149,7 @@ class HaMqttClientFactory {
 	 * client if not already closed.
 	 * 
 	 * @param clusterName Cluster name
-	 * @throws MqttException 
+	 * @throws MqttException
 	 */
 	void remove(String clusterName) throws MqttException {
 		if (clusterName == null) {
@@ -159,7 +165,7 @@ class HaMqttClientFactory {
 	 * Closes if not already closed and removes the specified client.
 	 * 
 	 * @param client Client to remove.
-	 * @throws MqttException 
+	 * @throws MqttException
 	 */
 	void remove(HaMqttClient client) throws MqttException {
 		if (client == null) {

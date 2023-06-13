@@ -48,10 +48,11 @@ public final class HaClusters {
 	 * cluster name. It returns null if the HaMqttClient instance is not found. To
 	 * create an instance, invoke {@link #getOrCreateHaMqttClient(String)}.
 	 * 
-	 * @param clusterName Cluster name
+	 * @param clusterName Cluster name. If null, returns the default client instance
+	 *                    connected to the default cluster.
 	 * @return null if the HaMqttClient instance is not found.
 	 */
-	public final static HaMqttClient getHaMqttClient(String clusterName) {
+	public final static HaMqttClient getHaMqttClient(String clusterName) throws IOException {
 		return HaMqttClientFactory.getHaMqttClient(clusterName);
 	}
 

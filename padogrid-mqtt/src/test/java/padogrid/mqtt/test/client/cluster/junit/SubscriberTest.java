@@ -47,7 +47,7 @@ public class SubscriberTest {
 	@BeforeClass
 	public static void setUp() throws Exception {
 		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-subscriber.yaml");
-		System.setProperty("java.util.logging.config.file", "etc/publisher-logging.properties");
+		System.setProperty("java.util.logging.config.file", "etc/subscriber-logging.properties");
 		TestUtil.setEnv("LOG_FILE", "log/subscriber.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
 		haclient = HaClusters.getHaMqttClient();

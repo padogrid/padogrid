@@ -1649,7 +1649,6 @@ function updateClusterEnvFile
       CLUSTER_TYPE="gemfire"
    elif [ "$PRODUCT" == "jet" ]; then
       echo "PRODUCT=hazelcast" > "$HOME_CLUSTERENV_FILE"
-      CLUSTER_TYPE="jet"
    elif [ "$PRODUCT" == "confluent" ]; then
       echo "PRODUCT=kafka" > "$HOME_CLUSTERENV_FILE"
       CLUSTER_TYPE="confluent"
@@ -1694,7 +1693,7 @@ function retrieveClusterEnvFile
 
    if [ -f "$HOME_CLUSTERENV_FILE" ]; then
       . "$HOME_CLUSTERENV_FILE"
-   elif [ -d "$CLUSTER_DIR/etc" ]; then
+   else
       if [ -f "$CLUSTER_DIR/etc/gemfire.properties" ]; then
          # Without the clusterenv.sh file, we cannot determine whether geode or gemfire.
          # Set it to geode for now.
@@ -1744,7 +1743,6 @@ function retrieveClusterEnvFile
       PRODUCT="geode"
    elif [ "$PRODUCT" == "jet" ]; then
       PRODUCT="hazelcast"
-      CLUSTER_TYPE="jet"
    elif [ "$PRODUCT" == "confluent" ]; then
       PRODUCT="kafka"
    elif [ "$PRODUCT" == "" ]; then

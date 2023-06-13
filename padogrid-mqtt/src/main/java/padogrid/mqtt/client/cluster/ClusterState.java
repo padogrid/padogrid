@@ -1500,15 +1500,21 @@ public class ClusterState implements IClusterConfig {
 							bridgeName, clusterName, bridgeClusterName));
 					continue;
 				}
-				HaMqttClient client = HaClusters.getHaMqttClient(bridgeClusterName);
-				if (client == null) {
-					logger.info(String.format("Bridge cluster undefined [%s: parent=%s, bridge=%s]. Discarded.",
-							bridgeName, clusterName, bridgeClusterName));
-				} else {
-					InBridgeCluster bridgeCluster = new InBridgeCluster(client, bridge.getTopicFilters(),
-							bridge.getQos());
-					inBridgeSet.add(bridgeCluster);
+				try {
+					HaMqttClient client = HaClusters.getHaMqttClient(bridgeClusterName);
+					if (client == null) {
+						logger.info(String.format("Bridge cluster undefined [%s: parent=%s, bridge=%s]. Discarded.",
+								bridgeName, clusterName, bridgeClusterName));
+					} else {
+						InBridgeCluster bridgeCluster = new InBridgeCluster(client, bridge.getTopicFilters(),
+								bridge.getQos());
+						inBridgeSet.add(bridgeCluster);
+					}
+				} catch (IOException e) {
+					logger.info(String.format("Unable to build bridge cluster [%s: parent=%s, bridge=%s]. %s Discarded.",
+							bridgeName, clusterName, bridgeClusterName, e.getMessage()));
 				}
+				
 			}
 		}
 	}
@@ -1544,15 +1550,21 @@ public class ClusterState implements IClusterConfig {
 							bridgeName, clusterName, bridgeClusterName));
 					continue;
 				}
-				HaMqttClient client = HaClusters.getHaMqttClient(bridgeClusterName);
-				if (client == null) {
-					logger.info(String.format("Bridge cluster undefined [%s: parent=%s, bridge=%s]. Discarded.",
-							bridgeName, clusterName, bridgeClusterName));
-				} else {
-					OutBridgeCluster bridgeCluster = new OutBridgeCluster(client, bridge.getTopicFilters(),
-							bridge.getQos());
-					outBridgeSet.add(bridgeCluster);
+				try {
+					HaMqttClient client = HaClusters.getHaMqttClient(bridgeClusterName);
+					if (client == null) {
+						logger.info(String.format("Bridge cluster undefined [%s: parent=%s, bridge=%s]. Discarded.",
+								bridgeName, clusterName, bridgeClusterName));
+					} else {
+						OutBridgeCluster bridgeCluster = new OutBridgeCluster(client, bridge.getTopicFilters(),
+								bridge.getQos());
+						outBridgeSet.add(bridgeCluster);
+					}
+				} catch (IOException e) {
+					logger.info(String.format("Unable to build bridge cluster [%s: parent=%s, bridge=%s]. %s Discarded.",
+							bridgeName, clusterName, bridgeClusterName, e.getMessage()));
 				}
+				
 			}
 		}
 	}

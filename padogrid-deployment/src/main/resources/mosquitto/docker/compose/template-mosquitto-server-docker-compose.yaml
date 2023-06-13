@@ -1,0 +1,15 @@
+  ${SERVER_NAME}:
+    env_file: .env
+    environment:
+      - LOG_FILE=/padogrid/log/${CLUSTER_NAME}-${SERVER_NAME}.log
+      - PADOGRID_TOPIC_PREFIX=edge/${SERVER_NAME}
+    image: padogrid/${IMAGE_NAME}:${VERSION}
+    hostname: ${SERVER_NAME}
+    mem_limit: 1g
+    expose:
+      - "$SERVER_PORT"
+    ports:
+      - "${HOST_SERVER_PORT}:1883"
+    volumes:
+      - ./padogrid:/padogrid/
+    restart: on-failure
