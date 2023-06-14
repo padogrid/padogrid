@@ -23,11 +23,11 @@ Once you are switched into the cluster, run the `create_docker` command which cr
 create_docker -cluster mydocker
 ```
 
-By default, the create_docker command adds two (3) Hazelcast brokers (members) in the cluster. You can change the number of brokers using the `-count` option. For example, the following command adds four (4) servers.
+By default, the create_docker command adds two (3) Hazelcast brokers (members) in the cluster. You can change the number of brokers using the `-count` option. For example, the following command adds five (5) brokers.
 
 ```bash
-# Create Mosquitto cluster with 4 brokers
-create_docker -cluster mydocker -count 4
+# Create Mosquitto cluster with 5 brokers
+create_docker -cluster mydocker -count 5
 ```
 
 ## Configure the Cluster Environment
@@ -46,50 +46,110 @@ There are four configuration files as follows. Edit them as needed.
 
 | Configuration File                 | For            |
 | ---------------------------------- | -------------- |
-| `padogrid/etc/mosquitto.yaml`      | Mosquitto      |
-| `padogrid/etc/log4j2.properties`   | `HaMqttClient` |
-| `padogrid/etc/mqttv5-client.yaml`   | `HaMqttClient` |
-| `padogrid/etc/simulator-edge.yaml` | MQTT data feed |
+| `padogrid/etc/mqttv5-client.yaml`  | `HaMqttClient` |
+| `padogrid/etc/simulator.yaml`      | MQTT data feed |
 
-Place your application jar files in the `padogrid/plugins` directory, which already contains PadoGrid test jar for running `perf_test`. 
+
+The `padogrid-mqtt` containers are configured with the `padogrid/etc/simulator.yaml` file for publishing simulated data. Before starting the containers, you can replace or modify this file as needed to generate the desired data.
 
 ```bash
-ls padogrid/plugins
+vi padogrid/etc/simulator.yaml
 ```
 
 ## Start Cluster
 
 ```bash
+cd_docker mydocker
 docker compose up
 ```
 
-## Log Files
+## Run `vc_subscribe`
 
-The log files are generated in the `padogrid/log` directory. The following example tails the first member's log file.
+If you launched the default cluster, i.e., three (3) brokers, then you can create and run `vc_subscribe` without the endpoints specified. By default, vc_subscribe creates a virtual cluster comprised of the endpoints `tcp://localhost:1883-1885`. 
+
+The following command listens on data published by the first broker, `broker1`, or the endpoint, `tcp://localhost:18883`. 
+
+```bash
+# Subscribe to broker1 - tcp://localhost:18883
+vc_subscribe -t edge/broker1/#
+```
+
+To listen on messages from all the brokers, subscribe to `edge/#`.
+
+```bash
+# Subscribe to all of the default brokers
+vc_subscribe -t edge/#
+```
+
+If you have created cluster with additional brokers, then you can specify the `-endpoints` option to create a virutal cluster that includes them. For example, the following includes five (5) endpoints.
+
+```bash
+# Subscribed to five (5) brokers
+vc_subscribe -endpoints tcp://localhost:1883-1887 -t edge/#
+```
+
+## Run `chart`
+
+The simulator comes in a bundle, which also includes the `chart` command that graphically displays the simulated data.You can install the bundle as follows.
+
+```bash
+install_bundle download -quiet bundle-none-app-simulator
+```
+
+Once installed, change directory to `simulator` and run the `chart` command as follows.
+
+```bash
+cd_app simulator/bin_sh
+./build_app
+./chart -t edge/broker1/sin
+```
+
+The simulator in each `padogrid-mqtt` container publishes to numerous topics. You can find the topic names from the `vc_subscribe` output or the `simulator.yaml` file.
 
 ```bash
 cd_docker mydocker
-tail -f padogrid/log/mydocker-broker1.log
+cat padogrid/etc/simulator.yaml
+```
+
+Some interesting charts are as follows.
+
+```bash
+cd_app simulator/bin_sh
+./chart -t edge/broker1/dampedSineWave
+./chart -t edge/broker1/circle
+./chart -t edge/broker1/tanh
+./chart -t edge/broker1/heartbeat
+```
+
+Like `vc_subscribe`, `chart` also supports the `-endpoints` option. The following `chart` command creates a virtual cluster that includes five (5) brokers and displays the `circle` data published by `broker5` that has the endpoint `tcp://localhost:1887`.
+
+```bash
+# Both of the following display the same data received from broker5
+./chart -endpoints tcp://localhost:1883-1887 -t edge/broker5/circle
+./chart -endpoints tcp://localhost:1887 -t edge/broker5/circle
 ```
 
 ## Run `perf_test`
 
-If you have not changed the Hazelcast cluster name, you can run `perf_test` as is without modifications.
+If you have launched the default cluster, i.e., three (3) brokers, then you can create and run `perf_test` as is. If you have changed the cluster endpoints, then you need to set the endpoints for `perf_test` in the `etc/mqttv5-client.yaml` file as follows.
 
 ```bash
 create_app
 cd_app perf_test; cd bin_sh
-./test_ingestion -run
+vi etc/mqttv5-client.yaml
 ```
- 
-If you have changed the Hazelcast cluster name, then add the `<cluster-name>` element in the `etc/hazelcast-client.xml` file as follows:
 
-```xml
-<hazelcast...>
-...
-   <cluster-name>mydocker</cluster-name>
-...
-</hazelcast>
+Change the value of `serverURIs` accordiningly.
+
+```yaml
+          serverURIs: [tcp://localhost:1883-1885]
+```
+
+Run `perf_test`.
+
+```bash
+cd bin_sh
+./test_group -run
 ```
 
 ## Teardown
@@ -110,5 +170,6 @@ docker system prune --volumes
 ````
 
 ## References
-1. Install Docker, [https://docs.docker.com/install/](https://docs.docker.com/install/).
-2. Install Docker Compose, Docker Compose is now part of the `docker` command. Before installing `docker-compose`, check to see if this option exists, [https://docs.docker.com/compose/install/](https://docs.docker.com/compose/install/). 
+1. Install Docker, <ttps://docs.docker.com/install/>.
+2. Install Docker Compose, Docker Compose is now part of the `docker` command. Before installing `docker-compose`, check to see if this option exists, <https://docs.docker.com/compose/install/>. 
+3. Data Feed Simulator, bundle-none-app-simulator, PadoGrid Bundles, <https://github.com/padogrid/bundle-none-app-simulator>.

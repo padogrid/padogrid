@@ -23,18 +23,13 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-product -docker -host -port -cluster -count -?"
+   echo "-product -docker -port -cluster -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
    __options
    exit
 fi
-
-# Get the host IP. Last IPv4 in the list.
-for i in $(getHostIPv4List); do
-   HOST_IP=$i
-done
 
 PRODUCT_OPTIONS=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /|/g')
 PRODUCTS_SUPPORTED=$(echo "$DOCKER_PRODUCT_LIST" | sed 's/ /, /g')
@@ -50,9 +45,7 @@ NAME
    $EXECUTABLE - Create a Docker environment in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-product $PRODUCT_OPTIONS]
-                 [-host host_ip] [-port first_port_number]
-                 [-count member_count] -cluster cluster_name [-?]
+   $EXECUTABLE [-product $PRODUCT_OPTIONS] [-port first_port_number] [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
    Creates a Docker environment that includes Mosquitto cluster configuration files for
@@ -73,15 +66,8 @@ OPTIONS
    -docker compose
              Docker compose driven Hazelcast cluster.
 
-   -host host_ip
-             Host IP address that is acccessible from the Docker containers. If this option
-             is not specified then the IP address of the host name is assigned. If the host
-             is running Docker Desktop, then you may specify the the host name, host.docker.internal,
-             which resolves to the internal IP address used by the host. Note that host.docker.internal
-             is for development only and not for production.
-
    -port first_port_number
-             First member's port number. Port number is incremented
+             First member's exposed port number. Port number is incremented
              starting from this port number for the subsquent members.
              Default: 1883
 
@@ -89,24 +75,20 @@ OPTIONS
              Number of members (servers) in the cluster. Default: 3
 
    -cluster cluster_name
-             Required Mosquitto cluster name. This name is used to create a Docker compose project,
-             for example.
+             Required Mosquitto cluster name. This name is used to create a Docker compose project.
 
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -product $THIS_PRODUCT -docker $DEFAULT_DOCKER -host $HOST_IP -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
+   $EXECUTABLE -product $THIS_PRODUCT -docker $DEFAULT_DOCKER -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
 
 EXAMPLES
-   To create 'mydocker' cluster with the host IP 'host.docker.internal':
-      $EXECUTABLE -host host.docker.internal -cluster mydocker
+   To create 'mydocker' cluster with the member (server) count of 3:
+      $EXECUTABLE -cluster mydocker
 
-   To create 'mydocker' cluster with the host IP '$HOST_IP' and member (server) count of 4:
-      $EXECUTABLE -host $HOST_IP -cluster mydocker -count 4
-
-   To create 'mydocker' cluster with the host IP '$HOST_IP':
-      $EXECUTABLE -host $HOST_IP -cluster mydocker
+   To create 'mydocker' cluster with the member (server) count of 5:
+      $EXECUTABLE -cluster mydocker -count 5
 
 FILES
    $PADOGRID_WORKSPACE/docker
@@ -152,10 +134,6 @@ if [ $COUNT -lt 1 ]; then
    exit 1
 fi
 
-if [ "$HOST" != "" ]; then
-   HOST_IP=$HOST
-fi
-
 #
 # docker directory
 #
@@ -197,16 +175,7 @@ if [ "$DOCKER" == "compose" ]; then
    else
       START_PORT=$DEFAULT_MEMBER_START_PORT
    fi
-   SERVER_PORT=$START_PORT
    let END_PORT=START_PORT+COUNT-1
-   TCP_MEMBERS=""
-   for i in $(seq 1 $COUNT); do   
-      if [ $i -gt 1 ]; then
-         TCP_MEMBERS="$TCP_MEMBERS,"
-      fi
-      TCP_MEMBERS="${TCP_MEMBERS}$HOST_IP:$SERVER_PORT"
-      let SERVER_PORT=SERVER_PORT+1
-   done
    SERVER_URIS="tcp:\\/\\/localhost:$START_PORT-$END_PORT"
    sed -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
        $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-env > $CLUSTER_DIR/.env
@@ -220,6 +189,17 @@ if [ "$DOCKER" == "compose" ]; then
    IMAGE_NAME="padogrid-mqtt"
    HOST_SERVER_PORT=$START_PORT
    WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
+
+   # The base Padogrid version for container is 0.9.26.
+   if [ $PADOGRID_MAJOR_VERSION_NUMBER -eq 0 ] && [ $PADOGRID_MINOR_VERSION_NUMBER -eq 9 ] && [ $PADOGRID_UPDATE_VERSION_NUMBER -lt 26 ]; then
+      PADOGRID_VERSION="0.9.26"
+   else
+      if [[ "$PADOGRID_VERSION" == *"-SNAPSHOT" ]]; then
+         let PADOGRID_UPDATE_VERSION_NUMBER=PADOGRID_UPDATE_VERSION_NUMBER-1
+         PADOGRID_VERSION=$PADOGRID_MAJOR_VERSION_NUMBER.$PADOGRID_MINOR_VERSION_NUMBER.$PADOGRID_UPDATE_VERSION_NUMBER
+      fi
+   fi
+
    for i in $(seq 1 $COUNT); do   
       SERVER_NAME="broker$i"
       sed -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
