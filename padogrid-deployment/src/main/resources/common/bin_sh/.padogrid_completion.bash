@@ -202,6 +202,23 @@ __padogrid_complete()
    -prefix)
       if [ "$command" == "create_group" ]; then
          type_list="grid"
+      elif [ "$command" == "create_docker" ]; then
+         # If -product specified then get downlodable product versions
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" == "" ]; then
+            product_name=$PRODUCT
+         fi
+         case "$product_name" in
+         mosquitto)
+            type_list="broker";;
+         *)
+            type_list="server" ;;
+         esac
       fi
      ;;
 
@@ -963,6 +980,23 @@ __command_complete()
    -prefix)
       if [ "$command" == "create_group" ]; then
          type_list="grid"
+      elif [ "$command" == "create_docker" ]; then
+         # If -product specified then get downlodable product versions
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" == "" ]; then
+            product_name=$PRODUCT
+         fi
+         case "$product_name" in
+         mosquitto)
+            type_list="broker";;
+         *)
+            type_list="server" ;;
+         esac
       fi
       ;;
    -diag)

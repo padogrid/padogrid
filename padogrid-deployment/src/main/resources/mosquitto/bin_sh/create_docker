@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-product -docker -port -cluster -count -?"
+   echo "-product -docker -port -cluster -prefix -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -45,7 +45,7 @@ NAME
    $EXECUTABLE - Create a Docker environment in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-product $PRODUCT_OPTIONS] [-port first_port_number] [-count member_count] -cluster cluster_name [-?]
+   $EXECUTABLE [-product $PRODUCT_OPTIONS] [-prefix hostname_prefix] [-port first_port_number] [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
    Creates a Docker environment that includes Mosquitto cluster configuration files for
@@ -66,6 +66,11 @@ OPTIONS
    -docker compose
              Docker compose driven Hazelcast cluster.
 
+   -prefix hostname_prefix
+             Host name prefix. Each container's hostname begins with this prefix followed
+             by a sequenced number starting from 1.
+             Default: broker
+
    -port first_port_number
              First member's exposed port number. Port number is incremented
              starting from this port number for the subsquent members.
@@ -81,7 +86,7 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -product $THIS_PRODUCT -docker $DEFAULT_DOCKER -port $DEFAULT_MEMBER_START_PORT -cluster cluster_name
+   $EXECUTABLE -product $THIS_PRODUCT -docker $DEFAULT_DOCKER -port $DEFAULT_MEMBER_START_PORT -prefix broker -cluster cluster_name
 
 EXAMPLES
    To create 'mydocker' cluster with the member (server) count of 3:
@@ -144,6 +149,10 @@ if [ -d $CLUSTER_DIR ]; then
    >&2 echo "ERROR: The specified Docker cluster exists. Command aborted."
    exit
 fi
+
+if [ "$PREFIX" == "" ]; then
+   PREFIX="broker"
+fi
    
 if [ ! -d $CLUSTER_DIR ]; then
    mkdir -p $CLUSTER_DIR
@@ -201,7 +210,7 @@ if [ "$DOCKER" == "compose" ]; then
    fi
 
    for i in $(seq 1 $COUNT); do   
-      SERVER_NAME="broker$i"
+      SERVER_NAME="$PREFIX$i"
       sed -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
           -e "s/\${VERSION}/$PADOGRID_VERSION/g" \
           -e "s/\${IMAGE_NAME}/$IMAGE_NAME/g" \
