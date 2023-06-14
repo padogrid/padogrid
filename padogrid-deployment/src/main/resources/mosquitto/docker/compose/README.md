@@ -19,21 +19,22 @@ switch_cluster mymosquitto
 Once you are switched into the cluster, run the `create_docker` command which creates a Docker cluster that is specific to that product.
 
 ```bash
-# Create Mosquitto cluster with 3 members (default)
-create_docker -cluster mydocker
+# Create Mosquitto cluster with 3 members (default) with the host name prefix, 'broker'.
+# If -prefix is not specified then the prefix defaults to to the cluster name.
+create_docker -cluster edge -prefix broker
 ```
 
-By default, the create_docker command adds two (3) Hazelcast brokers (members) in the cluster. You can change the number of brokers using the `-count` option. For example, the following command adds five (5) brokers.
+By default, the create_docker command adds two (3) Mosquitto brokers (members) in the cluster. You can change the number of brokers using the `-count` option. For example, the following command adds five (5) brokers.
 
 ```bash
-# Create Mosquitto cluster with 5 brokers
-create_docker -cluster mydocker -count 5
+# Create Mosquitto cluster with five (5) brokers with the host name prefix, 'broker'. 
+create_docker -cluster edge -prefix broker -count 5
 ```
 
 ## Configure the Cluster Environment
 
 ```bash
-cd_docker mydocker
+cd_docker edge
 ```
 
 Edit the `.env` file as needed.
@@ -59,7 +60,7 @@ vi padogrid/etc/simulator.yaml
 ## Start Cluster
 
 ```bash
-cd_docker mydocker
+cd_docker edge
 docker compose up
 ```
 
@@ -107,7 +108,7 @@ cd_app simulator/bin_sh
 The simulator in each `padogrid-mqtt` container publishes to numerous topics. You can find the topic names from the `vc_subscribe` output or the `simulator.yaml` file.
 
 ```bash
-cd_docker mydocker
+cd_docker edge
 cat padogrid/etc/simulator.yaml
 ```
 
