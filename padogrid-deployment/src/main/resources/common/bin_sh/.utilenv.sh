@@ -3112,10 +3112,10 @@ function cd_docker
    else
       local PARENT_DIR="$PADOGRID_WORKSPACE/docker"
       if [ ! -d "$PARENT_DIR/$1" ]; then
-         echo -e >&2 "${CError}ERROR: Invalid docker name: [$1]. Docker cluster does not exist. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid docker name: [$1]. Docker cluster does not exist. Command aborted."
          return 1
       elif [ ! -r "$PARENT_DIR/$1" ]; then
-         echo -e >&2 "${CError}ERROR: Invalid docker: [$1]. Permission denied. Command aborted."
+         echo -e >&2 "${CError}ERROR:${CNone} Invalid docker: [$1]. Permission denied. Command aborted."
          return 1
       else
          local DIR=""

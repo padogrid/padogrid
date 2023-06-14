@@ -68,8 +68,9 @@ OPTIONS
 
    -prefix hostname_prefix
              Host name prefix. Each container's hostname begins with this prefix followed
-             by a sequenced number starting from 1.
-             Default: broker
+             by a sequenced number starting from 1. If this option is not specified, then
+             the cluster name is used for prefix.
+             Default: cluster_name
 
    -port first_port_number
              First member's exposed port number. Port number is incremented
@@ -151,7 +152,7 @@ if [ -d $CLUSTER_DIR ]; then
 fi
 
 if [ "$PREFIX" == "" ]; then
-   PREFIX="broker"
+   PREFIX="$CLUSTER"
 fi
    
 if [ ! -d $CLUSTER_DIR ]; then
@@ -161,22 +162,13 @@ fi
 if [ "$DOCKER" == "compose" ]; then
 
    ETC_DIR=$CLUSTER_DIR/padogrid/etc
-   LIB_DIR=$CLUSTER_DIR/padogrid/lib
-   PLUGINS_DIR=$CLUSTER_DIR/padogrid/plugins
    DOCKER_DOC="README.md"
    mkdir -p $ETC_DIR
-   mkdir -p $LIB_DIR
-   mkdir -p $PLUGINS_DIR
 
    # Copy Docker doc and client config files
    cp -rf $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
    cp $BASE_DIR/docker/compose/mqttv5-client.yaml $ETC_DIR/mqttv5-client.yaml
    cp $BASE_DIR/docker/compose/simulator.yaml $ETC_DIR/simulator.yaml
-
-   # Copy binary files
-   cp $PADOGRID_HOME/lib/*.jar $LIB_DIR/ > /dev/null 2>&1
-   cp $BASE_DIR/lib/*.jar $LIB_DIR/ > /dev/null 2>&1
-   cp -r $BASE_DIR/plugins/*.jar $PLUGINS_DIR/ > /dev/null 2>&1
 
    # Update .env file
    if [ "$PORT_ARG" != "" ]; then
@@ -244,14 +236,14 @@ $TTee .env
 $TTee README.md
 $TTee docker-compose.yaml
 $TLel padogrid
-    $TTee etc
-    $TTee lib
-    $TLel plugins
+    $TLel etc
+        $TTee mqtt5-client.yaml
+        $TLel simulator.yaml
 
 EOF
 echo -e "Please follow the instructions in the ${CLightGreen}$DOCKER_DOC${CNone} document."
 echo -e "  - Change environment variables in the ${CLightGreen}.env${CNone} file as needed."
-echo -e "  - Configure locator(s) and servers (members) as needed in the ${CLightGreen}docker-compose.yaml${CNone} file as needed."
+echo -e "  - Configure servers (members) as needed in the ${CLightGreen}docker-compose.yaml${CNone} file as needed."
 echo "To start Docker cluster:"
 echo -e "   ${CLightGreen}cd_docker $CLUSTER${CNone}"
 echo -e "   ${CLightGreen}docker-compose up${CNone}"
