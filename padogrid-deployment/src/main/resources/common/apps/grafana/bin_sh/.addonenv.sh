@@ -192,13 +192,13 @@ function getGrafanaPid
          if [ -f "$CONFIG_FILE" ]; then
             PID="$(WMIC path win32_process get Caption,Processid,Commandline | grep prometheus | grep "$CONFIG_FILE" | grep -v grep | awk '{print $(NF-1)}')"
          else
-            PID="$(WMIC path win32_process get Caption,Processid,Commandline | grep grafana-server | grep "\-homepath" | grep -v grep | awk '{print $(NF-1)}')"
+            PID="$(WMIC path win32_process get Caption,Processid,Commandline | grep grafana | grep server | grep "\-homepath" | grep -v grep | awk '{print $(NF-1)}')"
          fi
       else
          if [ -f "$CONFIG_FILE" ]; then
-            PID=$(ps -wweo pid,comm,args | grep grafana-server | grep "$CONFIG_FILE" | grep -v grep | awk '{print $1}')
+            PID=$(ps -wweo pid,comm,args | grep grafana | grep server | grep "$CONFIG_FILE" | grep -v grep | awk '{print $1}')
          else
-            PID=$(ps -wweo pid,comm,args | grep grafana-server | grep "\-homepath" | grep -v grep | awk '{print $1}')
+            PID=$(ps -wweo pid,comm,args | grep grafana | grep server | grep "\-homepath" | grep -v grep | awk '{print $1}')
          fi
       fi
    fi
@@ -206,17 +206,17 @@ function getGrafanaPid
 }
 
 #
-# Returns a space separated list of PIDs of all Prometheus instances. Returns an
-# emptry string if Prometheus instances are not found.
+# Returns a space separated list of PIDs of all Grafana instances. Returns an
+# emptry string if Grafana instances are not found.
 #
 # @required OS_NAME
 #
 function getAllGrafanaPids
 {
    if [[ "$OS_NAME" == "CYGWIN"* ]]; then
-      PIDs="$(WMIC path win32_process get Caption,Processid,Commandline | grep grafana-server | grep "\-homepath" | grep -v grep | awk '{print $(NF-1)}')"
+      PIDs="$(WMIC path win32_process get Caption,Processid,Commandline | grep grafana | grep server | grep "\-homepath" | grep -v grep | awk '{print $(NF-1)}')"
    else
-      PIDs=$(ps -wweo pid,comm,args | grep grafana-server | grep "\-homepath" | grep -v grep | awk '{print $1}')
+      PIDs=$(ps -wweo pid,comm,args | grep grafana | grep server | grep "\-homepath" | grep -v grep | awk '{print $1}')
    fi
    echo "$PIDs"
 }

@@ -47,6 +47,13 @@ DESCRIPTION
 
       $GRAFANA_HOME
 
+NOTES
+   Grafana downloaded using 'install_padogrid' on Alpine Linux may not work due to
+   the glibc dependency. In that case, you can install the Grafana package using the
+   'apk add' command as follows.
+
+       sudo apk add grafana
+
 DEFAULT
    ./$EXECUTABLE -folder $DEFAULT_FOLDER
 
@@ -67,8 +74,21 @@ if [ ! -d "$RUN_DIR" ]; then
    mkdir -p "$RUN_DIR"
 fi
 pushd $RUN_DIR > /dev/null 2>&1
-$GRAFANA_HOME/bin/grafana-server $GRAFANA_OPTS -homepath $GRAFANA_HOME web > $GRAFANA_LOG_FILE 2>&1 &
-PID=$!
+PID=""
+if [ "$GRAFANA_HOME" != "" ]; then
+   $GRAFANA_HOME/bin/grafana-server $GRAFANA_OPTS -homepath $GRAFANA_HOME web > $GRAFANA_LOG_FILE 2>&1 &
+   PID=$(getGrafanaPid "$GRAFANA_CONFIG_FILE")
+fi
+if [ "$PID" == "" ]; then
+   if [ "$(which grafana 2> /dev/null)" != "" ]; then
+      grafana server $GRAFANA_OPTS -homepath $GRAFANA_HOME web > $GRAFANA_LOG_FILE 2>&1 &
+      PID=$!
+   else
+      popd > /dev/null 2>&1
+      echo -e >&2 "${CError}ERROR:${CNone} Grafana not installed. Command aborted."
+      exit 1
+   fi
+fi
 popd > /dev/null 2>&1
 
 # Delay a bit to see if Grafana starts
