@@ -639,11 +639,13 @@ public class HaMqttClient implements IHaMqttClient {
 		IMqttToken[] tokens = subscribeCluster(topicFilter, qos);
 		IMqttToken token = null;
 		MqttClient client = getPublisherByTopic(null);
-		if (client != null) {
+		if (client != null && client.getClientId() != null) {
 			for (IMqttToken t : tokens) {
-				if (client.getClientId().equals(t.getClient().getClientId())) {
-					token = t;
-					break;
+				if (t.getClient() != null && t.getClient().getClientId() != null) {
+					if (client.getClientId().equals(t.getClient().getClientId())) {
+						token = t;
+						break;
+					}
 				}
 			}
 		}

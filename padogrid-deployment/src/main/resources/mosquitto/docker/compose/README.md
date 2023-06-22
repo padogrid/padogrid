@@ -71,7 +71,7 @@ If you launched the default cluster, i.e., three (3) brokers, then you can creat
 The following command listens on data published by the first broker, `broker1`, or the endpoint, `tcp://localhost:18883`. 
 
 ```bash
-# Subscribe to broker1 - tcp://localhost:18883
+# Subscribe to broker1 - tcp://localhost:1883
 vc_subscribe -t edge/broker1/#
 ```
 
@@ -102,7 +102,7 @@ Once installed, change directory to `simulator` and run the `chart` command as f
 ```bash
 cd_app simulator/bin_sh
 ./build_app
-./chart -t edge/broker1/sin
+./chart -t edge/broker1/sine
 ```
 
 The simulator in each `padogrid-mqtt` container publishes to numerous topics. You can find the topic names from the `vc_subscribe` output or the `simulator.yaml` file.
