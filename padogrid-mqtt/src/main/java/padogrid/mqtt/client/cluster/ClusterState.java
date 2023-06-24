@@ -22,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1511,10 +1512,11 @@ public class ClusterState implements IClusterConfig {
 						inBridgeSet.add(bridgeCluster);
 					}
 				} catch (IOException e) {
-					logger.info(String.format("Unable to build bridge cluster [%s: parent=%s, bridge=%s]. %s Discarded.",
-							bridgeName, clusterName, bridgeClusterName, e.getMessage()));
+					logger.info(
+							String.format("Unable to build bridge cluster [%s: parent=%s, bridge=%s]. %s Discarded.",
+									bridgeName, clusterName, bridgeClusterName, e.getMessage()));
 				}
-				
+
 			}
 		}
 	}
@@ -1561,10 +1563,11 @@ public class ClusterState implements IClusterConfig {
 						outBridgeSet.add(bridgeCluster);
 					}
 				} catch (IOException e) {
-					logger.info(String.format("Unable to build bridge cluster [%s: parent=%s, bridge=%s]. %s Discarded.",
-							bridgeName, clusterName, bridgeClusterName, e.getMessage()));
+					logger.info(
+							String.format("Unable to build bridge cluster [%s: parent=%s, bridge=%s]. %s Discarded.",
+									bridgeName, clusterName, bridgeClusterName, e.getMessage()));
 				}
-				
+
 			}
 		}
 	}
@@ -1948,9 +1951,9 @@ public class ClusterState implements IClusterConfig {
 				}
 				markedForDeadClientMap.put(endpointName, client);
 				// If sticky subscriber then pick a new one.
-	//			if (client == stickySubscriber) {
+				// if (client == stickySubscriber) {
 				stickySubscriber = selectStickySubscriber();
-	//			}
+				// }
 			}
 		}
 	}
@@ -2024,24 +2027,13 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
-	 * Returns all (connected and disconnected) server URIs that make up the
-	 * cluster.
+	 * Returns a sorted array of all (connected and disconnected) server URIs that
+	 * make up the cluster.
 	 */
 	public String[] getServerURIs() {
-		ArrayList<String> list = new ArrayList<String>(allEndpointMap.size());
-		MqttClient[] liveClients = new MqttClient[0];
-		MqttClient[] deadClients = new MqttClient[0];
-		synchronized (lock) {
-			liveClients = liveClientMap.values().toArray(new MqttClient[0]);
-			deadClients = deadClientMap.values().toArray(new MqttClient[0]);
-		}
-		for (MqttClient client : liveClients) {
-			list.add(client.getServerURI());
-		}
-		for (MqttClient client : deadClients) {
-			list.add(client.getServerURI());
-		}
-		return list.toArray(new String[0]);
+		String[] endpoints = allEndpointMap.values().toArray(new String[0]);
+		Arrays.sort(endpoints);
+		return endpoints;
 	}
 
 	/**

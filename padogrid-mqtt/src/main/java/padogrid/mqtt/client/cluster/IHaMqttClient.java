@@ -94,8 +94,8 @@ public interface IHaMqttClient extends IMqttClient {
 	String[] getDisconnectedClientIds();
 
 	/**
-	 * Returns all (connected and disconnected) server URIs that make up the
-	 * cluster.
+	 * Returns a sorted array of all (connected and disconnected) server URIs that
+	 * make up the cluster.
 	 */
 	String[] getServerURIs();
 
@@ -308,7 +308,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * Returns the publisher type. Default: {@linkplain PublisherType#STICKY}.
 	 */
 	PublisherType getPublisherType();
-	
+
 	/**
 	 * Returns the publisher extracted from the live client list based on the
 	 * publisher type as follows.
@@ -380,8 +380,7 @@ public interface IHaMqttClient extends IMqttClient {
 	 * @throws MqttException if the specified endpoint name is not found or there
 	 *                       was an error publishing message
 	 */
-	void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained)
-			throws MqttException;
+	void publish(String endpointName, String topic, byte[] payload, int qos, boolean retained) throws MqttException;
 
 	/**
 	 * Subscribes to the specified array of subscriptions.
