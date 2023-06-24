@@ -41,7 +41,9 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 ✏️  The `perf_test` app uses Avro classes and requires Schema Registry. If you have configured the cluster with Confluent in PadoGrid, then you can start the registry as follows.
 
 ```bash
-schema-registry-start $CONFLUENT_HOME/etc/schema-registry/schema-registry.properties
+# Start Conflent schema registry. Make sure to unset CLASSPATH proior to
+# running it to avoid jar conflicts.
+CLASSPATH="" schema-registry-start $CONFLUENT_HOME/etc/schema-registry/schema-registry.properties
 ```
 
 ## Script Usages
@@ -87,6 +89,12 @@ Usage:
 
 Notes:
    The 'perf_test' app uses Avro classes and requires Schema Registry.
+```
+
+Run `test_group` by sepcifying the `-run` option.
+
+```bash
+./test_group -run
 ```
 
 ## Results

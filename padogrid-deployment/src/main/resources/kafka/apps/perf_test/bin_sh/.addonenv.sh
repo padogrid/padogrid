@@ -61,7 +61,12 @@ if [ "$K8S_PROPERTIES" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS $K8S_PROPERTIES"
 fi
 
-# Set Kafka addon class path. This is to handle 'none' product.
+# Set Kafka addon class path. This is to handle the 'none' product.
 if [[ "$CLASSPATH" != *"$PADOGRID_HOME/kafka/plugins"* ]]; then
    CLASSPATH="$PADOGRID_HOME/kafka/plugins/*:$PADOGRID_HOME/kafka/lib/*:$CLASSPATH"
 fi
+
+# Include the app's lib directory. Normally, the jar files in the workspace lib
+# directory are preferred since they are shared across the workspace. However,
+# Kafka is prone to too many jar conflicts.
+CLASSPATH="$APP_DIR/lib/*:$CLASSPATH"

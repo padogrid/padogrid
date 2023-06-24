@@ -6,13 +6,14 @@ https://github.com/padogrid
 
 ## Version 0.9.26-SNAPSHOT
 
-### Release Date: 06/23/23
+### Release Date: 06/24/23
 
 - Added a workaround to a Paho bug that throws an NPE instead of `MqttException` when it encounters a bad connection. `HaMqttClient` now catches and handles all exceptions accordingly. This workaround fixes `vc_subscribe` which exits when an NPE is raised by Paho. Paho v1.2.5.
 - Added `mosquitto` to `install_bundle`.
 - Fixed Jet 3.x/4.x cluster creation issues. Prior to this fix, Jet clusters incorrectly set `CLUSTER_TYPE` to `hazelcast` causing a conflict between IMDG and Jet.
 - Added Docker support for Mosquitto. The `create_docker` command now supports installation of Mosquitto Docker Compose clusters. Each cluster includes an `HaMqttClient` configuration file for creating an Archetype 8 virtual cluster.
 - Fixed an uncaught NPE issue in `HaMqttClient` potentially caused by null clientID.
+- Unlike other products, to prevent jar conflicts, `perf_test` for Kafka now places the jar dependencies only in the app's lib directory.
 
 ---
 

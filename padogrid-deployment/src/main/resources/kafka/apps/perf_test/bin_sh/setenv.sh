@@ -49,3 +49,4 @@ JAVA_OPTS="$JAVA_OPTS -Dkafka-addon.hibernate.config=$APP_ETC_DIR/hibernate.cfg-
 
 # Add your class path
 #CLASSPATH="$CLASSPATH"
+CLASSPATH="$APP_DIR/lib/*:$CLASSPATH"
