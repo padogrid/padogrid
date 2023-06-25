@@ -32,7 +32,7 @@ You can install PadoGrid and the supported data grid products by running the int
 
 [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
 
-:pencil2: *The latest PadoGrid snapshot release is available if you cannot wait till the next release. It is automatically built whenver there are changes made in [RELEASE_NOTES.md](RELEASE_NOTES.md). You can download it from [Releases](https://github.com/padogrid/padogrid/releases) or using `install_padogrid`.*
+:pencil2: *The latest PadoGrid snapshot release is available if you cannot wait till the next release. It is automatically built when there were changes made in [RELEASE_NOTES.md](RELEASE_NOTES.md). You can download it from [Releases](https://github.com/padogrid/padogrid/releases) or using `install_padogrid`.*
 
 ## PadoGrid Container
 
@@ -88,6 +88,8 @@ A workspace snapshot can be taken at any time in the form of a bundle that can b
 - [Docker Clusters](https://github.com/padogrid/padogrid/wiki/Docker)
 - [PadoGrid (Vagrant) Pods](https://github.com/padogrid/padogrid/wiki/Understanding-PadoGrid-Pods)
 - [Hazelcast Query Language (HQL)](https://github.com/padogrid/padogrid/wiki/HQL-Query)
+- [MQTT Virtual Clusters](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT)
+- [Integrated Tools (JupyterLab/VS Code)](https://github.com/padogrid/padogrid/wiki/Integrated-Tools)
 - [Use Cases via Online Bundles](https://github.com/padogrid/padogrid/wiki/Bundle-Catalogs)
 
 ## Building `padogrid`
