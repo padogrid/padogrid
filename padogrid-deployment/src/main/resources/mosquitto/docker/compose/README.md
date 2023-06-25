@@ -19,16 +19,16 @@ switch_cluster mymosquitto
 Once you are switched into the cluster, run the `create_docker` command which creates a Docker cluster that is specific to that product.
 
 ```bash
-# Create Mosquitto cluster with 3 members (default) with the host name prefix, 'broker'.
-# If -prefix is not specified then the prefix defaults to to the cluster name.
-create_docker -cluster edge -prefix broker
+# Create Mosquitto cluster with 3 members (default) with the default host name prefix, 'broker'.
+# You can change the prefix with the -prefix option.
+create_docker -cluster edge
 ```
 
 By default, the create_docker command adds two (3) Mosquitto brokers (members) in the cluster. You can change the number of brokers using the `-count` option. For example, the following command adds five (5) brokers.
 
 ```bash
-# Create Mosquitto cluster with five (5) brokers with the host name prefix, 'broker'. 
-create_docker -cluster edge -prefix broker -count 5
+# Create Mosquitto cluster with five (5) brokers with the default host name prefix, 'broker'. 
+create_docker -cluster edge -count 5
 ```
 
 ## Configure the Cluster Environment
@@ -89,20 +89,20 @@ If you have created cluster with additional brokers, then you can specify the `-
 vc_subscribe -endpoints tcp://localhost:1883-1887 -t edge/#
 ```
 
-## Run `chart`
+## Run `chart_mqtt`
 
-The simulator comes in a bundle, which also includes the `chart` command that graphically displays the simulated data.You can install the bundle as follows.
+The simulator comes in a bundle, which also includes the `chart_mqtt` command that graphically displays the simulated MQTT data. You can install the bundle as follows.
 
 ```bash
-install_bundle download -quiet bundle-none-app-simulator
+install_bundle -download -quiet bundle-none-app-simulator
 ```
 
-Once installed, change directory to `simulator` and run the `chart` command as follows.
+Once installed, change directory to `simulator` and run the `chart_mqtt` command as follows.
 
 ```bash
 cd_app simulator/bin_sh
 ./build_app
-./chart -t edge/broker1/sine
+./chart_mqtt -t edge/broker1/sine
 ```
 
 The simulator in each `padogrid-mqtt` container publishes to numerous topics. You can find the topic names from the `vc_subscribe` output or the `simulator.yaml` file.
@@ -116,18 +116,18 @@ Some interesting charts are as follows.
 
 ```bash
 cd_app simulator/bin_sh
-./chart -t edge/broker1/dampedSineWave
-./chart -t edge/broker1/circle
-./chart -t edge/broker1/tanh
-./chart -t edge/broker1/heartbeat
+./chart_mqtt -t edge/broker1/dampedSineWave
+./chart_mqtt -t edge/broker1/circle
+./chart_mqtt -t edge/broker1/tanh
+./chart_mqtt -t edge/broker1/heartbeat
 ```
 
-Like `vc_subscribe`, `chart` also supports the `-endpoints` option. The following `chart` command creates a virtual cluster that includes five (5) brokers and displays the `circle` data published by `broker5` that has the endpoint `tcp://localhost:1887`.
+Like `vc_subscribe`, `chart_mqtt` also supports the `-endpoints` option. The following `chart_mqtt` command creates a virtual cluster that includes five (5) brokers and displays the `circle` data published by `broker5` that has the endpoint `tcp://localhost:1887`.
 
 ```bash
 # Both of the following display the same data received from broker5
-./chart -endpoints tcp://localhost:1883-1887 -t edge/broker5/circle
-./chart -endpoints tcp://localhost:1887 -t edge/broker5/circle
+./chart_mqtt -endpoints tcp://localhost:1883-1887 -t edge/broker5/circle
+./chart_mqtt -endpoints tcp://localhost:1887 -t edge/broker5/circle
 ```
 
 ## Run `perf_test`
