@@ -14,7 +14,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
-- *May 29, 2023 - [PadoGrid v0.9.25 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.25) This release introduces MQTT virtual clusters for clustering Mosquitto brokers with support for High Availability.*
+- *June 25, 2023 - [PadoGrid v0.9.26 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.26) This release introduces the `padogrid/padogrid-mqtt` container image that serves as an edge device providing a simulated MQTT data feed. See [Mosquitto Docker Compose](https://github.com/padogrid/padogrid/wiki/Mosquitto-Docker-Compose) for details.*
 
 ---
 
@@ -123,15 +123,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir -p ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.25-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.27-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.25-SNAPSHOT
+tree -L 1 padogrid_0.9.27-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.25-SNAPSHOT
+padogrid_0.9.27-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -161,33 +161,50 @@ padogrid_0.9.25-SNAPSHOT
 To use PadoGrid, you must first create an RWE (Root Workspace Environment) by running the interactive command, `create_rwe`, to specify the workspaces directory and the product installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.25-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.27-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid using Docker and Podman
 
-PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.25-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+To save your workspaces created in the container, it is recommended that you mount a data volume along with ports exposed as follows.
 
 ```bash
-# docker
-docker run -it --rm padogrid/padogrid /bin/bash
+# Docker
+docker run --name padogrid -h padogrid -d \
+   --mount type=volume,source=padogrid,target=/opt/padogrid \
+   -p 8888:8888 -p 5701:5701 -p 5702:5702 -p 5703:5703 -p 8080:8080 \
+   -p 9401:9401 -p 9402:9402 -p 9403:9403 -p 3000:3000 -p 9090:9090 \
+   -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
 
-# podman
-podman run -it --rm padogrid/padogrid /bin/bash
+# Podman
+podman run --name padogrid -h padogrid -d \
+   --mount type=volume,source=padogrid,target=/opt/padogrid \
+   -p 8888:8888 -p 5701:5701 -p 5702:5702 -p 5703:5703 -p 8080:8080 \
+   -p 1883:1883 -p 1884:1883 -p 1885:1883 -p 5703:5703 \
+   -p 9401:9401 -p 9402:9402 -p 9403:9403 -p 3000:3000 -p 9090:9090 \
+   -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
 ```
 
-Beginning version 0.9.22, PadoGrid containers include JupyterLab. To start JupyterLab, start the container in the background as follows.
+Once the PadoGrid container is started, you can access the container as follows.
 
-```bash
-# docker
-docker run --name padogrid --rm -d -p 8888:8888 -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
+### Login from browser:
 
-# podman
-podman run --name padogrid --rm -d -p 8888:8888 -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
-```
-
-- PadoGrid URL: https://0.0.0.0:8888
+- PadoGrid URL: <https://0.0.0.0:8888>
 - Password: `padogrid`
+
+### Login from shell:
+
+```bash
+# Docker
+docker exec -it padogrid /bin/bash
+
+# Podman
+poman exec -it padogrid /bin/bash
+```
+
+:pencil2: PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.27-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+
+For additional details, see the [Docker](https://github.com/padogrid/padogrid/wiki/Docker) section of the manual.
 
 ## Running PadoGrid in Kubernetes
 
