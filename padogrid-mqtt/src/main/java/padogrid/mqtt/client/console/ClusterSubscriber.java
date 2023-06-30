@@ -58,7 +58,8 @@ public class ClusterSubscriber implements Constants {
 		writeLine();
 		writeLine("SNOPSIS");
 		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]] [-fos fos] [-qos qos] [-quiet] -t topic_filter [-?]");
+				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]]");
+		writeLine("                [-log log_file] [-fos fos] [-qos qos] [-quiet] -t topic_filter [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Subscribes to the specified topic filter in the specified virtual cluster.");
@@ -91,6 +92,10 @@ public class ClusterSubscriber implements Constants {
 		writeLine();
 		writeLine("   -config config_file");
 		writeLine("             Optional configuration file.");
+		writeLine();
+		writeLine("   -log log_file");
+		writeLine("             Optional log file.");
+		writeLine("             Default: ~/.padogrid/log/" + PROPERTY_executableName + ".log");
 		writeLine();
 		writeLine("   -fos fos");
 		writeLine("             Optional FoS value. Valid values are 0, 1, 2, 3. Default: 0.");

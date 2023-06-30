@@ -83,6 +83,6 @@ public class FosTest {
 
 	@AfterClass
 	public static void tearDown() throws Exception {
-		HaClusters.closeClusters();
+		HaClusters.close();
 	}
 }

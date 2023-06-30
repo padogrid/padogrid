@@ -125,11 +125,16 @@ public final class HaClusters {
 	 * the application should eagerly invoke this method to start the cluster
 	 * initialization process to reduce the overall cluster creation latency.
 	 * 
+	 * @param isStart true to start the service. If false, then the {@link #start()}
+	 *                method must be invoked to start the service.
+	 * @param args    Optional command line arguments. The specified arguments are
+	 *                pass onto
+	 *                {@linkplain IHaMqttPlugin#init(String, java.util.Properties, String...)}.
 	 * @return ClusterService instance
 	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
-	static final void initialize(boolean isStart) throws IOException {
-		ClusterService.initialize(isStart);
+	static final void initialize(boolean isStart, String... args) throws IOException {
+		ClusterService.initialize(isStart, args);
 	}
 
 	/**
@@ -147,12 +152,14 @@ public final class HaClusters {
 	 *                      {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE}
 	 *                      in the class path is read. If all fails, then the
 	 *                      default settings are applied.
-	 * 
+	 * @param args          Optional command line arguments. The specified arguments
+	 *                      are pass onto
+	 *                      {@linkplain IHaMqttPlugin#init(String, java.util.Properties, String...)}.
 	 * @return ClusterService instance
 	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
-	public final static void initialize(ClusterConfig clusterConfig) throws IOException {
-		ClusterService.initialize(clusterConfig, true);
+	public final static void initialize(ClusterConfig clusterConfig, String... args) throws IOException {
+		ClusterService.initialize(clusterConfig, true, args);
 	}
 
 	/**
@@ -170,12 +177,15 @@ public final class HaClusters {
 	 *                   {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE} in
 	 *                   the class path is read. If all fails, then the default
 	 *                   settings are applied.
+	 * @param args       Optional command line arguments. The specified arguments
+	 *                   are pass onto
+	 *                   {@linkplain IHaMqttPlugin#init(String, java.util.Properties, String...)}.
 	 * 
 	 * @return ClusterService instance
 	 * @throws IOException Thrown if unable to read the configuration source.
 	 */
-	public final static void initialize(File clusterConfigFile) throws IOException {
-		ClusterService.initialize(clusterConfigFile, true);
+	public final static void initialize(File clusterConfigFile, String... args) throws IOException {
+		ClusterService.initialize(clusterConfigFile, true, args);
 	}
 
 	/**
@@ -194,8 +204,20 @@ public final class HaClusters {
 	 *                     specified by the system property,
 	 *                     {@linkplain IClusterConfig#DEFAULT_CLIENT_CONFIG_FILE}.
 	 */
-	public final static void initialize() throws IOException {
-		ClusterService.initialize(true);
+	public final static void initialize(String... args) throws IOException {
+		ClusterService.initialize(true, args);
+	}
+
+	/**
+	 * Starts the service when invoked for the first time. Subsequent invocations
+	 * have no effect. It starts only if {@link #isServiceEnabled()} is true. This
+	 * method must be invoked to activate the service.
+	 */
+	public final static void start() {
+		if (ClusterService.getClusterService() == null) {
+			return;
+		}
+		ClusterService.getClusterService().start();
 	}
 
 	/**
@@ -217,9 +239,11 @@ public final class HaClusters {
 	}
 
 	/**
-	 * Disconnects and closes all the clusters.
+	 * Disconnects and closes all the plugins and clusters. Note that it closes the
+	 * plugins first before closing the clusters. This method does not stop the
+	 * cluster service. To stop the cluster service, invoke {@link #stop()}.
 	 */
-	public final static void closeClusters() {
+	public final static void close() {
 		if (ClusterService.getClusterService() == null) {
 			return;
 		}
@@ -227,8 +251,9 @@ public final class HaClusters {
 	}
 
 	/**
-	 * Closes all the clusters and then stops the cluster service. Once stopped, the
-	 * cluster service is no longer operational.
+	 * Closes all the plugins and clusters, and then stops the cluster service. Note
+	 * that it closes the plugins first before closing the clusters. Once stopped,
+	 * the cluster service is no longer operational.
 	 */
 	public final static void stop() {
 		if (ClusterService.getClusterService() == null) {
@@ -241,6 +266,9 @@ public final class HaClusters {
 	 * Returns the default cluster name.
 	 */
 	public final static String getDefaultClusterName() {
+		if (ClusterService.getClusterService() == null) {
+			return IClusterConfig.DEFAULT_CLUSTER_NAME;
+		}
 		return ClusterService.getClusterService().getDefaultClusterName();
 	}
 }

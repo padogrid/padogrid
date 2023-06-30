@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -endpoints -config -name -m -r -t -fos -qos -quiet -?"
+   echo "-cluster -endpoints -config -log -name -m -r -t -fos -qos -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -103,8 +103,13 @@ if [ ! -d "$LOG_DIR/paho" ]; then
 fi
 
 LOG_CONFIG_FILE="$PADOGRID_HOME/mosquitto/etc/template-log4j2.properties"
-LOG_FILE=$LOG_DIR/$EXECUTABLE.log
 PAHO_LOG_CONFIG_FILE="$PADOGRID_HOME/mosquitto/etc/paho-logging-$EXECUTABLE.properties"
+
+if [ "$LOG_SPECIFIED" == "true" ] && [ "$LOG" != "" ]; then
+   LOG_FILE=$LOG
+else
+   LOG_FILE=$LOG_DIR/$EXECUTABLE.log
+fi
 
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    LOG_DIR="$(cygpath -wp "$LOG_DIR")"

@@ -52,7 +52,8 @@ public class ClusterPublisher implements Constants {
 		writeLine();
 		writeLine("SNOPSIS");
 		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]] [-name endpoint_name] [-fos fos] [-qos qos] [-r] [-quiet] -t topic_filter -m message [-?]");
+				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]] [-name endpoint_name]");
+		writeLine("              [-log log_file] [-fos fos] [-qos qos] [-r] [-quiet] -t topic_filter -m message [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
 		writeLine("   Publishes the specified message to the specified topic.");
@@ -89,6 +90,10 @@ public class ClusterPublisher implements Constants {
 		writeLine();
 		writeLine("   -config config_file");
 		writeLine("             Optional configuration file. Default: current cluster's etc/mqtt5-client.yaml");
+		writeLine();
+		writeLine("   -log log_file");
+		writeLine("             Optional log file.");
+		writeLine("             Default: ~/.padogrid/log/" + PROPERTY_executableName + ".log");
 		writeLine();
 		writeLine("   -fos fos");
 		writeLine("             Optional FoS value. Valid values are 0, 1, 2, 3. Default: 0.");

@@ -65,12 +65,66 @@ persistence:
   #   className: MemoryPersistence
   className: MemoryPersistence
   properties: null
+    
+# Optional 'plugins' specifies a list of plugin classes such as connectors that 
+# implement padogrid.mqtt.client.cluster.IHaMqttPlugin for applying application
+# specific logic on published and/or received data. Connectors may cleanse, filter
+# and/or transform data, save data to databases, stream data to another product
+# such as Kafka and data grids, plot real-time data, and etc.
+# 
+# The plugins come in three flavors: IHaMqttPlugin, IHaMqttConnectorPublisher,
+# IHaMqttConnectorSubscriber.
+#
+#   - IHaMqttPlugin - Application plugin. Starts during the application startup
+#     time and has no association with virtual clusters.
 
+#   - IHaMqttConnectorPublisher - Publisher connector. Launches during cluster
+#     initialization. Responsible for intercepting publishing or published messages
+#     by the application.
+
+#   - IHaMqttConnectorSubscriber - Subscriber connector. Luanches during cluster
+#     initialization. Responsible for intercepting subscribed messages.
+#
+# Example:
+#   - name: plugin_name
+#     enabled: true
+#     className: myplugins.QuestDbJsonConnector
+#     properties:
+#       - key: endpoint
+#         value: localhost:9090
+#       - key: callback
+plugins:
+    # Plugin name. If null, then the plugin cannot and will never be created.
+  - name: null
+    # Optional plugin description.
+    description: null
+    # true enable, false to disable. If disabled, the plugin is not created.
+    enabled: true
+    # Plugin context. The plugin context determines the plugin bootstrap
+    # environment. Valid values are CLUSTER, APP. If CLUSTER, the plugin is
+    # associated with the cluster that has the matching 'pluginName' value
+    # and launched during the cluster initialization time. If APP, then
+    # the plugin is launched after the cluster service is initialized.
+    # For IHaMqttConnectorPublisher and IHaMqttConnectorSubscriber, the
+    # 'context' value is always CLUSTER.
+    # Default: CLUSTER
+    context: CLUSTER
+    # Fully-qualified class that implements padogrid.mqtt.client.cluster.IHaMqttPlugin.
+    # If null, then the connector cannot be created.
+    className: null
+    # Initialization properties passed into the 'init(Properties)'' method.
+    properties: null
+      #- key:
+      #  value: null
+      
 # Cluster definitions. HaMqttClient supports multiple clusters.
 clusters:
     # Unique cluster name. Each cluster name defined in this file must be unique.
     # Default: cluster-default
   - name: cluster-default
+  
+    # Optional cluster description.
+    description: null
   
     # true to enable the cluster, false to disable.
     # Default: true
@@ -150,7 +204,7 @@ clusters:
     liveEndpointPoolEnabled: true
     
     # Publisher Type. Valid values are STICKY, RANDOM, ROUND_ROBIN, ALL.
-    #   STICKY - Use one server for all publications.
+    #   STICKY - Use the same server for all publications.
     #   RANDOM - Randomly select one server from the live list for each publication.
     #   ROUND_ROBIN - Select the next server from the live list for each publication.
     #   ALL - Publish each message to all servers in the live list.
@@ -184,6 +238,11 @@ clusters:
         # Topic base to bound topics published to this endpoint. It overrides
         # publisherTopicBase.
         topicBase: null
+
+    # Optional connector name. Define the plugin under the 'plugins'
+    # element and specify its name here to activate it for this cluster.
+    # Default: null
+    pluginName: null
     
     # HaMqttClient provides a bridge service incomming and outgoing messages.
     # Incoming messages are the ones that are received by this application from
@@ -236,7 +295,7 @@ clusters:
           # Note that qos is for forwarding (publishing) messages.
           # Default: -1
           qos: -1
-      
+
     connections:
       # tls uses an internal socket factory for SSL connections
       - tls:

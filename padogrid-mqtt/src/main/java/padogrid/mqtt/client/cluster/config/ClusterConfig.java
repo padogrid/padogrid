@@ -26,7 +26,9 @@ import org.eclipse.paho.mqttv5.client.persist.MqttDefaultFilePersistence;
 
 import padogrid.mqtt.client.cluster.HaMqttConnectionOptions;
 import padogrid.mqtt.client.cluster.IClusterConfig;
+import padogrid.mqtt.client.cluster.PluginContext;
 import padogrid.mqtt.client.cluster.PublisherType;
+import padogrid.mqtt.client.cluster.config.ClusterConfig.Property;
 import padogrid.mqtt.client.cluster.internal.ConfigUtil;
 
 /**
@@ -43,6 +45,7 @@ public class ClusterConfig {
 	private int probeDelay = IClusterConfig.DEFAULT_CLUSTER_PROBE_DELAY_IN_MSEC;
 	private Cluster[] clusters = new Cluster[0];
 	private Persistence persistence = new Persistence();
+	private Plugin[] plugins;
 
 	public ClusterConfig() {
 	}
@@ -95,8 +98,23 @@ public class ClusterConfig {
 		this.persistence = persistence;
 	}
 
+	/**
+	 * @return the plugins
+	 */
+	public Plugin[] getPlugins() {
+		return plugins;
+	}
+
+	/**
+	 * @param plugins the plugins to set
+	 */
+	public void setPlugins(Plugin[] plugins) {
+		this.plugins = plugins;
+	}
+
 	public static class Cluster {
 		private String name;
+		private String description;
 		private int fos = 0;
 		private PublisherType publisherType = PublisherType.STICKY;
 		private int subscriberCount = -1;
@@ -110,6 +128,7 @@ public class ClusterConfig {
 		private String defaultTopicBase;
 		private Endpoint[] endpoints;
 		private HaMqttConnectionOptions[] connections;
+		private String pluginName;
 		private Bridges bridges;
 
 		/**
@@ -126,6 +145,20 @@ public class ClusterConfig {
 
 		public void setName(String name) {
 			this.name = name;
+		}
+
+		/**
+		 * @return the description
+		 */
+		public String getDescription() {
+			return description;
+		}
+
+		/**
+		 * @param description the description to set
+		 */
+		public void setDescription(String description) {
+			this.description = description;
 		}
 
 		public boolean isEnabled() {
@@ -190,7 +223,7 @@ public class ClusterConfig {
 		public void setLiveEndpointCount(int liveEndpointCount) {
 			this.liveEndpointCount = liveEndpointCount;
 		}
-		
+
 		public HaMqttConnectionOptions[] getConnections() {
 			if (connections != null) {
 				for (int i = 0; i < connections.length; i++) {
@@ -199,8 +232,8 @@ public class ClusterConfig {
 			}
 			return connections;
 		}
-		
-		public void setConnections(HaMqttConnectionOptions...connections) {
+
+		public void setConnections(HaMqttConnectionOptions... connections) {
 			this.connections = connections;
 		}
 
@@ -281,6 +314,20 @@ public class ClusterConfig {
 			this.endpoints = endpoints;
 		}
 
+		/**
+		 * @return the plugin name
+		 */
+		public String getPluginName() {
+			return pluginName;
+		}
+
+		/**
+		 * @param pluginName the plugin name to set
+		 */
+		public void setPluginName(String pluginName) {
+			this.pluginName = pluginName;
+		}
+
 		public Bridges getBridges() {
 			return bridges;
 		}
@@ -304,7 +351,7 @@ public class ClusterConfig {
 		}
 
 		/**
-		 * Returns a MqttClientPersistence instance of {@link #getClassName()}. It
+		 * Returns a new MqttClientPersistence instance of {@link #getClassName()}. It
 		 * returns null if the class name is undefined, i.e., null.
 		 * 
 		 * @throws ClassNotFoundException
@@ -315,7 +362,7 @@ public class ClusterConfig {
 		 * @throws IllegalArgumentException
 		 * @throws InvocationTargetException
 		 */
-		public MqttClientPersistence getMqttClientPersistence()
+		public MqttClientPersistence createMqttClientPersistence()
 				throws ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException,
 				IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
@@ -343,6 +390,114 @@ public class ClusterConfig {
 				}
 			}
 			return mqttClientPersistence;
+		}
+	}
+
+	public static class Plugin {
+		private String name;
+		private String description;
+		private boolean enabled;
+		private PluginContext context = PluginContext.CLUSTER;
+		private String className;
+		private Property[] properties;
+
+		/**
+		 * @return the name
+		 */
+		public String getName() {
+			return ConfigUtil.parseStringValue(name);
+		}
+
+		/**
+		 * @param name the name to set
+		 */
+		public void setName(String name) {
+			this.name = name;
+		}
+
+		/**
+		 * @return the description
+		 */
+		public String getDescription() {
+			return description;
+		}
+
+		/**
+		 * @param description the description to set
+		 */
+		public void setDescription(String description) {
+			this.description = description;
+		}
+
+		/**
+		 * @return the enabled
+		 */
+		public boolean isEnabled() {
+			return enabled;
+		}
+
+		/**
+		 * @param enabled the enabled to set
+		 */
+		public void setEnabled(boolean enabled) {
+			this.enabled = enabled;
+		}
+
+		/**
+		 * @return the context
+		 */
+		public PluginContext getContext() {
+			return context;
+		}
+
+		/**
+		 * @param context the context to set
+		 */
+		public void setContext(PluginContext context) {
+			this.context = context;
+		}
+
+		/**
+		 * @return the props
+		 */
+		public Properties getProps() {
+			Properties props = new Properties();
+			if (properties != null) {
+				for (Property property : properties) {
+					if (property != null && property.getKey() != null && property.getValue() != null) {
+						props.setProperty(property.getKey(), property.getValue());
+					}
+				}
+			}
+			return props;
+		}
+
+		/**
+		 * @return the className
+		 */
+		public String getClassName() {
+			return ConfigUtil.parseStringValue(className);
+		}
+
+		/**
+		 * @param className the className to set
+		 */
+		public void setClassName(String className) {
+			this.className = className;
+		}
+
+		/**
+		 * @return the properties
+		 */
+		public Property[] getProperties() {
+			return properties;
+		}
+
+		/**
+		 * @param properties the properties to set
+		 */
+		public void setProperties(Property[] properties) {
+			this.properties = properties;
 		}
 	}
 
@@ -447,7 +602,7 @@ public class ClusterConfig {
 			this.qos = qos;
 		}
 	}
-	
+
 	public static class Tls {
 		String tlsVersion;
 		String cafile;

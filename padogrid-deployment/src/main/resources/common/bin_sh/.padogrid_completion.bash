@@ -406,34 +406,40 @@ __padogrid_complete()
       ;;
 
    -log)
-      local __product=$PRODUCT
-      local __cluster_type=$CLUSTER_TYPE
-      local cluster=$CLUSTER
-      for i in $(seq 1 $len); do
-         if [ "${COMP_WORDS[i]}" == "-cluster" ]; then
-            cluster="${COMP_WORDS[i+1]}"
-            break;
-         fi
-      done
-      determineClusterProduct $cluster
-      case "$PRODUCT" in
-      geode)
-         type_list="data gc locator";;
-      hazelcast)
-         type_list="data gc diag mc";;
-      snappydata)
-         type_list="data gc locator leader";;
-      spark)
-         type_list="data gc master";;
-      coherence)
-         type_list="data gc";;
-      kafka)
-         type_list="data gc controller";;
-      hadoop)
-         type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
-      esac
-      PRODUCT=$__product
-      CLUSTER_TYPE=$__cluster_type
+      if [[ "$command" == "vc_*" ]]; then
+         is_path="true"
+      else
+         local __product=$PRODUCT
+         local __cluster_type=$CLUSTER_TYPE
+         local cluster=$CLUSTER
+         for i in $(seq 1 $len); do
+            if [ "${COMP_WORDS[i]}" == "-cluster" ]; then
+               cluster="${COMP_WORDS[i+1]}"
+               break;
+            fi
+         done
+         determineClusterProduct $cluster
+         case "$PRODUCT" in
+         geode)
+            type_list="data gc locator";;
+         hazelcast)
+            type_list="data gc diag mc";;
+         snappydata)
+            type_list="data gc locator leader";;
+         spark)
+            type_list="data gc master";;
+         coherence)
+            type_list="data gc";;
+         kafka)
+            type_list="data gc controller";;
+         hadoop)
+            type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
+         *)
+            type_list="data"
+         esac
+         PRODUCT=$__product
+         CLUSTER_TYPE=$__cluster_type
+      fi
       ;;
 
    -num)
@@ -515,6 +521,8 @@ __padogrid_complete()
       elif [ "$command" == "cd_k8s" ]; then
           type_list=$(__cd_complete_arg "k8s" 2)
       elif [[ "$command" == "vm_deploy_bundle" || "$command" == "vm_copy" ]] &&  [[ "$cur_word" != "-"* ]]; then
+         is_path="true"
+      elif [ "$command" == "vc_start" ] &&  [[ "$cur_word" != "-"* ]] && [ $len -gt 3 ]; then
          is_path="true"
       else
          if [ "$command" == "-version" ]; then
@@ -1166,34 +1174,40 @@ __command_complete()
       type_list="https ssh"
       ;;
    -log)
-      local __product=$PRODUCT
-      local __cluster_type=$CLUSTER_TYPE
-      local cluster=$CLUSTER
-      for i in $(seq 1 $len); do
-         if [ "${COMP_WORDS[i]}" == "-cluster" ]; then
-            cluster="${COMP_WORDS[i+1]}"
-            break;
-         fi
-      done
-      determineClusterProduct $cluster
-      case "$PRODUCT" in
-      geode)
-         type_list="data gc locator";;
-      hazelcast)
-         type_list="data gc diag mc";;
-      snappydata)
-         type_list="data gc locator leader";;
-      spark)
-         type_list="data gc master";;
-      coherence)
-         type_list="data gc";;
-      kafka)
-         type_list="data gc controller";;
-      hadoop)
-         type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
-      esac
-      PRODUCT=$__product
-      CLUSTER_TYPE=$__cluster_type
+      if [[ "$command" == "vc_"* ]]; then
+         is_path="true"
+      else
+         local __product=$PRODUCT
+         local __cluster_type=$CLUSTER_TYPE
+         local cluster=$CLUSTER
+         for i in $(seq 1 $len); do
+            if [ "${COMP_WORDS[i]}" == "-cluster" ]; then
+               cluster="${COMP_WORDS[i+1]}"
+               break;
+            fi
+         done
+         determineClusterProduct $cluster
+         case "$PRODUCT" in
+         geode)
+            type_list="data gc locator";;
+         hazelcast)
+            type_list="data gc diag mc";;
+         snappydata)
+            type_list="data gc locator leader";;
+         spark)
+            type_list="data gc master";;
+         coherence)
+            type_list="data gc";;
+         kafka)
+            type_list="data gc controller";;
+         hadoop)
+            type_list="data gc namenode secondarynamenode nodemanager resourcemanager historyserver";;
+         *)
+            type_list="data"
+         esac
+         PRODUCT=$__product
+         CLUSTER_TYPE=$__cluster_type
+      fi
      ;;
    -num)
       type_list="1 2 3 4 5 6 7 8 9"
@@ -1264,6 +1278,8 @@ __command_complete()
 
    *)
       if [[ "$command" == "vm_deploy_bundle" || "$command" == "vm_copy" ]] &&  [[ "$cur_word" != "-"* ]]; then
+         is_path="true"
+      elif [ "$command" == "vc_start" ] &&  [[ "$cur_word" != "-"* ]] && [ $len -gt 2 ]; then
          is_path="true"
       else
          # Command options

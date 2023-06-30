@@ -81,6 +81,11 @@ public class ClusterState implements IClusterConfig {
 	private final HaMqttClient haclient;
 	private final String clusterName;
 	private final MqttClientPersistence persistence;
+	private final String pluginName;
+	private final IHaMqttPlugin haplugin;
+	private final IHaMqttConnectorPublisher publisherConnector;
+	private final IHaMqttConnectorSubscriber subscriberConnector;
+	private boolean isConnectorsStarted = false;
 	private ScheduledExecutorService executorService;
 
 	// The first iteration of connections is done on a small number of brokers
@@ -100,8 +105,6 @@ public class ClusterState implements IClusterConfig {
 
 	private String primaryServerURI;
 	private MqttClient primaryClient;
-	private String[] secondaryServerURIs;
-	private boolean roundRobinEnabled = false;
 	private MqttClient stickySubscriber;
 
 	private final List<String> allEndpointList = Collections.synchronizedList(new ArrayList<String>(10));
@@ -275,6 +278,37 @@ public class ClusterState implements IClusterConfig {
 			}
 		}
 
+		if (clusterConfig.getPluginName() != null) {
+			pluginName = clusterConfig.getPluginName();
+			IHaMqttPlugin plugin = ClusterService.getClusterService().initClusterPlugin(clusterConfig.getPluginName());
+			if (plugin != null) {
+				if (plugin instanceof IHaMqttConnectorPublisher) {
+					publisherConnector = (IHaMqttConnectorPublisher) plugin;
+				} else {
+					publisherConnector = null;
+				}
+				if (plugin instanceof IHaMqttConnectorSubscriber) {
+					subscriberConnector = (IHaMqttConnectorSubscriber) plugin;
+				} else {
+					subscriberConnector = null;
+				}
+				if (publisherConnector == null && subscriberConnector == null) {
+					haplugin = plugin;
+				} else {
+					haplugin = null;
+				}
+			} else {
+				publisherConnector = null;
+				subscriberConnector = null;
+				haplugin = null;
+			}
+		} else {
+			pluginName = null;
+			publisherConnector = null;
+			subscriberConnector = null;
+			haplugin = null;
+		}
+
 		// Set FoS dependent parameters
 		switch (this.fos) {
 		case 1:
@@ -293,6 +327,19 @@ public class ClusterState implements IClusterConfig {
 			this.liveEndpointCount = -1;
 			break;
 		}
+	}
+
+	/**
+	 * Returns the connector.
+	 * 
+	 * @return null if undefined.
+	 */
+	public IHaMqttConnectorPublisher getPublisherConnector() {
+		return publisherConnector;
+	}
+
+	public IHaMqttConnectorSubscriber getSubscriberConnector() {
+		return subscriberConnector;
 	}
 
 	/**
@@ -446,7 +493,7 @@ public class ClusterState implements IClusterConfig {
 	/**
 	 * Returns a unique client ID for the specified endpoint.
 	 * 
-	 * @param endpoint Endpoint, aka, serverURI.
+	 * @param mykey Endpoint, aka, serverURI.
 	 */
 	private String getClientId() {
 		if (clientId == null) {
@@ -1356,13 +1403,31 @@ public class ClusterState implements IClusterConfig {
 	 * cluster connection after invoking {@link #disconnect()}.
 	 */
 	public void connect() {
-		switch (connectionState) {
-		case DISCONNECTED:
-			connectionState = ConnectionState.LIVE;
-			reviveDeadEndpoints();
-			break;
-		default:
-			break;
+		if (isEnabled) {
+			switch (connectionState) {
+			case DISCONNECTED:
+				connectionState = ConnectionState.LIVE;
+				reviveDeadEndpoints();
+				break;
+			default:
+				break;
+			}
+			if (isConnectorsStarted == false) {
+				Thread pluginThread = null;
+				if (publisherConnector != null) {
+					publisherConnector.start(haclient);
+					isConnectorsStarted = true;
+					pluginThread = ClusterService.getClusterService().addPluginThread(pluginName, publisherConnector);
+				}
+				if (subscriberConnector != null && subscriberConnector != publisherConnector) {
+					subscriberConnector.start(haclient);
+					isConnectorsStarted = true;
+					pluginThread = ClusterService.getClusterService().addPluginThread(pluginName, subscriberConnector);
+				}
+				if (pluginThread != null) {
+					pluginThread.start();
+				}
+			}
 		}
 	}
 
@@ -1417,14 +1482,20 @@ public class ClusterState implements IClusterConfig {
 	 * @throws MqttException
 	 */
 	public void connect(MqttConnectionOptions options) throws MqttSecurityException, MqttException {
-		switch (connectionState) {
-		case DISCONNECTED:
-			connectionState = ConnectionState.LIVE;
-			this.defaultMqttConnectionOptions = updateConnectionOptions(options);
-			reviveDeadEndpoints();
-			break;
-		default:
-			break;
+		if (isEnabled) {
+			switch (connectionState) {
+			case DISCONNECTED:
+				connectionState = ConnectionState.LIVE;
+				this.defaultMqttConnectionOptions = updateConnectionOptions(options);
+				reviveDeadEndpoints();
+				break;
+			default:
+				break;
+			}
+			if (publisherConnector != null && isConnectorsStarted == false) {
+				publisherConnector.start(haclient);
+				isConnectorsStarted = true;
+			}
 		}
 	}
 
@@ -1590,6 +1661,10 @@ public class ClusterState implements IClusterConfig {
 			default:
 				tokens = new IMqttToken[0];
 				break;
+			}
+			if (publisherConnector != null && isConnectorsStarted == false) {
+				publisherConnector.start(haclient);
+				isConnectorsStarted = true;
 			}
 		}
 		return tokens;
@@ -1921,6 +1996,16 @@ public class ClusterState implements IClusterConfig {
 				haCallbacks = haCallbackList.toArray(new IHaMqttCallback[0]);
 				liveSubscriptionClientSet.clear();
 				stickySubscriber = null;
+			}
+			if (isConnectorsStarted) {
+				if (publisherConnector != null) {
+					publisherConnector.stop();
+					isConnectorsStarted = false;
+				}
+				if (subscriberConnector != null && subscriberConnector != publisherConnector) {
+					publisherConnector.stop();
+					isConnectorsStarted = false;
+				}
 			}
 			break;
 		default:
@@ -2279,10 +2364,18 @@ public class ClusterState implements IClusterConfig {
 				break;
 			}
 
+			// Deliver message to the connector
+			if (subscriberConnector != null) {
+				subscriberConnector.messageArrived(client, topic, message.getPayload());
+			}
+
+			// Deliver message to the MqttClient callback
 			MqttCallback cb = callback;
 			if (cb != null) {
 				cb.messageArrived(topic, message);
 			}
+
+			// Deliver message to HaMqttClient callback
 			IHaMqttCallback[] hacb = haCallbacks;
 			for (IHaMqttCallback hacallback : hacb) {
 				hacallback.messageArrived(client, topic, message);

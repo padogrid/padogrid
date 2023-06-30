@@ -1,0 +1,34 @@
+defaultCluster: connector
+
+plugins:
+  - name: plugin-app
+    description: A test plugin app for validating the API.
+    enabled: true
+    context: APP
+    className: padogrid.mqtt.test.client.cluster.junit.plugins.TestAppPlugin
+    # Initialization properties passed into the 'init(Properties)'' method.
+    properties:
+      - key: mykey
+        value: testing
+  - name: plugin-connector
+    description: A test connector that prints messages.
+    enabled: true
+    className: padogrid.mqtt.test.client.cluster.junit.plugins.TestConnector
+    # Initialization properties passed into the 'init(Properties)'' method.
+    properties:
+      - key: endpoint
+        value: localhost:9009
+      
+clusters:
+  - name: connector
+    pluginName: plugin-connector
+    publisherType: ROUND_ROBIN
+    connections:
+      - connection:
+          serverURIs: [tcp://localhost:1883,tcp://localhost:1884,tcp://localhost:1885]
+  - name: connector2
+    pluginName: plugin-connector
+    publisherType: ROUND_ROBIN
+    connections:
+      - connection:
+          serverURIs: [tcp://localhost:1883,tcp://localhost:1884,tcp://localhost:1885]

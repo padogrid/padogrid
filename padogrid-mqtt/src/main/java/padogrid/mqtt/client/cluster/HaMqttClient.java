@@ -68,6 +68,7 @@ public class HaMqttClient implements IHaMqttClient {
 	private Map<String, String> invertedTopicBaseMap = new HashMap<String, String>(10);
 	private Map<String, Boolean> invertedTopicBaseScannedMap = new HashMap<String, Boolean>(10);
 	private ClusterState clusterState;
+	private IHaMqttConnectorPublisher publisherConnector;
 	private Logger logger = LogManager.getLogger(HaMqttClient.class);
 
 	private PublisherType publisherType = PublisherType.STICKY;
@@ -129,6 +130,7 @@ public class HaMqttClient implements IHaMqttClient {
 			// Obtain cluster state
 			clusterState = ClusterService.getClusterService().addHaClient(this, clusterConfig, persistence,
 					executorService);
+			publisherConnector = clusterState.getPublisherConnector();
 		}
 	}
 
@@ -220,7 +222,7 @@ public class HaMqttClient implements IHaMqttClient {
 	public boolean isEnabled() {
 		return clusterState.isEnabled();
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -234,7 +236,7 @@ public class HaMqttClient implements IHaMqttClient {
 	public MqttClient getPublisher() {
 		return getPublisherByTopic(null);
 	}
-	
+
 	/**
 	 * IMqttClient: {@inheritDoc}
 	 */
@@ -338,8 +340,19 @@ public class HaMqttClient implements IHaMqttClient {
 			cleanupThreadLocals();
 			throw new HaMqttException(-100, String.format("Cluster unreachable"));
 		}
+		byte[] originalPayload = message.getPayload();
+		byte[] payload = originalPayload;
+		if (publisherConnector != null) {
+			payload = publisherConnector.beforeMessagePublished(clients, topic, payload);
+			if (payload == null) {
+				return;
+			}
+		}
 		for (MqttClient client : clients) {
 			try {
+				if (publisherConnector != null) {
+					message.setPayload(payload);
+				}
 				client.publish(topic, message);
 			} catch (MqttException e) {
 
@@ -359,12 +372,18 @@ public class HaMqttClient implements IHaMqttClient {
 						cleanupThreadLocals();
 						throw e;
 					} else {
+						if (publisherConnector != null) {
+							message.setPayload(originalPayload);
+						}
 						publish(topic, message);
 					}
 				} else {
 					throw e;
 				}
 			}
+		}
+		if (publisherConnector != null) {
+			publisherConnector.afterMessagePublished(clients, topic, payload);
 		}
 
 		// TODO: Move it to another thread
@@ -398,6 +417,15 @@ public class HaMqttClient implements IHaMqttClient {
 			cleanupThreadLocals();
 			throw new HaMqttException(-100, String.format("Cluster unreachable"));
 		}
+		byte[] originalPayload = message.getPayload();
+		byte[] payload = originalPayload;
+		if (publisherConnector != null) {
+			payload = publisherConnector.beforeMessagePublished(new MqttClient[] { client }, topic, payload);
+			if (payload == null) {
+				return;
+			}
+			message.setPayload(payload);
+		}
 		try {
 			client.publish(topic, message);
 		} catch (MqttException e) {
@@ -418,11 +446,18 @@ public class HaMqttClient implements IHaMqttClient {
 					cleanupThreadLocals();
 					throw e;
 				} else {
+					if (publisherConnector != null) {
+						message.setPayload(originalPayload);
+					}
 					publish(topic, message);
 				}
 			} else {
 				throw e;
 			}
+		}
+
+		if (publisherConnector != null) {
+			publisherConnector.afterMessagePublished(new MqttClient[] { client }, topic, payload);
 		}
 
 		// TODO: Move it to another thread
@@ -462,7 +497,7 @@ public class HaMqttClient implements IHaMqttClient {
 			return client.getServerURI();
 		}
 	}
-	
+
 	/**
 	 * IMqttClient: {@inheritDoc}
 	 */
@@ -505,6 +540,13 @@ public class HaMqttClient implements IHaMqttClient {
 			throw new HaMqttException(-100,
 					String.format("Cluster unreachable [liveClients.length=%d]", liveClients.length));
 		}
+		byte[] orginalPayload = payload;
+		if (publisherConnector != null) {
+			payload = publisherConnector.beforeMessagePublished(clients, topic, payload);
+			if (payload == null) {
+				return;
+			}
+		}
 		for (MqttClient client : clients) {
 			try {
 				client.publish(topic, payload, qos, retained);
@@ -525,12 +567,16 @@ public class HaMqttClient implements IHaMqttClient {
 						cleanupThreadLocals();
 						throw e;
 					} else {
-						publish(topic, payload, qos, retained);
+						publish(topic, orginalPayload, qos, retained);
 					}
 				} else {
 					throw e;
 				}
 			}
+		}
+
+		if (publisherConnector != null) {
+			publisherConnector.afterMessagePublished(clients, topic, payload);
 		}
 
 		// TODO: Move it to another thread
@@ -556,6 +602,13 @@ public class HaMqttClient implements IHaMqttClient {
 			throw new HaMqttException(-100, String.format("Cluster unreachable [client=%s, liveClients.length=%d]",
 					client, liveClients.length));
 		}
+		byte[] originalPayload = payload;
+		if (publisherConnector != null) {
+			payload = publisherConnector.beforeMessagePublished(new MqttClient[] { client }, topic, payload);
+			if (payload == null) {
+				return;
+			}
+		}
 		try {
 			client.publish(topic, payload, qos, retained);
 		} catch (MqttException e) {
@@ -577,11 +630,15 @@ public class HaMqttClient implements IHaMqttClient {
 					cleanupThreadLocals();
 					throw e;
 				} else {
-					publish(topic, payload, qos, retained);
+					publish(topic, originalPayload, qos, retained);
 				}
 			} else {
 				throw e;
 			}
+		}
+
+		if (publisherConnector != null) {
+			publisherConnector.afterMessagePublished(new MqttClient[] { client }, topic, payload);
 		}
 
 		// TODO: Move it to another thread
@@ -1130,7 +1187,7 @@ public class HaMqttClient implements IHaMqttClient {
 	 */
 	@Override
 	public void close() throws MqttException {
-		close(false);	
+		close(false);
 	}
 
 	/**
@@ -1157,7 +1214,7 @@ public class HaMqttClient implements IHaMqttClient {
 	public boolean isClosed() {
 		return clusterState.isClosed();
 	}
-	
+
 	/**
 	 * HaMqttClient: {@inheritDoc}
 	 */
