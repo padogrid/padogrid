@@ -142,6 +142,7 @@ CONSOLE=false
 USER=
 GITHOST=github
 BRANCH=
+TAG=
 CONNECT=https
 CONNECT_ARG=
 REPLACE_ARG=
@@ -291,6 +292,8 @@ do
          GITHOST=$i
       elif [ "$PREV" == "-branch" ]; then
          BRANCH=$i
+      elif [ "$PREV" == "-tag" ]; then
+         TAG=$i
       elif [ "$PREV" == "-connect" ]; then
          CONNECT=$i
          CONNECT_ARG=$i

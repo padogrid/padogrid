@@ -401,6 +401,10 @@ __padogrid_complete()
       type_list="master"
       ;;
 
+  -tag)
+      type_list=" "
+      ;;
+
    -connect)
       type_list="https ssh"
       ;;
@@ -1169,6 +1173,9 @@ __command_complete()
       ;;
   -branch)
       type_list="master"
+      ;;
+  -tag)
+      type_list=" "
       ;;
    -connect)
       type_list="https ssh"
