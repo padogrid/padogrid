@@ -401,6 +401,10 @@ __padogrid_complete()
       type_list="master"
       ;;
 
+  -release)
+      type_list=" "
+      ;;
+
   -tag)
       type_list=" "
       ;;
@@ -1173,6 +1177,9 @@ __command_complete()
       ;;
   -branch)
       type_list="master"
+      ;;
+  -release)
+      type_list=" "
       ;;
   -tag)
       type_list=" "

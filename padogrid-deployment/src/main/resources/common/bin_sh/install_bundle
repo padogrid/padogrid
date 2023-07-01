@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-user -githost -branch -tag -connect -preview -download -checkout -workspace -replace -force -overwrite-workspace -init -quiet -?"
+   echo "-user -githost -branch -tag -release -connect -preview -download -checkout -workspace -replace -force -overwrite-workspace -init -quiet -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -85,6 +85,9 @@ OPTIONS
 
    -branch git_branch
              Git branch to download. If not specified then the default branch is downloaded.
+
+   -release git_release
+             Git release version to download. If not specified then the default branch is downloaded.
 
    -tag git_tag
              Git tag to download. If not specified then the default branch is downloaded.
@@ -293,16 +296,29 @@ if [ "$SED_SUB_EXPRESSION" != "" ]; then
 fi
 
 # Exit if both -branch and -tag are specified
-if [ "$BRANCH" != "" ] && [ "$TAG" != "" ]; then
-   echo -e >&2 "${CError}ERROR:${CNone} '-branch' and '-tag' are not allowed together. Command aborted."
+num_opts=0
+if [ "$BRANCH" != "" ]; then 
+   num_opts=$((num_opts + 1))
+fi
+if [ "$RELEASE" != "" ]; then 
+   num_opts=$((num_opts + 1))
+fi
+if [ "$TAG" != "" ]; then 
+   num_opts=$((num_opts + 1))
+fi
+
+if [ $num_opts -gt 1 ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} '-branch', '-release', and '-tag' are not allowed together. Command aborted."
    exit 1
 fi
 
-BRANCH_TAG=""
+BRANCH_TAG_RELEASE=""
 if [ "$BRANCH" != "" ]; then
-   BRANCH_TAG="$BRANCH"
+   BRANCH_TAG_RELEASE="$BRANCH"
 elif [ "$TAG" != "" ]; then
-   BRANCH_TAG="$TAG"
+   BRANCH_TAG_RELEASE="$TAG"
+elif [ "$RELEASE" != "" ]; then
+   BRANCH_TAG_RELEASE="$RELEASE"
 fi
 
 #
@@ -365,6 +381,7 @@ if [[ $BUNDLE_FILE_PATH == *.zip ]]; then
 else
    BUNDLE_NAME=$BUNDLE_FILE_PATH
 fi
+
 
 #
 # Returns "true" if one of the specfied product versions match the configured product version.
@@ -489,6 +506,27 @@ if [ "$CHECKOUT_SPECIFIED" == "true" ] && [ "$WORKSPACE_SPECIFIED" == "true" ]; 
    exit 1
 fi
 
+# Handle the -release option. Download the release and set the DOWNLOADED* variables
+# to install.
+if [ "$RELEASE" != "" ]; then
+   BUNDLE_DIR=$PADOGRID_WORKSPACE/bundles
+   if [ ! -d $BUNDLE_DIR ]; then
+      mkdir -p $BUNDLE_DIR
+   fi
+   PADOGRID_URL="https://github.com/padogrid"
+   BUNDLE_FILE_PATH=$BUNDLE_DIR/$BUNDLE_NAME-${RELEASE}.zip
+   curl -sL -o $BUNDLE_FILE_PATH $PADOGRID_URL/$BUNDLE_NAME/archive/refs/tags/${RELEASE}.zip
+   if [ "$(file $BUNDLE_FILE_PATH | grep -i ASCII)" != "" ]; then
+      rm $BUNDLE_FILE_PATH
+      echo -e >&2 "${CLightRed}ERROR:${CNone} The specified release does not exist: [$RELEASE]. Command aborted."
+      exit 1
+   else
+      DOWNLOADED_BUNDLE_FILE_SPECIFIED=true
+      DOWNLOADED_BUNDLE_FILE_NAME=$(basename $BUNDLE_FILE_PATH)
+      DOWNLOADED_BUNDLE_NAME=${DOWNLOADED_BUNDLE_FILE_NAME%.zip}
+   fi
+fi
+
 # Set arguments
 if [ "$USER" == "" ]; then
    GITHUB_USER="padogrid"
@@ -558,6 +596,7 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
          pushd $PADOGRID_WORKSPACE/bundles > /dev/null 2>&1 
          jar xf $BUNDLE_FILE_PATH
 
+         echo debug: DOWNLOADED_BUNDLE_NAME=$DOWNLOADED_BUNDLE_NAME
          if [ ! -d "$DOWNLOADED_BUNDLE_NAME" ]; then
             echo -e >&2 "${CLightRed}ERROR:${CNone} Invalid bundle zip file. Command aborted."
             exit 1
@@ -789,9 +828,9 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             fi
             git checkout $BRANCH
          elif [ "$TAG" != "" ]; then
-            TAG_IN_REMOTE=$(git ls-remote --tags origin ${BRANCH})
+            TAG_IN_REMOTE=$(git ls-remote --tags origin ${TAG})
             if [[ -z ${TAG_IN_REMOTE} ]]; then
-               echo -e >&2 "${CLightRed}ERROR:${CNone} The specified tag does not exist: [$BRANCH]. Command aborted."
+               echo -e >&2 "${CLightRed}ERROR:${CNone} The specified tag does not exist: [$TAG]. Command aborted."
                exit 1
             fi
             git checkout $TAG
@@ -824,8 +863,8 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
                popd > /dev/null 2>&1 
             fi
             echo ""
-            if [ "$BRANCH_TAG" != "" ]; then
-               echo "Branch/Tag: $BRANCH_TAG"
+            if [ "$BRANCH_TAG_RELEASE" != "" ]; then
+               echo "Branch/Tag/Release: $BRANCH_TAG_RELEASE"
                echo ""
             fi
             echo "Bundle workspace updated. Switch workspace by executing the following command:"
@@ -865,8 +904,8 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             fi
 
             echo ""
-            if [ "$BRANCH_TAG" != "" ]; then
-               echo "Branch/Tag: $BRANCH_TAG"
+            if [ "$BRANCH_TAG_RELEASE" != "" ]; then
+               echo "Branch/Tag/Release: $BRANCH_TAG_RELEASE"
                echo ""
             fi
             echo "Bundle workspace created. Switch workspace by executing the following command:"
@@ -1034,7 +1073,7 @@ if [ "$PREVIEW" == "true" ]; then
    else
    echo "            Bundle: $BUNDLE_FILE_PATH"
    fi
-   echo "        Branch/Tag: $BRANCH_TAG"
+   echo "Branch/Tag/Release: $BRANCH_TAG_RELEASE"
    echo "   Preiview Pod(s):$PODS"
    echo "Preview Cluster(s):$CLUSTERS"
    echo "   Preview Apps(s):$APPS"
@@ -1044,7 +1083,7 @@ else
    echo "           WORKSPACE: $WORKSPACE_PATH"
    echo "        Cluster Type: $CLUSTER_TYPE"
    echo "              Bundle: $BUNDLE_FILE_PATH"
-   echo "          Branch/Tag: $BRANCH_TAG"
+   echo "  Branch/Tag/Release: $BRANCH_TAG_RELEASE"
    echo "    Installed Pod(s):$PODS"
    echo "Installed Cluster(s):$CLUSTERS"
    echo "    Installed App(s):$APPS"

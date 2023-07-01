@@ -6,10 +6,10 @@ https://github.com/padogrid
 
 ## Version 0.9.27-SNAPSHOT
 
-### Release Date: 06/30/23
+### Release Date: 07/01/23
 
 - Enhanced `HaMqttClient` to support generic plugins. With this enhancement, `HaMqttClient` is now capable of embedding both MQTT and non-MQTT plugins, allowing applications to provide reusable services. The `vc_*` commands have been outfitted with the new plugin harness to seamlessly embed plugins.
-- Added the `-tag` option to `install_bundle` for downloading versioned bundles.
+- Added the `-tag` and `-release` options to `install_bundle` for installing versioned online bundles.
 
 ---
 

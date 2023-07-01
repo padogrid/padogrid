@@ -142,6 +142,7 @@ CONSOLE=false
 USER=
 GITHOST=github
 BRANCH=
+RELEASE=
 TAG=
 CONNECT=https
 CONNECT_ARG=
@@ -292,6 +293,8 @@ do
          GITHOST=$i
       elif [ "$PREV" == "-branch" ]; then
          BRANCH=$i
+      elif [ "$PREV" == "-release" ]; then
+         RELEASE=$i
       elif [ "$PREV" == "-tag" ]; then
          TAG=$i
       elif [ "$PREV" == "-connect" ]; then
