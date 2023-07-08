@@ -291,6 +291,9 @@ public final class ConfigUtil {
 		PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder().build(pwd.toCharArray());
 		JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
 		KeyPair key;
+		if (logger.isDebugEnabled()) {
+			logger.debug("SSLSocketFactory: KeyPair has the type " + object.getClass());
+		}
 		if (object instanceof PEMEncryptedKeyPair) {
 			if (logger.isDebugEnabled())
 				logger.debug("SSLSocketFactory: Encrypted key - Provided password used");

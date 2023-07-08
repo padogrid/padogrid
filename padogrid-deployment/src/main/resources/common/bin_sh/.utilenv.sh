@@ -4983,3 +4983,74 @@ function getDownloadableProductVersions
       esac
    fi
 }
+
+
+# Installs the specified PadoGrid artifacts to the local Maven repo. The following is a list
+# of available artifacts as of writing. For a complete list, see $PADOGRID_HOME.
+#
+#   - geode-addon-core
+#   - hazelcast-addon-common
+#   - hazelcast-addon-core-3
+#   - hazelcast-addon-core-4
+#   - hazelcast-addon-core-5
+#   - hazelcast-addon-jet-demo-3
+#   - hazelcast-addon-jet-demo-4
+#   - hazelcast-addon-jet-core-4
+#   - kafka-addon-core
+#   - padogrid-common
+#   - padogrid-mqtt
+#   - padogrid-tools
+#   - redisson-addon-core
+#   - snappydata-addon-core
+#
+# @param artifactId PadoGrid artifact ID
+function installMavenPadogridJar
+{
+   local artifactId=$1
+   local productMajorVersionNumber=$2
+   local product=${artifactId%%-*}
+   local jarPath
+
+   case "$product" in
+   padogrid)
+      case "$artifactId" in
+         padogrid-mqtt)
+            jarPath="$PADOGRID_HOME/mosquitto/lib/$artifactId-$PADOGRID_VERSION.jar" ;;
+         *)
+            jarPath="$PADOGRID_HOME/lib/$artifactId-$PADOGRID_VERSION.jar" ;;
+         esac
+         ;;
+   hazelcast)
+      case "$artifactId" in
+      hazelcast-addon-common)
+         jarPath="$PADOGRID_HOME/hazelcast/lib/$artifactId-$PADOGRID_VERSION.jar" ;;
+      *)
+         local majorVersionNumber=${artifactId##*-}
+         jarPath="$PADOGRID_HOME/hazelcast/lib/v$majorVersionNumber/$artifactId-$PADOGRID_VERSION.jar" ;;
+      esac
+      ;;
+   redisson)
+      jarPath="$PADOGRID_HOME/redis/lib/$artifactId-$PADOGRID_VERSION.jar"
+      ;;
+   *)
+      jarPath="$PADOGRID_HOME/$product/lib/$artifactId-$PADOGRID_VERSION.jar"
+      ;;
+   esac
+
+   local jarFileName=$(basename $jarPath)
+   local groupId="padogrid.addon"
+
+   if [ ! -d tmp/padogrid/jars ]; then
+      mkdir -p /tmp/padogrid/jars
+   else
+      rm -r /tmp/padogrid/jars/*
+   fi
+   pushd /tmp/padogrid/jars > /dev/null
+   jar -xf $jarPath
+   rm -r META-INF/maven
+   jar -cf /tmp/padogrid/$jarFileName .
+   mvn install:install-file -Dfile=/tmp/padogrid/$jarFileName -DgroupId=$groupId \
+       -DartifactId=$artifactId -Dversion=$PADOGRID_VERSION -Dpackaging=jar
+   rm -r /tmp/padogrid
+   popd > /dev/null
+}

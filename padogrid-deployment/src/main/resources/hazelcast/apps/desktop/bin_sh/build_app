@@ -35,7 +35,7 @@ if [ "$HELP" == "true" ]; then
    echo "   ./$EXECUTABLE [-clean] [-?]"
    echo ""
    echo "   Builds $REPO_NAME in the padogrid environment. Upon successfully execution,"
-   echo "   it deploys the latest $REPO_NAME distribuion in the following app directory."
+   echo "   it deploys the latest $REPO_NAME distribution in the following app directory."
    echo "      $APP_DIR/${REPO_NAME}_<version>"
    echo ""
    echo "   -clean Cleans up the build files after the build completes."
@@ -73,50 +73,12 @@ function sortVersionList
    echo $SORTED_VERSIONS
 }
 
-#
-# Determine the addon version
-#
-ADDON_CORE_JAR_FILE_PATH=`ls $BASE_DIR/lib/v$HAZELCAST_MAJOR_VERSION_NUMBER/hazelcast-addon-core-*.jar`
-ADDON_CORE_JAR_FILE_NAME="`basename $ADDON_CORE_JAR_FILE_PATH`"
-ADDON_CORE_PREFIX="hazelcast-addon-core-$HAZELCAST_MAJOR_VERSION_NUMBER-"
-ADDON_CORE_NAME=${ADDON_CORE_JAR_FILE_NAME%.jar}
-ADDON_VERSION=${ADDON_CORE_NAME#$ADDON_CORE_PREFIX}
-
-PADOGRID_COMMON_JAR_FILE_PATH="$PADOGRID_HOME/lib/padogrid-common-$ADDON_VERSION.jar"
-ADDON_COMMON_JAR_FILE_PATH="$BASE_DIR/lib/hazelcast-addon-common-$ADDON_VERSION.jar"
-ADDON_CORE_JAR_FILE_PATH_3="$BASE_DIR/lib/v3/hazelcast-addon-core-3-$ADDON_VERSION.jar"
-ADDON_CORE_JAR_FILE_PATH_4="$BASE_DIR/lib/v4/hazelcast-addon-core-4-$ADDON_VERSION.jar"
-ADDON_CORE_JAR_FILE_PATH_5="$BASE_DIR/lib/v5/hazelcast-addon-core-5-$ADDON_VERSION.jar"
-
-# Install the addon-core jar to the local Maven repo
-if [[ ${OS_NAME} == CYGWIN* ]]; then
-   PADOGRID_COMMON_JAR_FILE_PATH="$(cygpath -wp "$PADOGRID_COMMON_JAR_FILE_PATH")"
-   ADDON_COMMON_JAR_FILE_PATH="$(cygpath -wp "$ADDON_COMMON_JAR_FILE_PATH")"
-   ADDON_CORE_JAR_FILE_PATH_3="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_3")"
-   ADDON_CORE_JAR_FILE_PATH_4="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_4")"
-   ADDON_CORE_JAR_FILE_PATH_5="$(cygpath -wp "$ADDON_CORE_JAR_FILE_PATH_5")"
-   __SED_BACKUP="0"
-fi
-
-# SED backup prefix
-if [[ ${OS_NAME} == DARWIN* ]]; then
-   # Mac - space required
-   __SED_BACKUP=" 0"
-else
-   __SED_BACKUP="0"
-fi
-
 # Install padogrid to the local repo
-mvn install:install-file -Dfile=$PADOGRID_COMMON_JAR_FILE_PATH -DgroupId=padogrid.addon \
-    -DartifactId=padogrid-common -Dversion=$ADDON_VERSION -Dpackaging=jar
-mvn install:install-file -Dfile=$ADDON_COMMON_JAR_FILE_PATH -DgroupId=padogrid.addon \
-    -DartifactId=hazelcast-addon-common -Dversion=$ADDON_VERSION -Dpackaging=jar
-mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_3 -DgroupId=padogrid.addon \
-    -DartifactId=hazelcast-addon-core-3 -Dversion=$ADDON_VERSION -Dpackaging=jar
-mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_4 -DgroupId=padogrid.addon \
-    -DartifactId=hazelcast-addon-core-4 -Dversion=$ADDON_VERSION -Dpackaging=jar
-mvn install:install-file -Dfile=$ADDON_CORE_JAR_FILE_PATH_5 -DgroupId=padogrid.addon \
-    -DartifactId=hazelcast-addon-core-5 -Dversion=$ADDON_VERSION -Dpackaging=jar
+installMavenPadogridJar padogrid-common
+installMavenPadogridJar hazelcast-addon-common
+installMavenPadogridJar hazelcast-addon-core-3
+installMavenPadogridJar hazelcast-addon-core-4
+installMavenPadogridJar hazelcast-addon-core-5
 
 #
 # Build hazelcast-desktop
@@ -144,7 +106,7 @@ done
 git checkout tags/$REPO_VERSION
 
 # Change the addon version number in the desktop pom.xml
-sed -i${__SED_BACKUP} 's/<padogrid.version>.*<\/padogrid.version>/<padogrid.version>'$ADDON_VERSION'<\/padogrid.version>/' pom.xml
+sed -i${__SED_BACKUP} 's/<padogrid.version>.*<\/padogrid.version>/<padogrid.version>'$PADOGRID_VERSION'<\/padogrid.version>/' pom.xml
 
 # Build the desktop
 mvn -DskipTests package
