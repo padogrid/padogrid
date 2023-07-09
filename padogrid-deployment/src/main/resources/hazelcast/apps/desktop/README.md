@@ -1,53 +1,31 @@
-# Hazelcast Desktop App
+
 
 The Hazelcast Desktop app sits on top of [Netcrest Pado](https://github.com/netcrest/pado), which includes a run-time screen layout manager for dynamically laying out the screen with Swing components. This app is maintained by Netcrest in the following GitHub repo:
 
 Repo: [https://github.com/netcrest/hazelcast-desktop](https://github.com/netcrest/hazelcast-desktop)
 
-You can install the Hazelcast Deskop app by running `install_padogrid` or optionally build it by running `bin_sh/build_app`.
+You can install the Hazelcast Deskop app by running `install_padogrid`.
 
 ## Installing Hazelcast Desktop
 
 ```bash
-# 1. Install hazelcast-desktop
+# 1. Install hazelcast-desktop.
 install_padogrid -product hazelcast-desktop
 update_products -product hazelcast-desktop
 
-# 2. Create desktop app
+# 2. Create desktop app.
 create_app -app desktop
 
 # 3. Copy any client jar files that contain domain classes, etc. into the plugins directory.
 cd_app desktop
-cp <your-domain-class-jars> plugins/
-```
-
-## Optional: Building Hazelcast Desktop (Dreprecated)
-
-You can optionally build Hazelcast Desktop by running the `build_app` script found in the `bin_sh` directory.
-
-:exclamation: *Note that `build_app` script has been deprecated as of PadoGrid v0.9.15.*
-
-```bash
-# 1. Create desktop app
-create_app -app desktop
-
-# 2. Build hazelcast-desktop
-cd_app desktop/bin_sh
-./build_app
-
-# 3. Copy any client jar files that contain domain classes, etc. into the plugins directory.
-cd ../hazelcast-desktop-<version>
 cp <your-domain-class-jars> plugins/
 ```
 
 ## Running Hazelcast Desktop
 
 ```bash
-# 1.1. If you have installed hazelcast-desktop using install_padogrid/update_products:
+# 1. Change directory to desktop.
 cd_app desktop
-
-# 1.2. If you have built hazelcast-desktop:
-cd_app desktop/hazelcast-desktop-<version>
 
 # 2. Define ProtableFactory and/or DataSerializable factory classes in the etc/pado.properties file.
 vi etc/pado.properties
@@ -59,7 +37,7 @@ hazelcast.client.config.serialization.portable.factories=1:org.hazelcast.demo.nw
 # DataSerializable
 hazelcast.client.config.serialization.dataSerializable.factories=
 
-# 3. Run desktop
+# 3. Run desktop.
 cd bin_sh/
 ./desktop
 ```
@@ -74,7 +52,7 @@ If you prefer to configure Hazelcast client settings in `etc/hazelcast-client.xm
 
 If you are running PadoGrid in WSL, then you can use X Server on Windows to display the desktop app.
 
-1. Download and install Xming X Server for Windows. https://sourceforge.net/projects/xming/
+1. Download and install Xming X Server for Windows. https://sourceforge.net/projects/xming/.
 
 2. Run **XLaunch** and select the **No Access Control** check box in the **Additional parameters** window.
 
@@ -91,11 +69,8 @@ export DISPLAY=<Windows host name>:0
 You can also run the desktop app without X Server by executing the `bin_win/desktop.bat` as follows.
 
 ```bash
-# 1.1. If you have installed hazelcast-desktop using install_padogrid/update_products:
+# 1. Change directory to desktop/bin_sh.
 cd_app desktop/bin_win
-
-# 1.2. If you have built hazelcast-desktop:
-cd_app desktop/hazelcast-desktop-<version>/bin_win
 ```
 
 Find the `JAVA_HOME` line in the `setenv.bat` file and set it to the Windows Java home path. If yo already have `JAVA_HOME` globally set in Windows then you can skip this step.
@@ -117,16 +92,12 @@ cmd.exe /c desktop.bat
 
 You can use the `perf_test` app to ingest mock data into a Hazelcast cluster and test the desktop app as shown below.
 
-1. Copy domain class serialization configuration from the desktop hazecast-client.xml
+1. Copy domain class serialization configuration from the desktop hazecast-client.xml.
 
 ```bash
-# 1.1. If you have installed hazelcast-desktop using install_padogrid/update_products:
-cd_app desktop/etc
-cat hazelcast-client.xml
-
-# 1.2. If you have built hazelcast-desktop:
-cd_app desktop/hazelcast-desktop-<version>/etc
-cat hazelcast-client.xml
+# 1. Change directory to desktop
+cd_app desktop
+cat etc/hazelcast-client.xml
 ```
 
 **Output:**
@@ -146,13 +117,13 @@ cd_cluster
 vi etc/hazelcast.xml
 ```
 
-3. Run cluster
+3. Run cluster.
 
 ```bash
 start_cluster
 ```
 
-4. Ingest data
+4. Ingest data.
 
 ```bash
 create_app
@@ -160,7 +131,7 @@ cd_app perf_test; cd bin_sh
 ./test_group -prop ../etc/group-factory.properties -run
 ```
 
-5. Run desktop
+5. Run desktop.
 
 ```bash
 cd_app desktop; cd bin_sh
@@ -172,11 +143,7 @@ cd_app desktop; cd bin_sh
 The `hazelcast-client.xml` file for the desktop is located in the `etc/` directory as follows:
 
 ```bash
-# 1.1. If you have installed hazelcast-desktop using install_padogrid/update_products:
 cat $PADOGRID_WORKSPACE/apps/desktop/etc/hazelcast-client.xml
-
-# 1.2. If you have built hazelcast-desktop:
-cat $PADOGRID_WORKSPACE/apps/desktop/<hazelcast-desktop-<version>/etc/hazelcast-client.xml
 ```
 
 ## HqlQuery
@@ -253,7 +220,7 @@ If you have X Server running in your host machine then you can run the desktop a
 
 ### macOS
 
-1. Install XQuarts: https://www.xquartz.org/
+1. Install XQuarts: https://www.xquartz.org/.
 
 2. Open XQuarts and activate **Allow connections from network clients** under **Preferences > Security**.
 

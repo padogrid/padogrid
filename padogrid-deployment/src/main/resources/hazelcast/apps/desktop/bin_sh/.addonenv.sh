@@ -37,6 +37,12 @@ APP_LOG_DIR=$APP_DIR/log
 if [ ! -d "$APP_LOG_DIR" ]; then
    mkdir -p "$APP_LOG_DIR"
 fi
+if [ ! -d "$APP_DIR/plugins" ]; then
+   mkdir -p "$APP_DIR/plugins"
+fi
+if [ ! -d "$APP_DIR/lib" ]; then
+   mkdir -p "$APP_DIR/lib"
+fi
 
 # Source in app specifics
 . $APP_DIR/bin_sh/setenv.sh
@@ -46,3 +52,5 @@ fi
 #JAVA_OPT="$JAVA_OPT -Dhazelcast.logging.type=log4j2 \
 #-Dlog4j.configurationFile=$APP_ETC_DIR/log4j2.properties \
 #-DlogDir=$APP_DIR/log"
+
+CLASSPATH=$APP_DIR/plugins/*:$APP_DIR/lib/*:$CLASSPATH
