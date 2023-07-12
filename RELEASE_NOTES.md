@@ -6,11 +6,17 @@ https://github.com/padogrid
 
 ## Version 0.9.27-SNAPSHOT
 
-### Release Date: 07/01/23
+### Release Date: 07/12/23
 
 - Enhanced `HaMqttClient` to support generic plugins. With this enhancement, `HaMqttClient` is now capable of embedding both MQTT and non-MQTT plugins, allowing applications to provide reusable services. The `vc_*` commands have been outfitted with the new plugin harness to seamlessly embed plugins.
 - Added the `-tag` and `-release` options to `install_bundle` for installing versioned online bundles.
-
+- Removed the deprecated `build_app` script from the Hazelcast desktop app. Desktop build is no longer supported and required. All online bundles have been updated accordingly.
+- Replaced the deprecated terminal settings for `open_vscode`. This update does not affect the existing VS Code workspaces, but it is recommended to migrate to the new settings by removing the `workspace.code-workspace` file and restarting VS Code with `open_vscode` as follows`.
+  ```bash
+  cd_workspace
+  rm workspace.code-workspace
+  open_vscode
+  ```
 ---
 
 ## Version 0.9.26
