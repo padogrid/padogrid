@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.27-SNAPSHOT
 
-### Release Date: 07/12/23
+### Release Date: 07/13/23
 
 - Enhanced `HaMqttClient` to support generic plugins. With this enhancement, `HaMqttClient` is now capable of embedding both MQTT and non-MQTT plugins, allowing applications to provide reusable services. The `vc_*` commands have been outfitted with the new plugin harness to seamlessly embed plugins.
 - Added the `-tag` and `-release` options to `install_bundle` for installing versioned online bundles.
@@ -17,6 +17,7 @@ https://github.com/padogrid
   rm workspace.code-workspace
   open_vscode
   ```
+- Updated the MQTT Docker cluster with the latest simulator bundle.
 ---
 
 ## Version 0.9.26

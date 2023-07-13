@@ -24,7 +24,7 @@ Once you are switched into the cluster, run the `create_docker` command which cr
 create_docker -cluster edge
 ```
 
-By default, the create_docker command adds two (3) Mosquitto brokers (members) in the cluster. You can change the number of brokers using the `-count` option. For example, the following command adds five (5) brokers.
+By default, the `create_docker` command adds two (3) Mosquitto brokers (members) in the cluster. You can change the number of brokers using the `-count` option. For example, the following command adds five (5) brokers.
 
 ```bash
 # Create Mosquitto cluster with five (5) brokers with the default host name prefix, 'broker'. 
@@ -66,9 +66,20 @@ docker compose up
 
 ## Run `vc_subscribe`
 
-If you launched the default cluster, i.e., three (3) brokers, then you can create and run `vc_subscribe` without the endpoints specified. By default, vc_subscribe creates a virtual cluster comprised of the endpoints `tcp://localhost:1883-1885`. 
+If you launched the default cluster, i.e., three (3) brokers, then you can create and run `vc_subscribe` without the endpoints specified. By default, `vc_subscribe` creates a virtual cluster comprised of the endpoints `tcp://localhost:1883-1885`. 
 
-The following command listens on data published by the first broker, `broker1`, or the endpoint, `tcp://localhost:18883`. 
+✏️  The `create_docker` command generates the `docker-compose.yaml` file with the topic name prefix set with the cluster name followed by `/broker<number>`. For this example, the first broker's topic name prefix is set as follows.
+
+```yaml
+services:
+  broker1:
+  ...
+    environment:
+      - PADOGRID_TOPIC_PREFIX=edge/broker1
+  ...
+```
+
+The following command listens on data published by the first broker, `broker1`, or the endpoint, `tcp://localhost:1883`. 
 
 ```bash
 # Subscribe to broker1 - tcp://localhost:1883
