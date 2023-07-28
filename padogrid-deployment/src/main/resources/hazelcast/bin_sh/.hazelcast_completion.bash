@@ -43,6 +43,10 @@ __get_jet_jobs()
          __ADDRESSES="-a $__WORD" 
       elif [ "$__PREV_WORD" == "--addresses" ]; then
          __ADDRESSES="--addresses $__WORD" 
+      elif [ "$__PREV_WORD" == "-t" ]; then
+         __ADDRESSES="-t $__WORD" 
+      elif [ "$__PREV_WORD" == "--targets" ]; then
+         __ADDRESSES="--targets $__WORD" 
       fi
       __PREV_WORD=$__WORD
    done

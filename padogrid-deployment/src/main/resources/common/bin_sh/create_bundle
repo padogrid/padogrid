@@ -308,6 +308,10 @@ fi
 # clusters
 for CLUSTER in $CLUSTERS; do
    CLUSTER_DIR=$CLUSTERS_DIR/$CLUSTER
+   # Assume if bin_sh does not exist then it is not valid
+   if [ ! -d "$CLUSTER_DIR/bin_sh" ]; then
+      continue;
+   fi
    mkdir -p $TMP_BUNDLE_DIR/clusters/$CLUSTER
 
    # Copy README.md if exists
@@ -321,10 +325,14 @@ for CLUSTER in $CLUSTERS; do
    fi
 
    # Copy bin_sh
-   cp -Rf $CLUSTER_DIR/bin_sh $TMP_BUNDLE_DIR/clusters/$CLUSTER
+   if [ -d "$CLUSTER_DIR/bin_sh" ]l then
+      cp -Rf $CLUSTER_DIR/bin_sh $TMP_BUNDLE_DIR/clusters/$CLUSTER
+   fi
 
    # Copy etc
-   cp -Rf $CLUSTER_DIR/etc $TMP_BUNDLE_DIR/clusters/$CLUSTER
+   if [ -d "$CLUSTER_DIR/etc" ]l then
+      cp -Rf $CLUSTER_DIR/etc $TMP_BUNDLE_DIR/clusters/$CLUSTER
+   fi
 
    # Copy lib - all but addon jars
    if [ -d $CLUSTER_DIR/lib ]; then
@@ -353,6 +361,10 @@ done
 # pods
 for POD in $PODS; do
    POD_DIR=$PODS_DIR/$POD
+   # Assume if bin_sh does not exist then it is not valid
+   if [ ! -d "$POD_DIR/bin_sh" ]; then
+      continue;
+   fi
    mkdir -p $TMP_BUNDLE_DIR/pods/$POD
    cp -f $POD_DIR/Vagrantfile $TMP_BUNDLE_DIR/pods/$POD/ > /dev/null 2>&1
    if [ -f $POD_DIR/README.md ]; then
