@@ -4,6 +4,14 @@
 
 https://github.com/padogrid
 
+## Version 0.9.28-SNAPSHOT
+
+### Release Date: 07/30/23
+
+- Initial snapshot.
+
+---
+
 ## Version 0.9.27-SNAPSHOT
 
 ### Release Date: 07/30/23
@@ -20,6 +28,7 @@ https://github.com/padogrid
   open_vscode
 
 - Updated the MQTT Docker cluster with the latest simulator bundle.
+
 ---
 
 ## Version 0.9.26
