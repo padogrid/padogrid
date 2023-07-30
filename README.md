@@ -14,9 +14,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
-- *June 25, 2023 - [PadoGrid v0.9.26 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.26) This release introduces the `padogrid/padogrid-mqtt` container image that serves as an edge device providing a simulated MQTT data feed. See [Mosquitto Docker Compose](https://github.com/padogrid/padogrid/wiki/Mosquitto-Docker-Compose) for details.*
-
-- *June 25, 2023 - [Data Feed Simulator released.](https://github.com/padogrid/bundle-none-app-simulator) This bundle includes a data feed simulator for generating continous numerical data for MQTT and Hazelcast.*
+- *July 30, 2023 - [PadoGrid v0.9.27 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.27) This release includes plugin support for `HaMqttClient` and tighter VS Code integration.*
 
 ---
 
