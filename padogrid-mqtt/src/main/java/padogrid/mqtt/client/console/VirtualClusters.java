@@ -87,7 +87,10 @@ public class VirtualClusters implements Constants {
 		}
 
 		// Validate inputs
-		if (isHelp == false && configFilePath == null) {
+		if (configFilePath == null) {
+			if (isHelp) {
+				System.exit(0);
+			}
 			System.err.printf("ERROR: -config not specified. Command aborted.%n");
 			System.exit(2);
 		}
