@@ -6,8 +6,10 @@ https://github.com/padogrid
 
 ## Version 0.9.27-SNAPSHOT
 
-### Release Date: 07/13/23
+### Release Date: 07/30/23
 
+- Updated support for installing PadoGrid jar packages in the local Maven repo. The `installMavenPadogridJar` function has been updated to automatically install the padogrid-parent `pom.xml` in the local repo to comply with the latest changes in Maven.
+- Enhanced `open_vscode` to support all levels of PadoGrid workspace directory. Previously, only the workspace directory level was supported. VS Code can now be launched from RWE, workspace, component root, and component directories.
 - Enhanced `HaMqttClient` to support generic plugins. With this enhancement, `HaMqttClient` is now capable of embedding both MQTT and non-MQTT plugins, allowing applications to provide reusable services. The `vc_*` commands have been outfitted with the new plugin harness to seamlessly embed plugins.
 - Added the `-tag` and `-release` options to `install_bundle` for installing versioned online bundles.
 - Removed the deprecated `build_app` script from the Hazelcast desktop app. Desktop build is no longer supported and required. All online bundles have been updated accordingly.
@@ -16,7 +18,7 @@ https://github.com/padogrid
   cd_workspace
   rm workspace.code-workspace
   open_vscode
-  ```
+
 - Updated the MQTT Docker cluster with the latest simulator bundle.
 ---
 

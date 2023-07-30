@@ -5037,20 +5037,11 @@ function installMavenPadogridJar
       ;;
    esac
 
-   local jarFileName=$(basename $jarPath)
-   local groupId="padogrid.addon"
+   # Install padogrid-parent pom.xml
+   mvn install:install-file -Dfile="$PADOGRID_HOME/etc/padogrid-parent-pom.xml" -DpomFile="$PADOGRID_HOME/etc/padogrid-parent-pom.xml" -Dpackaging=pom
 
-   if [ ! -d tmp/padogrid/jars ]; then
-      mkdir -p /tmp/padogrid/jars
-   else
-      rm -r /tmp/padogrid/jars/*
-   fi
-   pushd /tmp/padogrid/jars > /dev/null
-   jar -xf $jarPath
-   rm -r META-INF/maven
-   jar -cf /tmp/padogrid/$jarFileName .
-   mvn install:install-file -Dfile=/tmp/padogrid/$jarFileName -DgroupId=$groupId \
+   # Install jar
+   local groupId="padogrid.addon"
+   mvn install:install-file -Dfile=$jarPath -DgroupId=$groupId \
        -DartifactId=$artifactId -Dversion=$PADOGRID_VERSION -Dpackaging=jar
-   rm -r /tmp/padogrid
-   popd > /dev/null
 }
