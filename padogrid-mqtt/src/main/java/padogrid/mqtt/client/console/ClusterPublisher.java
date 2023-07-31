@@ -50,7 +50,7 @@ public class ClusterPublisher implements Constants {
 		writeLine("NAME");
 		writeLine("   " + executable + " - Publish messages to an MQTT virtual cluster");
 		writeLine();
-		writeLine("SNOPSIS");
+		writeLine("SYNOPSIS");
 		writeLine("   " + executable
 				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]] [-name endpoint_name]");
 		writeLine("              [-log log_file] [-fos fos] [-qos qos] [-r] [-quiet] -t topic_filter -m message [-?]");

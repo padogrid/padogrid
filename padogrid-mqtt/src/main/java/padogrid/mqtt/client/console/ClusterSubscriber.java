@@ -56,7 +56,7 @@ public class ClusterSubscriber implements Constants {
 		writeLine("   " + executable
 				+ " - Subscribe to the specified topic filter in the specified MQTT virtual cluster");
 		writeLine();
-		writeLine("SNOPSIS");
+		writeLine("SYNOPSIS");
 		writeLine("   " + executable
 				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]]");
 		writeLine("                [-log log_file] [-fos fos] [-qos qos] [-quiet] -t topic_filter [-?]");

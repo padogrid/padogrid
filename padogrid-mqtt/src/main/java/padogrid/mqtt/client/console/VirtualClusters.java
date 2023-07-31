@@ -48,7 +48,7 @@ public class VirtualClusters implements Constants {
 		writeLine("NAME");
 		writeLine("   " + executable + " - Start MQTT virtual clusters");
 		writeLine();
-		writeLine("SNOPSIS");
+		writeLine("SYNOPSIS");
 		writeLine("   " + executable + " -config config_file [-log log_file] [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
