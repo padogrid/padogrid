@@ -147,7 +147,7 @@ If you have launched the default cluster, i.e., three (3) brokers, then you can 
 
 ```bash
 create_app
-cd_app perf_test; cd bin_sh
+cd_app perf_test
 vi etc/mqttv5-client.yaml
 ```
 

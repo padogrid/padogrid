@@ -15,6 +15,9 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 ## Announcements
 
 - *July 30, 2023 - [PadoGrid v0.9.27 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.27) This release includes plugin support for `HaMqttClient` and tighter VS Code integration.*
+- *July 30, 2023 - [Neural Network: LSTM RNN released.](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) This bundle demonstrates forecasting future events in real time using LSTM RNN via Keras backed by TensorFlow. It constructs a Hazelcast Jet pipeline to apply LSTM RNN models on streamed data.*
+- *July 30, 2023 - [Hazelcast Job: Executing Remote Python Code released.](https://github.com/padogrid/bundle-hazelcast-5-tutorial-app-jet_python) This bundle walks through the Hazelcast Jet job preparation, submission, and deubgging steps in detail and provides troubleshooting tips.*
+- *July 30, 2023 - [padogrid/padogrid-mqtt container released.](https://hub.docker.com/layers/padogrid/padogrid-mqtt/latest/images/sha256-8546b8afdb5804633d359d9a9750944b5a00fce6e1c841137bc4e65e16b7767d?context=repo) This container is now part of PadoGrid MQTT deployment. Please see [Mosquitto Docker Compose](padogrid-deployment/src/main/resources/mosquitto/docker/compose/README.md) for detaiis.*
 
 ---
 
