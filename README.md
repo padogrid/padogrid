@@ -29,7 +29,7 @@ You can install PadoGrid and the supported data grid products by running the int
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid)"
 ```
 
-The above command may fail on some Linux variants due the large length of the command line arguments. In that case, you need to downlaod and run `install_padogrid` as follows.
+The above command may fail on some Linux variants due the large length of the command line arguments. In that case, you need to download and run `install_padogrid` as follows.
 
 ```bash
 curl -O -fsSL https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid
