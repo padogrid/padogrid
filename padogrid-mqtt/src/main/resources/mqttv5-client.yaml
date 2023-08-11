@@ -81,7 +81,7 @@ persistence:
 #   - IHaMqttConnectorPublisher - Publisher connector. Launches during cluster
 #     initialization. Responsible for intercepting publishing or published messages
 #     by the application.
-
+#
 #   - IHaMqttConnectorSubscriber - Subscriber connector. Luanches during cluster
 #     initialization. Responsible for intercepting subscribed messages.
 #
@@ -112,10 +112,22 @@ plugins:
     # Fully-qualified class that implements padogrid.mqtt.client.cluster.IHaMqttPlugin.
     # If null, then the connector cannot be created.
     className: null
-    # Initialization properties passed into the 'init(Properties)'' method.
+    # Initialization properties passed into the 'init(Properties)' method.
     properties: null
       #- key:
       #  value: null
+    # The 'subscriptions' element is for IHaMqttConnectorSubscriber plugins
+    # to automatically subscribe to the specified topic filters. For other plugin
+    # types, i.e., IHaMqttConnectorPublisher and IHaMqttPlugin, this element
+    # may be used explicitly in the plugin implementation.
+    subscriptions:
+        # Topic filters for IHaMqttConnectorSubscriber. IHaMqttConnectorSubscriber
+        # automatically subscribes to the specified topic filters.
+      - topicFilters: []
+        # QoS for the topic filters. Valid values are 0, 1, 2. If it is invalid or
+        # unspecified, then it defaults to 1.
+        # Default: 1
+        qos: 1
       
 # Cluster definitions. HaMqttClient supports multiple clusters.
 clusters:
@@ -265,10 +277,11 @@ clusters:
           topicFilters: []
           
           # Set qos to override the caller's qos value. It must be a valid number,
-          # i.e., 0, 1, or 2; otherwise, it is ignored and the caller's qos is used.
-          # Note that qos is for forwarding (publishing) messages.
-          # Default: -1
-          qos: -1
+          # i.e., 0, 1, or 2; otherwise, it deaults to 1.
+          # Note that qos is for subscribing to the topic filters as well as forwarding
+          # (publishing) messages.
+          # Default: 1
+          qos: 1
         
       # 'out' sends outgoing messages to the target clusters. 
       # Note that unlike 'in', 'out' does not suffer from a single point
@@ -291,10 +304,11 @@ clusters:
           topicFilters: []
           
           # Set qos to override the caller's qos value. It must be a valid number,
-          # i.e., 0, 1, or 2; otherwise, it is ignored and the caller's qos is used.
-          # Note that qos is for forwarding (publishing) messages.
-          # Default: -1
-          qos: -1
+          # i.e., 0, 1, or 2; otherwise, it defaults to 1. Unlike the 'in' bridge,
+          # this value may never be used for the 'out' bridge, since the qos
+          # specified by the caller overrides it.
+          # Default: 1
+          qos: 1
 
     connections:
       # tls uses an internal socket factory for SSL connections

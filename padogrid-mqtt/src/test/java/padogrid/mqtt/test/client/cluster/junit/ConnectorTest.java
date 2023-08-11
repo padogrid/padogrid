@@ -42,7 +42,7 @@ public class ConnectorTest {
 	public static void setUp() throws Exception {
 		System.setProperty(IClusterConfig.PROPERTY_CLIENT_CONFIG_FILE, "etc/mqttv5-connector.yaml");
 		System.setProperty("java.util.logging.config.file", "etc/publisher-logging.properties");
-		TestUtil.setEnv("LOG_FILE", "log/publisher.log");
+		TestUtil.setEnv("LOG_FILE", "log/connector.log");
 		System.setProperty("log4j.configurationFile", "etc/log4j2.properties");
 		haclient = HaClusters.getHaMqttClient();
 		haclient.connect();

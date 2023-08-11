@@ -1419,11 +1419,37 @@ public class ClusterState implements IClusterConfig {
 					isConnectorsStarted = true;
 					pluginThread = ClusterService.getClusterService().addPluginThread(pluginName, publisherConnector);
 				}
-				if (subscriberConnector != null && subscriberConnector != publisherConnector) {
-					subscriberConnector.start(haclient);
-					isConnectorsStarted = true;
-					pluginThread = ClusterService.getClusterService().addPluginThread(pluginName, subscriberConnector);
+				if (subscriberConnector != null) {
+					ClusterConfig.Plugin plugin = ClusterService.getClusterService().getPluginConfig(pluginName);
+					if (plugin != null) {
+						ClusterConfig.Subscriptions[] subscriptions = plugin.getSubscriptions();
+						for (ClusterConfig.Subscriptions sub : subscriptions) {
+							String[] topicFilters = sub.getTopicFilters();
+							if (topicFilters != null) {
+								int qos = sub.getQos();
+								for (String topicFilter : topicFilters) {
+									try {
+										haclient.subscribe(topicFilter, qos);
+										logger.info(String.format(
+												"Plugin subscribed to topic filter [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
+												this.clusterName, this.pluginName, topicFilter, qos));
+									} catch (MqttException e) {
+										logger.error(String.format(
+												"Plugin error occurred while subscribing to topic filter. Topic filter discarded. [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
+												this.clusterName, this.pluginName, topicFilter, qos), e);
+									}
+								}
+							}
+						}
+					}
+					if (subscriberConnector != publisherConnector) {
+						subscriberConnector.start(haclient);
+						isConnectorsStarted = true;
+						pluginThread = ClusterService.getClusterService().addPluginThread(pluginName,
+								subscriberConnector);
+					}
 				}
+
 				if (pluginThread != null) {
 					pluginThread.start();
 				}

@@ -28,8 +28,8 @@ import padogrid.mqtt.client.cluster.HaMqttConnectionOptions;
 import padogrid.mqtt.client.cluster.IClusterConfig;
 import padogrid.mqtt.client.cluster.PluginContext;
 import padogrid.mqtt.client.cluster.PublisherType;
-import padogrid.mqtt.client.cluster.config.ClusterConfig.Property;
 import padogrid.mqtt.client.cluster.internal.ConfigUtil;
+import padogrid.mqtt.client.cluster.internal.TopicFilters;
 
 /**
  * ClusterConfig configures one or more clusters. This class directly maps to
@@ -400,6 +400,7 @@ public class ClusterConfig {
 		private PluginContext context = PluginContext.CLUSTER;
 		private String className;
 		private Property[] properties;
+		private Subscriptions[] subscriptions;
 
 		/**
 		 * @return the name
@@ -499,6 +500,21 @@ public class ClusterConfig {
 		public void setProperties(Property[] properties) {
 			this.properties = properties;
 		}
+
+		/**
+		 * @return the subscriptions
+		 */
+		public Subscriptions[] getSubscriptions() {
+			return subscriptions;
+		}
+
+		/**
+		 * @param subscriptions the subscriptions to set
+		 */
+		public void setSubscriptions(Subscriptions[] subscriptions) {
+			this.subscriptions = subscriptions;
+		}
+
 	}
 
 	public static class Property {
@@ -519,6 +535,39 @@ public class ClusterConfig {
 
 		public void setValue(String value) {
 			this.value = value;
+		}
+	}
+
+	public static class Subscriptions {
+		private String[] topicFilters;
+		private int qos = 1;
+
+		/**
+		 * @return the topicFilters
+		 */
+		public String[] getTopicFilters() {
+			return topicFilters;
+		}
+
+		/**
+		 * @param topicFilters the topicFilters to set
+		 */
+		public void setTopicFilters(String[] topicFilters) {
+			this.topicFilters = topicFilters;
+		}
+
+		/**
+		 * @return the qos
+		 */
+		public int getQos() {
+			return qos;
+		}
+
+		/**
+		 * @param qos the qos to set
+		 */
+		public void setQos(int qos) {
+			this.qos = qos;
 		}
 	}
 
@@ -576,7 +625,7 @@ public class ClusterConfig {
 	public static class Bridge {
 		private String cluster;
 		private String[] topicFilters;
-		private int qos = -1;
+		private int qos = 1;
 
 		public String getCluster() {
 			return ConfigUtil.parseStringValue(cluster);

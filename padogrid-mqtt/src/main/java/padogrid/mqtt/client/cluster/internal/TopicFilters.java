@@ -25,7 +25,7 @@ public class TopicFilters extends TopicInfo {
 		if (qos == null) {
 			this.qos = new int[topicFilters.length];
 			for (int i = 0; i < this.qos.length; i++) {
-				this.qos[i] = 0;
+				this.qos[i] = 1;
 			}
 		} else {
 			this.qos = qos;

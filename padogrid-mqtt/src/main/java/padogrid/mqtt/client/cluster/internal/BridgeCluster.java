@@ -9,14 +9,14 @@ import padogrid.mqtt.client.cluster.HaMqttClient;
 public class BridgeCluster extends TopicInfo {
 	protected HaMqttClient client;
 	protected String[] topicFilters;
-	protected int qos;
+	protected int qos = 1;
 
 	public BridgeCluster(HaMqttClient client, String[] topicFilters, int qos) {
 		this.client = client;
 		this.topicFilters = topicFilters;
 		this.qos = qos;
 		if (this.qos < 0 || this.qos > 2) {
-			this.qos = 0;
+			this.qos = 1;
 		}
 	}
 
@@ -24,11 +24,10 @@ public class BridgeCluster extends TopicInfo {
 		for (int i = 0; i < topicFilters.length; i++) {
 			String topicFilter = topicFilters[i];
 			if (MqttTopicValidator.isMatched(topicFilter, topic)) {
-				if (0 <= this.qos && this.qos <= 2) {
-					client.publish(topic, payload, this.qos, retained);
-				} else {
-					client.publish(topic, payload, qos, retained);
+				if (qos < 0 || qos > 2) {
+					qos = this.qos;
 				}
+				client.publish(topic, payload, this.qos, retained);
 				break;
 			}
 		}
@@ -38,11 +37,11 @@ public class BridgeCluster extends TopicInfo {
 		for (int i = 0; i < topicFilters.length; i++) {
 			String topicFilter = topicFilters[i];
 			if (MqttTopicValidator.isMatched(topicFilter, topic)) {
-				if (0 <= this.qos && this.qos <= 2) {
-					client.publish(topic, message.getPayload(), this.qos, message.isRetained());
-				} else {
-					client.publish(topic, message.getPayload(), message.getQos(), message.isRetained());
+				int qos = message.getQos();
+				if (qos < 0 || qos > 2) {
+					qos = this.qos;
 				}
+				client.publish(topic, message.getPayload(), qos, message.isRetained());
 				break;
 			}
 		}

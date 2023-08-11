@@ -249,7 +249,7 @@ public class ClusterService {
 		buildBridgeClusters();
 
 		// Initialize all APP plugins by invoking their init() methods.
-		// Note that CLUSTER plugin init() methods are invoked during the cluster
+		// Note that CLUSTER plugin prelude() methods are invoked during the cluster
 		// initialization step above.
 		if (plugins != null) {
 			for (Plugin plugin : plugins) {
@@ -263,7 +263,6 @@ public class ClusterService {
 							pluginThread.start();
 						} else {
 							hapluginMap.remove(plugin.getName());
-
 						}
 					}
 				}
@@ -504,6 +503,14 @@ public class ClusterService {
 		Thread thread = new Thread(haplugin, pluginName);
 		thread.setDaemon(true);
 		return thread;
+	}
+	
+	/**
+	 * Returns the specified plugin configuration.
+	 * @param pluginName Plugin name
+	 */
+	public Plugin getPluginConfig(String pluginName) {
+		return pluginMap.get(pluginName);
 	}
 
 	/**

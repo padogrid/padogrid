@@ -6,9 +6,10 @@ https://github.com/padogrid
 
 ## Version 0.9.28-SNAPSHOT
 
-### Release Date: 07/31/23
+### Release Date: 08/11/23
 
-- Initial snapshot.
+- Added the 'subscriptions' element to MQTT virtual cluster configuration to enable automatic topic filter subscriptions for plugins. This addition frees the `IHaMqttConnectorSubscriber` plugins from explicitly subscribing to topic filters.
+- The default QoS is now set to 1 `HaMqttClient` to be consistent with Paho.
 
 ---
 
