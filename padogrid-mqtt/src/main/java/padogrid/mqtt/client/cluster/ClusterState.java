@@ -1423,20 +1423,22 @@ public class ClusterState implements IClusterConfig {
 					ClusterConfig.Plugin plugin = ClusterService.getClusterService().getPluginConfig(pluginName);
 					if (plugin != null) {
 						ClusterConfig.Subscriptions[] subscriptions = plugin.getSubscriptions();
-						for (ClusterConfig.Subscriptions sub : subscriptions) {
-							String[] topicFilters = sub.getTopicFilters();
-							if (topicFilters != null) {
-								int qos = sub.getQos();
-								for (String topicFilter : topicFilters) {
-									try {
-										haclient.subscribe(topicFilter, qos);
-										logger.info(String.format(
-												"Plugin subscribed to topic filter [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
-												this.clusterName, this.pluginName, topicFilter, qos));
-									} catch (MqttException e) {
-										logger.error(String.format(
-												"Plugin error occurred while subscribing to topic filter. Topic filter discarded. [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
-												this.clusterName, this.pluginName, topicFilter, qos), e);
+						if (subscriptions != null) {
+							for (ClusterConfig.Subscriptions sub : subscriptions) {
+								String[] topicFilters = sub.getTopicFilters();
+								if (topicFilters != null) {
+									int qos = sub.getQos();
+									for (String topicFilter : topicFilters) {
+										try {
+											haclient.subscribe(topicFilter, qos);
+											logger.info(String.format(
+													"Plugin subscribed to topic filter [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
+													this.clusterName, this.pluginName, topicFilter, qos));
+										} catch (MqttException e) {
+											logger.error(String.format(
+													"Plugin error occurred while subscribing to topic filter. Topic filter discarded. [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
+													this.clusterName, this.pluginName, topicFilter, qos), e);
+										}
 									}
 								}
 							}

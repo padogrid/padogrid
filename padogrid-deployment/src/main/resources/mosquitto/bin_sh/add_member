@@ -266,8 +266,7 @@ fi
 LOG_FILE_NAME=${NEW_MEMBER}.log
 LOG_FILE=../../log/${LOG_FILE_NAME}
 if [ ! -f "$ETC_DIR/$CONFIG_FILE_NAME" ]; then
-   sed -e "s|#protocol.*|protocol websockets|" \
-       -e "s|#allow_anonymous.*|allow_anonymous true|" \
+   sed -e "s|#allow_anonymous.*|allow_anonymous true|" \
        -e "s|#connection_messages true.*|connection_messages true|" \
        -e "s|#log_timestamp_format.*|log_timestamp_format %Y-%m-%dT%H:%M:%S|" \
        -e "s|#log_timestamp.*|log_timestamp true|" \
@@ -295,6 +294,7 @@ if [ ! -f "$NEW_MEMBER_CONFIG_FILE" ]; then
    echo "listener $MEMBER_PORT" >> "$NEW_MEMBER_CONFIG_FILE"
    if [ "$MEMBER_HTTP_ENABLED" == "true" ]; then
       echo "listener $HTTP_PORT" >> "$NEW_MEMBER_CONFIG_FILE"
+      echo "protocol websockets" >> "$NEW_MEMBER_CONFIG_FILE"
    fi
    echo "log_dest file $LOG_FILE" >> "$NEW_MEMBER_CONFIG_FILE"
    let ODD_NUM=NEW_MEMBER_NUMBER%2

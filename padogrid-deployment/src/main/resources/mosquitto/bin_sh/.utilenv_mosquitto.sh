@@ -32,7 +32,7 @@ function getVmMosquittoMemberPid
    local __HOST="$1"
    local __MEMBER_PORT="$2"
    local CONF_FILE="$ETC_DIR/mosquitto.conf"
-   local pid=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep mosquitto | grep \"\-p $__MEMBER_PORT\" | grep \"$CONF_FILE\" | grep -v grep | awk '{print \\$1}'"`
+   local pid=`ssh -n $VM_KEY $VM_USER@$__HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -ewwwo pid,comm,args | grep mosquitto | grep \"\-p $__MEMBER_PORT\" | grep \"$CONF_FILE\" | grep -v grep | awk '{print \\$1}'"`
    echo $pid
 }
 
@@ -123,7 +123,7 @@ function getMosquittoServerPortPid
    local MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
    local MEMBER_PORT
    let MEMBER_PORT=MEMBER_START_PORT+MEMBER_NUM_NO_LEADING_ZERO-1
-   local pid=$(ps -eo pid,comm,args | grep mosquitto | grep "\-p $MEMBER_PORT" | grep -v grep | awk '{print $1}')
+   local pid=$(ps -ewwwo pid,comm,args | grep mosquitto | grep "\-p $MEMBER_PORT" | grep -v grep | awk '{print $1}')
    echo $pid
 }
 
@@ -160,13 +160,13 @@ function getMosquittoMemberPid
 
    if [ "$__IS_GUEST_OS_NODE" == "true" ] && [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
      __MEMBER_PORT=$__MEMBER_START_PORT
-     pid=$(ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -eo pid,comm,args | grep mosquitto | grep \"\-p $__MEMBER_PORT\" | grep \"$CONF_FILE\" | grep -v grep")
+     pid=$(ssh -n $SSH_USER@$NODE_LOCAL -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "ps -ewwwo pid,comm,args | grep mosquitto | grep \"\-p $__MEMBER_PORT\" | grep \"$CONF_FILE\" | grep -v grep")
       pid=$(echo $pid | awk '{print $1}')
    else
       if [ "$POD" != "local" ]; then
          __MEMBER_PORT=$__MEMBER_START_PORT
       fi
-      pid=$(ps -eo pid,comm,args | grep mosquitto | grep "\-p $__MEMBER_PORT" | grep "$CONF_FILE" | grep -v grep | awk '{print $1}')
+      pid=$(ps -ewwwo pid,comm,args | grep mosquitto | grep "\-p $__MEMBER_PORT" | grep "$CONF_FILE" | grep -v grep | awk '{print $1}')
    fi
    echo $pid
 }
