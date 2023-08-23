@@ -207,6 +207,9 @@ public class ClusterService {
 		if (plugins != null) {
 			for (Plugin plugin : plugins) {
 				String pluginName = plugin.getName();
+				if (pluginName == null || pluginName.length() == 0 || plugin == null) {
+					continue;
+				}
 				pluginMap.put(pluginName, plugin);
 				if (plugin.getName() != null && plugin.isEnabled()) {
 					IHaMqttPlugin haplugin = createPlugin(plugin.getName(), plugin.getContext());

@@ -82,7 +82,7 @@ ipconfig
 
 ## Guest OS Software
 
-Pods share the `products` directory. Before you create a pod, you must fist install the OS specific software on your host file system. For example, if your host OS is Mac and the Guest OS is Linux then you would create a directory on your Mac and install all the Linux software in that directory. You would then enter this directory path as the `products` directory path when you execute the `create_pod` command. By default, `create_pod` searches the `products` directory in your workspace. If you want to keep the default directory path then you can create a symbolic link to the Linux installation directory path as shown in the example below.
+Pods share the `products` directory. Before you create a pod, you must first install the OS specific software on your host file system. For example, if your host OS is Mac and the Guest OS is Linux then you would create a directory on your Mac and install all the Linux software in that directory. You would then enter this directory path as the `products` directory path when you execute the `create_pod` command. By default, `create_pod` searches the `products` directory in your workspace. If you want to keep the default directory path then you can create a symbolic link to the Linux installation directory path as shown in the example below.
 
 ### Installed Linux Software Example
 
