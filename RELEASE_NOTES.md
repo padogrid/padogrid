@@ -8,7 +8,7 @@ https://github.com/padogrid
 
 ### Release Date: 08/23/23
 
-- Added the 'subscriptions' element to MQTT virtual cluster configuration to enable automatic topic filter subscriptions for plugins. This addition frees the `IHaMqttConnectorSubscriber` plugins from explicitly subscribing to topic filters.
+- Added the `subscriptions` element to MQTT virtual cluster configuration to enable automatic topic filter subscriptions for plugins. This addition frees the `IHaMqttConnectorSubscriber` plugins from explicitly subscribing to topic filters.
 - The default QoS is now set to 1 `HaMqttClient` to be consistent with Paho.
 - Fixed Mosquitto PID functions to properly search active members. Prior to this fix, the commands such as `show_cluster` were unable to detect active Mosquitto members.
 

@@ -308,7 +308,7 @@ public class ClusterService {
 			} catch (ClassNotFoundException | NoSuchMethodException | SecurityException | InstantiationException
 					| IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 				logger.warn(String.format(
-						"Exception raised while creating MqttClientPersistence [%s]. Proceeding with the default persistence instead.",
+						"Exception raised while creating the global MqttClientPersistence [%s]. Proceeding with the default persistence instead.",
 						e.getMessage()));
 			}
 		}

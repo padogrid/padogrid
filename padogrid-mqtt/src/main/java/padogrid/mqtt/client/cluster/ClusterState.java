@@ -16,6 +16,7 @@
 package padogrid.mqtt.client.cluster;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -179,6 +180,18 @@ public class ClusterState implements IClusterConfig {
 			this.defaultTopicBase = this.defaultTopicBase.trim();
 			if (this.defaultTopicBase.endsWith("/") == false) {
 				this.defaultTopicBase = this.defaultTopicBase + "/";
+			}
+		}
+		if (persistence == null) {
+			if (clusterConfig.getPersistence() != null) {
+				try {
+					persistence = clusterConfig.getPersistence().createMqttClientPersistence();
+				} catch (ClassNotFoundException | NoSuchMethodException | SecurityException | InstantiationException
+						| IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+					logger.warn(String.format(
+							"Exception raised while creating a cluster MqttClientPersistence [cluster=%s, error=%s]. Proceeding with the default persistence instead.",
+							clusterConfig.getName(), e.getMessage()));
+				}
 			}
 		}
 		this.persistence = persistence;

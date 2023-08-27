@@ -117,7 +117,7 @@ EOF
    exit
 fi
 
-PRODUCTS="geode gemfire hazelcast snappydata coherence redis spark kafka hadoop"
+PRODUCTS="geode gemfire hadoop hazelcast kafka mosquitto redis snappydata spark coherence"
 __PRODUCT_HOME="$PRODUCT_HOME_ARG"
 
 function isValidProduct
@@ -415,6 +415,8 @@ if [ "$__PRODUCT_HOME" == "" ]; then
          __PRODUCT_HOME="$KAFKA_HOME"
       elif [ "$PRODUCT" == "hadoop" ]; then
          __PRODUCT_HOME="$HADOOP_HOME"
+      elif [ "$PRODUCT" == "mosquitto" ]; then
+         __PRODUCT_HOME="$MOSQUITTO_HOME"
       else
          __PRODUCT_HOME=""
       fi
@@ -459,6 +461,9 @@ if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
       fi
       if [ "$HADOOP_HOME" != "" ]; then
          echo "   $HADOOP_HOME"
+      fi
+      if [ "$MOSQUITTO_HOME" != "" ]; then
+         echo "   $MOSQUITTO_HOME"
       fi
       echo "[$__PRODUCT_HOME]:"
       read -p "" INPUT
@@ -533,6 +538,7 @@ echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
 echo "KAFKA_HOME=\"$KAFKA_HOME\"" >> $TMP_ENV_FILE
 echo "HADOOP_HOME=\"$HADOOP_HOME\"" >> $TMP_ENV_FILE
 echo "COHERENCE_HOME=\"$COHERENCE_HOME\"" >> $TMP_ENV_FILE
+echo "MOSQUITTO_HOME=\"$MOSQUITTO_HOME\"" >> $TMP_ENV_FILE
 
 # Initialize the product RWE environment.
 $BASE_DIR/${PRODUCT}/bin_sh/.init_padogrid -env $TMP_ENV_FILE

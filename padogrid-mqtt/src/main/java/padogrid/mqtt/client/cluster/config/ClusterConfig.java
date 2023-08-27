@@ -29,7 +29,6 @@ import padogrid.mqtt.client.cluster.IClusterConfig;
 import padogrid.mqtt.client.cluster.PluginContext;
 import padogrid.mqtt.client.cluster.PublisherType;
 import padogrid.mqtt.client.cluster.internal.ConfigUtil;
-import padogrid.mqtt.client.cluster.internal.TopicFilters;
 
 /**
  * ClusterConfig configures one or more clusters. This class directly maps to
@@ -127,6 +126,7 @@ public class ClusterConfig {
 		private long timeToWait = IClusterConfig.DEFAULT_TIME_TO_WAIT_IN_MSEC;
 		private String defaultTopicBase;
 		private Endpoint[] endpoints;
+		private Persistence persistence;
 		private HaMqttConnectionOptions[] connections;
 		private String pluginName;
 		private Bridges bridges;
@@ -334,6 +334,20 @@ public class ClusterConfig {
 
 		public void setBridges(Bridges bridges) {
 			this.bridges = bridges;
+		}
+
+		/**
+		 * @return the persistence
+		 */
+		public Persistence getPersistence() {
+			return persistence;
+		}
+
+		/**
+		 * @param persistence the persistence to set
+		 */
+		public void setPersistence(Persistence persistence) {
+			this.persistence = persistence;
 		}
 	}
 
