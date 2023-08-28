@@ -6,8 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.28-SNAPSHOT
 
-### Release Date: 08/23/23
+### Release Date: 08/28/23
 
+- Moved from Alpine to Ubuntu for building PadoGrid container images to provide better support for Python. The Ubuntu community provides more readily available Python binaries. The PadoGrid container (`padogrid/padogrid`) image size has grown significantly due to its inclusion of JupyterLab and Python libaries. For those applications that do not need JupyterLab and Python, the `padogrid/padogrid-base` image is now available. It is built on Alpine and has only PadoGrid, Java, and Mosquitto installed providing a small footprint which is ideal for building edge device images.
 - Added the `subscriptions` element to MQTT virtual cluster configuration to enable automatic topic filter subscriptions for plugins. This addition frees the `IHaMqttConnectorSubscriber` plugins from explicitly subscribing to topic filters.
 - The default QoS is now set to 1 `HaMqttClient` to be consistent with Paho.
 - Fixed Mosquitto PID functions to properly search active members. Prior to this fix, the commands such as `show_cluster` were unable to detect active Mosquitto members.
