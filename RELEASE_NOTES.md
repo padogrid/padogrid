@@ -4,7 +4,7 @@
 
 https://github.com/padogrid
 
-## Version 0.9.28-SNAPSHOT
+## Version 0.9.28
 
 ### Release Date: 08/28/23
 
