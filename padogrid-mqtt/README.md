@@ -197,6 +197,18 @@ The default YAML configuration file is found in the following link.
 
 [Default YAML File](src/main/resources/mqttv5-client.yaml)
 
+## `HaMqttClient` Plugins
+
+`HaMqttClient` supports three types of plugins for creating virtual clusters with embedded businesss and data logic. Plugins cover a wide range of use cases. For example, a simple connector plugin can translate MQTT messages to Kafka messages and vice versa. A more complex plugin can aggregate streamed data to provide readily consumable entity objects. Furthermore, with a composite plugin, it is also possible to provide session-sensitive data management services by integrating various streaming data sources in real time.
+
+A plugin is created by implementing one of three (3) interfaces as follows.
+
+1. `IHaMqttPlugin` - Application plugin. A class implementing `IHaMqttPlugin` starts during the application startup time and has no direct association with virtual clusters. The [Data Feed Simulator](https://github.com/padogrid/bundle-none-app-simulator/tree/master) bundle's [DataFeedSimulatorPlugin](https://github.com/padogrid/bundle-none-app-simulator/blob/master/apps/simulator/src/main/java/padogrid/simulator/DataFeedSimulatorPlugin.java) class is a good example of an application plugin. It generates simulated data into MQTT topics and Hazelcast data structures including maps, replicated maps, topics, reliable topics, and queues. 
+
+2. `IHaMqttConnectorPublisher` - Publisher connector. A class implementing `IHaMqttConnectorPublisher` launches during the cluster initialization time. It is responsible for intercepting publishing and/or published messages by the application. The [Data Feed Simulator](https://github.com/padogrid/bundle-none-app-simulator/tree/master) bundle's [QuestDbJsonConnector](https://github.com/padogrid/bundle-none-app-simulator/blob/master/apps/simulator/src/main/java/padogrid/mqtt/connectors/QuestDbJsonConnector.java) class is a good example of a publisher connector. It translates MQTT topics to QuestDB tables.
+
+3. `IHaMqttConnectorSubscriber` - Subscriber connector. A class implementing `IHaMqttConnectorSubscriber` llauanches during the cluster initialization time. It is responsible for intercepting subscribed messages.
+The [Neural Network: LSTM RNN](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) bundle's [QuestDbJsonConnector](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet/blob/master/apps/ml_lstm/src/main/java/padogrid/mqtt/connectors/HazelcastJsonConnector.java) class is a good example of a subscriber connector. It translates MQTT topics to Hazelcast maps.
 
 ## Logging
 
