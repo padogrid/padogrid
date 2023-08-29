@@ -14,10 +14,19 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
-- *July 30, 2023 - [PadoGrid v0.9.27 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.27) This release includes plugin support for `HaMqttClient` and tighter VS Code integration.*
-- *July 30, 2023 - [Neural Network: LSTM RNN released.](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) This bundle demonstrates forecasting future events in real time using LSTM RNN via Keras backed by TensorFlow. It constructs a Hazelcast Jet pipeline to apply LSTM RNN models on streamed data.*
-- *July 30, 2023 - [Hazelcast Job: Executing Remote Python Code released.](https://github.com/padogrid/bundle-hazelcast-5-tutorial-app-jet_python) This bundle walks through the Hazelcast Jet job preparation, submission, and deubgging steps in detail and provides troubleshooting tips.*
-- *July 30, 2023 - [padogrid/padogrid-mqtt container released.](https://hub.docker.com/layers/padogrid/padogrid-mqtt/latest/images/sha256-8546b8afdb5804633d359d9a9750944b5a00fce6e1c841137bc4e65e16b7767d?context=repo) This container simulates edge devices publishing real-time data and is now part of PadoGrid MQTT deployment. Please see [Mosquitto Docker Compose](padogrid-deployment/src/main/resources/mosquitto/docker/compose/README.md) for details.*
+- *August 29, 2023 - [Neural Network: LSTM RNN updated.](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) This bundle has been updated to use the latest `HaMqttClient` API included in PadoGrid v0.9.28.*
+- *August 28, 2023 - [PadoGrid v0.9.28 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.28) This release moves the [`padogrid/padogrid`](https://hub.docker.com/repository/docker/padogrid/padogrid/general) container image from Alpine to Ubuntu and introduces the [`padogrid/padogrid-base`](https://hub.docker.com/repository/docker/padogrid/padogrid-base/general) container image. The `padogrid/padogrid` container image is now fully capable of running Python bundles that require Python graphics display and AI/ML packages.*
+- *August 28, 2023 - [padogrid/padogrid-base container image released.](https://hub.docker.com/repository/docker/padogrid/padogrid-base/general) This container image includes only PadoGrid, Mosquitto, and Java for building light-weight images.*
+
+---
+
+## Monthly Tips
+
+- Building MQTT applications that require High Availability? Checkout the [archetypes](https://github.com/padogrid/padogrid/wiki/Cluster-Archetypes) offerred by `HaMqttClient`.
+- Want to forecast future events? Checkout the [Neural Network: LSTM RNN](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) bundle.
+- In need of benchmarking IMDG products? Try the [IMDG Product Benchmark Tests](https://github.com/padogrid/bundle-none-imdg-benchmark-tests) bundle.
+- New to Hazelcast? Have fun learning Hazelcast data structures in the [PadoGrid Hazelcast Playground](https://github.com/padogrid/bundle-hazelcast-5-playground-python) bundle.
+- Checkout the [bundle catalogs](https://github.com/padogrid/catalog-bundles/blob/master/all-catalog.md) for additional use cases.
 
 ---
 
@@ -136,15 +145,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir -p ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.28-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.29-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.28-SNAPSHOT
+tree -L 1 padogrid_0.9.29-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.28-SNAPSHOT
+padogrid_0.9.29-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -174,7 +183,7 @@ padogrid_0.9.28-SNAPSHOT
 To use PadoGrid, you must first create an RWE (Root Workspace Environment) by running the interactive command, `create_rwe`, to specify the workspaces directory and the product installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.28-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.29-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid using Docker and Podman
@@ -215,7 +224,7 @@ docker exec -it padogrid /bin/bash
 poman exec -it padogrid /bin/bash
 ```
 
-:pencil2: PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.28-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+:pencil2: PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.29-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 For additional details, see the [Docker](https://github.com/padogrid/padogrid/wiki/Docker) section of the manual.
 
