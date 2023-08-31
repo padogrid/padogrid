@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: padogrid-pvc
+  labels:
+    app: padogrid
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: padogrid-configmap
+  labels:
+    app: padogrid
+data:
+  HAZELCAST_SERVICE: hazelcast
+  HAZELCAST_CLUSTER_NAME: dev
+  PADOGRID_HTTPS_ENABLED: "false"
+  PADOGRID_SERVICE_NAME: padogrid
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: padogrid
+  labels:
+    app: padogrid
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: padogrid
+      role: jupyterlab
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: padogrid
+        role: jupyterlab
+    spec:
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+      - image: docker.io/padogrid/padogrid:latest
+        name: padogrid
+        ports:
+        - name: jupyterlab
+          containerPort: 8888
+        - name: hazelcast-mc
+          containerPort: 8080
+        - name: geode-pulse
+          containerPort: 7070
+        - name: prometheus
+          containerPort: 9090
+        - name: grafana
+          containerPort: 3000
+        volumeMounts:
+        - mountPath: /opt/padogrid/workspaces
+          name: padogrid-mount
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: padogrid-configmap
+      volumes:
+      - name: padogrid-mount
+        persistentVolumeClaim:
+          claimName: padogrid-pvc
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: padogrid
+  labels:
+    app: padogrid
+spec:
+  type: LoadBalancer
+  selector:
+    app: padogrid
+    role: jupyterlab
+  ports:
+  - name: padogrid
+    protocol: TCP
+    port: 8888
+    targetPort: jupyterlab
+  - name: hazelcast-mc
+    protocol: TCP
+    port: 8080
+    targetPort: hazelcast-mc
+  - name: geode-pulse
+    protocol: TCP
+    port: 7070
+    targetPort: hazelcast-mc
+  - name: prometheus
+    protocol: TCP
+    port: 9090
+    targetPort: prometheus
+  - name: grafana
+    protocol: TCP
+    port: 3000
+    targetPort: grafana
