@@ -14,19 +14,21 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
+- *August 31, 2023 - [PadoGrid Tutorial updated.](https://github.com/padogrid/bundle-none-tutorial-padogrid) The PadoGrid tutorial 
+now includes instructions for displaying GUI apps in Docker, Kubernetes, and OpenShift.*
 - *August 29, 2023 - [Neural Network: LSTM RNN updated.](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) This bundle has been updated to use the latest `HaMqttClient` API included in PadoGrid v0.9.28.*
 - *August 28, 2023 - [PadoGrid v0.9.28 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.28) This release moves the [`padogrid/padogrid`](https://hub.docker.com/repository/docker/padogrid/padogrid/general) container image from Alpine to Ubuntu and introduces the [`padogrid/padogrid-base`](https://hub.docker.com/repository/docker/padogrid/padogrid-base/general) container image. The `padogrid/padogrid` container image is now fully capable of running Python bundles that require Python graphics display and AI/ML packages.*
 - *August 28, 2023 - [padogrid/padogrid-base container image released.](https://hub.docker.com/repository/docker/padogrid/padogrid-base/general) This container image includes only PadoGrid, Mosquitto, and Java for building light-weight images.*
 
 ---
 
-## Monthly Tips
+## Tips of the Day
 
-- Building MQTT applications that require High Availability? Checkout the [archetypes](https://github.com/padogrid/padogrid/wiki/Cluster-Archetypes) offerred by `HaMqttClient`.
-- Want to forecast future events? Checkout the [Neural Network: LSTM RNN](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) bundle.
-- In need of benchmarking IMDG products? Try the [IMDG Product Benchmark Tests](https://github.com/padogrid/bundle-none-imdg-benchmark-tests) bundle.
-- New to Hazelcast? Have fun learning Hazelcast data structures in the [PadoGrid Hazelcast Playground](https://github.com/padogrid/bundle-hazelcast-5-playground-python) bundle.
-- Checkout the [bundle catalogs](https://github.com/padogrid/catalog-bundles/blob/master/all-catalog.md) for additional use cases.
+- Want to try PadoGrid without installing it on your host? [PadoGrid Tutorial](https://github.com/padogrid/bundle-none-tutorial-padogrid) shows you how.
+- In need of MQTT brokers with High Availability? Checkout the [archetypes](https://github.com/padogrid/padogrid/wiki/Cluster-Archetypes) offerred by [`HaMqttClient`](https://github.com/padogrid/padogrid/blob/develop/padogrid-mqtt/README.md).
+- Want to forecast future events in real time? [Neural Network: LSTM RNN](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet).
+- New to Hazelcast? Come and play in [PadoGrid Hazelcast Playground](https://github.com/padogrid/bundle-hazelcast-5-playground-python).
+- Checkout the [bundle catalogs](https://github.com/padogrid/catalog-bundles/blob/master/all-catalog.md) for a large collection of ready-to-run use cases.
 
 ---
 
