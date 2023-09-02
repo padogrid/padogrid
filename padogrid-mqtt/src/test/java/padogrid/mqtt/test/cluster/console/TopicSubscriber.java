@@ -53,7 +53,7 @@ public class TopicSubscriber {
 		writeLine("   " + executableName + " [-qos 0|1|2] topic_name [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
-		writeLine("   Listens on the specified topics and prints received messages. To list the existing topics, specify '-list'.");
+		writeLine("   Listens on the specified topics and prints received messages.");
 		writeLine();
 		writeLine("OPTIONS");
 		writeLine("   -qos");
