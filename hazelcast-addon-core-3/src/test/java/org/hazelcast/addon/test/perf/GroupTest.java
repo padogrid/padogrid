@@ -28,6 +28,8 @@ import javax.persistence.criteria.Root;
 import org.hazelcast.addon.cluster.util.HibernatePool;
 import org.hazelcast.addon.test.perf.data.Blob;
 import org.hazelcast.addon.test.perf.data.DataObjectFactory;
+import org.hazelcast.addon.test.perf.query.IPredicate;
+import org.hazelcast.addon.test.perf.query.ISql;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
@@ -39,6 +41,7 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.core.IQueue;
 import com.hazelcast.core.ITopic;
 import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.query.Predicates;
 
 /**
  * GroupTest is a test tool for capturing the throughput and average latency of
@@ -104,7 +107,7 @@ public class GroupTest implements Constants
 	}
 
 	enum TestCaseEnum {
-		set, put, putall, get, getall, publish, offer, poll, peek, take;
+		set, put, putall, get, getall, predicate, publish, offer, poll, peek, take;
 
 		static TestCaseEnum getTestCase(String testCaseName) {
 			if (set.name().equalsIgnoreCase(testCaseName)) {
@@ -117,6 +120,8 @@ public class GroupTest implements Constants
 				return get;
 			} else if (getall.name().equalsIgnoreCase(testCaseName)) {
 				return getall;
+			} else if (predicate.name().equalsIgnoreCase(testCaseName)) {
+				return predicate;
 			} else if (publish.name().equalsIgnoreCase(testCaseName)) {
 				return publish;
 			} else if (offer.name().equalsIgnoreCase(testCaseName)) {
@@ -167,6 +172,8 @@ public class GroupTest implements Constants
 		int startNum = -1;
 		DataObjectFactory dataObjectFactory;
 		Random random;
+		@SuppressWarnings("rawtypes")
+		IPredicate predicateObj;
 
 		@Override
 		public Object clone() {
@@ -189,6 +196,7 @@ public class GroupTest implements Constants
 			op.startNum = startNum;
 			op.dataObjectFactory = dataObjectFactory;
 			op.random = random;
+			op.predicateObj= predicateObj;
 			return op;
 		}
 
@@ -245,11 +253,13 @@ public class GroupTest implements Constants
 					// dsName maybe null if sleep operation
 					if (operation.dsName != null) {
 						operation.imap = hazelcastInstance.getMap(operation.dsName);
+						if (operation.predicateObj != null) {
+							operation.predicateObj.init(operation.imap);
+						}
 					}
 					break;
 				}
 			}
-
 		}
 	}
 
@@ -541,6 +551,7 @@ public class GroupTest implements Constants
 								}
 							}
 								break;
+
 							case putall:
 							default: {
 								HashMap<Object, Object> map = new HashMap<Object, Object>(operation.batchSize, 1f);
@@ -686,6 +697,12 @@ public class GroupTest implements Constants
 								}
 							}
 								break;
+								
+							case predicate:
+								if (operation.predicateObj != null) {
+									operation.imap.values(operation.predicateObj.getPredicate());
+								}
+								break;
 
 							case putall:
 							default: {
@@ -717,10 +734,11 @@ public class GroupTest implements Constants
 	 * @param index
 	 * @param threadStartIndex
 	 * @param threadStopIndex
+	 * @throws InterruptedException 
 	 */
 	@SuppressWarnings("unchecked")
 	private void writeEr(Operation operation, DataObjectFactory.Entry entry, int index, int threadStartIndex,
-			int threadStopIndex) {
+			int threadStopIndex) throws InterruptedException {
 		// Child objects
 		if (operation.dataObjectFactory.isEr()) {
 			int maxErKeys = operation.dataObjectFactory.getMaxErKeys();
@@ -738,6 +756,10 @@ public class GroupTest implements Constants
 					DataObjectFactory.Entry childEntry = childOperation.dataObjectFactory.createEntry(childIdNum,
 							entry.key);
 					switch (childOperation.ds) {
+					case sleep:
+						Thread.sleep(childOperation.sleep);
+						break;
+						
 					case rmap:
 						if (childOperation.rmap != null) {
 							childOperation.rmap.put(childEntry.key, childEntry.value);
@@ -940,7 +962,7 @@ public class GroupTest implements Constants
 						Iterator<?> iterator = keys.iterator();
 						int size = keys.size();
 						int k = 1;
-						Map<Object, Object> map = new HashMap();
+						Map<Object, Object> map = new HashMap<Object, Object>();
 						while (k <= size) {
 							In<String> inClause = cb.in(root.get(pk));
 							while (iterator.hasNext() && k % operation.batchSize > 0) {
@@ -1244,6 +1266,12 @@ public class GroupTest implements Constants
 						erOperationNamesSet.add(factoryErOperationName);
 					}
 				}
+				
+				String predicateClass = System.getProperty(operationName + ".predicate.class");
+				if (predicateClass != null) {
+					Class<IPredicate> clazz = (Class<IPredicate>) Class.forName(predicateClass);
+					operation.predicateObj = clazz.newInstance();
+				}
 			}
 		}
 		return operation;
@@ -1328,6 +1356,9 @@ public class GroupTest implements Constants
 							}
 							if (operation.random == null) {
 								operation.random = refOperation.random;
+							}
+							if (operation.predicateObj == null) {
+								operation.predicateObj = refOperation.predicateObj;
 							}
 						}
 					}

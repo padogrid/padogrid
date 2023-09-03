@@ -22,8 +22,8 @@
 #   make sure to include all system properties found in this file. The following
 #   system properties are required:
 #
-#		"hazelcast-addon.group"
-#		         Group name. Disabled by default. Hard coded: "dev".
+#		"hazelcast-addon.cluster-name"
+#		         Cluster name. Disabled by default.
 #		         See below to see how to enable it.
 #		"hazelcast-addon.management-center"
 #		         MC URL.
@@ -36,16 +36,19 @@
 hazelcast:
   properties:
     hazelcast.phone.home.enabled: false
-   
-  group:
-    name: dev
-    # To use the cluster name as the group name, comment out the following line.
-    #name: ${hazelcast-addon.group}
-        
-  management-center:
+
+  cluster-name: dev
+  # To use the workspace cluster name, remove the above line and uncomment 
+  # the following line.
+  #cluster-name: ${hazelcast-addon.cluster-name}
+  
+  # Enable jet (required for SQL)
+  jet:
     enabled: true
+    resource-upload-enabled: true
+    
+  management-center:
     scripting-enabled: true
-    url: ${hazelcast-addon.management-center}
     
   user-code-deployment:
     enabled: true
@@ -86,13 +89,26 @@ hazelcast:
       enabled: false
     ssl:
       enabled: false
-  
-  native-memory:
-    enabled: true
-    size:
-      unit: MEGABYTES
-      value: 512
 
+  # Indexes for nw data
+  map:
+    nw/customers:
+      indexes:
+        - name: country
+          type: HASH
+          attributes:
+            - "country"
+    nw/orders:
+      indexes:
+        - name: freight
+          type: SORTED
+          attributes:
+            - "freight"
+        - name: shipvia
+          type: BITMAP
+          attributes:
+            - "shipVia"
+    
   executor-service:
     hz:query:
       pool-size: 16

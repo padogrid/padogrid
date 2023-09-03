@@ -15,7 +15,7 @@ The `perf_test` app also includes the `test_group` script that allows you to con
 
 The `perf_test` app can directly *upsert* mock data into your database of choice using Hibernate, which automatically creates tables as needed. This capability allows you to quickly synchrnize Hazelcast with your database and perform latency tests.
 
-## Transaction Test Cases
+## 1. Transaction Test Cases
 
 All of the transaction test cases are performed on three (3) distributed maps with a simple PBM (Pharmacy Benefit Management) data model that associates the client group number with group members. Simply put, all of the members that belong to a group are co-located in the same Hazelcast partition. This enables each Hazelcast member to complete transactions with their local datasets without encountering additional netowork hops.
 
@@ -25,7 +25,7 @@ All of the transaction test cases are performed on three (3) distributed maps wi
 | `profile`    | The `profile` map contains `ClientProfileKey` and `Blob` entries. `ClientProfileKey` contains core client information and `Blob` as described above.| `bin_sh/test_ingestion` |
 | `summary`    | The `summary` map contains `groupNumber` and `GroupSummary` entries. `GroupSummary` contains the group summary results produced when the `tx` test case is performed by running the `bin_sh/test_tx` script.| `bin_sh/test_tx` |
 
-## Configuration Files
+## 2. Configuration Files
 
 The following table describes a list of preconfigured properties files in the `etc/` directory.
 
@@ -37,6 +37,7 @@ The following table describes a list of preconfigured properties files in the `e
 | `group-put.properties` | Defines properties for making 22 put calls on 22 different maps in a single group. |
 | `group-get.properties` | Defines properties for making 22 get calls on 22 different maps in a single group. Note that before invoking this file, `group-put.properties` must be invoked first to ingest data. |
 | `group-cache.properties` | Defines properties for `ICache` (JCache) operations. Unlike other, data structures, `ICache` requires you to first configure the cluster with the caches that you want to test before running the `test_group` script. |
+| `group-query.properties` |  Defines properties for `IMap` query operations. |
 | `group-queue.properties` |  Defines properties for `IQueue` operations. |
 | `group-rmap.properties` | Defines properties for `ReplicatedMap` operations. |
 | `group-rtopic.properties` | Defines properties for `ReliableTopic` operations.|
@@ -46,7 +47,7 @@ The following table describes a list of preconfigured properties files in the `e
 
 You can introduce your own test criteria by modifying the properties the above files or supply another properties file by specifying the `-prop` option of the scripts described below.
 
-## Scripts
+## 3. Scripts
 
 The `bin_sh/` directory contains the following scripts. By default, these scripts simply prints the configuration information obtained from the `etc/perf.properties` file. To run the test cases, you must specify the `-run` option.
 
@@ -56,9 +57,9 @@ The `bin_sh/` directory contains the following scripts. By default, these script
 | `test_tx` | Displays or runs transaction and query test cases specified in the `etc/tx.properties` file. It runs `get`, `getall`, `tx` test cases specified in the `perf.properties` file. |
 | `test_group` | Displays or runs group test cases (`set`, `put`, `putall`, `get`, `getall`). A group represents a function that executes one or more Hazelcast `IMap` operations. |
 
-## Script Usages
+## 4. Script Usages
 
-### test_ingestion
+### 4.1. `test_ingestion`
 
 ```bash
 ./test_ingestion -?
@@ -86,7 +87,7 @@ Usage:
       /Users/dpark/padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
 ```
 
-### test_tx
+### 4.2. `test_tx`
 
 ```bash
 ./test_tx -?
@@ -114,7 +115,7 @@ Usage:
       /Users/dpark/padogrid/workspaces/myrwe/ws-intro/apps/perf_test/results
 ```
 
-### test_group
+### 4.3. `test_group`
 
 ```bash
 ./test_group -?
@@ -161,7 +162,7 @@ Notes:
    the cluster with caches.
 ```
 
-### MapStorePkDbImpl (Database Integration)
+### 4.4. `MapStorePkDbImpl` (Database Integration)
 
 `padogrid` includes a generic DB addon, `org.hazelcast.addon.cluster.MapStorePkDbImpl`, that can read/write from/to a database. This primary-key-based DB addon maps your Hibernate entity objects to database tables. To use the plugin, the primary key must be part of the entity object annotated with Hibernate's `@Id`. The following is a snippet of the `Order` object included in `padogrid`.
 
@@ -209,7 +210,7 @@ public class Order implements VersionedPortable, Comparable<Order>
 
 To use `MapStorePkDbImpl`, you must first build the environment by executing the `build_app` script as shown below. This script runs Maven to download the dependency files into the `$PADOGRID_WORKSPACE/lib` directory, which is included in `CLASSPATH` for all the apps and clusters running in the workspace.
 
-:pencil2: If your application does not require Hazelcast locally installed then you can set `HAZELCAST_VERSION` in the `setenv.sh` file. If this environment variable is set then the `build_app` script downloads the specified version of Hazelcast jar files. **Note that you might need to make adjustments in the `pom-hazelcast.xml` file to handle different major versions of Hazelcast.**
+✏️  If your application does not require Hazelcast locally installed then you can set `HAZELCAST_VERSION` in the `setenv.sh` file. If this environment variable is set then the `build_app` script downloads the specified version of Hazelcast jar files. **Note that you might need to make adjustments in the `pom-hazelcast.xml` file to handle different major versions of Hazelcast.**
 
 ```bash
 ./build_app
@@ -345,7 +346,7 @@ Once the cluster is up, you are ready to run the `test_group` script to insert `
 
 You can reconfigure `group-factory.properties` to add more data, threads, etc.
 
-## Results
+## 5. Results
 
 Upon successful run, the test results are outputted in the `results/` directory. The following shows an example.
 
@@ -410,7 +411,7 @@ Time unit: msec
 Stop Time: Sun Jun 30 15:16:18 EDT 2019
 ```
 
-## Inserting and Updating Database Tables
+## 6. Inserting and Updating Database Tables
 
 The `group_test -db` command directly loads mock data into database tables without connecting to Hazelcast. You can use this command to pre-populate the database before testing database synchronization tests in Hazelcast. This command is also useful for testing the CDC use case in which database changes are automatically ingested into Hazelcast via a CDC product such as Debezium ansd Striim.
 
@@ -434,12 +435,126 @@ Run `test_group -db`.
 ./test_group -db -run -prop ../etc/group-factory.properties
 ```
 
-## Generating Entity Relationships (ER)
+## 7. Generating Entity Relationships (ER)
 
-If you want to add entity relationships to your data, then you can implement [`DataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/addon/test/perf/data/DataObjectFactory.java) or extend [`AbstractDataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/AbstractDataObjectFactory.java) and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see [`org.hazelcast.demo.nw.impl.OrderFactoryImpl`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/OrderFactoryImpl.java) for details. You can run the example as follows:
+If you want to add entity relationships to your data, then you can implement [`DataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/addon/test/perf/data/DataObjectFactory.java) or extend [`AbstractDataObjectFactory`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/AbstractDataObjectFactory.java) and pass the object key to the `createEntry()` method using the `factory.er.operation` property. The `perf_test` app includes an ER example that creates one-to-many ER between `Customer` and `Order` objects by setting `Customer.customerId` to `Order.customerId` while ingesting mock data. Please see [`org.hazelcast.demo.nw.impl.OrderFactoryImpl`](https://github.com/padogrid/padogrid/blob/develop/hazelcast-addon-core-5/src/test/java/org/hazelcast/demo/nw/impl/OrderFactoryImpl.java) for details. The source code is provided in the `perf_test` app's `src` directory.
+
+You can run the example as follows:
 
 ```bash
 ./test_group -run -prop ../etc/group-factory-er.properties
 ```
 
 The ER capbility provides you a quick way to ingest co-located data into Hazelcast and test server-side operations that take advatange of data affinity.
+
+## 8. Adding Hazelcast Queries
+
+In addition to Hazelcast map method operations, the `test_group` script also supports queries. Query predicats and SQL statements can be entered in the group properties file using the `predicate` and `sql` operation parameters, respectively. The `etc/group-query.properties` file provides examples. Before running `etc/group-query.properties`, first, run `group_factory.properties` to ingest data.
+
+✏️  When you create a Hazelcast cluster using `create_cluster`, PadoGrid deploys the `hazelcast-indexes.xml` file configured with the `nw/customers` and `nw/orders` maps indexed. Optionally, you can this file to start your cluster and run the `grafana` app to monitor the query metrics.
+
+```properties
+# predicate2
+predicate2.map=nw/orders
+predicate2.testCase=predicate
+predicate2.predicate=freight>20
+
+# sql2
+sql2.testCase=sql
+sql2.sql=select * from "nw/orders" where freight>20
+
+# predicate3
+predicate3.map=nw/orders
+predicate3.testCase=predicate
+predicate3.predicate.class=org.hazelcast.demo.nw.impl.OrdersPredicateImpl
+
+# sql3
+sql3.testCase=sql
+sql3.sql.class=org.hazelcast.demo.nw.impl.OrdersSqlImpl
+sql3.sql.arg="nw/orders"
+```
+
+### 8.1. `predicate2`
+
+The `predicate2.predicate` example defines the SQL predicate "freight>20" for querying values that have the freight cost greater than 20. The SQL predicate is executed as follows.
+
+```java
+IMap.values(Predicates.sql("freight>20"));
+```
+
+### 8.2. `sql2`
+
+The `sql2.sql` example defines the SQL statement "select * from "nw/orders" where freight>20" which returns entries that have the freight cost greater than 20. The ad hoc query is executed as follows.
+
+```java
+HazelcastInstance.getSql().execute("select * from \"nw/orders\" where freight>20");
+```
+
+### 8.3. `predicate3`
+
+The `predicate3.predicate.class` example defines the class, "org.hazelcast.demo.nw.impl.OrdersPredicateImpl", which implements `org.hazelcast.addon.test.perf.query.IPredicate`.
+
+```java
+public class OrdersPredicateImpl implements IPredicate<String, Order> {
+	IMap<String, Order> map;
+
+	@Override
+	public void init(IMap<String, Order> map) {
+		this.map = map;
+	}
+
+	@Override
+	public Predicate<String, Order> getPredicate() {
+		EntryObject e = Predicates.newPredicateBuilder().getEntryObject();
+		Predicate<String, Order> predicate = e.get("freight").lessThan(20);
+		return predicate;
+	}
+}
+```
+
+The `test_group` script invokes the `getPredicate()` method to get the predicate for querying values that have the freight cost greater than 20. The `init()` method is invoked once at startup. The passed in `map` is the map that is used to execute the predicate as follows.
+
+```java
+IMap.values(IPredicate.getPredicate());
+```
+
+### 8.4. `sql3`
+
+The `sql3.sql.class` example defines the class, "org.hazelcast.demo.nw.impl.OrdersPredicateImpl", which implements `org.hazelcast.addon.test.perf.query.ISql`.
+
+```java
+public class OrdersSqlImpl implements ISql {
+	private String mapName = "\"nw/orders\"";
+
+	@Override
+	public void init(String arg) {
+		if (arg != null) {
+			mapName = arg;
+		}
+	}
+
+	@Override
+	public String getSql() {
+		return String.format("select * from %s where freight>20", mapName);
+	}
+}
+```
+
+The `test_group` script invokes the `getSql()` method to get the SQL statement for querying entries that have the freight cost greater than 20. The `init()` method is invoked once at the startup time. The passed in `arg` is the argument value provided by `sql3.sql.arg`.
+
+```java
+HazelcastInstance.getSql().execute(ISql.getSql());
+```
+
+## 9. Adding Your `IPredicate` and `ISql` Implementation Classes
+
+1. Place your source code in the `src/main/java/` directory.
+
+2. Compile your source code.
+
+```bash
+cd bin_sh
+./build_app
+```
+
+✏️  *If you prefer to use an IDE, PadoGrid workspaces are integrated with VS Code. See the [VS Code](https://github.com/padogrid/padogrid/wiki/VS-Code) section of the PadoGrid Manual for details.*

@@ -1,4 +1,4 @@
-package org.hazelcast.addon.test.perf;
+package org.hazelcast.addon.test.perf.data;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -6,19 +6,14 @@ import java.util.Date;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
-import org.hazelcast.addon.test.perf.data.Blob;
-import org.hazelcast.addon.test.perf.data.ClientProfileKey;
-import org.hazelcast.addon.test.perf.data.EligKey;
-import org.hazelcast.addon.test.perf.data.GroupSummary;
-
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.PartitionAware;
+import com.hazelcast.map.IMap;
+import com.hazelcast.partition.PartitionAware;
 import com.hazelcast.query.PartitionPredicate;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.query.EntryObject;
-import com.hazelcast.query.PredicateBuilder;
+import com.hazelcast.query.PredicateBuilder.EntryObject;
+import com.hazelcast.query.Predicates;
 
 /**
  * EligCallable is executed in the cluster to insert {@linkplain GroupSummary}
@@ -41,9 +36,9 @@ public class EligCallable
 
 	private Collection<Entry<EligKey, Blob>> getEligibilityByGroupNumber(String groupNumber) {
 		IMap<EligKey, Blob> imap = hz.getMap("eligibility");
-		EntryObject e = new PredicateBuilder().getEntryObject();
+		EntryObject e = Predicates.newPredicateBuilder().getEntryObject();
 		Predicate predicate = e.key().get("groupNumber").equal(groupNumber);
-		PartitionPredicate<EligKey, Blob> partitionPredicate = new PartitionPredicate<EligKey, Blob>(groupNumber,
+		PartitionPredicate<EligKey, Blob> partitionPredicate = Predicates.partitionPredicate(groupNumber,
 				predicate);
 		Collection<Entry<EligKey, Blob>> col = imap.entrySet(partitionPredicate);
 		return col;
@@ -51,9 +46,9 @@ public class EligCallable
 
 	private Entry<ClientProfileKey, Blob> getClientProfileByGroupNumber(String groupNumber) {
 		IMap<ClientProfileKey, Blob> imap = hz.getMap("profile");
-		EntryObject e = new PredicateBuilder().getEntryObject();
+		EntryObject e = Predicates.newPredicateBuilder().getEntryObject();
 		Predicate predicate = e.key().get("groupNumber").equal(groupNumber);
-		PartitionPredicate<ClientProfileKey, Blob> partitionPredicate = new PartitionPredicate<ClientProfileKey, Blob>(
+		PartitionPredicate<ClientProfileKey, Blob> partitionPredicate = Predicates.partitionPredicate(
 				groupNumber, predicate);
 		Collection<Entry<ClientProfileKey, Blob>> col = imap.entrySet(partitionPredicate);
 		if (col == null) {

@@ -1,15 +1,10 @@
-package org.hazelcast.addon.test.perf;
+package org.hazelcast.addon.test.perf.data;
 
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
-
-import org.hazelcast.addon.test.perf.data.Blob;
-import org.hazelcast.addon.test.perf.data.ClientProfileKey;
-import org.hazelcast.addon.test.perf.data.EligKey;
-import org.hazelcast.addon.test.perf.data.GroupSummary;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;

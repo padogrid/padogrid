@@ -3,8 +3,6 @@ package org.hazelcast.addon.test.perf.data;
 import java.io.IOException;
 import java.util.Date;
 
-import org.hazelcast.addon.test.perf.EligCallable;
-
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;

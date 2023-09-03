@@ -61,21 +61,6 @@ hazelcast:
     # Allowed port range when connecting to other nodes. 0 or * means use system provided port. 
     outbound-ports:
       - 0
-    rest-api:
-      enabled: true
-      endpoint-groups:
-        CLUSTER_READ:
-          enabled: false
-        CLUSTER_WRITE:
-          enabled: false
-        DATA:
-          enabled: false
-        HEALTH_CHECK:
-          enabled: true
-        HOT_RESTART:
-          enabled: false
-        WAN:
-          enabled: false
     join:
       multicast:
         enabled: false
@@ -86,13 +71,20 @@ hazelcast:
       enabled: false
     ssl:
       enabled: false
-  
-  native-memory:
-    enabled: true
-    size:
-      unit: MEGABYTES
-      value: 512
 
+  # Indexes for nw data
+  map:
+    nw/customers:
+      indexes:
+        country:
+          ordered: false
+    nw/orders:
+      indexes:
+        freight:
+          ordered: true
+        shipVia:
+          ordered: false
+    
   executor-service:
     hz:query:
       pool-size: 16

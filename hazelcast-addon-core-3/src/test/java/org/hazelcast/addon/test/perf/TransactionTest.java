@@ -15,6 +15,7 @@ import java.util.concurrent.Future;
 
 import org.hazelcast.addon.test.perf.data.Blob;
 import org.hazelcast.addon.test.perf.data.ClientProfileKey;
+import org.hazelcast.addon.test.perf.data.EligCallable;
 import org.hazelcast.addon.test.perf.data.EligKey;
 import org.hazelcast.addon.test.perf.data.GroupSummary;
 

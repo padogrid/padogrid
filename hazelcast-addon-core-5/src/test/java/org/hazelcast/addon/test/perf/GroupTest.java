@@ -28,6 +28,8 @@ import javax.persistence.criteria.Root;
 import org.hazelcast.addon.cluster.util.HibernatePool;
 import org.hazelcast.addon.test.perf.data.Blob;
 import org.hazelcast.addon.test.perf.data.DataObjectFactory;
+import org.hazelcast.addon.test.perf.query.IPredicate;
+import org.hazelcast.addon.test.perf.query.ISql;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
@@ -37,6 +39,7 @@ import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.collection.IQueue;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
+import com.hazelcast.query.Predicates;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 import com.hazelcast.topic.ITopic;
 
@@ -104,7 +107,7 @@ public class GroupTest implements Constants
 	}
 
 	enum TestCaseEnum {
-		set, put, putall, get, getall, publish, publishall, offer, poll, peek, take;
+		set, put, putall, get, getall, predicate, sql, publish, publishall, offer, poll, peek, take;
 
 		static TestCaseEnum getTestCase(String testCaseName) {
 			if (set.name().equalsIgnoreCase(testCaseName)) {
@@ -117,6 +120,10 @@ public class GroupTest implements Constants
 				return get;
 			} else if (getall.name().equalsIgnoreCase(testCaseName)) {
 				return getall;
+			} else if (predicate.name().equalsIgnoreCase(testCaseName)) {
+				return predicate;
+			} else if (sql.name().equalsIgnoreCase(testCaseName)) {
+				return sql;
 			} else if (publish.name().equalsIgnoreCase(testCaseName)) {
 				return publish;
 			} else if (publishall.name().equalsIgnoreCase(testCaseName)) {
@@ -169,6 +176,12 @@ public class GroupTest implements Constants
 		int startNum = -1;
 		DataObjectFactory dataObjectFactory;
 		Random random;
+		String predicate;
+		String sql;
+		@SuppressWarnings("rawtypes")
+		IPredicate predicateObj;
+		ISql sqlObj;
+		String sqlArg;
 
 		@Override
 		public Object clone() {
@@ -191,6 +204,11 @@ public class GroupTest implements Constants
 			op.startNum = startNum;
 			op.dataObjectFactory = dataObjectFactory;
 			op.random = random;
+			op.predicate = predicate;
+			op.sql = sql;
+			op.predicateObj= predicateObj;
+			op.sqlObj = sqlObj;
+			op.sqlArg = sqlArg;
 			return op;
 		}
 
@@ -247,6 +265,11 @@ public class GroupTest implements Constants
 					// dsName maybe null if sleep operation
 					if (operation.dsName != null) {
 						operation.imap = hazelcastInstance.getMap(operation.dsName);
+						if (operation.predicateObj != null) {
+							operation.predicateObj.init(operation.imap);
+						} else if (operation.sqlObj != null) {
+							operation.sqlObj.init(operation.sqlArg);
+						}
 					}
 					break;
 				}
@@ -718,6 +741,22 @@ public class GroupTest implements Constants
 											+ operation.testCase + "] returned " + map.size() + "/" + keys.size());
 								}
 							}
+								break;
+								
+							case predicate:
+								if (operation.predicate != null) {
+									operation.imap.values(Predicates.sql(operation.predicate));
+								} else if (operation.predicateObj != null) {
+									operation.imap.values(operation.predicateObj.getPredicate());
+								}
+								break;
+								
+							case sql:
+								if (operation.sql != null) {
+									hazelcastInstance.getSql().execute(operation.sql);
+								} else if (operation.sqlObj != null) {
+									hazelcastInstance.getSql().execute(operation.sqlObj.getSql());
+								}
 								break;
 
 							case putall:
@@ -1282,6 +1321,20 @@ public class GroupTest implements Constants
 						erOperationNamesSet.add(factoryErOperationName);
 					}
 				}
+				operation.predicate = System.getProperty(operationName + ".predicate");
+				operation.sql = System.getProperty(operationName + ".sql");
+				
+				String predicateClass = System.getProperty(operationName + ".predicate.class");
+				if (predicateClass != null) {
+					Class<IPredicate> clazz = (Class<IPredicate>) Class.forName(predicateClass);
+					operation.predicateObj = clazz.newInstance();
+				}
+				String sqlClass = System.getProperty(operationName + ".sql.class");
+				if (sqlClass != null) {
+					Class<ISql> clazz = (Class<ISql>) Class.forName(sqlClass);
+					operation.sqlObj = clazz.newInstance();
+				}
+				operation.sqlArg = System.getProperty(operationName + ".sql.arg");
 			}
 		}
 		return operation;
@@ -1366,6 +1419,21 @@ public class GroupTest implements Constants
 							}
 							if (operation.random == null) {
 								operation.random = refOperation.random;
+							}
+							if (operation.predicate == null) {
+								operation.predicate = refOperation.predicate;
+							}
+							if (operation.predicateObj == null) {
+								operation.predicateObj = refOperation.predicateObj;
+							}
+							if (operation.sql == null) {
+								operation.sql = refOperation.sql;
+							}
+							if (operation.sqlObj == null) {
+								operation.sqlObj = refOperation.sqlObj;
+							}
+							if (operation.sqlArg == null) {
+								operation.sqlArg = refOperation.sqlArg;
 							}
 						}
 					}

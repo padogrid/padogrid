@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.hazelcast.addon.test.perf.DataIngestionTest;
-import org.hazelcast.addon.test.perf.EligCallable;
+import org.hazelcast.addon.test.perf.data.EligCallable;
 import org.hazelcast.addon.test.perf.data.GroupSummary;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
