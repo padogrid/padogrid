@@ -11,6 +11,7 @@ https://github.com/padogrid
 - Added `predicate` and `sql` support in `test_group` for Hazelcast `perf_test`. With these parameters, any query predicates and SQL statements can be included in test group workflows. See the [Adding Hazelcast Queries](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/hazelcast/apps/perf_test/README.md#8-adding-hazelcast-queries) section of the `perf_test` documentation for details.
 - Added the *Queries* dashboard for monitoring Hazelcast query metrics in Grafana.
 - Hazelcast clusters created using `make_cluster' or `create_cluster` now include the `hazelcast-indexes.xml` and `hazecast-indexes.yaml` files for testing indexes.
+- Fixed hazelcast mc and grafana version update issues. Prior to this fix, `update_products -version` hanged for `hazelcast-mc` and `grafana`.
 
 ---
 
