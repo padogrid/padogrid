@@ -17,7 +17,7 @@ public class OrdersPredicateImpl implements IPredicate<String, Order> {
 
 	@Override
 	public Predicate<String, Order> getPredicate() {
-		Predicate<String, Order> predicate = Predicates.lessThan("freight", 20);
+		Predicate<String, Order> predicate = Predicates.greaterThan("freight", 20);
 		return predicate;
 	}
 }
