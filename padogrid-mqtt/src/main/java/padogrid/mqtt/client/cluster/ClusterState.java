@@ -24,6 +24,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -82,10 +83,17 @@ public class ClusterState implements IClusterConfig {
 	private final HaMqttClient haclient;
 	private final String clusterName;
 	private final MqttClientPersistence persistence;
-	private final String pluginName;
-	private final IHaMqttPlugin haplugin;
-	private final IHaMqttConnectorPublisher publisherConnector;
-	private final IHaMqttConnectorSubscriber subscriberConnector;
+
+	// <pluginName, IHaMqttPlugin>
+	private final Map<String, IHaMqttPlugin> hapluginMap = Collections
+			.synchronizedMap(new HashMap<String, IHaMqttPlugin>(4));
+	// <pluginName, IHaMqttConnectorPublisher>
+	private final Map<String, IHaMqttConnectorPublisher> publisherConnectorMap = Collections
+			.synchronizedMap(new HashMap<String, IHaMqttConnectorPublisher>(4));
+	// <pluginName, IHaMqttConnectorSubscriber>
+	private final Map<String, IHaMqttConnectorSubscriber> subscriberConnectorMap = Collections
+			.synchronizedMap(new HashMap<String, IHaMqttConnectorSubscriber>(4));
+	private IHaMqttConnectorSubscriber[] subscriberConnectors = new IHaMqttConnectorSubscriber[0];
 	private boolean isConnectorsStarted = false;
 	private ScheduledExecutorService executorService;
 
@@ -291,35 +299,23 @@ public class ClusterState implements IClusterConfig {
 			}
 		}
 
-		if (clusterConfig.getPluginName() != null) {
-			pluginName = clusterConfig.getPluginName();
-			IHaMqttPlugin plugin = ClusterService.getClusterService().initClusterPlugin(clusterConfig.getPluginName());
-			if (plugin != null) {
-				if (plugin instanceof IHaMqttConnectorPublisher) {
-					publisherConnector = (IHaMqttConnectorPublisher) plugin;
-				} else {
-					publisherConnector = null;
+		String[] pluginNames = clusterConfig.getPluginNames();
+		if (pluginNames != null) {
+			for (String pluginName : pluginNames) {
+				IHaMqttPlugin plugin = ClusterService.getClusterService().initClusterPlugin(pluginName);
+				if (plugin != null) {
+					if (plugin instanceof IHaMqttConnectorPublisher) {
+						publisherConnectorMap.put(pluginName, (IHaMqttConnectorPublisher) plugin);
+					}
+					if (plugin instanceof IHaMqttConnectorSubscriber) {
+						subscriberConnectorMap.put(pluginName, (IHaMqttConnectorSubscriber) plugin);
+					}
+					if (plugin instanceof IHaMqttPlugin) {
+						hapluginMap.put(pluginName, (IHaMqttPlugin) plugin);
+					}
 				}
-				if (plugin instanceof IHaMqttConnectorSubscriber) {
-					subscriberConnector = (IHaMqttConnectorSubscriber) plugin;
-				} else {
-					subscriberConnector = null;
-				}
-				if (publisherConnector == null && subscriberConnector == null) {
-					haplugin = plugin;
-				} else {
-					haplugin = null;
-				}
-			} else {
-				publisherConnector = null;
-				subscriberConnector = null;
-				haplugin = null;
 			}
-		} else {
-			pluginName = null;
-			publisherConnector = null;
-			subscriberConnector = null;
-			haplugin = null;
+			subscriberConnectors = subscriberConnectorMap.values().toArray(new IHaMqttConnectorSubscriber[subscriberConnectorMap.size()]);
 		}
 
 		// Set FoS dependent parameters
@@ -343,16 +339,21 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
-	 * Returns the connector.
+	 * Returns the publisher connectors.
 	 * 
-	 * @return null if undefined.
+	 * @return an empty array if undefined.
 	 */
-	public IHaMqttConnectorPublisher getPublisherConnector() {
-		return publisherConnector;
+	public IHaMqttConnectorPublisher[] getPublisherConnectors() {
+		return publisherConnectorMap.values().toArray(new IHaMqttConnectorPublisher[publisherConnectorMap.size()]);
 	}
 
-	public IHaMqttConnectorSubscriber getSubscriberConnector() {
-		return subscriberConnector;
+	/**
+	 * Returns the subscriber connectors.
+	 * 
+	 * @return an empty array if undefined.
+	 */
+	public IHaMqttConnectorSubscriber[] getSubscriberConnectors() {
+		return subscriberConnectorMap.values().toArray(new IHaMqttConnectorSubscriber[subscriberConnectorMap.size()]);
 	}
 
 	/**
@@ -1426,13 +1427,20 @@ public class ClusterState implements IClusterConfig {
 				break;
 			}
 			if (isConnectorsStarted == false) {
-				Thread pluginThread = null;
-				if (publisherConnector != null) {
+				ArrayList<Thread> pluginThreadList = new ArrayList<Thread>(4);
+				for (Map.Entry<String, IHaMqttConnectorPublisher> entry : publisherConnectorMap.entrySet()) {
+					String pluginName = entry.getKey();
+					IHaMqttConnectorPublisher publisherConnector = entry.getValue();
 					publisherConnector.start(haclient);
 					isConnectorsStarted = true;
-					pluginThread = ClusterService.getClusterService().addPluginThread(pluginName, publisherConnector);
+					Thread pluginThread = ClusterService.getClusterService().addPluginThread(pluginName,
+							publisherConnector);
+					pluginThreadList.add(pluginThread);
 				}
-				if (subscriberConnector != null) {
+
+				for (Map.Entry<String, IHaMqttConnectorSubscriber> entry : subscriberConnectorMap.entrySet()) {
+					String pluginName = entry.getKey();
+					IHaMqttConnectorSubscriber subscriberConnector = entry.getValue();
 					ClusterConfig.Plugin plugin = ClusterService.getClusterService().getPluginConfig(pluginName);
 					if (plugin != null) {
 						ClusterConfig.Subscriptions[] subscriptions = plugin.getSubscriptions();
@@ -1446,26 +1454,36 @@ public class ClusterState implements IClusterConfig {
 											haclient.subscribe(topicFilter, qos);
 											logger.info(String.format(
 													"Plugin subscribed to topic filter [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
-													this.clusterName, this.pluginName, topicFilter, qos));
+													this.clusterName, pluginName, topicFilter, qos));
 										} catch (MqttException e) {
 											logger.error(String.format(
 													"Plugin error occurred while subscribing to topic filter. Topic filter discarded. [cluster=%s, plugin=%s, topicFilter=%s, qos=%d]",
-													this.clusterName, this.pluginName, topicFilter, qos), e);
+													this.clusterName, pluginName, topicFilter, qos), e);
 										}
 									}
 								}
 							}
 						}
 					}
-					if (subscriberConnector != publisherConnector) {
+					// If publisher is not the same instance as the subscriber then
+					// create a plugin thread.
+					boolean found = false;
+					for (Map.Entry<String, IHaMqttConnectorPublisher> entry2 : publisherConnectorMap.entrySet()) {
+						IHaMqttConnectorPublisher publisherConnector = entry2.getValue();
+						found = publisherConnector == subscriberConnector;
+						if (found) {
+							break;
+						}
+					}
+					if (found == false) {
 						subscriberConnector.start(haclient);
 						isConnectorsStarted = true;
-						pluginThread = ClusterService.getClusterService().addPluginThread(pluginName,
+						Thread pluginThread = ClusterService.getClusterService().addPluginThread(pluginName,
 								subscriberConnector);
+						pluginThreadList.add(pluginThread);
 					}
 				}
-
-				if (pluginThread != null) {
+				for (Thread pluginThread : pluginThreadList) {
 					pluginThread.start();
 				}
 			}
@@ -1533,16 +1551,18 @@ public class ClusterState implements IClusterConfig {
 			default:
 				break;
 			}
-			if (publisherConnector != null && isConnectorsStarted == false) {
-				publisherConnector.start(haclient);
-				isConnectorsStarted = true;
+			
+			if (isConnectorsStarted == false) {
+				for (IHaMqttConnectorPublisher publisherConnector : publisherConnectorMap.values()) {
+					publisherConnector.start(haclient);
+					isConnectorsStarted = true;
+				}
 			}
 		}
 	}
 
 	/**
 	 * Invoked by ClusterService. This method must be invoked after creating all
-	 * clusters.
 	 * 
 	 * @param clusterConfig Cluster config
 	 */
@@ -1703,9 +1723,11 @@ public class ClusterState implements IClusterConfig {
 				tokens = new IMqttToken[0];
 				break;
 			}
-			if (publisherConnector != null && isConnectorsStarted == false) {
-				publisherConnector.start(haclient);
-				isConnectorsStarted = true;
+			if (isConnectorsStarted == false) {
+				for (IHaMqttConnectorPublisher publisherConnector : publisherConnectorMap.values()) {
+					publisherConnector.start(haclient);
+					isConnectorsStarted = true;
+				}
 			}
 		}
 		return tokens;
@@ -2038,14 +2060,27 @@ public class ClusterState implements IClusterConfig {
 				liveSubscriptionClientSet.clear();
 				stickySubscriber = null;
 			}
+			if (isConnectorsStarted == false) {
+				for (IHaMqttConnectorPublisher publisherConnector : publisherConnectorMap.values()) {
+					publisherConnector.start(haclient);
+					isConnectorsStarted = true;
+				}
+			}
 			if (isConnectorsStarted) {
-				if (publisherConnector != null) {
+				for (IHaMqttConnectorPublisher publisherConnector : publisherConnectorMap.values()) {
 					publisherConnector.stop();
 					isConnectorsStarted = false;
 				}
-				if (subscriberConnector != null && subscriberConnector != publisherConnector) {
-					publisherConnector.stop();
-					isConnectorsStarted = false;
+				for (IHaMqttConnectorSubscriber subscriberConnector : subscriberConnectorMap.values()) {
+					boolean found = false;
+					for (IHaMqttConnectorPublisher publisherConnector : publisherConnectorMap.values()) {
+						found = publisherConnector == subscriberConnector;
+						break;
+					}
+					if (found == false) {
+						subscriberConnector.stop();
+						isConnectorsStarted = false;
+					}
 				}
 			}
 			break;
@@ -2406,7 +2441,7 @@ public class ClusterState implements IClusterConfig {
 			}
 
 			// Deliver message to the connector
-			if (subscriberConnector != null) {
+			for (IHaMqttConnectorSubscriber subscriberConnector: subscriberConnectors) {
 				subscriberConnector.messageArrived(client, topic, message.getPayload());
 			}
 

@@ -68,7 +68,7 @@ public class HaMqttClient implements IHaMqttClient {
 	private Map<String, String> invertedTopicBaseMap = new HashMap<String, String>(10);
 	private Map<String, Boolean> invertedTopicBaseScannedMap = new HashMap<String, Boolean>(10);
 	private ClusterState clusterState;
-	private IHaMqttConnectorPublisher publisherConnector;
+	private IHaMqttConnectorPublisher[] publisherConnectors = new IHaMqttConnectorPublisher[0];
 	private Logger logger = LogManager.getLogger(HaMqttClient.class);
 
 	private PublisherType publisherType = PublisherType.STICKY;
@@ -130,7 +130,7 @@ public class HaMqttClient implements IHaMqttClient {
 			// Obtain cluster state
 			clusterState = ClusterService.getClusterService().addHaClient(this, clusterConfig, persistence,
 					executorService);
-			publisherConnector = clusterState.getPublisherConnector();
+			publisherConnectors = clusterState.getPublisherConnectors();
 		}
 	}
 
@@ -342,15 +342,18 @@ public class HaMqttClient implements IHaMqttClient {
 		}
 		byte[] originalPayload = message.getPayload();
 		byte[] payload = originalPayload;
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			payload = publisherConnector.beforeMessagePublished(clients, topic, payload);
-			if (payload == null) {
-				return;
+			if (payload != null) {
+				break;
 			}
+		}
+		if (payload == null) {
+			return;
 		}
 		for (MqttClient client : clients) {
 			try {
-				if (publisherConnector != null) {
+				if (publisherConnectors.length > 0) {
 					message.setPayload(payload);
 				}
 				client.publish(topic, message);
@@ -372,7 +375,7 @@ public class HaMqttClient implements IHaMqttClient {
 						cleanupThreadLocals();
 						throw e;
 					} else {
-						if (publisherConnector != null) {
+						if (publisherConnectors.length > 0) {
 							message.setPayload(originalPayload);
 						}
 						publish(topic, message);
@@ -382,7 +385,7 @@ public class HaMqttClient implements IHaMqttClient {
 				}
 			}
 		}
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			publisherConnector.afterMessagePublished(clients, topic, payload);
 		}
 
@@ -419,13 +422,16 @@ public class HaMqttClient implements IHaMqttClient {
 		}
 		byte[] originalPayload = message.getPayload();
 		byte[] payload = originalPayload;
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			payload = publisherConnector.beforeMessagePublished(new MqttClient[] { client }, topic, payload);
-			if (payload == null) {
-				return;
+			if (payload != null) {
+				break;
 			}
-			message.setPayload(payload);
 		}
+		if (payload == null) {
+			return;
+		}
+		message.setPayload(payload);
 		try {
 			client.publish(topic, message);
 		} catch (MqttException e) {
@@ -446,7 +452,7 @@ public class HaMqttClient implements IHaMqttClient {
 					cleanupThreadLocals();
 					throw e;
 				} else {
-					if (publisherConnector != null) {
+					if (publisherConnectors.length > 0) {
 						message.setPayload(originalPayload);
 					}
 					publish(topic, message);
@@ -456,7 +462,7 @@ public class HaMqttClient implements IHaMqttClient {
 			}
 		}
 
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			publisherConnector.afterMessagePublished(new MqttClient[] { client }, topic, payload);
 		}
 
@@ -541,11 +547,14 @@ public class HaMqttClient implements IHaMqttClient {
 					String.format("Cluster unreachable [liveClients.length=%d]", liveClients.length));
 		}
 		byte[] orginalPayload = payload;
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			payload = publisherConnector.beforeMessagePublished(clients, topic, payload);
-			if (payload == null) {
-				return;
+			if (payload != null) {
+				break;
 			}
+		}
+		if (payload == null) {
+			return;
 		}
 		for (MqttClient client : clients) {
 			try {
@@ -575,7 +584,7 @@ public class HaMqttClient implements IHaMqttClient {
 			}
 		}
 
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			publisherConnector.afterMessagePublished(clients, topic, payload);
 		}
 
@@ -603,11 +612,14 @@ public class HaMqttClient implements IHaMqttClient {
 					client, liveClients.length));
 		}
 		byte[] originalPayload = payload;
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			payload = publisherConnector.beforeMessagePublished(new MqttClient[] { client }, topic, payload);
-			if (payload == null) {
-				return;
+			if (payload != null) {
+				break;
 			}
+		}
+		if (payload == null) {
+			return;
 		}
 		try {
 			client.publish(topic, payload, qos, retained);
@@ -637,7 +649,7 @@ public class HaMqttClient implements IHaMqttClient {
 			}
 		}
 
-		if (publisherConnector != null) {
+		for (IHaMqttConnectorPublisher publisherConnector : publisherConnectors) {
 			publisherConnector.afterMessagePublished(new MqttClient[] { client }, topic, payload);
 		}
 

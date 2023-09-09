@@ -128,7 +128,7 @@ public class ClusterConfig {
 		private Endpoint[] endpoints;
 		private Persistence persistence;
 		private HaMqttConnectionOptions[] connections;
-		private String pluginName;
+		private String[] pluginNames;
 		private Bridges bridges;
 
 		/**
@@ -315,17 +315,17 @@ public class ClusterConfig {
 		}
 
 		/**
-		 * @return the plugin name
+		 * @return the plugin names
 		 */
-		public String getPluginName() {
-			return pluginName;
+		public String[] getPluginNames() {
+			return pluginNames;
 		}
 
 		/**
 		 * @param pluginName the plugin name to set
 		 */
-		public void setPluginName(String pluginName) {
-			this.pluginName = pluginName;
+		public void setPluginNames(String[] pluginNames) {
+			this.pluginNames = pluginNames;
 		}
 
 		public Bridges getBridges() {
