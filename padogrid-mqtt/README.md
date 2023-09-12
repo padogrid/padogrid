@@ -28,7 +28,7 @@ target/padogrid-mqtt-<version>.jar
 
 ### Clustering MQTT Brokers
 
-There are numerous commercial MQTT products that offer clustering solutions, but if you are on a tight budget then you might consider implementing your own clustering solution. Depending on the clustering flexibility that you want in your system, clustering MQTT brokers can get complicated. If you are primarily in need of High Availability (HA), then instead of clustering from the server side, you can implement a simple client-side API to attain the same level of HA that commercial products offer. Such an API undoubtedly comes with some limitations but because of the instability nature of edge devices, the limitations maybe tolerable for many use cases. With this reasoning, PadoGrid provides a client API, `HaMqttClient`, for clustering MQTT brokers. 
+There are numerous commercial MQTT products that offer clustering solutions, but if you are on a tight budget then you might consider implementing your own clustering solution. Depending on the clustering flexibility that you want in your system, clustering MQTT brokers can get complicated. If you are primarily in need of High Availability (HA), then instead of clustering from the server side, you can implement a simple client-side API to attain the same level of HA that commercial products offer. Such an API undoubtedly comes with some limitations but because of the instability nature of edge devices, the limitations maybe tolerable for many use cases. With this reasoning, PadoGrid provides the client API, `HaMqttClient`, for clustering MQTT brokers. 
 
 ![HaClusters Diagram](images/padogrid-mqtt-haclusters.drawio.png)
 
