@@ -2351,8 +2351,19 @@ if [ "$FILE_SPECIFIED" != "true" ] && [ "$VERSION_SPECIFIED" == "true" ]; then
       exit 1
    fi
 
+   # Set the latest stable padogrid version if padogrid is not specified
+   if [ "$PADOGRID_VERSION" == "" ]; then
+      PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[0]}
+      if [[ "$PADOGRID_VERSION" == *"SNAPSHOT" ]]; then
+         PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[1]} 
+      fi
+      if [ "$PRODUCT_ARG" != "" ] && [ "$PRODUCT_ARG" != "padogrid" ] && [ -d "$PADOGRID_PRODUCTS_PATH/padogrid_$PADOGRID_VERSION" ]; then
+         PADOGRID_VERSION=""
+      fi
+   fi
+
 elif [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "true" ]; then
-   # Set to the latest versions
+   # Set the latest version
    PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[0]}
    if [[ "$PADOGRID_VERSION" == *"SNAPSHOT" ]]; then
       PADOGRID_VERSION=${PADOGRID_DOWNLOAD_VERSIONS[1]} 
