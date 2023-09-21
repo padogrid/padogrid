@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.eclipse.paho.mqttv5.client.MqttClient;
+import org.eclipse.paho.mqttv5.common.MqttMessage;
 
 import padogrid.mqtt.client.cluster.HaClusters;
 import padogrid.mqtt.client.cluster.HaMqttClient;
@@ -81,7 +82,7 @@ public class ClusterPublisher implements Constants {
 		writeLine("             current workspace.");
 		writeLine();
 		writeLine("   -endpoints serverURIs");
-		writeLine("             Connects to the specified endpoints. Exits if none of the endpoints exist.");
+		writeLine("             Connects to the specified endpoints. Exits if none of the endpoints exists.");
 		writeLine("             Default: tcp://localhost:1883-1885");
 		writeLine();
 		writeLine("   -name endpoint_name");
@@ -119,7 +120,7 @@ public class ClusterPublisher implements Constants {
 		return uuid.toString();
 	}
 
-	public static void main(String[] args) {
+	public static void main(String...args) {
 		String clusterName = null;
 		String endpointName = null;
 		String endpoints = null;
@@ -242,7 +243,7 @@ public class ClusterPublisher implements Constants {
 			}
 		}
 		if (virtualClusterName == null) {
-			virtualClusterName = "subscriber";
+			virtualClusterName = "publisher";
 		}
 		if (isQuiet == false) {
 			writeLine("cluster: " + virtualClusterName + " (virtual)");
@@ -274,9 +275,9 @@ public class ClusterPublisher implements Constants {
 		if (configFilePath == null) {
 			ClusterConfig clusterConfig = new ClusterConfig();
 			clusterConfig.setDefaultCluster(virtualClusterName);
-//			HaMqttConnectionOptions options = new MqttConnectionOptionsBuilder().serverURI(endpoints).build();
 			HaMqttConnectionOptions options = new HaMqttConnectionOptions();
-			options.getConnection().setServerURIs(new String[] { endpoints });
+			endpoints = endpoints.replaceAll(" ", "");
+			options.getConnection().setServerURIs(endpoints.split(","));
 			ClusterConfig.Cluster cluster = new ClusterConfig.Cluster();
 			cluster.setName(virtualClusterName);
 			cluster.setFos(fos);
@@ -323,25 +324,10 @@ public class ClusterPublisher implements Constants {
 				client.publish(topic, message.getBytes(), qos, isRetained);
 				writeLine("published to: ALL endpoints");
 			} else {
-				MqttClient mc;
 				if (endpointName != null) {
-					mc = client.getPublisherByName(endpointName);
-					if (mc == null) {
-						System.err.printf("ERROR: Error occured while publishing data. Endpoint not found [endpointName=%s]. Command aborted.%n", endpointName);
-						System.exit(-2);
-					}
+					client.publish(endpointName, topic, message.getBytes(), qos, isRetained);
 				} else {
-					mc = client.getPublisherByTopic(topic);
-					if (mc == null) {
-						System.err.printf("ERROR: Cluster unreachable. Command aborted.%n");
-						System.exit(-2);
-					}
-				}
-
-				
-				mc.publish(topic, message.getBytes(), qos, isRetained);
-				if (isQuiet == false) {
-					writeLine("published to: " + mc.getServerURI());
+					client.publish(topic, message.getBytes(), qos, isRetained);
 				}
 			}
 			HaClusters.stop();

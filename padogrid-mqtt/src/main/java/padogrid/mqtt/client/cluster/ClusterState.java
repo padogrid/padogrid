@@ -24,7 +24,6 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -315,7 +314,8 @@ public class ClusterState implements IClusterConfig {
 					}
 				}
 			}
-			subscriberConnectors = subscriberConnectorMap.values().toArray(new IHaMqttConnectorSubscriber[subscriberConnectorMap.size()]);
+			subscriberConnectors = subscriberConnectorMap.values()
+					.toArray(new IHaMqttConnectorSubscriber[subscriberConnectorMap.size()]);
 		}
 
 		// Set FoS dependent parameters
@@ -435,6 +435,13 @@ public class ClusterState implements IClusterConfig {
 	}
 
 	/**
+	 * Returns live client pool count.
+	 */
+	private static int getLiveClientPoolCount() {
+		return s_liveClientPoolMap.size();
+	}
+
+	/**
 	 * Returns a comma separated, sorted list of live server URIs.
 	 */
 	private String getLiveEndpoints() {
@@ -490,6 +497,13 @@ public class ClusterState implements IClusterConfig {
 	 * Returns a comma separated, sorted list of dead server URIs.
 	 */
 	private String getDeadEndpoints() {
+		return getDeadEndpointList().toString();
+	}
+
+	/**
+	 * Returns a sorted list of dead server URIs.
+	 */
+	private List<String> getDeadEndpointList() {
 		ArrayList<String> endpointList = new ArrayList<String>(getDeadEndpointCount());
 		for (MqttClient client : deadClientMap.values()) {
 			endpointList.add(client.getServerURI());
@@ -501,7 +515,7 @@ public class ClusterState implements IClusterConfig {
 			endpointList.add(client.getServerURI());
 		}
 		Collections.sort(endpointList);
-		return endpointList.toString();
+		return endpointList;
 	}
 
 	/**
@@ -933,8 +947,10 @@ public class ClusterState implements IClusterConfig {
 			String endpoint = entry.getValue();
 			if (deadClientMap.containsKey(endpointName) || deadEndpointMap.containsKey(endpointName)
 					|| markedForDeadClientMap.containsKey(endpointName)) {
+				liveClientMap.remove(endpointName);
 				continue;
 			}
+
 			if (liveClientMap.containsKey(endpointName) == false) {
 				deadEndpointMap.put(endpointName, endpoint);
 			}
@@ -1265,16 +1281,43 @@ public class ClusterState implements IClusterConfig {
 	 * Logs the current connection status.
 	 */
 	private void logConnectionStatus() {
+		// deadEndpointCount includes markedForDeadClientMap, which are concurrently
+		// updated by HaMqttClient. We need to calculate the counts based on the
+		// current snapshot.
+		List<String> deadEndpointList = getDeadEndpointList();
+		int deadEndpointCount = deadEndpointList.size();
+		int liveEndpointCount = getLiveEndpointCount();
+		liveEndpointCount -= deadEndpointCount;
+		int liveClientPoolCount = getLiveClientPoolCount();
+		int allEndpointCount = getAllEndpointCount();
+		int liveSubscriberCount = getLiveSubscriberCount();
+		for (String endpoint : deadEndpointList) {
+			if (s_liveClientPoolMap.containsKey(endpoint)) {
+				liveClientPoolCount--;
+			}
+		}
+		synchronized (markedForDeadClientMap) {
+			Iterator<Map.Entry<String, MqttClient>> iterator = markedForDeadClientMap.entrySet().iterator();
+			while (iterator.hasNext()) {
+				Map.Entry<String, MqttClient> entry = iterator.next();
+				MqttClient client = entry.getValue();
+				if (liveSubscriptionClientSet.contains(client)) {
+					liveSubscriberCount--;
+				}
+			}
+		}
+		
 		String header;
-		if (liveClientMap.size() == allEndpointMap.size()) {
+		if (deadEndpointCount == 0) {
 			header = "All endpoints connected";
 		} else {
 			header = "Some endpoints not connected";
 		}
+
 		logger.info(
 				String.format("%s [%s]. [Pool: %d, All: %d, Live: %d, Dead: %d, Subscribers: %d]. Dead endpoints %s.",
-						header, clusterName, s_liveClientPoolMap.size(), allEndpointMap.size(), liveClientMap.size(),
-						getDeadEndpointCount(), getLiveSubscriberCount(), getDeadEndpoints()));
+						header, clusterName, liveClientPoolCount, allEndpointCount, liveEndpointCount,
+						deadEndpointCount, liveSubscriberCount, deadEndpointList.toString()));
 	}
 
 	/**
@@ -1551,7 +1594,7 @@ public class ClusterState implements IClusterConfig {
 			default:
 				break;
 			}
-			
+
 			if (isConnectorsStarted == false) {
 				for (IHaMqttConnectorPublisher publisherConnector : publisherConnectorMap.values()) {
 					publisherConnector.start(haclient);
@@ -2441,7 +2484,7 @@ public class ClusterState implements IClusterConfig {
 			}
 
 			// Deliver message to the connector
-			for (IHaMqttConnectorSubscriber subscriberConnector: subscriberConnectors) {
+			for (IHaMqttConnectorSubscriber subscriberConnector : subscriberConnectors) {
 				subscriberConnector.messageArrived(client, topic, message.getPayload());
 			}
 

@@ -35,7 +35,10 @@ import padogrid.mqtt.client.cluster.IHaMqttCallback;
 import padogrid.mqtt.client.cluster.config.ClusterConfig;
 
 public class ClusterSubscriber implements Constants {
-
+	
+	static String executable = System.getProperty(PROPERTY_executableName, ClusterSubscriber.class.getName());
+	static boolean shouldRun = true;
+	
 	private static void writeLine() {
 		System.out.println();
 	}
@@ -50,15 +53,13 @@ public class ClusterSubscriber implements Constants {
 	}
 
 	private static void usage() {
-		String executable = System.getProperty(PROPERTY_executableName, ClusterSubscriber.class.getName());
 		writeLine();
 		writeLine("NAME");
 		writeLine("   " + executable
 				+ " - Subscribe to the specified topic filter in the specified MQTT virtual cluster");
 		writeLine();
 		writeLine("SYNOPSIS");
-		writeLine("   " + executable
-				+ " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]]");
+		writeLine("   " + executable + " [[-cluster cluster_name] [-config config_file] | [-endpoints serverURIs]]");
 		writeLine("                [-log log_file] [-fos fos] [-qos qos] [-quiet] -t topic_filter [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
@@ -87,7 +88,7 @@ public class ClusterSubscriber implements Constants {
 		writeLine("             current workspace.");
 		writeLine();
 		writeLine("   -endpoints serverURIs");
-		writeLine("             Connects to the specified endpoints. Exits if none of the endpoints exist.");
+		writeLine("             Connects to the specified endpoints. Exits if none of the endpoints exists.");
 		writeLine("             Default: tcp://localhost:1883-1885");
 		writeLine();
 		writeLine("   -config config_file");
@@ -111,7 +112,7 @@ public class ClusterSubscriber implements Constants {
 		writeLine();
 	}
 
-	public static void main(String[] args) {
+	public static void main(String... args) {
 		String clusterName = null;
 		String endpoints = null;
 		String configFilePath = null;
@@ -337,7 +338,16 @@ public class ClusterSubscriber implements Constants {
 				writeLine("Waiting for messages...");
 			}
 
-			while (true) {
+			// Register a shutdown hook thread to gracefully shutdown
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+				public void run() {
+					HaClusters.stop();
+					writeLine(executable + " stopped.");
+					shouldRun = false;
+				}
+			});
+
+			while (shouldRun) {
 				Thread.sleep(5000);
 			}
 		} catch (Exception e) {

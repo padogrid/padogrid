@@ -136,7 +136,7 @@ public class HaMqttClient implements IHaMqttClient {
 
 	/**
 	 * Marks the specified client for revival. It removes the client form the local
-	 * live list and notifies {@linkplain ClusterState} revival in the next probing
+	 * live list and notifies {@linkplain ClusterState} for revival in the next probing
 	 * cycle.
 	 * 
 	 * @param client Client to mark for revival
@@ -710,7 +710,7 @@ public class HaMqttClient implements IHaMqttClient {
 		MqttClient client = getPublisherByTopic(null);
 		if (client != null && client.getClientId() != null) {
 			for (IMqttToken t : tokens) {
-				if (t.getClient() != null && t.getClient().getClientId() != null) {
+				if (t != null && t.getClient() != null && t.getClient().getClientId() != null) {
 					if (client.getClientId().equals(t.getClient().getClientId())) {
 						token = t;
 						break;
@@ -768,9 +768,9 @@ public class HaMqttClient implements IHaMqttClient {
 		IMqttToken[] tokens = subscribeCluster(topicFilters, qos);
 		IMqttToken token = null;
 		MqttClient client = getPublisherByTopic(null);
-		if (client != null) {
+		if (client != null && client.getClientId() != null) {
 			for (IMqttToken t : tokens) {
-				if (client.getClientId().equals(t.getClient().getClientId())) {
+				if (t != null && client.getClientId().equals(t.getClient().getClientId())) {
 					token = t;
 					break;
 				}
@@ -822,9 +822,9 @@ public class HaMqttClient implements IHaMqttClient {
 		IMqttToken[] tokens = subscribeCluster(topicFilters, qos);
 		IMqttToken token = null;
 		MqttClient client = getPublisherByTopic(null);
-		if (client != null) {
+		if (client != null && client.getClientId() != null) {
 			for (IMqttToken t : tokens) {
-				if (client.getClientId().equals(t.getClient().getClientId())) {
+				if (t != null && client.getClientId().equals(t.getClient().getClientId())) {
 					token = t;
 					break;
 				}
@@ -924,9 +924,9 @@ public class HaMqttClient implements IHaMqttClient {
 		IMqttToken[] tokens = subscribeCluster(topicFilter, qos, messageListener);
 		IMqttToken token = null;
 		MqttClient client = getPublisherByTopic(null);
-		if (client != null) {
+		if (client != null && client.getClientId() != null) {
 			for (IMqttToken t : tokens) {
-				if (client.getClientId().equals(t.getClient().getClientId())) {
+				if (t != null && client.getClientId().equals(t.getClient().getClientId())) {
 					token = t;
 					break;
 				}
@@ -1138,11 +1138,13 @@ public class HaMqttClient implements IHaMqttClient {
 	public IMqttToken connectWithResult(MqttConnectionOptions options) throws MqttSecurityException, MqttException {
 		IMqttToken[] tokens = connectWithResultCluster(options);
 		IMqttToken token = null;
-		for (IMqttToken t : tokens) {
-			MqttClient client = getPublisherByTopic(null);
-			if (client != null && client.getClientId().equals(t.getClient().getClientId())) {
-				token = t;
-				break;
+		MqttClient client = getPublisherByTopic(null);
+		if (client != null && client.getClientId() != null) {
+			for (IMqttToken t : tokens) {
+				if (t != null && client != null && client.getClientId().equals(t.getClient().getClientId())) {
+					token = t;
+					break;
+				}
 			}
 		}
 		return token;
