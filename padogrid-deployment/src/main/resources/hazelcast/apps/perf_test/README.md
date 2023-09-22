@@ -451,7 +451,7 @@ The ER capbility provides you a quick way to ingest co-located data into Hazelca
 
 In addition to Hazelcast map method operations, the `test_group` script also supports queries. Query predicats and SQL statements can be entered in the group properties file using the `predicate` and `sql` operation parameters, respectively. The `etc/group-query.properties` file provides examples. Before running `etc/group-query.properties`, first, run `group_factory.properties` to ingest data.
 
-✏️  When you create a Hazelcast cluster using `create_cluster`, PadoGrid deploys the `hazelcast-indexes.xml` file configured with the `nw/customers` and `nw/orders` maps indexed. Optionally, you can this file to start your cluster and run the `grafana` app to monitor the query metrics.
+✏️  When you create a Hazelcast cluster using `create_cluster`, PadoGrid deploys the `hazelcast-indexes.xml` file configured with the `nw/customers` and `nw/orders` maps indexed. Optionally, you can use this file to start your cluster and run the `grafana` app to monitor the query metrics.
 
 ```properties
 # predicate2

@@ -76,7 +76,12 @@ fi
 pushd $RUN_DIR > /dev/null 2>&1
 PID=""
 if [ "$GRAFANA_HOME" != "" ]; then
-   $GRAFANA_HOME/bin/grafana-server $GRAFANA_OPTS -homepath $GRAFANA_HOME web > $GRAFANA_LOG_FILE 2>&1 &
+   if [ -f "$GRAFANA_HOME/bin/grafana" ]; then
+      GRAFANA_EXECUTABLE="$GRAFANA_HOME/bin/grafana server"
+   else
+      GRAFANA_EXECUTABLE="$GRAFANA_HOME/bin/grafana-server"
+   fi
+   $GRAFANA_EXECUTABLE $GRAFANA_OPTS -homepath $GRAFANA_HOME web > $GRAFANA_LOG_FILE 2>&1 &
    PID=$(getGrafanaPid "$GRAFANA_CONFIG_FILE")
 fi
 if [ "$PID" == "" ]; then
