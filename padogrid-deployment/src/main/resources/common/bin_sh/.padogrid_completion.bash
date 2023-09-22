@@ -532,6 +532,26 @@ __padogrid_complete()
          is_path="true"
       elif [ "$command" == "vc_start" ] &&  [[ "$cur_word" != "-"* ]] && [ $len -gt 3 ]; then
          is_path="true"
+      elif [ "$command" = "make_cluster" ]; then
+         # If -product specified then get the product's app options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            product_name=$product_name 
+            case $product_name in
+            confluent) product_name="kafka" ;;
+            gemfire) product_name="geode" ;;
+            jet) product_name="hazelcast" ;;
+            *) ;;
+            esac
+            type_list=`$PADOGRID_HOME/$product_name/bin_sh/create_cluster -options`
+         else
+            type_list=`$command -options`
+         fi
       else
          if [ "$command" == "-version" ]; then
             type_list=""
@@ -1295,6 +1315,27 @@ __command_complete()
          is_path="true"
       elif [ "$command" == "vc_start" ] &&  [[ "$cur_word" != "-"* ]] && [ $len -gt 2 ]; then
          is_path="true"
+      elif [ "$command" = "make_cluster" ]; then
+         # If -product specified then get the product's app options
+         __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
+         local index=$?
+         local product_name=""
+         if [ $index -ne 255 ]; then
+             product_name="${COMP_WORDS[$index+1]}"
+         fi
+         if [ "$product_name" != "" ] && [[ "$product_name" != "-"** ]]; then
+            product_name=$product_name 
+            case $product_name in
+            confluent) product_name="kafka" ;;
+            gemfire) product_name="geode" ;;
+            jet) product_name="hazelcast" ;;
+            *) ;;
+            esac
+            type_list=`$PADOGRID_HOME/$product_name/bin_sh/create_cluster -options`
+         else
+            type_list=`$command -options`
+         fi
+
       else
          # Command options
          type_list=`$command -options`

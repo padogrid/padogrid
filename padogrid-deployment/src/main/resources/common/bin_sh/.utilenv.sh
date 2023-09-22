@@ -674,8 +674,6 @@ function getClusterPortOptions
       __DEFAULT_PORT="$DEFAULT_REDIS_START_PORT";;
    spark)
       __DEFAULT_PORT="$DEFAULT_SPARK_START_PORT";;
-   mosquitto)
-      __DEFAULT_PORT="$DEFAULT_MOSQUITTO_START_PORT";;
     *)
       __DEFAULT_PORT=""
    esac
