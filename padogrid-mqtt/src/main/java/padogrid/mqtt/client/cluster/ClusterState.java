@@ -905,8 +905,6 @@ public class ClusterState implements IClusterConfig {
 					getDeadEndpointCount(), getLiveSubscriberCount(), getDeadEndpoints()));
 		}
 
-		int beforeLiveCount = getLiveEndpointCount();
-
 		// Iterate live list and remove all disconnected clients.
 		// The live list normally contains only connected clients, but there is a
 		// chance that some may have disconnected and did not get cleaned up
@@ -969,20 +967,14 @@ public class ClusterState implements IClusterConfig {
 								liveClientMap.size()));
 			}
 			haclient.updateLiveClients(getLiveClientMap(), getDefaultTopicBase(), getTopicBaseMap());
-			logger.info(String.format("Revived endpoints %s. Live endpoints %s. Dead endpoints %s.", revivedEndpointSet,
-					getLiveEndpoints(), getDeadEndpoints()));
+			if (logger.isDebugEnabled()) {
+				logger.debug(String.format("Revived endpoints %s. Live endpoints %s. Dead endpoints %s.",
+						revivedEndpointSet, getLiveEndpoints(), getDeadEndpoints()));
+			}
+			logConnectionStatus(false);
 		}
 		if (logger.isDebugEnabled()) {
-			logger.debug(String.format(
-					"Probed [%s]. [Pool: %d, All: %d, Live: %d, Dead: %d, Subscribers: %d]. Dead endpoints %s.",
-					clusterName, s_liveClientPoolMap.size(), allEndpointMap.size(), liveClientMap.size(),
-					getDeadEndpointCount(), getLiveSubscriberCount(), getDeadEndpoints()));
-		}
-
-		int afterLiveCount = getLiveEndpointCount();
-
-		if (beforeLiveCount != afterLiveCount) {
-			logConnectionStatus();
+			logConnectionStatus(true);
 		}
 
 		connectionInProgress = false;
@@ -1280,14 +1272,12 @@ public class ClusterState implements IClusterConfig {
 	/**
 	 * Logs the current connection status.
 	 */
-	private void logConnectionStatus() {
+	private void logConnectionStatus(boolean isDebug) {
 		// deadEndpointCount includes markedForDeadClientMap, which are concurrently
 		// updated by HaMqttClient. We need to calculate the counts based on the
 		// current snapshot.
 		List<String> deadEndpointList = getDeadEndpointList();
 		int deadEndpointCount = deadEndpointList.size();
-		int liveEndpointCount = getLiveEndpointCount();
-		liveEndpointCount -= deadEndpointCount;
 		int liveClientPoolCount = getLiveClientPoolCount();
 		int allEndpointCount = getAllEndpointCount();
 		int liveSubscriberCount = getLiveSubscriberCount();
@@ -1296,6 +1286,7 @@ public class ClusterState implements IClusterConfig {
 				liveClientPoolCount--;
 			}
 		}
+		int liveEndpointCount = allEndpointCount - deadEndpointCount;
 		synchronized (markedForDeadClientMap) {
 			Iterator<Map.Entry<String, MqttClient>> iterator = markedForDeadClientMap.entrySet().iterator();
 			while (iterator.hasNext()) {
@@ -1306,9 +1297,11 @@ public class ClusterState implements IClusterConfig {
 				}
 			}
 		}
-		
+
 		String header;
-		if (deadEndpointCount == 0) {
+		if (isDebug) {
+			header = "Probed: ";
+		} else if (deadEndpointCount == 0) {
 			header = "All endpoints connected";
 		} else {
 			header = "Some endpoints not connected";
