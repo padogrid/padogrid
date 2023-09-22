@@ -15,6 +15,7 @@ https://github.com/padogrid
 - Migrated the old Table and Graph widgets in Grafana dashboard templates to Time Series widgets.
 - Hazelcast clusters created using `make_cluster' or `create_cluster` now include the `hazelcast-indexes.xml` and `hazecast-indexes.yaml` files for testing indexes.
 - Fixed hazelcast mc and grafana version update issues. Prior to this fix, `update_products -version` hanged for `hazelcast-mc` and `grafana`.
+- Added auto-completion support for all product options to `make_cluster`.
 
 ---
 
