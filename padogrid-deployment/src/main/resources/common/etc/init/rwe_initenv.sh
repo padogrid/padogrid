@@ -63,11 +63,12 @@ fi
 #
 # Need to reset here for the direct call, i.e., from .bashrc
 #
-if [ -f "$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh" ]; then
-   . "$PADOGRID_WORKSPACE/.workspace/workspaceenv.sh"
+HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+if [ -f "$HOME_WORKSPACE_DIR/workspaceenv.sh" ]; then
+   . "$HOME_WORKSPACE_DIR/workspaceenv.sh"
 fi
-if [ -f "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster/clusterenv.sh" ]; then
-   . "$PADOGRID_WORKSPACE/clusters/$CLUSTER/.cluster/clusterenv.sh"
+if [ -f "$HOME_WORKSPACE_DIR/clusters/$CLUSTER/clusterenv.sh" ]; then
+   . "$HOME_WORKSPACE_DIR/clusters/$CLUSTER/clusterenv.sh"
 fi
 export CLUSTER
 export CLUSTER_TYPE
