@@ -281,22 +281,29 @@ fi
 # First, reset product paths for local pods. This is required in case the user
 # switches contexts.
 if [ "$IN_POD" != "true" ]; then
+   export JAVA_HOME=""
    export PADOGRID_HOME=""
    export PADO_HOME=""
-   export JAVA_HOME=""
    export COHERENCE_HOME=""
+   export CONFLUENT_HOME=""
    export GEMFIRE_HOME=""
    export GEODE_HOME=""
+   export HADOOP_HOME=""
    export HAZELCAST_HOME=""
    export HAZELCAST_MC_HOME=""
    export JET_HOME=""
    export JET_MC_HOME=""
+   export KAFKA_HOME=""
+   export MOSQUITTO_HOME=""
    export REDIS_HOME=""
    export SNAPPYDATA_HOME=""
    export SPARK_HOME=""
-   export KAFKA_HOME=""
-   export HADOOP_HOME=""
    export PRODUCT_HOME=""
+
+   # Following are not in path
+   export PADOWEB_HOME=""
+   export PADODESKTOP_HOME=""
+   export HAZELCAST_DESKTOP_HOME=""
 fi
 # Source in setenv.sh
 if [ -f "$PADOGRID_WORKSPACES_HOME/setenv.sh" ]; then
@@ -463,23 +470,27 @@ for i in "${PATH_ARRAY[@]}"; do
       continue;
    elif [ "$COHERENCE_HOME" != "" ] && [[ "$i" == "$COHERENCE_HOME"** ]]; then
       continue;
+   elif [ "$CONFLUENT_HOME" != "" ] && [[ "$i" == "$CONFLUENT_HOME"** ]]; then
+      continue;
    elif [ "$GEODE_HOME" != "" ] && [[ "$i" == "$GEODE_HOME"** ]]; then
       continue;
    elif [ "$GEMFIRE_HOME" != "" ] && [[ "$i" == "$GEMFIRE_HOME"** ]]; then
       continue;
+   elif [ "$HADOOP_HOME" != "" ] && [[ "$i" == "$HADOOP_HOME"** ]]; then
+      continue;
    elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
       continue;
    elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
+      continue;
+   elif [ "$KAFKA_HOME" != "" ] && [[ "$i" == "$KAFKA_HOME"** ]]; then
+      continue;
+   elif [ "$MOSQUITTO_HOME" != "" ] && [[ "$i" == "$MOSQUITTO_HOME"** ]]; then
       continue;
    elif [ "$REDIS_HOME" != "" ] && [[ "$i" == "$REDIS_HOME"** ]]; then
       continue;
    elif [ "$SNAPPYDATA_HOME" != "" ] && [[ "$i" == "$SNAPPYDATA_HOME"** ]]; then
       continue;
    elif [ "$SPARK_HOME" != "" ] && [[ "$i" == "$SPARK_HOME"** ]]; then
-      continue;
-   elif [ "$KAFKA_HOME" != "" ] && [[ "$i" == "$KAFKA_HOME"** ]]; then
-      continue;
-   elif [ "$HADOOP_HOME" != "" ] && [[ "$i" == "$HADOOP_HOME"** ]]; then
       continue;
    fi
    if [ "$CLEANED_PATH" == "" ]; then
