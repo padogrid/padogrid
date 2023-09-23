@@ -27,7 +27,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -pod -vm -port -?"
+   echo "-product -cluster -pod -vm -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -35,7 +35,7 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
-if [ "$HELP" == "true" ]; then
+if [ "$PRODUCT_ARG" == "$PRODUCT" ] && [ "$HELP" == "true" ]; then
 cat <<EOF
 
 WORKSPACE
@@ -45,7 +45,8 @@ NAME
    $EXECUTABLE - Create a new cluster in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name]
+   $EXECUTABLE [-product product_name]
+                  [-cluster cluster_name]
                   [-pod pod_name]
                   [-vm [comma_separated_hosts]]
                   [-port namenode_port_number] [-?]
@@ -57,6 +58,13 @@ DESCRIPTION
    etc/cluster.properties
 
 OPTIONS
+   -product
+             Cluster product name. If unspecified then the current cluster's product is assigned.
+             This command will abort if the specified product is not installed for the current
+             workspace. To add or update product installations, run 'update_products' or set the
+             appropriate '*_HOME' environment varibles in the RWE or workspace 'setenv.sh' file.
+             Note that workspace 'setenv.sh' inherits RWE 'setenv.sh'.
+
    -cluster cluster_name
              Unique cluster name. The cluster name is prepended
              to all datanode names.
@@ -109,6 +117,16 @@ EOF
    exit
 fi
 
+# Delegate the command to the specified product's create_cluster command.
+COMMON_PRODUCT="$(getCommonProductName $PRODUCT_ARG)"
+if [ "$COMMON_PRODUCT" != "$PRODUCT" ]; then
+   COMMAND=$(getCreateClusterCommand $PRODUCT_ARG)
+   if [ "$COMMAND" != "" ]; then
+      $COMMAND "$@"
+   fi
+   exit
+fi
+
 # Set the default cluster name if not specified
 if [ "$CLUSTER_ARG" == "" ]; then
    CLUSTER=$DEFAULT_CLUSTER
@@ -140,7 +158,7 @@ if [ "`isPodExist $POD`" == "false" ]; then
    exit 1
 fi
 
-# If -product (hidden option) is specified then make it default. This effectively
+# If -product is specified then make it default. This effectively
 # provides a way to create any product clusters in the same workspace.
 if [ "$PRODUCT_ARG" != "" ]; then
    PRODUCT=$PRODUCT_ARG

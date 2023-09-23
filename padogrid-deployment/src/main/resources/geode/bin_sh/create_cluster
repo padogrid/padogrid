@@ -27,7 +27,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-cluster -type -pod -vm -locator -padoweb -port -?"
+   echo "-product -cluster -type -pod -vm -locator -padoweb -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -35,7 +35,7 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
-if [ "$HELP" == "true" ]; then
+if [ "$PRODUCT_ARG" == "$PRODUCT" ] && [ "$HELP" == "true" ]; then
 cat <<EOF
 
 WORKSPACE
@@ -45,13 +45,14 @@ NAME
    $EXECUTABLE - Create a new cluster in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-cluster cluster_name]
-               [-type default|pado|padolite]
-               [-pod pod_name]
-               [-vm [comma_separated_hosts]]
-               [-locator comma_separated_locator_hosts]
-               [-padoweb padoweb_host]
-               [-port first_locator_port_number] [-?]
+   $EXECUTABLE [-product product_name]
+                 [-cluster cluster_name]
+                 [-type default|pado|padolite]
+                 [-pod pod_name]
+                 [-vm [comma_separated_hosts]]
+                 [-locator comma_separated_locator_hosts]
+                 [-padoweb padoweb_host]
+                 [-port first_locator_port_number] [-?]
 
 DESCRIPTION
    Creates a new cluster in the current workspace. Once the cluster is created,
@@ -60,6 +61,13 @@ DESCRIPTION
    etc/cluster.properties
 
 OPTIONS
+   -product
+             Cluster product name. If unspecified then the current cluster's product is assigned.
+             This command will abort if the specified product is not installed for the current
+             workspace. To add or update product installations, run 'update_products' or set the
+             appropriate '*_HOME' environment varibles in the RWE or workspace 'setenv.sh' file.
+             Note that workspace 'setenv.sh' inherits RWE 'setenv.sh'.
+
    -cluster cluster_name
              Unique cluster name. The cluster name is prepended
              to all member names.
@@ -137,7 +145,17 @@ EOF
    exit
 fi
 
-# If -product (hidden option) is specified then make it default. This effectively
+# Delegate the command to the specified product's create_cluster command.
+COMMON_PRODUCT="$(getCommonProductName $PRODUCT_ARG)"
+if [ "$COMMON_PRODUCT" != "$PRODUCT" ]; then
+   COMMAND=$(getCreateClusterCommand $PRODUCT_ARG)
+   if [ "$COMMAND" != "" ]; then
+      $COMMAND "$@"
+   fi
+   exit
+fi
+
+# If -product is specified then make it default. This effectively
 # provides a way to create any product clusters in the same workspace.
 if [ "$PRODUCT_ARG" != "" ]; then
    PRODUCT=$PRODUCT_ARG

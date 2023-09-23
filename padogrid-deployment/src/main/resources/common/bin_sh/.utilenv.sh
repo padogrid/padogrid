@@ -4982,7 +4982,7 @@ function getDownloadableProductVersions
    fi
 }
 
-
+#
 # Installs the specified PadoGrid artifacts to the local Maven repo. The following is a list
 # of available artifacts as of writing. For a complete list, see $PADOGRID_HOME.
 #
@@ -5002,6 +5002,7 @@ function getDownloadableProductVersions
 #   - snappydata-addon-core
 #
 # @param artifactId PadoGrid artifact ID
+#
 function installMavenPadogridJar
 {
    local artifactId=$1
@@ -5042,4 +5043,111 @@ function installMavenPadogridJar
    local groupId="padogrid.addon"
    mvn install:install-file -Dfile=$jarPath -DgroupId=$groupId \
        -DartifactId=$artifactId -Dversion=$PADOGRID_VERSION -Dpackaging=jar
+}
+
+#
+# Returns the common product name for the specified product.
+# @param product Product name
+#
+function getCommonProductName {
+   local PRODUCT_ARG="$1"
+   local RETVAL=$PRODUCT_ARG
+   case $PRODUCT_ARG in
+      gemfire) RETVAL="geode" ;;
+      jet) RETVAL="hazelcast" ;;
+      confluent) RETVAL="kafka" ;;
+   esac
+   echo $RETVAL
+}
+
+#
+# Returns the create_cluster command for the specified product. It returns and
+# empty string if the product name is invalid or the product is not installed.
+#
+# @param product Product name
+#
+function getCreateClusterCommand {
+   local PRODUCT_ARG="$1"
+   local COMMAND=""
+   case $PRODUCT_ARG in
+      geode)
+         if [ "$GEODE_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/geode/bin_sh/create_cluster"
+         fi
+         ;;
+      gemfire)
+         if [ "$GEMFIRE_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/geode/bin_sh/create_cluster"
+         fi
+         ;;
+      hazelcast)
+         if [ "$HAZELCAST_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/hazelcast/bin_sh/create_cluster"
+         fi
+         ;;
+      jet)
+         if [ "$JET_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/hazelcast/bin_sh/create_cluster"
+         fi
+         ;;
+      snappydata)
+         if [ "$SNAPPYDATA_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/snappydata/bin_sh/create_cluster"
+         fi
+         ;;
+      spark)
+         if [ "$SPARK_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/spark/bin_sh/create_cluster"
+         fi
+         ;;
+      coherence)
+         if [ "$COHERENCE_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/coherence/bin_sh/create_cluster"
+         fi
+         ;;
+      mosquitto)
+         # Allow mosquitto installed elsewhere as well
+         if [ "$MOSQUITTO_HOME" != "" ] || [ "$(which mosquitto 2> /dev/null)" != "" ]; then
+            COMMAND="$PADOGRID_HOME/mosquitto/bin_sh/create_cluster"
+         fi
+         ;;
+      redis)
+         if [ "$REDIS_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/redis/bin_sh/create_cluster"
+         fi
+         ;;
+      kafka)
+         if [ "$KAFKA_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/kafka/bin_sh/create_cluster"
+         fi
+         ;;
+      confluent)
+         if [ "$CONFLUENT_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/kafka/bin_sh/create_cluster"
+         fi
+         ;;
+      hadoop)
+         if [ "$HADOOP_HOME" != "" ]; then
+            COMMAND="$PADOGRID_HOME/hadoop/bin_sh/create_cluster"
+         fi
+         ;;
+   esac
+
+   if [ "$COMMAND" == "" ]; then
+      echo -e >&2 "${CLightRed}ERROR:${CNone} The specified product has not been installed or configured: [$PRODUCT_ARG]"
+      if [ "$PRODUCT_ARG" = "gemfire" ] || [ "$PRODUCT_ARG" == "coherence" ]; then
+         echo -e >&2 "       Please download and install the product in the following directory:"
+         echo >&2 "          $PADOGRID_WORKSPACES_HOME/products"
+         echo >&2 "       You must also set its home path in one of the following 'setenv.sh' files:"
+      else
+         echo -e >&2 "       To install and update a product release, run ${CLightGreen}install_padogrid${CNone} and"
+         echo -e >&2 "       ${CLightGreen}update_padogrid${CNone}. You can also set the product home path in one of" 
+         echo -e >&2 "       the following 'setenv.sh' files:"
+      fi
+      echo >&2 "                RWE: $PADOGRID_WORKSPACES_HOME/setenv.sh"
+      echo >&2 "          Workspace: $PADOGRID_WORKSPACE/setenv.sh"
+      echo >&2 "       Command aborted."
+      exit 1
+   fi
+   echo $COMMAND
 }

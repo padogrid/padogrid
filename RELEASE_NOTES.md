@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.29-SNAPSHOT
 
-### Release Date: 09/22/23
+### Release Date: 09/23/23
 
 - Added support for multiple plugins per MQTT virtual cluster. With this support, MQTT connectors can be created to stream MQTT data to multiple targets including Databases, Hazelcast, Geode/GemFire, Kafka, etc.
 - Fixed MQTT logging issues that logged incorrect endpoint count status.
@@ -15,7 +15,7 @@ https://github.com/padogrid
 - Migrated the old Table and Graph widgets in Grafana dashboard templates to Time Series widgets.
 - Hazelcast clusters created using `make_cluster' or `create_cluster` now include the `hazelcast-indexes.xml` and `hazecast-indexes.yaml` files for testing indexes.
 - Fixed hazelcast mc and grafana version update issues. Prior to this fix, `update_products -version` hanged for `hazelcast-mc` and `grafana`.
-- Added auto-completion support for all product options to `make_cluster`.
+- Added support for the `-product` option to `create_cluster`. With this change, `make_cluster` is now deprecated.
 
 ---
 
