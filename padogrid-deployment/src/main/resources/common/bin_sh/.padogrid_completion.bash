@@ -22,6 +22,7 @@ else
    SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
    PRODUCT=$(basename $(dirname "$SCRIPT_DIR"))
 fi
+COMMON_BIN_SH_DIR=$(dirname $(dirname $SCRIPT_DIR))/bin_sh
 . $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh -script_dir $SCRIPT_DIR
 . $SCRIPT_DIR/.utilenv.sh
 
@@ -115,7 +116,7 @@ __padogrid_complete()
    local command2=$third_word
    local is_product="false"
    local is_path="false"
-      
+
    local type_list=""
    case "$prev_word" in
    -?)
@@ -553,7 +554,7 @@ __padogrid_complete()
          elif [ $len -gt 2 ]; then
             type_list=`$command -options`
          else
-            type_list=`ls $SCRIPT_DIR`
+            type_list=$(ls $SCRIPT_DIR $COMMON_BIN_SH_DIR | sed -e '/bin_sh.*$/d' | sort)
             type_list=$(removeTokens "$type_list" "setenv.sh")
             type_list="-product -rwe -version -? $type_list"
          fi
@@ -1350,7 +1351,7 @@ __command_complete()
 }
 
 # Register __command_complete to provide completion for all commands
-commands=`ls $SCRIPT_DIR`
+commands=$(ls $SCRIPT_DIR $COMMON_BIN_SH_DIR | sed -e '/bin_sh.*$/d' | sort)
 for i in $commands; do
    if [ "$i" != "setenv.sh" ]; then
       if [ "$i" == "cp_sub" ] || [ "$i" == "tools" ]; then
