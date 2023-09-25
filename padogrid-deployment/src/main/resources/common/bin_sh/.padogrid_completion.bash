@@ -22,7 +22,7 @@ else
    SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
    PRODUCT=$(basename $(dirname "$SCRIPT_DIR"))
 fi
-. $SCRIPT_DIR/.addonenv.sh -script_dir $SCRIPT_DIR
+. $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh -script_dir $SCRIPT_DIR
 . $SCRIPT_DIR/.utilenv.sh
 
 # Unset IFS in case it is not reset by some of the commands executed.

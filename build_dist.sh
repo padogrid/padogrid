@@ -80,6 +80,9 @@ done
 VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 
+#PADOGRID_ENV_BASE_PATH=`pwd`/build
+#PADOGRID_HOME=$PADOGRID_ENV_BASE_PATH/padogrid_$VERSION
+
 if [ "$MAN_SPECIFIED" == "true" ]; then
    # Untar the distribution file in the build directory.
    if [ ! -d build ]; then
@@ -87,13 +90,13 @@ if [ "$MAN_SPECIFIED" == "true" ]; then
    fi
 
    if [ "$DEBUG" == "false" ]; then
-   if [ -d build/padogrid_${VERSION} ]; then
-      rm -Rf build/padogrid_${VERSION}
-   fi
-   if [ -d build/padogrid-all_${VERSION} ]; then
-      rm -Rf build/padogrid-all_${VERSION}
-   fi
-   tar -C build/ -xzf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz
+      if [ -d build/padogrid_${VERSION} ]; then
+         rm -Rf build/padogrid_${VERSION}
+      fi
+      if [ -d build/padogrid-all_${VERSION} ]; then
+         rm -Rf build/padogrid-all_${VERSION}
+      fi
+      tar -C build/ -xzf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz
    fi
 
    # Build man pages

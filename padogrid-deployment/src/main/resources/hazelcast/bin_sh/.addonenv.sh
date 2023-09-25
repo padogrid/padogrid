@@ -27,8 +27,16 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # Source in .argenv.sh to set all default variables. This call is required.
 # IMPORTANT: Do NOT remove this call.
 # -------------------------------------------------------------------------------
-. $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_hazelcast.sh "$@"
+. $PADOGRID_HOME/bin_sh/.argenv.sh "$@"
+
+#
+# Source in the target product utilenv
+#
+PRODUCT_NAME=$(getCommonProductName $PRODUCT_ARG)
+if [ "$PRODUCT_NAME" == "" ]; then
+   PRODUCT_NAME="$PRODUCT"
+fi
+. $PADOGRID_HOME/$PRODUCT_NAME/bin_sh/.utilenv_$PRODUCT_NAME.sh "$@"
 
 #
 # Source in setenv.sh that contains user configured variables
@@ -310,10 +318,11 @@ else
    fi
 fi
 
+__PATH="$PADOGRID_HOME/$PRODUCT_NAME/bin_sh:$PADOGRID_HOME/$PRODUCT_NAME/bin_sh/cp_sub:$PADOGRID_HOME/$PRODUCT_NAME/bin_sh/tools:$PADOGRID_HOME/bin_sh"
 if [ "$CLUSTER_TYPE" == "jet" ]; then
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$JET_HOME/bin:$PATH"
+   export PATH="$__PATH:$JET_HOME/bin:$PATH"
 else
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/cp_sub:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HAZELCAST_HOME/bin:$PATH"
+   export PATH="$__PATH:$HAZELCAST_HOME/bin:$PATH"
 fi
 
 #

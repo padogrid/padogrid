@@ -27,8 +27,16 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # Source in .argenv.sh to set all default variables. This call is required.
 # IMPORTANT: Do NOT remove this call.
 # -------------------------------------------------------------------------------
-. $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_geode.sh "$@"
+. $PADOGRID_HOME/bin_sh/.argenv.sh "$@"
+
+#
+# Source in the target product utilenv
+#
+PRODUCT_NAME=$(getCommonProductName $PRODUCT_ARG)
+if [ "$PRODUCT_NAME" == "" ]; then
+   PRODUCT_NAME="$PRODUCT"
+fi
+. $PADOGRID_HOME/$PRODUCT_NAME/bin_sh/.utilenv_$PRODUCT_NAME.sh "$@"
 
 #
 # Source in setenv.sh that contains user configured variables
@@ -212,16 +220,17 @@ export PRODUCT="geode"
 #      export CLUSTER_TYPE="geode"
 #   fi
 #fi
+__PATH="$PADOGRID_HOME/geode/bin_sh:$PADOGRID_HOME/geode/bin_sh/tools:$PADOGRID_HOME/bin_sh"
 if [ "$CLUSTER_TYPE_ARG" == "gemfire" ] || [ "$CLUSTER_TYPE" == "gemfire" ]; then
    IS_GEODE_ENTERPRISE=true
    export CLUSTER_TYPE="gemfire"
    export PRODUCT_HOME="$GEMFIRE_HOME"
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEMFIRE_HOME/bin:$PATH"
+   export PATH="$__PATH:$GEMFIRE_HOME/bin:$PATH"
 else
    IS_GEODE_ENTERPRISE=false
    export CLUSTER_TYPE="geode"
    export PRODUCT_HOME="$GEODE_HOME"
-   export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$GEODE_HOME/bin:$PATH"
+   export PATH="$__PATH:$GEODE_HOME/bin:$PATH"
 fi
 
 #

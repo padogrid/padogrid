@@ -17,7 +17,7 @@
 # ========================================================================
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-. $SCRIPT_DIR/.addonenv.sh
+. $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh
 
 EXECUTABLE="`basename $0`"
 
@@ -101,16 +101,6 @@ if [ "$MEMBER_NUM_SPECIFIED" == "false" ]; then
    echo "    ERROR: Member number not specified. Run 'kill_member -?' to see usage. Command aborted."
    echo "----------------------------------------------------------------"
    exit
-fi
-
-#
-# Run the target cluster command if the product is different.
-#
-if [ "$PRODUCT_CLUSTER_SPECIFIED" == "false" ]; then
-   if [ "$THIS_PRODUCT" != "$PRODUCT" ]; then
-      $PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -product-cluster $CLUSTER "$@"
-      exit
-   fi
 fi
 
 POD=`getClusterProperty "pod.name" "local"`

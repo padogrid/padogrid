@@ -65,16 +65,20 @@ VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 export VERSION
 
-PRODUCTS="geode hazelcast mosquitto redis snappydata spark kafka hadoop none"
+PRODUCTS="common geode hazelcast mosquitto redis snappydata spark kafka hadoop none"
 
 if [ "$COHERENCE_SPECIFIED" == "true" ]; then
    PRODUCTS="$PRODUCTS coherence"
 fi
 
-for PRODUCT in $PRODUCTS; do
+for __PRODUCT in $PRODUCTS; do
    # Build man pages
-   echo "Building man pages: $PRODUCT..."
-   pushd build/padogrid_${VERSION}/$PRODUCT > /dev/null 2>&1
+   echo "Building man pages: $__PRODUCT..."
+   if [ "$__PRODUCT" == "common" ]; then
+      pushd build/padogrid_${VERSION} > /dev/null 2>&1
+   else
+      pushd build/padogrid_${VERSION}/$__PRODUCT > /dev/null 2>&1
+   fi
    if [ ! -d $TMP_DIR ]; then
       mkdir -p $TMP_DIR
    fi
