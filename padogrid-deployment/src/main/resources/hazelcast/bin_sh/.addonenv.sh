@@ -324,6 +324,8 @@ if [ "$CLUSTER_TYPE" == "jet" ]; then
 else
    export PATH="$__PATH:$HAZELCAST_HOME/bin:$PATH"
 fi
+# Unset __PATH so that it is not consumed by commands such as switch_rwe
+unset __PATH
 
 #
 # JAVA_OPTS

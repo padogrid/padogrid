@@ -232,6 +232,8 @@ else
    export PRODUCT_HOME="$GEODE_HOME"
    export PATH="$__PATH:$GEODE_HOME/bin:$PATH"
 fi
+# Unset __PATH so that it is not consumed by commands such as switch_rwe
+unset __PATH
 
 #
 # GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version

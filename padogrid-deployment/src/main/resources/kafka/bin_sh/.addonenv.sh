@@ -163,6 +163,8 @@ else
    export PRODUCT_HOME="$KAFKA_HOME"
    export PATH="$__PATH:$KAFKA_HOME/bin:$PATH"
 fi
+# Unset __PATH so that it is not consumed by commands such as switch_rwe
+unset __PATH
 
 #
 # KAFKA_VERSION/PRODUCT_VERSION: Determine the Kafka version

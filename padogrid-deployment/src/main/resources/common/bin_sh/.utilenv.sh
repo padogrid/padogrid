@@ -1830,16 +1830,16 @@ function switch_rwe
       retrieveClusterEnvFile
       cd_rwe $@
    else
-      local __PATH=""
+      local __RWE_PATH=""
       for i in "$@"; do
-        if [ "$__PATH" == "" ] || [[ "$__PATH" == */ ]]; then
-           __PATH="${__PATH}$i"
+        if [ "$__RWE_PATH" == "" ] || [[ "$__RWE_PATH" == */ ]]; then
+           __RWE_PATH="${__RWE_PATH}$i"
         else
-           __PATH="${__PATH}/$i"
+           __RWE_PATH="${__RWE_PATH}/$i"
         fi
       done
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
-      local tokens=$(echo "$__PATH" | sed 's/\// /g')
+      local tokens=$(echo "$__RWE_PATH" | sed 's/\// /g')
       local __INDEX=0
       local __WORKSPACE=""
       local __COMPONENT_DIR_NAME=""
@@ -1904,7 +1904,7 @@ function switch_rwe
          # Initialze workspace
          . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
 
-         local __SHIFTED="${__PATH#*\/}"
+         local __SHIFTED="${__RWE_PATH#*\/}"
          cd_workspace $__SHIFTED
 
       else
@@ -2041,15 +2041,15 @@ function switch_workspace
          echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Permission denied. Command aborted."
          return 1
       fi
-      local __PATH=""
+      local __WORKSPACE_PATH=""
       for i in "$@"; do
-        if [ "$__PATH" == "" ] || [[ "$__PATH" == */ ]]; then
-           __PATH="${__PATH}$i"
+        if [ "$__WORKSPACE_PATH" == "" ] || [[ "$__WORKSPACE_PATH" == */ ]]; then
+           __WORKSPACE_PATH="${__WORKSPACE_PATH}$i"
         else
-           __PATH="${__PATH}/$i"
+           __WORKSPACE_PATH="${__WORKSPACE_PATH}/$i"
         fi
       done
-      local tokens=$(echo "$__PATH" | sed 's/\// /g')
+      local tokens=$(echo "$__WORKSPACE_PATH" | sed 's/\// /g')
       local __INDEX=0
       local __WORKSPACE=""
       local __COMPONENT_DIR_NAME=""
