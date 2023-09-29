@@ -76,19 +76,24 @@ for EXPORT_FOLDER_DIR in *; do
 
    # Convert the exported files to templates and place them 
    # in the template dir.
-   pushd $FOLDER_NAME > /dev/null 2>&1
-   for file in *; do
-     `cat "$file" | jq ".dashboard.annotations.list[].datasource=\"\\${DATASOURCE}\" 
-                  | .dashboard.panels[].datasource=\"\\${DATASOURCE}\" 
-                  | .dashboard.panels[].targets[].datasource=\"\\${DATASOURCE}\" 
-                  | del(.meta) 
-                  | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
-                  | del(.dashboard.version, .dashboard.uid, .dashboard.id) 
-                  " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
-   done
-   popd > /dev/null 2>&1
-  
-   echo "Template folder created: $FOLDER_NAME"
+   if [ ! -z "$(ls -A $FOLDER_NAME)" ]; then
+      pushd $FOLDER_NAME > /dev/null 2>&1
+      for file in *; do
+        `cat "$file" | jq ".dashboard.annotations.list[].datasource=\"\\${DATASOURCE}\" 
+                     | .dashboard.panels[].datasource=\"\\${DATASOURCE}\" 
+                     | .dashboard.panels[].targets[].datasource=\"\\${DATASOURCE}\" 
+                     | del(.meta) 
+                     | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
+                     | del(.dashboard.version, .dashboard.uid, .dashboard.id) 
+                     " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
+      done
+      popd > /dev/null 2>&1
+   fi
+   if [ -z "$(ls -A $FOLDER_NAME)" ]; then
+      echo "Template folder created: $FOLDER_NAME - empty"
+   else
+      echo "Template folder created: $FOLDER_NAME"
+   fi
 done
 popd > /dev/null 2>&1
 

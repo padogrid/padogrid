@@ -13,6 +13,7 @@
         }
       ]
     },
+    "description": "",
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
@@ -21,22 +22,44 @@
     "panels": [
       {
         "datasource": "${DATASOURCE}",
+        "description": "",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "palette-classic"
             },
-            "mappings": [
-              {
-                "options": {
-                  "match": "null",
-                  "result": {
-                    "text": "N/A"
-                  }
-                },
-                "type": "special"
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
               }
-            ],
+            },
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -50,207 +73,109 @@
                 }
               ]
             },
-            "unit": "none"
+            "unit": "s"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 6,
-          "w": 2,
+          "h": 5,
+          "w": 12,
           "x": 0,
+          "y": 0
+        },
+        "id": 7,
+        "links": [],
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "expr": "jvm_gc_collection_seconds_sum{gc=\"PS Scavenge\"}/jvm_gc_collection_seconds_count{gc=\"PS Scavenge\"}",
+            "format": "time_series",
+            "intervalFactor": 1,
+            "legendFormat": "{{instance}}",
+            "refId": "B"
+          }
+        ],
+        "title": "Minor GC Time (Average)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 5,
+          "w": 12,
+          "x": 12,
           "y": 0
         },
         "id": 4,
         "links": [],
-        "maxDataPoints": 100,
-        "options": {
-          "colorMode": "background",
-          "graphMode": "none",
-          "justifyMode": "auto",
-          "orientation": "horizontal",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "textMode": "auto"
-        },
-        "pluginVersion": "10.1.2",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "count(com_hazelcast_Metrics_activeMembers)",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Member Count",
-        "type": "stat"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "mappings": [
-              {
-                "options": {
-                  "match": "null",
-                  "result": {
-                    "text": "N/A"
-                  }
-                },
-                "type": "special"
-              }
-            ],
-            "max": 100,
-            "min": 0,
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "bytes"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 6,
-          "w": 22,
-          "x": 2,
-          "y": 0
-        },
-        "id": 9,
-        "links": [],
-        "maxDataPoints": 100,
-        "options": {
-          "orientation": "vertical",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          },
-          "showThresholdLabels": false,
-          "showThresholdMarkers": true
-        },
-        "pluginVersion": "10.1.2",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_usedHeap)",
-            "hide": false,
-            "instant": false,
-            "legendFormat": "Used",
-            "range": true,
-            "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_freeHeap)",
-            "hide": false,
-            "instant": false,
-            "legendFormat": "Free",
-            "range": true,
-            "refId": "B"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_totalMemory)",
-            "hide": false,
-            "instant": false,
-            "legendFormat": "Total",
-            "range": true,
-            "refId": "C"
-          }
-        ],
-        "title": "Memory",
-        "type": "gauge"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "CPU",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "never",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "percent"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 6,
-          "w": 24,
-          "x": 0,
-          "y": 6
-        },
-        "id": 13,
-        "links": [],
         "options": {
           "legend": {
             "calcs": [],
@@ -267,32 +192,18 @@
         "targets": [
           {
             "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "com_hazelcast_Metrics_processCpuLoad",
+            "expr": "jvm_gc_collection_seconds_sum{gc=\"PS MarkSweep\"} /jvm_gc_collection_seconds_count{gc=\"PS MarkSweep\"}",
             "format": "time_series",
             "intervalFactor": 1,
-            "legendFormat": "Max: {{instance}}",
-            "range": true,
-            "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "com_hazelcast_Metrics_systemCpuLoad",
-            "format": "time_series",
-            "hide": false,
-            "intervalFactor": 1,
-            "legendFormat": "Max: {{instance}}",
-            "range": true,
-            "refId": "D"
+            "legendFormat": "{{instance}}",
+            "refId": "B"
           }
         ],
-        "title": "CPU",
+        "title": "Major GC Time (Average)",
         "type": "timeseries"
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -302,305 +213,6 @@
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "never",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "bytes"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 6,
-          "w": 12,
-          "x": 0,
-          "y": 12
-        },
-        "id": 2,
-        "links": [],
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "mode": "multi",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_usedHeap)",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Used",
-            "range": true,
-            "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_totalMemory)",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Total ",
-            "range": true,
-            "refId": "B"
-          }
-        ],
-        "title": "Heap Total (Used vs. Total)",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "never",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "bytes"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 6,
-          "w": 12,
-          "x": 12,
-          "y": 12
-        },
-        "id": 16,
-        "links": [],
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "mode": "multi",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "expr": "sum(jvm_memory_bytes_used{area=\"nonheap\"})",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Used",
-            "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "expr": "sum(jvm_memory_bytes_committed{area=\"nonheap\"})",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Committed",
-            "refId": "B"
-          }
-        ],
-        "title": "Non-Heap Total (Used vs. Committed)",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "Memory Used (MiB)",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "never",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "bytes"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 6,
-          "w": 12,
-          "x": 0,
-          "y": 18
-        },
-        "id": 11,
-        "links": [],
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "mode": "multi",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_used{area=\"heap\"}",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Used: {{instance}}",
-            "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_max{area=\"heap\"}",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Max: {{instance}}",
-            "refId": "B"
-          }
-        ],
-        "title": "Heap (Used vs. Max)",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "Memory Used (MiB)",
               "axisPlacement": "auto",
               "barAlignment": 0,
               "drawStyle": "line",
@@ -647,12 +259,12 @@
           "overrides": []
         },
         "gridPos": {
-          "h": 6,
+          "h": 5,
           "w": 12,
-          "x": 12,
-          "y": 18
+          "x": 0,
+          "y": 5
         },
-        "id": 17,
+        "id": 2,
         "links": [],
         "options": {
           "legend": {
@@ -670,22 +282,284 @@
         "targets": [
           {
             "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_used{area=\"nonheap\"}",
+            "expr": "jvm_gc_collection_seconds_count{gc=\"PS Scavenge\"}",
             "format": "time_series",
             "intervalFactor": 1,
-            "legendFormat": "Used: {{instance}}",
+            "legendFormat": "{{instance}}",
             "refId": "A"
+          }
+        ],
+        "title": "Minor GC Count",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
           },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 5,
+          "w": 12,
+          "x": 12,
+          "y": 5
+        },
+        "id": 5,
+        "links": [],
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
           {
             "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_committed{area=\"nonheap\"}",
+            "expr": "jvm_gc_collection_seconds_count{gc=\"PS MarkSweep\"}",
             "format": "time_series",
             "intervalFactor": 1,
-            "legendFormat": "Committed: {{instance}}",
+            "legendFormat": "{{instance}}",
             "refId": "B"
           }
         ],
-        "title": "Non-Heap (Used vs. Committed)",
+        "title": "Major GC Count",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 5,
+          "w": 12,
+          "x": 0,
+          "y": 10
+        },
+        "id": 3,
+        "links": [],
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "expr": "jvm_gc_collection_seconds_sum{gc=\"PS Scavenge\",}",
+            "format": "time_series",
+            "intervalFactor": 1,
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Minor GC Time (Sum)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 5,
+          "w": 12,
+          "x": 12,
+          "y": 10
+        },
+        "id": 6,
+        "links": [],
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "expr": "jvm_gc_collection_seconds_sum{gc=\"PS MarkSweep\",}",
+            "format": "time_series",
+            "intervalFactor": 1,
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Major GC Time (Sum)",
         "type": "timeseries"
       }
     ],
@@ -693,23 +567,10 @@
     "schemaVersion": 38,
     "style": "dark",
     "tags": [
-      "memory-usage"
+      "gc"
     ],
     "templating": {
-      "list": [
-        {
-          "datasource": {
-            "type": "datasource",
-            "uid": "grafana"
-          },
-          "filters": [],
-          "hide": 0,
-          "label": "",
-          "name": "Filters",
-          "skipUrlSync": false,
-          "type": "adhoc"
-        }
-      ]
+      "list": []
     },
     "time": {
       "from": "now-5m",
@@ -717,6 +578,7 @@
     },
     "timepicker": {
       "refresh_intervals": [
+        "2s",
         "5s",
         "10s",
         "30s",
@@ -741,7 +603,7 @@
       ]
     },
     "timezone": "",
-    "title": "Summary",
+    "title": "PS GC Time",
     "weekStart": ""
   },
   "folderId": "${FOLDER_ID}",
