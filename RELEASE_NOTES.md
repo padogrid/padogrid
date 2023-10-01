@@ -8,6 +8,14 @@ https://github.com/padogrid
 
 ### Release Date: 10/01/23
 
+- Initial snapshot.
+
+----
+
+## Version 0.9.29-SNAPSHOT
+
+### Release Date: 10/01/23
+
 - Added support for multiple plugins per MQTT virtual cluster. With this support, MQTT connectors now stream MQTT data to multiple target endpoints including Databases, Hazelcast, Geode/GemFire, Kafka, etc.
 - Fixed MQTT logging issues that logged incorrect endpoint count status.
 - Added `predicate` and `sql` support in `test_group` for Hazelcast `perf_test`. With these parameters, any query predicates and SQL statements can be included in test group workflows. See the [Adding Hazelcast Queries](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/hazelcast/apps/perf_test/README.md#8-adding-hazelcast-queries) section of the `perf_test` documentation for details.
