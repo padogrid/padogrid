@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.30-SNAPSHOT
 
-### Release Date: 10/01/23
+### Release Date: 10/07/23
 
-- Initial snapshot.
+- Added Hazelcast Grafana dashboards.
 
 ----
 
