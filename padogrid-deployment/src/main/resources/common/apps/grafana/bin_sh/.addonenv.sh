@@ -110,7 +110,7 @@ PROMETHEUS_CONFIG_FILE="$APP_DIR/etc/prometheus.yml"
 if [[ ${OS_NAME} == CYGWIN* ]]; then
    PROMETHEUS_CONFIG_FILE="$(cygpath -wp "$PROMETHEUS_CONFIG_FILE")"
 fi
-PROMETHEUS_OPTS="--config.file=$PROMETHEUS_CONFIG_FILE"
+PROMETHEUS_OPTS="--web.listen-address="$PROMETHEUS_HOST:$PROMETHEUS_PORT" --config.file=$PROMETHEUS_CONFIG_FILE"
 
 #
 # Grafana bootstrap settings

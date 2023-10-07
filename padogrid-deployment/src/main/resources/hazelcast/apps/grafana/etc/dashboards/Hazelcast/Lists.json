@@ -1,0 +1,292 @@
+{
+  "dashboard": {
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "${DATASOURCE}",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": [],
+        "targetBlank": true,
+        "title": "Created by PadoGrid",
+        "tooltip": "Go to PadoGrid",
+        "type": "link",
+        "url": "http://github.com/padogrid"
+      }
+    ],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Time/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "frameIndex": 1,
+          "showHeader": true
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_creationTime{job=\"$Cluster\",prefix=\"list\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "{{instance}}",
+            "range": false,
+            "refId": "Creation Time"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lastUpdateTime{job=\"$Cluster\",prefix=\"list\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "{{instance}}",
+            "range": false,
+            "refId": "Update Time"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lastAccessTime{job=\"$Cluster\",prefix=\"list\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "{{instance}}",
+            "range": false,
+            "refId": "Access Time"
+          }
+        ],
+        "title": "Lists: Access Time",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "instance|tag0 1|Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value #A": "Creation Time",
+                "Value #Access Time": "Access Time",
+                "Value #C": "",
+                "Value #Creation Time": "Creation Time",
+                "Value #Update Time": "Update Time",
+                "instance": "Member",
+                "instance 1": "Member",
+                "tag0 1": "List"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      }
+    ],
+    "refresh": "",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": [
+      "hazelast",
+      "data structure",
+      "list"
+    ],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "selected": true,
+            "text": "myhz",
+            "value": "myhz"
+          },
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "Cluster",
+          "options": [
+            {
+              "selected": true,
+              "text": "myhz",
+              "value": "myhz"
+            },
+            {
+              "selected": false,
+              "text": "myhz2",
+              "value": "myhz2"
+            }
+          ],
+          "query": "myhz,myhz2",
+          "queryValue": "",
+          "skipUrlSync": false,
+          "type": "custom"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "Lists",
+    "uid": "efe7f2af-9568-48c0-bba4-616bccf374e1",
+    "weekStart": ""
+  },
+  "folderId": "${FOLDER_ID}",
+  "overWrite": false
+}

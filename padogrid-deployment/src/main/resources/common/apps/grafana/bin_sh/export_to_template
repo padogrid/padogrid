@@ -81,10 +81,10 @@ for EXPORT_FOLDER_DIR in *; do
       for file in *; do
         `cat "$file" | jq ".dashboard.annotations.list[].datasource=\"\\${DATASOURCE}\" 
                      | .dashboard.panels[].datasource=\"\\${DATASOURCE}\" 
-                     | .dashboard.panels[].targets[].datasource=\"\\${DATASOURCE}\" 
+                     | .dashboard.panels[].targets[]?.datasource=\"\\${DATASOURCE}\" 
                      | del(.meta) 
                      | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
-                     | del(.dashboard.version, .dashboard.uid, .dashboard.id) 
+                     | del(.dashboard.version, .dashboard.id, .dashboard.templating.list[]?.datasource.uid) 
                      " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
       done
       popd > /dev/null 2>&1

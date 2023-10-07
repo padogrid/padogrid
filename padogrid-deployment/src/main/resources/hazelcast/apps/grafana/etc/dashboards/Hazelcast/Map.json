@@ -1,0 +1,1274 @@
+{
+  "dashboard": {
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "${DATASOURCE}",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main&${__url_time_range}"
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Charts",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/f85a965f-c2ef-425a-98e0-ae4c4cdc695f/maps-rows-charts&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": [],
+        "targetBlank": true,
+        "title": "Created by PadoGrid",
+        "tooltip": "Go to PadoGrid",
+        "type": "link",
+        "url": "http://github.com/padogrid"
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Map",
+        "tooltip": "",
+        "type": "link",
+        "url": ""
+      }
+    ],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Cost/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Memory"
+              },
+              "properties": [
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "right"
+                },
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "red",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        },
+        "id": 10,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_ownedEntryCount{job=\"$Cluster\",prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "instant": false,
+            "legendFormat": "Entries",
+            "range": true,
+            "refId": "Entries"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_ownedEntryMemoryCost{job=\"$Cluster\",prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Memory",
+            "range": true,
+            "refId": "Owned Entry Memory Cost"
+          }
+        ],
+        "title": "$Map: Entries, Memory ($MapType)",
+        "transformations": [],
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "ops"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        },
+        "id": 11,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_putCount{job=\"$Cluster\", tag0=\"\\\"name=$Map\\\"\"})*1000/sum(com_hazelcast_Metrics_totalPutLatency{instance=~\"$Cluster\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "instant": false,
+            "legendFormat": "Puts/s",
+            "range": true,
+            "refId": "Puts/s"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_getCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"})*1000/sum(com_hazelcast_Metrics_totalGetLatency{instance=~\"$Cluster\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Gets/s",
+            "range": true,
+            "refId": "Gets/s"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_removeCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"})*1000/sum(com_hazelcast_Metrics_totalRemoveLatency{instance=~\"$Cluster\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Removes/s",
+            "range": true,
+            "refId": "Removes/s"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_setCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"})*1000/sum(com_hazelcast_Metrics_totalSetLatency{instance=~\"$Cluster\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Sets/s",
+            "range": true,
+            "refId": "Sets/s"
+          }
+        ],
+        "title": "$Map: Operations/s ($MapType)",
+        "transformations": [],
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        },
+        "id": 12,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_dirtyEntryCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "instant": false,
+            "legendFormat": "Dirty Entries",
+            "range": true,
+            "refId": "Dirty Entries"
+          }
+        ],
+        "title": "$Map: Dirty Entries ($MapType)",
+        "transformations": [],
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Backup Memory"
+              },
+              "properties": [
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "right"
+                },
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                }
+              ]
+            },
+            {
+              "__systemRef": "hideSeriesFrom",
+              "matcher": {
+                "id": "byNames",
+                "options": {
+                  "mode": "exclude",
+                  "names": [
+                    "Backup Count"
+                  ],
+                  "prefix": "All except:",
+                  "readOnly": true
+                }
+              },
+              "properties": [
+                {
+                  "id": "custom.hideFrom",
+                  "value": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        },
+        "id": 13,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_backupEntryCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "instant": false,
+            "legendFormat": "Backup Entries",
+            "range": true,
+            "refId": "Backup Entries"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_backupEntryMemoryCost{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"})",
+            "format": "time_series",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Backup Memory",
+            "range": true,
+            "refId": "Backup Entry Memory Cost"
+          }
+        ],
+        "title": "$Map: Backup ($MapType)",
+        "transformations": [],
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Entry Memory"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                },
+                {
+                  "id": "custom.minWidth"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 10
+        },
+        "id": 8,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "Value #CPU"
+            }
+          ]
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Entries",
+            "range": false,
+            "refId": "Entries"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_getCount{job=\"$Cluster\", prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "interval": "",
+            "legendFormat": "Gets",
+            "range": false,
+            "refId": "Gets"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_putCount{job=\"$Cluster\", prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Puts",
+            "range": false,
+            "refId": "Puts"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_removeCount{job=\"$Cluster\", prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Removals",
+            "range": false,
+            "refId": "Removals"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_setCount{job=\"$Cluster\", prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Sets",
+            "range": false,
+            "refId": "Sets"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{job=\"$Cluster\", prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Entry Memory",
+            "range": false,
+            "refId": "Entry Memory"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfEvents{job=\"$Cluster\", prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Events",
+            "range": false,
+            "refId": "Events"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_hits{job=\"$Cluster\", prefix=\"$MapType\",tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Hits",
+            "range": false,
+            "refId": "Hits"
+          }
+        ],
+        "title": "$Map: Map Statistics ($MapType)",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "Value #CPU",
+                  "Value #Used Heap",
+                  "Value #Total Heap",
+                  "Value #Heap Usage",
+                  "Value #Used Native Memory",
+                  "Value #Committed Native Memory",
+                  "Value #GC Major Count",
+                  "Value #GC Major Time",
+                  "Value #GC Minor Count",
+                  "Value #GC Minor Time",
+                  "instance"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Entries": "Entries",
+                "Value #Entry Memory": "Entry Memory",
+                "Value #Events": "Events",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Gets": "Gets",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Hits": "Hits",
+                "Value #Puts": "Puts",
+                "Value #Removals": "Removals",
+                "Value #Sets": "Sets",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member"
+              }
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Entry Memory"
+              },
+              "properties": [
+                {
+                  "id": "custom.minWidth"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Avg Put Latency"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "ms"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Latency/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "ms"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*\\/s/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "ops"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 18
+        },
+        "id": 9,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "Value #CPU"
+            }
+          ]
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_putCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}*1000/com_hazelcast_Metrics_totalPutLatency{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Puts",
+            "range": false,
+            "refId": "Puts"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_getCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}*1000/com_hazelcast_Metrics_totalGetLatency{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}\n",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "interval": "",
+            "legendFormat": "Gets",
+            "range": false,
+            "refId": "Gets"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_removeCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}/com_hazelcast_Metrics_totalRemoveLatency{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Removals",
+            "range": false,
+            "refId": "Removals"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_setCount{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}*1000/com_hazelcast_Metrics_totalSetLatency{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Sets",
+            "range": false,
+            "refId": "Sets"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalPutLatency{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}/com_hazelcast_Metrics_putCount{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Avg Get Put Latency",
+            "range": false,
+            "refId": "Avg Put Latency"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalGetLatency{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}/com_hazelcast_Metrics_getCount{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Avg Get Put Latency",
+            "range": false,
+            "refId": "Avg Get Latency"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalRemoveLatency{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}/com_hazelcast_Metrics_removeCount{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Avg Get Put Latency",
+            "range": false,
+            "refId": "Avg Remove Latency"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalSetLatency{job=\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}/com_hazelcast_Metrics_setCount{instance=~\"$Cluster\", prefix=\"$MapType\", tag0=\"\\\"name=$Map\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Avg Get Put Latency",
+            "range": false,
+            "refId": "Avg Set Latency"
+          }
+        ],
+        "title": "$Map: Map Throughput Statistics ($MapType)",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "Value #CPU",
+                  "Value #Used Heap",
+                  "Value #Total Heap",
+                  "Value #Heap Usage",
+                  "Value #Used Native Memory",
+                  "Value #Committed Native Memory",
+                  "Value #GC Major Count",
+                  "Value #GC Major Time",
+                  "Value #GC Minor Count",
+                  "Value #GC Minor Time",
+                  "instance"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value #Avg Get Latency": "Avg Get Latency",
+                "Value #Avg Get Put Latency": "Avg Put Latency",
+                "Value #Avg Put Latency": "Avg Put Latency",
+                "Value #Avg Remove Latency": "Avg Remove Latency",
+                "Value #Avg Set Latency": "Avg Set Latency",
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Entries": "Entries",
+                "Value #Entry Memory": "Entry Memory",
+                "Value #Events": "Events",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Gets": "Gets/s",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Hits": "Hits",
+                "Value #Puts": "Puts/s",
+                "Value #Removals": "Removals/s",
+                "Value #Sets": "Sets/s",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member"
+              }
+            }
+          }
+        ],
+        "type": "table"
+      }
+    ],
+    "refresh": "",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": [
+      "hazelcast",
+      "data structure",
+      "map"
+    ],
+    "templating": {
+      "list": [
+        {
+          "datasource": {
+            "type": "datasource"
+          },
+          "filters": [],
+          "hide": 0,
+          "name": "Filters",
+          "skipUrlSync": false,
+          "type": "adhoc"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": "myhz",
+            "value": "myhz"
+          },
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "Cluster",
+          "options": [
+            {
+              "selected": true,
+              "text": "myhz",
+              "value": "myhz"
+            },
+            {
+              "selected": false,
+              "text": "myhz2",
+              "value": "myhz2"
+            }
+          ],
+          "query": "myhz,myhz2",
+          "queryValue": "",
+          "skipUrlSync": false,
+          "type": "custom"
+        },
+        {
+          "hide": 2,
+          "label": "Map Type",
+          "name": "MapType",
+          "query": "map",
+          "skipUrlSync": false,
+          "type": "constant"
+        },
+        {
+          "current": {
+            "selected": false,
+            "text": "\"name=__jet.exportedSnapshotsCache\"",
+            "value": "\"name=__jet.exportedSnapshotsCache\""
+          },
+          "datasource": {
+            "type": "prometheus"
+          },
+          "definition": "label_values(prefix)",
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "Map",
+          "options": [],
+          "query": {
+            "query": "label_values(prefix)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "/name=\"(?<value>[^\"]+)/g",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "Map",
+    "uid": "cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a",
+    "weekStart": ""
+  },
+  "folderId": "${FOLDER_ID}",
+  "overWrite": false
+}
