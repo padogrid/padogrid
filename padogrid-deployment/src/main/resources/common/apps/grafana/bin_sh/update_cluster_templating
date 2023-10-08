@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+DEFAULT_FOLDER="Hazelcast"
+DEFAULT_CLUSTER="hazelcast"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Update the Cluster variable in dashaboards
+
+SYNOPSIS
+   ./$EXECUTABLE [-folder folder_name] [-cluster cluster_list] [-?]
+
+DESCRIPTION
+   Updates the Cluster variable to all dashboards in the specified folder. The Cluster
+   variable holds a list of cluster names that each dashboard monitors. The cluster
+   names must match the 'job_name' values in the following Prometheus configuration file.
+   
+      ../etc/prometheus.yml
+
+   Note that the default value of 'job_name' and the '-cluster' option is 'hazelcast'.
+   See the EXAMPLE section for adding multiple clusters to Grafana dashboards.
+
+OPTIONS
+   -folder folder_name
+             Folder name. Default: $DEFAULT_FOLDER
+
+   -cluster cluster_list
+             A comma-separated list of cluster names. The cluster names must match
+             the 'job_name' values in the Prometheus configuration file.
+
+DEFAULT
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER -cluster $DEFAULT_CLUSTER
+
+EXAMPLES
+
+   The following example configures Prometheus with two (2) Hazelcast clusters: 'myhz'
+   and 'myhz2'.
+
+      global:
+        scrape_interval:     5s
+        external_labels:
+          monitor: 'hazelcast'
+
+      scrape_configs:
+        - job_name: 'myhz'
+          static_configs:
+            - targets: [localhost:8291, localhost:8292, localhost:8293, localhost:8294, localhost:8295, localhost:8296, localhost:8297, localhost:8298, localhost:8299]
+        - job_name: 'myhz2'
+          static_configs:
+              - targets: [localhost:8391, localhost:8392, localhost:8393, localhost:8394, localhost:8395, localhost:8396, localhost:8397, localhost:8398, localhost:8399]
+
+   To include 'myhz' and 'myhz2' in Grafana dashboards, execute this command as follows.
+
+      ./$EXECUTABLE -cluster "myhz,myhz2"
+
+   The above command updates the JSON files in the following directory.
+
+      $DASHBOARDS_DIR/$DEFAULT_FOLDER
+
+   You can now update the entire $DEFAULT_FOLDER folder in Granana by deleting and importing
+   it as follows.
+
+      ./delete_folder -folder $DEFAULT_FOLDER
+      ./import_folder -folder $DEFAULT_FOLDER
+
+SEE ALSO
+   ../etc/prometheus.yml
+
+EOF
+exit
+fi
+
+if [ "$FOLDER" == "" ]; then
+   FOLDER="$DEFAULT_FOLDER"
+fi
+
+if [ "$CLUSTER" == "" ]; then
+   CLUSTERS="$DEFAULT_CLUSTER"
+else
+   CLUSTERS="$CLUSTER"
+fi
+
+query="$CLUSTERS"
+CLUSTERS=$(echo $CLUSTERS | sed 's/,/ /g')
+current="myhz"
+options="\"options\": ["
+INDEX=0
+for CLUSTER in $CLUSTERS; do
+   if [ $INDEX -eq 0 ]; then
+      current="$CLUSTER"
+      options="$options {\"selected\": true, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
+      query="$CLUSTER"
+   else
+      options="$options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
+      query="$query,$CLUSTER"
+   fi
+   let INDEX=INDEX+1
+done
+options="$options ]"
+
+CLUSTER_OPTIONS="
+[
+{
+   \"current\": {
+   \"selected\": true,
+   \"text\": \"$current\",
+   \"value\": \"$current\"
+ },
+ \"hide\": 0,
+ \"includeAll\": false,
+ \"multi\": false,
+ \"name\": \"Cluster\",
+ $options,
+ \"query\": \"$query\",
+ \"queryValue\": \"\",
+ \"skipUrlSync\": false,
+ \"type\": \"custom\"
+}]
+"
+
+if [ -d "$TMP_DIR/$FOLDER" ]; then
+   rm -r "$TMP_DIR/$FOLDER"
+fi
+mkdir "$TMP_DIR/$FOLDER"
+FOLDER_PATH="$DASHBOARDS_DIR/$FOLDER"
+pushd "$FOLDER_PATH" > /dev/null 2>&1
+for file in *; do
+   cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+               | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+               " > "$TMP_DIR/$FOLDER/${file}"
+done
+popd > /dev/null 2>&1
+
+cp -r $TMP_DIR/$FOLDER/* "$FOLDER_PATH/"
+
+echo ""
+echo "Dashboards updated in the following directory:"
+echo "   $FOLDER_PATH"
+echo ""

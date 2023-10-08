@@ -28,7 +28,7 @@
         "title": "Main",
         "tooltip": "",
         "type": "link",
-        "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main&${__url_time_range}"
+        "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main?var-Cluster=$Cluster&${__url_time_range}"
       },
       {
         "asDropdown": true,
@@ -467,7 +467,7 @@
         "type": "table"
       },
       {
-        "collapsed": true,
+        "collapsed": false,
         "datasource": "${DATASOURCE}",
         "gridPos": {
           "h": 1,
@@ -476,1303 +476,1263 @@
           "y": 7
         },
         "id": 23,
-        "panels": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
+        "panels": [],
+        "title": "Aggregates",
+        "type": "row"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
             },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  }
-                },
-                "mappings": [],
-                "unit": "bytes"
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": [],
+            "unit": "bytes"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "{__name__=\"com_hazelcast_Metrics_minorCount\", exported_instance=\"objective_tesla\", instance=\"localhost:8292\", job=\"hazelcast\", prefix=\"gc\"}"
               },
-              "overrides": [
+              "properties": [
                 {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "{__name__=\"com_hazelcast_Metrics_minorCount\", exported_instance=\"objective_tesla\", instance=\"localhost:8292\", job=\"hazelcast\", prefix=\"gc\"}"
-                  },
-                  "properties": [
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "red",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "red",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 0,
+          "y": 8
+        },
+        "id": 10,
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "pieType": "pie",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_usedMemory{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Used Memory",
+            "range": false,
+            "refId": "Used Memory"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_freeMemory{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Free Memory",
+            "range": false,
+            "refId": "Free Memory"
+          }
+        ],
+        "title": "Memory: Free, Used (Aggregate)",
+        "type": "piechart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 6,
+          "y": 8
+        },
+        "id": 33,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_localPartitionCount{job=\"$Cluster\"}",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "{{instance}}",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "max(com_hazelcast_Metrics_partitionCount{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Total",
+            "range": false,
+            "refId": "Total"
+          }
+        ],
+        "title": "Partition Distribution",
+        "type": "bargauge"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
                 }
               ]
             },
-            "gridPos": {
-              "h": 8,
-              "w": 6,
-              "x": 0,
-              "y": 8
-            },
-            "id": 10,
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "pieType": "pie",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "sum(com_hazelcast_Metrics_usedMemory{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "Used Memory",
-                "range": false,
-                "refId": "Used Memory"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "sum(com_hazelcast_Metrics_freeMemory{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "Free Memory",
-                "range": false,
-                "refId": "Free Memory"
-              }
-            ],
-            "title": "Memory: Free, Used (Aggregate)",
-            "type": "piechart"
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
+        "id": 3,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "max(jvm_gc_collection_seconds_count{job=\"$Cluster\",gc=~\".+Young Generation\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "GC Minor Count",
+            "range": true,
+            "refId": "GC Minor"
           },
           {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "continuous-GrYlRd"
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 6,
-              "x": 6,
-              "y": 8
-            },
-            "id": 33,
-            "options": {
-              "displayMode": "lcd",
-              "minVizHeight": 10,
-              "minVizWidth": 0,
-              "orientation": "horizontal",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "showUnfilled": true,
-              "valueMode": "color"
-            },
-            "pluginVersion": "10.1.1",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_localPartitionCount{job=\"$Cluster\"}",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "{{instance}}",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "max(com_hazelcast_Metrics_partitionCount{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "Total",
-                "range": false,
-                "refId": "Total"
-              }
-            ],
-            "title": "Partition Distribution",
-            "type": "bargauge"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 12,
-              "x": 12,
-              "y": 8
-            },
-            "id": 3,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "max(jvm_gc_collection_seconds_count{job=\"$Cluster\",gc=~\".+Young Generation\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "GC Minor Count",
-                "range": true,
-                "refId": "GC Minor"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "max(jvm_gc_collection_seconds_count{job=\"$Cluster\",gc=~\".+Old Generation\"})",
-                "instant": false,
-                "legendFormat": "GC Major Count",
-                "range": true,
-                "refId": "GC Max"
-              }
-            ],
-            "title": "GC Count: Minor, Major (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "percent"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 9,
-              "w": 12,
-              "x": 0,
-              "y": 16
-            },
-            "id": 27,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "max(com_hazelcast_Metrics_systemCpuLoad{job=\"$Cluster\"})",
-                "instant": false,
-                "legendFormat": "{{instance}}",
-                "range": true,
-                "refId": "A"
-              }
-            ],
-            "title": "Max System CPU Load (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "bytes"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 9,
-              "w": 12,
-              "x": 12,
-              "y": 16
-            },
-            "id": 24,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_usedHeap{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Used Heap",
-                "range": true,
-                "refId": "Used Heap"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_freeHeap{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Free Heap",
-                "range": true,
-                "refId": "Free Heap"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_maxHeap{job=\"$Cluster\"})",
-                "instant": false,
-                "legendFormat": "Max Heap",
-                "range": true,
-                "refId": "Max Heap"
-              }
-            ],
-            "title": " Heap: Used, Free, Max (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "bytes"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 9,
-              "w": 12,
-              "x": 0,
-              "y": 25
-            },
-            "id": 30,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_usedHeap{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Used Heap",
-                "range": true,
-                "refId": "B"
-              }
-            ],
-            "title": "Used Heap (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "bytes"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 9,
-              "w": 12,
-              "x": 12,
-              "y": 25
-            },
-            "id": 26,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_usedNative{job=\"$Cluster\"})",
-                "instant": false,
-                "legendFormat": "{{instance}}",
-                "range": true,
-                "refId": "A"
-              }
-            ],
-            "title": "Used Native (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "bytes"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 10,
-              "w": 12,
-              "x": 0,
-              "y": 34
-            },
-            "id": 31,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "max(com_hazelcast_Metrics_freePhysical{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Free Physical Memory",
-                "range": true,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "max(com_hazelcast_Metrics_totalPhysicalMemorySize{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Total Physical Memory",
-                "range": true,
-                "refId": "B"
-              }
-            ],
-            "title": "Max Physical Memory (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 10,
-              "w": 12,
-              "x": 12,
-              "y": 34
-            },
-            "id": 25,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_threadCount{job=\"$Cluster\"})",
-                "instant": false,
-                "legendFormat": "{{instance}} Active",
-                "range": true,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_peakThreadCount{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "{{instance}} Peak",
-                "range": true,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_daemonThreadCount{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "{{instance}} Daemon",
-                "range": true,
-                "refId": "C"
-              }
-            ],
-            "title": "Thread Count (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "bytes"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 9,
-              "w": 12,
-              "x": 0,
-              "y": 44
-            },
-            "id": 19,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "sum(com_hazelcast_Metrics_committedHeap{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Committed Heap",
-                "range": true,
-                "refId": "Committed Heap"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_committedNative{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Committed Native",
-                "range": true,
-                "refId": "Committed Native"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_committedVirtualMemorySize{job=\"$Cluster\"})",
-                "instant": false,
-                "legendFormat": "Committed Virtual",
-                "range": true,
-                "refId": "Committed Virtual"
-              }
-            ],
-            "title": "Committed Memory (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "bytes"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 9,
-              "w": 12,
-              "x": 12,
-              "y": 44
-            },
-            "id": 7,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_ownedEntryMemoryCost{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Primary Maps",
-                "range": true,
-                "refId": "Primary"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_backupEntryMemoryCost{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Backup Maps",
-                "range": true,
-                "refId": "Backup"
-              }
-            ],
-            "title": "Memory Maps (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "bytes"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 12,
-              "x": 0,
-              "y": 53
-            },
-            "id": 28,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_freeSwapSpaceSize{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "{{instance}} Free",
-                "range": true,
-                "refId": "Free"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "sum(com_hazelcast_Metrics_totalSwapSpaceSize{job=\"$Cluster\"})",
-                "instant": false,
-                "legendFormat": "{{instance}} Total",
-                "range": true,
-                "refId": "Total"
-              }
-            ],
-            "title": "Total Swap Space (Aggregate)",
-            "type": "timeseries"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "f33947b2-c42d-4a57-88a0-7d8453446f37"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "palette-classic"
-                },
-                "custom": {
-                  "axisCenteredZero": false,
-                  "axisColorMode": "text",
-                  "axisLabel": "",
-                  "axisPlacement": "auto",
-                  "barAlignment": 0,
-                  "drawStyle": "line",
-                  "fillOpacity": 0,
-                  "gradientMode": "none",
-                  "hideFrom": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": false
-                  },
-                  "insertNulls": false,
-                  "lineInterpolation": "linear",
-                  "lineWidth": 1,
-                  "pointSize": 5,
-                  "scaleDistribution": {
-                    "type": "linear"
-                  },
-                  "showPoints": "auto",
-                  "spanNulls": false,
-                  "stacking": {
-                    "group": "A",
-                    "mode": "none"
-                  },
-                  "thresholdsStyle": {
-                    "mode": "off"
-                  }
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 12,
-              "x": 12,
-              "y": 53
-            },
-            "id": 32,
-            "options": {
-              "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {
-                "mode": "single",
-                "sort": "none"
-              }
-            },
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "max(com_hazelcast_Metrics_openFileDescriptorCount{job=\"$Cluster\"})",
-                "hide": false,
-                "instant": false,
-                "legendFormat": "Open FD",
-                "range": true,
-                "refId": "Open"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "expr": "max(com_hazelcast_Metrics_maxFileDescriptorCount{job=\"$Cluster\"})",
-                "instant": false,
-                "legendFormat": "Max FD",
-                "range": true,
-                "refId": "Max"
-              }
-            ],
-            "title": "Max File Descriptors (Aggregate)",
-            "type": "timeseries"
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "max(jvm_gc_collection_seconds_count{job=\"$Cluster\",gc=~\".+Old Generation\"})",
+            "instant": false,
+            "legendFormat": "GC Major Count",
+            "range": true,
+            "refId": "GC Max"
           }
         ],
-        "title": "Aggregates",
-        "type": "row"
+        "title": "GC Count: Minor, Major (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "percent"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
+        "id": 27,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "max(com_hazelcast_Metrics_systemCpuLoad{job=\"$Cluster\"})",
+            "instant": false,
+            "legendFormat": "{{instance}}",
+            "range": true,
+            "refId": "A"
+          }
+        ],
+        "title": "Max System CPU Load (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "id": 24,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_usedHeap{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Used Heap",
+            "range": true,
+            "refId": "Used Heap"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_freeHeap{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Free Heap",
+            "range": true,
+            "refId": "Free Heap"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_maxHeap{job=\"$Cluster\"})",
+            "instant": false,
+            "legendFormat": "Max Heap",
+            "range": true,
+            "refId": "Max Heap"
+          }
+        ],
+        "title": " Heap: Used, Free, Max (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 25
+        },
+        "id": 30,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_usedHeap{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Used Heap",
+            "range": true,
+            "refId": "B"
+          }
+        ],
+        "title": "Used Heap (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 25
+        },
+        "id": 26,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_usedNative{job=\"$Cluster\"})",
+            "instant": false,
+            "legendFormat": "{{instance}}",
+            "range": true,
+            "refId": "A"
+          }
+        ],
+        "title": "Used Native (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 12,
+          "x": 0,
+          "y": 34
+        },
+        "id": 31,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "max(com_hazelcast_Metrics_freePhysical{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Free Physical Memory",
+            "range": true,
+            "refId": "A"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "max(com_hazelcast_Metrics_totalPhysicalMemorySize{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Total Physical Memory",
+            "range": true,
+            "refId": "B"
+          }
+        ],
+        "title": "Max Physical Memory (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 12,
+          "x": 12,
+          "y": 34
+        },
+        "id": 25,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_threadCount{job=\"$Cluster\"})",
+            "instant": false,
+            "legendFormat": "{{instance}} Active",
+            "range": true,
+            "refId": "A"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_peakThreadCount{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "{{instance}} Peak",
+            "range": true,
+            "refId": "B"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_daemonThreadCount{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "{{instance}} Daemon",
+            "range": true,
+            "refId": "C"
+          }
+        ],
+        "title": "Thread Count (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 44
+        },
+        "id": 19,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_committedHeap{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Committed Heap",
+            "range": true,
+            "refId": "Committed Heap"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_committedNative{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Committed Native",
+            "range": true,
+            "refId": "Committed Native"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_committedVirtualMemorySize{job=\"$Cluster\"})",
+            "instant": false,
+            "legendFormat": "Committed Virtual",
+            "range": true,
+            "refId": "Committed Virtual"
+          }
+        ],
+        "title": "Committed Memory (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 44
+        },
+        "id": 7,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_ownedEntryMemoryCost{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Primary Maps",
+            "range": true,
+            "refId": "Primary"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_backupEntryMemoryCost{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Backup Maps",
+            "range": true,
+            "refId": "Backup"
+          }
+        ],
+        "title": "Memory Maps (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 53
+        },
+        "id": 28,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_freeSwapSpaceSize{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "{{instance}} Free",
+            "range": true,
+            "refId": "Free"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_totalSwapSpaceSize{job=\"$Cluster\"})",
+            "instant": false,
+            "legendFormat": "{{instance}} Total",
+            "range": true,
+            "refId": "Total"
+          }
+        ],
+        "title": "Total Swap Space (Aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 53
+        },
+        "id": 32,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "max(com_hazelcast_Metrics_openFileDescriptorCount{job=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Open FD",
+            "range": true,
+            "refId": "Open"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "max(com_hazelcast_Metrics_maxFileDescriptorCount{job=\"$Cluster\"})",
+            "instant": false,
+            "legendFormat": "Max FD",
+            "range": true,
+            "refId": "Max"
+          }
+        ],
+        "title": "Max File Descriptors (Aggregate)",
+        "type": "timeseries"
       },
       {
         "collapsed": false,
@@ -1781,7 +1741,7 @@
           "h": 1,
           "w": 24,
           "x": 0,
-          "y": 8
+          "y": 61
         },
         "id": 22,
         "panels": [],
@@ -1827,7 +1787,7 @@
           "h": 8,
           "w": 6,
           "x": 0,
-          "y": 9
+          "y": 62
         },
         "id": 9,
         "options": {
@@ -1904,7 +1864,7 @@
           "h": 8,
           "w": 6,
           "x": 6,
-          "y": 9
+          "y": 62
         },
         "id": 8,
         "options": {
@@ -2002,7 +1962,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 9
+          "y": 62
         },
         "id": 29,
         "options": {
@@ -2101,7 +2061,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 17
+          "y": 70
         },
         "id": 2,
         "options": {
@@ -2190,7 +2150,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 17
+          "y": 70
         },
         "id": 6,
         "options": {
@@ -2299,7 +2259,7 @@
           "h": 9,
           "w": 12,
           "x": 0,
-          "y": 25
+          "y": 78
         },
         "id": 1,
         "options": {
@@ -2389,7 +2349,7 @@
           "h": 9,
           "w": 12,
           "x": 12,
-          "y": 25
+          "y": 78
         },
         "id": 13,
         "options": {
@@ -2478,7 +2438,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 34
+          "y": 87
         },
         "id": 20,
         "options": {
@@ -2578,7 +2538,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 34
+          "y": 87
         },
         "id": 17,
         "options": {
@@ -2670,8 +2630,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -2687,7 +2646,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 42
+          "y": 95
         },
         "id": 4,
         "options": {
@@ -2769,8 +2728,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -2785,7 +2743,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 42
+          "y": 95
         },
         "id": 21,
         "options": {
@@ -2841,16 +2799,6 @@
     "templating": {
       "list": [
         {
-          "datasource": {
-            "type": "datasource"
-          },
-          "filters": [],
-          "hide": 0,
-          "name": "Filters",
-          "skipUrlSync": false,
-          "type": "adhoc"
-        },
-        {
           "current": {
             "selected": true,
             "text": "myhz",
@@ -2876,6 +2824,16 @@
           "queryValue": "",
           "skipUrlSync": false,
           "type": "custom"
+        },
+        {
+          "datasource": {
+            "type": "datasource"
+          },
+          "filters": [],
+          "hide": 0,
+          "name": "Filters",
+          "skipUrlSync": false,
+          "type": "adhoc"
         }
       ]
     },
