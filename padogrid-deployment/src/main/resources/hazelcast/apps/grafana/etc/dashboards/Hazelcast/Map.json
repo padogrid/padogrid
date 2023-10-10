@@ -562,30 +562,6 @@
                   "value": "bytes"
                 }
               ]
-            },
-            {
-              "__systemRef": "hideSeriesFrom",
-              "matcher": {
-                "id": "byNames",
-                "options": {
-                  "mode": "exclude",
-                  "names": [
-                    "Backup Count"
-                  ],
-                  "prefix": "All except:",
-                  "readOnly": true
-                }
-              },
-              "properties": [
-                {
-                  "id": "custom.hideFrom",
-                  "value": {
-                    "legend": false,
-                    "tooltip": false,
-                    "viz": true
-                  }
-                }
-              ]
             }
           ]
         },
@@ -1591,6 +1567,15 @@
     "templating": {
       "list": [
         {
+          "datasource": "${DATASOURCE}",
+          "hide": 2,
+          "label": "Map Type",
+          "name": "MapType",
+          "query": "map",
+          "skipUrlSync": false,
+          "type": "constant"
+        },
+        {
           "current": {
             "selected": true,
             "text": "myhz",
@@ -1625,7 +1610,7 @@
             "value": "map1"
           },
           "datasource": "${DATASOURCE}",
-          "definition": "label_values(com_hazelcast_Metrics_entryCount,tag0)",
+          "definition": "label_values(com_hazelcast_Metrics_entryCount{prefix=\"$MapType\"},tag0)",
           "hide": 0,
           "includeAll": false,
           "label": "",
@@ -1633,7 +1618,7 @@
           "name": "Map",
           "options": [],
           "query": {
-            "query": "label_values(com_hazelcast_Metrics_entryCount,tag0)",
+            "query": "label_values(com_hazelcast_Metrics_entryCount{prefix=\"$MapType\"},tag0)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -1641,15 +1626,6 @@
           "skipUrlSync": false,
           "sort": 1,
           "type": "query"
-        },
-        {
-          "datasource": "${DATASOURCE}",
-          "hide": 2,
-          "label": "Map Type",
-          "name": "MapType",
-          "query": "map",
-          "skipUrlSync": false,
-          "type": "constant"
         }
       ]
     },

@@ -8,7 +8,7 @@ https://github.com/padogrid
 
 ### Release Date: 10/09/23
 
-- Added Hazelcast Grafana dashboards.
+- Added Hazelcast Grafana dashboards that resemble Hazelcast Management Center.
 
 ----
 

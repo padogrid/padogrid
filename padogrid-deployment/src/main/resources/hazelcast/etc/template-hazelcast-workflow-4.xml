@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+-->
+
+<!--******************************************************************************* 
+
+IMPORTANT:
+
+   padogrid depends on several system properties, which must be specified
+   in your hazelcast.xml. If you choose to use your own hazelcast.xml file then
+   make sure to include all system properties found in this file. The following
+   system properties are required: 
+   
+		"hazelcast-addon.cluster-name"
+		         Cluster name. Disabled by default. Hard coded: "dev".
+		         See below to see how to enable it. 
+		"hazelcast-addon.management-center" 
+		         MC URL.
+		"hazelcast-addon.tcp.port"
+		         TPC port number for the member.
+		"hazelcast-addon.tcp.members"
+		         A complete list of TCP member addresses.
+		
+******************************************************************************* -->
+
+<hazelcast xmlns="http://www.hazelcast.com/schema/config"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.hazelcast.com/schema/config
+	http://www.hazelcast.com/schema/config/hazelcast-config-4.0.xsd">
+
+	<properties>
+		<property name="hazelcast.phone.home.enabled">false</property>
+	</properties>
+
+	<cluster-name>dev</cluster-name>
+	<!-- To use the workspace cluster name, remove the above line and uncomment 
+	the following line. -->
+	<!-- <cluster-name>${hazelcast-addon.cluster-name}</cluster-name> -->
+
+    <management-center scripting-enabled="true"/>
+
+	<user-code-deployment enabled="true">
+		<class-cache-mode>ETERNAL</class-cache-mode>
+		<provider-mode>LOCAL_AND_CACHED_CLASSES</provider-mode>
+	</user-code-deployment>
+
+	<network>
+		<!-- padogrid explicitly assigns the TCP port numbers in order to 
+			launch multiple clusters on the same machine. -->
+		<port auto-increment="false">${hazelcast-addon.tcp.port}</port>
+		<outbound-ports>
+			<!-- Allowed port range when connecting to other nodes. 0 or * means use 
+				system provided port. -->
+			<ports>0</ports>
+		</outbound-ports>
+		<rest-api enabled="true">
+			<endpoint-group name="HEALTH_CHECK" enabled="true" />
+			<endpoint-group name="CLUSTER_READ" enabled="true" />
+			<endpoint-group name="CLUSTER_WRITE" enabled="true" />
+			<endpoint-group name="DATA" enabled="true" />
+			<endpoint-group name="HOT_RESTART" enabled="true" />
+			<endpoint-group name="WAN" enabled="true" />
+			<endpoint-group name="CP" enabled="true" />
+		</rest-api>
+		<join>
+			<multicast enabled="false"></multicast>
+			<tcp-ip enabled="true">
+				<members>${hazelcast-addon.tcp.members}</members>
+			</tcp-ip>
+		</join>
+		<ssl enabled="false" />
+		<socket-interceptor enabled="false" />
+	</network>
+
+	<cp-subsystem>
+		<cp-member-count>3</cp-member-count>
+		<group-size>3</group-size>
+	</cp-subsystem>
+
+	<map name="map*">
+		<near-cache name="maps">
+			<max-idle-seconds>100</max-idle-seconds>
+		</near-cache>
+	</map>
+
+	<!-- Indexes for nw data -->
+	<map name="nw/customers">
+		<indexes>
+			<index name="country">
+				<attributes>
+					<attribute>country</attribute>
+				</attributes>
+			</index>
+		</indexes>
+		<near-cache name="customers">
+			<max-idle-seconds>100</max-idle-seconds>
+		</near-cache>
+	</map>
+	<map name="nw/orders">
+		<indexes>
+			<index name="freight">
+				<attributes>
+					<attribute>freight</attribute>
+				</attributes>
+			</index>
+			<index name="shipvia" type="BITMAP">
+				<attributes>
+					<attribute>shipVia</attribute>
+				</attributes>
+			</index>
+		</indexes>
+		<near-cache name="orders">
+			<max-idle-seconds>100</max-idle-seconds>
+		</near-cache>
+	</map>
+
+	<executor-service name="hz:query">
+		<pool-size>16</pool-size>
+		<!--Queue capacity. 0 means Integer.MAX_VALUE. -->
+		<queue-capacity>0</queue-capacity>
+	</executor-service>
+
+	<!-- padogrid serialization -->
+	<serialization>
+		<portable-version>1</portable-version>
+		<portable-factories>
+			<portable-factory factory-id="10000">
+			org.hazelcast.addon.hql.impl.PortableFactoryImpl
+			</portable-factory>
+		</portable-factories>
+	</serialization>
+
+</hazelcast>

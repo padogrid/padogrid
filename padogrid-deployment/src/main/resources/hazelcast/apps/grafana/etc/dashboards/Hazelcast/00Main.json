@@ -233,33 +233,19 @@
             "color": {
               "mode": "palette-classic"
             },
-            "custom": {
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              }
-            },
             "mappings": [],
-            "unit": "none"
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "{__name__=\"com_hazelcast_Metrics_minorCount\", exported_instance=\"objective_tesla\", instance=\"localhost:8292\", job=\"hazelcast\", prefix=\"gc\"}"
-              },
-              "properties": [
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
                 {
-                  "id": "color",
-                  "value": {
-                    "fixedColor": "red",
-                    "mode": "fixed"
-                  }
+                  "color": "green",
+                  "value": null
                 }
               ]
-            }
-          ]
+            },
+            "unit": "percentunit"
+          },
+          "overrides": []
         },
         "gridPos": {
           "h": 8,
@@ -269,12 +255,10 @@
         },
         "id": 6,
         "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "pieType": "pie",
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "vertical",
           "reduceOptions": {
             "calcs": [
               "lastNotNull"
@@ -282,17 +266,15 @@
             "fields": "",
             "values": false
           },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
+          "textMode": "auto"
         },
+        "pluginVersion": "10.1.4",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_localPartitionCount{job=\"$Cluster\"}",
+            "expr": "com_hazelcast_Metrics_localPartitionCount{job=\"$Cluster\"}/com_hazelcast_Metrics_partitionCount{job=\"$Cluster\"}",
             "hide": false,
             "instant": true,
             "legendFormat": "{{instance}}",
@@ -300,8 +282,8 @@
             "refId": "B"
           }
         ],
-        "title": "Partition Distribution (Per Member)",
-        "type": "piechart"
+        "title": "Partition Distribution",
+        "type": "stat"
       },
       {
         "datasource": "${DATASOURCE}",

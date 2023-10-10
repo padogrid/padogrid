@@ -278,7 +278,13 @@ The `padogrid-perf_test` folder includes the `perf_test` app dashboards. To view
 create_app
 ```
 
-For `perf_test details, see [perf_test README.md](../perf_test/README.md).
+For `perf_test` details, see [perf_test README.md](../perf_test/README.md).
+
+### 6.2. Hazelcast Dashboards
+
+The `Hazelcast` folder includes the dashboards that resemble the Hazelcast Management Center. You can run [`perf_test`](../perf_test/README.md) with the `group-workflow-*.properties` files to activate most of the dashboards.
+
+The Hazelcast dasboards support multiple clusters. To include multiple clusters, you must add them in the `etc/prometheus.yml` file. You can use the the included [`etc/prometheus-clusters.yml`](etc/prometheus-clusters.yml) as an example. This file configures two (2) Hazelast clusters named, 'myhz' and 'myhz2'.
 
 ## 7. Exporting Dashboards
 
@@ -316,7 +322,13 @@ Default: ./create_folder -folder padogrid-perf_test
 
 ## 10. Screenshots
 
-![Grafana Screenshot](https://github.com/padogrid/padogrid/blob/develop/images/grafana-screenshot.png?raw=true)
+### 10.1. padogrid_perf_test Folder
+
+![perf_test Folder](https://github.com/padogrid/padogrid/blob/develop/images/grafana-screenshot.png?raw=true)
+
+### 10.2. Hazelcast Folder
+
+![Hazelcast Folder](https://github.com/padogrid/padogrid/blob/develop/images/grafana-hazelcast-screenshot.png?raw=true)
 
 ## 11. Teardown
 

@@ -53,7 +53,13 @@ exit
 fi
 
 if [ "$FOLDER" != "" ]; then
-   FOLDERS=$FOLDER
+   __UID=`./get_folder_uid -folder $FOLDER`
+   if [ "$__UID" == "" ]; then
+      echo -e >&2 "${CError}ERROR:${CNone} Specified folder not found in Grafana [$FOLDER]. Command aborted."
+      exit 1
+   else
+      FOLDERS=$FOLDER
+   fi
 elif [ "$ALL" != "true" ]; then
    FOLDERS=$DEFAULT_FOLDER
 else
@@ -74,7 +80,7 @@ else
 fi
 
 if [ "$FOLDERS" == "" ]; then
-   echo "Folders not found in Grafana. Command aboarded."
+   echo -e >&2 "${CError}ERROR:${CNone} Folders not found in Grafana. Command aborted."
    exit 1
 fi
    

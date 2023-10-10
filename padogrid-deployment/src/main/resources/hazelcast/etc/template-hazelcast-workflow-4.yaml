@@ -74,6 +74,8 @@ hazelcast:
           enabled: true
         WAN:
           enabled: true
+        CP:
+          enabled: true
     join:
       multicast:
         enabled: false
@@ -84,13 +86,39 @@ hazelcast:
       enabled: false
     ssl:
       enabled: false
-  
-  native-memory:
-    enabled: true
-    size:
-      unit: MEGABYTES
-      value: 512
 
+  cp-subsystem:
+    cp-member-count: 3
+    group-size: 3
+
+  map:
+    map*:
+      near-cache:
+        max-idle-seconds: 100
+
+    # Indexes for nw data
+    nw/customers:
+      indexes:
+        - name: country
+          type: HASH
+          attributes:
+            - "country"
+      near-cache:
+        max-idle-seconds: 100
+        
+    nw/orders:
+      indexes:
+        - name: freight
+          type: SORTED
+          attributes:
+            - "freight"
+        - name: shipvia
+          type: BITMAP
+          attributes:
+            - "shipVia"
+      near-cache:
+        max-idle-seconds: 100
+    
   executor-service:
     hz:query:
       pool-size: 16

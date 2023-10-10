@@ -1366,12 +1366,14 @@ public class GroupTest implements Constants
 				String[] split = operationsStr.split(",");
 
 				HashSet<Operation> groupOperationSet = new HashSet<Operation>(split.length);
+				ArrayList<Operation> groupOperationList = new ArrayList<Operation>(split.length);
 				for (int k = 0; k < split.length; k++) {
 					String operationName = split[k];
 					operationName = operationName.trim();
 					Operation operation = parseOperation(operationName, erOperationNamesSet);
 					if (operation != null) {
 						groupOperationSet.add(operation);
+						groupOperationList.add(operation);
 					}
 				}
 
@@ -1473,7 +1475,9 @@ public class GroupTest implements Constants
 					}
 				}
 
-				group.operations = groupOperationSet.toArray(new Operation[0]);
+				// groupOperationList contains all operations including repeating ones
+				// in the order they were defined.
+				group.operations = groupOperationList.toArray(new Operation[0]);
 				group.comment = System.getProperty(groupName + ".comment", "");
 			}
 		}
