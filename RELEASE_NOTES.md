@@ -6,9 +6,15 @@ https://github.com/padogrid
 
 ## Version 0.9.30-SNAPSHOT
 
-### Release Date: 10/09/23
+### Release Date: 10/11/23
 
-- Added Hazelcast Grafana dashboards that resemble Hazelcast Management Center.
+- Added Hazelcast Grafana dashboards providing the following features.
+  - Main console resembling the Management Center
+  - Additional metrics not found in the Management Center
+  - Support for monitoring multiple Hazelcast clusters
+  - A workflow simulator for activating dashboards
+  - A complete set of scripts for importing, exporting, and creating templates
+  - Kubernetes ready
 
 ----
 
