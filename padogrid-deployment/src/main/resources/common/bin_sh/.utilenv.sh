@@ -3408,7 +3408,7 @@ function getWorkspaceInfoList
          if [ "$JAVA_HOME" != "" ]; then
             __JAVA_HOME=$JAVA_HOME
          else
-            local JAVA_EXEC_PATH=$(which java)
+            local JAVA_EXEC_PATH=$(which java 2> /dev/null)
             if [ "$JAVA_EXEC_PATH" != "" ]; then
                __JAVA_HOME=$(dirname $(dirname $JAVA_EXEC_PATH))
             fi
@@ -3618,20 +3618,41 @@ function removeTokensArray()
 # Prints the SEE ALSO list by applying the specified filter and exclusion command
 # @param filter            Filter must be in double quotes with wild card
 # @param exclusionCommand  Command to exclude from the list
+# @required $SCRIPT_DIR
 # @returns SEE ALSO list
 #
 # Example: printSeeAlsoList "*cluster*" remove_cluster
 #
 function printSeeAlsoList
 {
+   local PARENT_DIR=$(dirname $SCRIPT_DIR)
+   local PARENT_DIR_NAME=$(basename $PARENT_DIR)
+
+   local SCRIPT_DIR2=""
+   if [[ "$PARENT_DIR_NAME" == "padogrid"** ]]; then
+      SHOW_LOG_PATH="$(which show_log 2> /dev/null)"
+      if [ "$SHOW_LOG_PATH" != "" ]; then
+         SCRIPT_DIR2=$(dirname $SHOW_LOG_PATH)
+      fi
+   else
+      SCRIPT_DIR2=$(dirname $PARENT_DIR)/bin_sh
+   fi
+
    local FILTER=$1
    local EXCLUDE=$2
    pushd $SCRIPT_DIR > /dev/null 2>&1
-   local COMMANDS=`ls $FILTER 2> /dev/null`
+   local COMMANDS1=`ls $FILTER 2> /dev/null`
    popd > /dev/null 2>&1
+   local COMMANDS2=""
+   if [ "$SCRIPT_DIR" != "" ]; then
+      pushd $SCRIPT_DIR2 > /dev/null 2>&1
+      local COMMANDS2=`ls $FILTER 2> /dev/null`
+      popd > /dev/null 2>&1
+   fi
+   local COMMANDS="$COMMANDS1 $COMMANDS2"
    local LINE=""
-   COMMANDS=$(unique_words "$COMMANDS")
-   COMMANDS=($COMMANDS)
+   COMMANDS=$(echo $(echo $COMMANDS | sed 's/ /\n/g' | sort))
+   COMMANDS=($(unique_words "$COMMANDS"))
    local len=${#COMMANDS[@]}
    local last_index
    let last_index=len-1

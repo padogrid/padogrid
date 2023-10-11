@@ -65,6 +65,12 @@ VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 export VERSION
 
+BASE_DIR=`pwd`
+
+PATH="$BASE_DIR/build/padogrid_${VERSION}/bin_sh:$PATH"
+__PATH=$PATH
+
+
 PRODUCTS="common geode hazelcast mosquitto redis snappydata spark kafka hadoop none"
 
 if [ "$COHERENCE_SPECIFIED" == "true" ]; then
@@ -74,10 +80,15 @@ fi
 for __PRODUCT in $PRODUCTS; do
    # Build man pages
    echo "Building man pages: $__PRODUCT..."
+
+   # We set PATH to the product bin directory so that the printSeeAlso 
+   # function can properly build SEE ALSO.
    if [ "$__PRODUCT" == "common" ]; then
       pushd build/padogrid_${VERSION} > /dev/null 2>&1
+      PATH="$BASE_DIR/build/padogrid_${VERSION}/hazelcast/bin_sh:$__PATH"
    else
       pushd build/padogrid_${VERSION}/$__PRODUCT > /dev/null 2>&1
+      PATH="$BASE_DIR/build/padogrid_${VERSION}/$__PRODUCT/bin_sh:$__PATH"
    fi
    if [ ! -d $TMP_DIR ]; then
       mkdir -p $TMP_DIR
