@@ -67,9 +67,29 @@ export VERSION
 
 BASE_DIR=`pwd`
 
-PATH="$BASE_DIR/build/padogrid_${VERSION}/bin_sh:$PATH"
+RWE="rwe-build"
+PADOGRID_ENV_BASE_PATH="$BASE_DIR/build/Padogrid"
+PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/$RWE"
+PRODUCT="none"
+export PADOGRID_HOME="$PADOGRID_ENV_BASE_PATH/products/padogrid_${VERSION}"
+
+TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
+echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
+echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
+echo "PRODUCT=\"none\"" >> $TMP_ENV_FILE
+echo "JAVA_HOME=\"$JAVA_HOME\"" >> $TMP_ENV_FILE
+
+PATH="$PADOGRID_HOME/bin_sh:$PATH"
 __PATH=$PATH
 
+if [ -d "$PADOGRID_WORKSPACES_HOME" ]; then
+   rm -rf "$PADOGRID_WORKSPACES_HOME"
+fi
+
+$PADOGRID_HOME/bin_sh/create_rwe -rwe $RWE -quiet -env $TMP_ENV_FILE
+rm $TMP_ENV_FILE
+
+. $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet
 
 PRODUCTS="common geode hazelcast mosquitto redis snappydata spark kafka hadoop none"
 
@@ -84,11 +104,11 @@ for __PRODUCT in $PRODUCTS; do
    # We set PATH to the product bin directory so that the printSeeAlso 
    # function can properly build SEE ALSO.
    if [ "$__PRODUCT" == "common" ]; then
-      pushd build/padogrid_${VERSION} > /dev/null 2>&1
-      PATH="$BASE_DIR/build/padogrid_${VERSION}/hazelcast/bin_sh:$__PATH"
+      pushd $PADOGRID_HOME > /dev/null 2>&1
+      PATH="$PADOGRID_HOME/hazelcast/bin_sh:$__PATH"
    else
-      pushd build/padogrid_${VERSION}/$__PRODUCT > /dev/null 2>&1
-      PATH="$BASE_DIR/build/padogrid_${VERSION}/$__PRODUCT/bin_sh:$__PATH"
+      pushd $PADOGRID_HOME/$__PRODUCT > /dev/null 2>&1
+      PATH="$PADOGRID_HOME/$__PRODUCT/bin_sh:$__PATH"
    fi
    if [ ! -d $TMP_DIR ]; then
       mkdir -p $TMP_DIR

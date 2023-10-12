@@ -85,18 +85,19 @@ VERSION=${VERSION%<\/version>}
 
 if [ "$MAN_SPECIFIED" == "true" ]; then
    # Untar the distribution file in the build directory.
-   if [ ! -d build ]; then
-      mkdir -p build
+
+   if [ "$DEBUG" == "false" ]; then
+      if [ -d build ]; then
+         rm -Rf build
+      fi
+   fi
+
+   if [ ! -d build/Padogrid/products ]; then
+      mkdir -p build/Padogrid/products
    fi
 
    if [ "$DEBUG" == "false" ]; then
-      if [ -d build/padogrid_${VERSION} ]; then
-         rm -Rf build/padogrid_${VERSION}
-      fi
-      if [ -d build/padogrid-all_${VERSION} ]; then
-         rm -Rf build/padogrid-all_${VERSION}
-      fi
-      tar -C build/ -xzf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz
+      tar -C build/Padogrid/products/ -xzf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz
    fi
 
    # Build man pages
@@ -108,11 +109,11 @@ if [ "$MAN_SPECIFIED" == "true" ]; then
    fi
 
    # tar up the distribution which now includes man pages
-   tar -C build -czf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz padogrid_${VERSION}
+   tar -C build/Padogrid/products -czf padogrid-deployment/target/assembly/padogrid_${VERSION}.tar.gz padogrid_${VERSION}
    if [ "$(which zip)" == "" ]; then
       echo "Unable to create a zip file due to missing 'zip' command."
    else
-      pushd build > /dev/null 2>&1
+      pushd build/Padogrid/products > /dev/null 2>&1
       zip -q -r ../padogrid-deployment/target/assembly/padogrid_${VERSION}.zip padogrid_${VERSION}
       popd > /dev/null 2>&1
    fi
