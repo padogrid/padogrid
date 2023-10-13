@@ -23,6 +23,14 @@ else
    . $SCRIPT_DIR/.argenv.sh
 fi
 
+if [ "$PADOGRID_HOME" == "" ]; then
+   PADOGRID_HOME=$(dirname "$SCRIPT_DIR")
+   DIR_NAME="$(basename $PADOGRID_HOME)"
+   if [[ "$DIR_NAME" != "padogrid"* ]]; then
+      PADOGRID_HOME=$(dirname "$PADOGRID_HOME")
+   fi
+fi
+
 EXECUTABLE="`basename $0`"
 
 # 
@@ -510,8 +518,9 @@ fi
 
 # Create env file for the '.init_padpgrid' command to source in.
 TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
-echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" > $TMP_ENV_FILE
-echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" > $TMP_ENV_FILE
+echo "PADOGRID_HOME=\"$PADOGRID_HOME\"" > $TMP_ENV_FILE
+echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
+echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
 echo "PRODUCT_HOME_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
 echo "PRODUCT_ARG=\"$PRODUCT\"" >> $TMP_ENV_FILE
 echo "PRODUCT=\"$PRODUCT\"" >> $TMP_ENV_FILE

@@ -5073,11 +5073,18 @@ function installMavenPadogridJar
 function getCommonProductName {
    local PRODUCT_ARG="$1"
    local RETVAL=$PRODUCT_ARG
-   case $PRODUCT_ARG in
-      gemfire) RETVAL="geode" ;;
-      jet) RETVAL="hazelcast" ;;
-      confluent) RETVAL="kafka" ;;
-   esac
+   if [[ "$PRODUCT_ARG" == "hazelcast"* ]]; then
+      RETVAL="hazelcast"
+   elif [[ "$PRODUCT_ARG" == "jet"* ]]; then
+      RETVAL="hazelcast"
+   elif [[ "$PRODUCT_ARG" == "redis"* ]]; then
+      RETVAL="redis"
+   else
+      case $PRODUCT_ARG in
+         gemfire) RETVAL="geode" ;;
+         confluent) RETVAL="kafka" ;;
+      esac
+   fi
    echo $RETVAL
 }
 

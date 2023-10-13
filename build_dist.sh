@@ -114,7 +114,7 @@ if [ "$MAN_SPECIFIED" == "true" ]; then
       echo "Unable to create a zip file due to missing 'zip' command."
    else
       pushd build/Padogrid/products > /dev/null 2>&1
-      zip -q -r ../padogrid-deployment/target/assembly/padogrid_${VERSION}.zip padogrid_${VERSION}
+      zip -q -r ../../../padogrid-deployment/target/assembly/padogrid_${VERSION}.zip padogrid_${VERSION}
       popd > /dev/null 2>&1
    fi
 fi

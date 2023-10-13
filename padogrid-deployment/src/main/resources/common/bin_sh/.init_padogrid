@@ -17,9 +17,17 @@
 # ========================================================================
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-# Source in .argenv.sh here to handle initial build
-. $PADOGRID_HOME/bin_sh/.argenv.sh
-. $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh
+# Source in .argenv.sh here to handle the initial build
+if [ -f $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh ]; then
+   . $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh
+else
+   . $SCRIPT_DIR/.argenv.sh
+fi
+if [ "$BASE_DIR" == "" ]; then
+   BASE_DIR="$PADOGRID_HOME"
+fi
+#. $PADOGRID_HOME/bin_sh/.argenv.sh
+#. $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh
 
 EXECUTABLE="`basename $0`"
 
@@ -104,7 +112,9 @@ if [ "$ENV_ARG" != "" ]; then
 fi
 
 # Set PADOGRID_HOME
-PADOGRID_HOME="$BASE_DIR"
+if [ "$PADOGRID_HOME" == "" ]; then
+   PADOGRID_HOME="$BASE_DIR"
+fi
 
 RWE_HOME="$PATH_ARG"
 if [ "$RWE_HOME" == "" ]; then
@@ -438,7 +448,8 @@ if [ "$CLUSTER" == "" ]; then
 else
    CLUSTER_SPECIFIED="true"
 fi
-echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" > $TMP_ENV_FILE
+echo "PADOGRID_HOME=\"$PADOGRID_HOME\"" > $TMP_ENV_FILE
+echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
 echo "CLUSTER_SPECIFIED=\"$CLUSTER_SPECIFIED\"" >> $TMP_ENV_FILE
 echo "CLUSTER=\"$CLUSTER\"" >> $TMP_ENV_FILE
 if [ "$WORKSPACE" != "" ]; then
