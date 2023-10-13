@@ -143,6 +143,7 @@ for __PRODUCT in $PRODUCTS; do
          COMMANDS="$COMMANDS $i"
       done
    fi
+   prev_first_word=""
    for i in $COMMANDS; do 
       COMMAND_NAME="`basename $i`"
       # Skip pado executable. Requires PADO_HOME and man format.
@@ -276,6 +277,26 @@ for __PRODUCT in $PRODUCTS; do
                fi
                echo "$line" >> $MAN_FILE
             fi
+         elif [ "$section" == "SUMMARY" ]; then
+            # padogrid's SUMMARY needs to be custom indented due to
+            # sub-bullets.
+            first_word=$(echo $line | awk '{print $1}')
+            if [[ $first_word =~ ^[A-Z].* ]]; then
+               if [ "$prev_first_word" != "" ]; then
+                  line="                    $line"
+                  prev_first_word=""
+                  echo "$line" >> $MAN_FILE
+                  continue;
+               elif [ ${#first_word} -ge 27 ]; then
+                  prev_first_word=$first_word
+                  continue;
+               fi
+               echo ".SS $line" >> $MAN_FILE
+            else
+               echo ".TP" >> $MAN_FILE
+               echo "$line" >> $MAN_FILE
+            fi 
+            prev_first_word=$first_word
          else
             echo "$line" >> $MAN_FILE
          fi
