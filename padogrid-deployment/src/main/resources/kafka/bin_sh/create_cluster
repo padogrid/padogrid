@@ -35,7 +35,7 @@ if [ "$OPTIONS" == "true" ]; then
    exit
 fi
 
-if [ "$PRODUCT_ARG" == "$PRODUCT" ] && [ "$HELP" == "true" ]; then
+if [[ "$PRODUCT_ARG" == "" || "$PRODUCT_ARG" == "$PRODUCT" ]] && [ "$HELP" == "true" ]; then
 cat <<EOF
 
 WORKSPACE
@@ -139,9 +139,15 @@ if [ "$COMMON_PRODUCT" != "$PRODUCT" ]; then
    exit
 fi
 
+# If -product is specified then make it default. This effectively
+# provides a way to create any product clusters in the same workspace.
+if [ "$PRODUCT_ARG" != "" ]; then
+   PRODUCT=$PRODUCT_ARG
+fi
+
 # Set the default cluster name if not specified
 if [ "$CLUSTER_ARG" == "" ]; then
-   if [ "$CLUSTER_TYPE_ARG" == "confluent" ]; then
+   if [ "$PRODUCT" == "confluent" ] || [ "$CLUSTER_TYPE_ARG" == "confluent" ]; then
       CLUSTER=$DEFAULT_CONFLUENT_CLUSTER
    else
       CLUSTER=$DEFAULT_CLUSTER

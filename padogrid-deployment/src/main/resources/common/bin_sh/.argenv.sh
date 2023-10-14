@@ -680,3 +680,7 @@ fi
 if [ "$ENV_ARG" != "" ]; then
    . $ENV_ARG
 fi
+
+if [ "$PRODUCT" == "" ]; then
+   PRODUCT="none"
+fi

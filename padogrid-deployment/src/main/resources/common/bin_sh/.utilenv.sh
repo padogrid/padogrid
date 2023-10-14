@@ -1830,16 +1830,16 @@ function switch_rwe
       retrieveClusterEnvFile
       cd_rwe $@
    else
-      local __PATH=""
+      local __RWE_PATH=""
       for i in "$@"; do
-        if [ "$__PATH" == "" ] || [[ "$__PATH" == */ ]]; then
-           __PATH="${__PATH}$i"
+        if [ "$__RWE_PATH" == "" ] || [[ "$__RWE_PATH" == */ ]]; then
+           __RWE_PATH="${__RWE_PATH}$i"
         else
-           __PATH="${__PATH}/$i"
+           __RWE_PATH="${__RWE_PATH}/$i"
         fi
       done
       local PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
-      local tokens=$(echo "$__PATH" | sed 's/\// /g')
+      local tokens=$(echo "$__RWE_PATH" | sed 's/\// /g')
       local __INDEX=0
       local __WORKSPACE=""
       local __COMPONENT_DIR_NAME=""
@@ -1904,7 +1904,7 @@ function switch_rwe
          # Initialze workspace
          . "$NEW_WORKSPACE_DIR/initenv.sh" -quiet
 
-         local __SHIFTED="${__PATH#*\/}"
+         local __SHIFTED="${__RWE_PATH#*\/}"
          cd_workspace $__SHIFTED
 
       else
@@ -2041,15 +2041,15 @@ function switch_workspace
          echo -e >&2 "${CError}ERROR:${CNone} Invalid workspace: [$1]. Permission denied. Command aborted."
          return 1
       fi
-      local __PATH=""
+      local __WORKSPACE_PATH=""
       for i in "$@"; do
-        if [ "$__PATH" == "" ] || [[ "$__PATH" == */ ]]; then
-           __PATH="${__PATH}$i"
+        if [ "$__WORKSPACE_PATH" == "" ] || [[ "$__WORKSPACE_PATH" == */ ]]; then
+           __WORKSPACE_PATH="${__WORKSPACE_PATH}$i"
         else
-           __PATH="${__PATH}/$i"
+           __WORKSPACE_PATH="${__WORKSPACE_PATH}/$i"
         fi
       done
-      local tokens=$(echo "$__PATH" | sed 's/\// /g')
+      local tokens=$(echo "$__WORKSPACE_PATH" | sed 's/\// /g')
       local __INDEX=0
       local __WORKSPACE=""
       local __COMPONENT_DIR_NAME=""
@@ -3408,7 +3408,7 @@ function getWorkspaceInfoList
          if [ "$JAVA_HOME" != "" ]; then
             __JAVA_HOME=$JAVA_HOME
          else
-            local JAVA_EXEC_PATH=$(which java)
+            local JAVA_EXEC_PATH=$(which java 2> /dev/null)
             if [ "$JAVA_EXEC_PATH" != "" ]; then
                __JAVA_HOME=$(dirname $(dirname $JAVA_EXEC_PATH))
             fi
@@ -3618,20 +3618,41 @@ function removeTokensArray()
 # Prints the SEE ALSO list by applying the specified filter and exclusion command
 # @param filter            Filter must be in double quotes with wild card
 # @param exclusionCommand  Command to exclude from the list
+# @required $SCRIPT_DIR
 # @returns SEE ALSO list
 #
 # Example: printSeeAlsoList "*cluster*" remove_cluster
 #
 function printSeeAlsoList
 {
+   local PARENT_DIR=$(dirname $SCRIPT_DIR)
+   local PARENT_DIR_NAME=$(basename $PARENT_DIR)
+
+   local SCRIPT_DIR2=""
+   if [[ "$PARENT_DIR_NAME" == "padogrid"** ]]; then
+      SHOW_LOG_PATH="$(which show_log 2> /dev/null)"
+      if [ "$SHOW_LOG_PATH" != "" ]; then
+         SCRIPT_DIR2=$(dirname $SHOW_LOG_PATH)
+      fi
+   else
+      SCRIPT_DIR2=$(dirname $PARENT_DIR)/bin_sh
+   fi
+
    local FILTER=$1
    local EXCLUDE=$2
    pushd $SCRIPT_DIR > /dev/null 2>&1
-   local COMMANDS=`ls $FILTER 2> /dev/null`
+   local COMMANDS1=`ls $FILTER 2> /dev/null`
    popd > /dev/null 2>&1
+   local COMMANDS2=""
+   if [ "$SCRIPT_DIR" != "" ]; then
+      pushd $SCRIPT_DIR2 > /dev/null 2>&1
+      local COMMANDS2=`ls $FILTER 2> /dev/null`
+      popd > /dev/null 2>&1
+   fi
+   local COMMANDS="$COMMANDS1 $COMMANDS2"
    local LINE=""
-   COMMANDS=$(unique_words "$COMMANDS")
-   COMMANDS=($COMMANDS)
+   COMMANDS=$(echo $(echo $COMMANDS | sed 's/ /\n/g' | sort))
+   COMMANDS=($(unique_words "$COMMANDS"))
    local len=${#COMMANDS[@]}
    local last_index
    let last_index=len-1
@@ -5052,11 +5073,18 @@ function installMavenPadogridJar
 function getCommonProductName {
    local PRODUCT_ARG="$1"
    local RETVAL=$PRODUCT_ARG
-   case $PRODUCT_ARG in
-      gemfire) RETVAL="geode" ;;
-      jet) RETVAL="hazelcast" ;;
-      confluent) RETVAL="kafka" ;;
-   esac
+   if [[ "$PRODUCT_ARG" == "hazelcast"* ]]; then
+      RETVAL="hazelcast"
+   elif [[ "$PRODUCT_ARG" == "jet"* ]]; then
+      RETVAL="hazelcast"
+   elif [[ "$PRODUCT_ARG" == "redis"* ]]; then
+      RETVAL="redis"
+   else
+      case $PRODUCT_ARG in
+         gemfire) RETVAL="geode" ;;
+         confluent) RETVAL="kafka" ;;
+      esac
+   fi
    echo $RETVAL
 }
 

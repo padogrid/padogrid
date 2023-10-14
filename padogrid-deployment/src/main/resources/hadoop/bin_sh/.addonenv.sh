@@ -27,8 +27,16 @@ BASE_DIR="$(dirname "$SCRIPT_DIR")"
 # Source in .argenv.sh to set all default variables. This call is required.
 # IMPORTANT: Do NOT remove this call.
 # -------------------------------------------------------------------------------
-. $SCRIPT_DIR/.argenv.sh "$@"
-. $SCRIPT_DIR/.utilenv_hadoop.sh "$@"
+. $PADOGRID_HOME/bin_sh/.argenv.sh "$@"
+
+#
+# Source in the target product utilenv
+#
+PRODUCT_NAME=$(getCommonProductName $PRODUCT_ARG)
+if [ "$PRODUCT_NAME" == "" ]; then
+   PRODUCT_NAME="$PRODUCT"
+fi
+. $PADOGRID_HOME/$PRODUCT_NAME/bin_sh/.utilenv_$PRODUCT_NAME.sh "$@"
 
 #
 # Source in setenv.sh that contains user configured variables
@@ -206,7 +214,7 @@ LOG_PROPERTIES="-Dlog4j.configurationFile=$LOG4J_FILE"
 # We need to change that accordingly here.
 export PRODUCT="hadoop"
 export CLUSTER_TYPE="pseudo"
-export PATH="$SCRIPT_DIR:$SCRIPT_DIR/tools:$PADOGRID_HOME/bin_sh:$HADOOP_HOME/sbin:$HADOOP_HOME/bin:$PATH"
+export PATH="$PADOGRID_HOME/$PRODUCT_NAME/bin_sh:$PADOGRID_HOME/$PRODUCT_NAME/bin_sh/tools:$PADOGRID_HOME/bin_sh:$HADOOP_HOME/sbin:$HADOOP_HOME/bin:$PATH"
 
 #
 # HADOOP_VERSION/PRODUCT_VERSION: Determine the Hadoop version

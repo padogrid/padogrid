@@ -65,16 +65,55 @@ VERSION=${VERSION#<version>}
 VERSION=${VERSION%<\/version>}
 export VERSION
 
-PRODUCTS="geode hazelcast mosquitto redis snappydata spark kafka hadoop none"
+BASE_DIR=`pwd`
+
+RWE="rwe-build"
+WORKSPACE="myws"
+PADOGRID_ENV_BASE_PATH="$BASE_DIR/build/Padogrid"
+PADOGRID_WORKSPACES_HOME="$PADOGRID_ENV_BASE_PATH/workspaces/$RWE"
+PRODUCT="none"
+PADOGRID_HOME="$PADOGRID_ENV_BASE_PATH/products/padogrid_${VERSION}"
+PADOGRID_WORKSPACE="$PADOGRID_WORKSPACES_HOME/myws"
+
+TMP_ENV_FILE=/tmp/$EXECUTABLE-$(date "+%m%d%y%H%M%S").sh
+echo "PADOGRID_HOME=\"$PADOGRID_HOME\"" > $TMP_ENV_FILE
+echo "PADOGRID_ENV_BASE_PATH=\"$PADOGRID_ENV_BASE_PATH\"" >> $TMP_ENV_FILE
+echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
+echo "PADOGRID_WORKSPACE=\"$PADOGRID_WORKSPACE\"" >> $TMP_ENV_FILE
+echo "PRODUCT=\"none\"" >> $TMP_ENV_FILE
+echo "JAVA_HOME=\"$JAVA_HOME\"" >> $TMP_ENV_FILE
+
+PATH="$PADOGRID_HOME/bin_sh:$PATH"
+__PATH=$PATH
+
+if [ -d "$PADOGRID_WORKSPACES_HOME" ]; then
+   rm -rf "$PADOGRID_WORKSPACES_HOME"
+fi
+
+$PADOGRID_HOME/bin_sh/create_rwe -rwe $RWE -workspace $WORKSPACE -quiet -env $TMP_ENV_FILE
+rm $TMP_ENV_FILE
+
+. $PADOGRID_WORKSPACES_HOME/initenv.sh -quiet
+
+PRODUCTS="common geode hazelcast mosquitto redis snappydata spark kafka hadoop none"
 
 if [ "$COHERENCE_SPECIFIED" == "true" ]; then
    PRODUCTS="$PRODUCTS coherence"
 fi
 
-for PRODUCT in $PRODUCTS; do
+for __PRODUCT in $PRODUCTS; do
    # Build man pages
-   echo "Building man pages: $PRODUCT..."
-   pushd build/padogrid_${VERSION}/$PRODUCT > /dev/null 2>&1
+   echo "Building man pages: $__PRODUCT..."
+
+   # We set PATH to the product bin directory so that the printSeeAlso 
+   # function can properly build SEE ALSO.
+   if [ "$__PRODUCT" == "common" ]; then
+      pushd $PADOGRID_HOME > /dev/null 2>&1
+      PATH="$PADOGRID_HOME/hazelcast/bin_sh:$__PATH"
+   else
+      pushd $PADOGRID_HOME/$__PRODUCT > /dev/null 2>&1
+      PATH="$PADOGRID_HOME/$__PRODUCT/bin_sh:$__PATH"
+   fi
    if [ ! -d $TMP_DIR ]; then
       mkdir -p $TMP_DIR
    fi
@@ -104,6 +143,9 @@ for PRODUCT in $PRODUCTS; do
          COMMANDS="$COMMANDS $i"
       done
    fi
+   prev_first_word=""
+   summary_in_progress="false"
+   summary_section=""
    for i in $COMMANDS; do 
       COMMAND_NAME="`basename $i`"
       # Skip pado executable. Requires PADO_HOME and man format.
@@ -237,6 +279,36 @@ for PRODUCT in $PRODUCTS; do
                fi
                echo "$line" >> $MAN_FILE
             fi
+         elif [ "$section" == "SUMMARY" ]; then
+            # padogrid's SUMMARY needs to be custom indented due to
+            # sub-bullets.
+            first_word=$(echo $line | awk '{print $1}')
+            case $first_word in
+               Prefixes|Postfixes|APP|BUNDLE|CLUSTER|DATANODE|DOCKER|GROUP|K8S|LEADER|LOCATOR|MASTER|MEMBER|NAMENODE|POD|RWE|VM|WORKER|WORKSPACE|TOOLS|CP|Virtual|MISCELLANEOUS)
+                  echo ".SS $line" >> $MAN_FILE
+                  summary_section="$first_word"
+                  prev_first_word=""
+                  summary_in_progress="true"
+                  ;;
+               *)
+                  if [ "$prev_first_word" != "" ]; then
+                     line="                    $line"
+                     prev_first_word=""
+                     echo "$line" >> $MAN_FILE
+                  elif [ ${#first_word} -ge 27 ]; then
+                     prev_first_word=$first_word
+                     if [ "$summary_in_progress" == "true" ] && [ "$first_word" != "" ]; then
+                        echo ".TP" >> $MAN_FILE
+                        echo "$line" >> $MAN_FILE
+                     fi
+                  else
+                     if [ "$summary_in_progress" == "true" ] && [ "$first_word" != "" ] && [ "$summary_section" != "Postfixes" ]; then
+                        echo ".TP" >> $MAN_FILE
+                     fi
+                     echo "$line" >> $MAN_FILE
+                  fi
+                  ;;
+            esac
          else
             echo "$line" >> $MAN_FILE
          fi

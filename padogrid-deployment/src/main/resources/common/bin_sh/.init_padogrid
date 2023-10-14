@@ -17,7 +17,17 @@
 # ========================================================================
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-. $SCRIPT_DIR/.addonenv.sh
+# Source in .argenv.sh here to handle the initial build
+if [ -f $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh ]; then
+   . $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh
+else
+   . $SCRIPT_DIR/.argenv.sh
+fi
+if [ "$BASE_DIR" == "" ]; then
+   BASE_DIR="$PADOGRID_HOME"
+fi
+#. $PADOGRID_HOME/bin_sh/.argenv.sh
+#. $PADOGRID_HOME/$PRODUCT/bin_sh/.addonenv.sh
 
 EXECUTABLE="`basename $0`"
 
@@ -102,7 +112,9 @@ if [ "$ENV_ARG" != "" ]; then
 fi
 
 # Set PADOGRID_HOME
-PADOGRID_HOME="$(dirname "$BASE_DIR")"
+if [ "$PADOGRID_HOME" == "" ]; then
+   PADOGRID_HOME="$BASE_DIR"
+fi
 
 RWE_HOME="$PATH_ARG"
 if [ "$RWE_HOME" == "" ]; then
@@ -436,7 +448,8 @@ if [ "$CLUSTER" == "" ]; then
 else
    CLUSTER_SPECIFIED="true"
 fi
-echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" > $TMP_ENV_FILE
+echo "PADOGRID_HOME=\"$PADOGRID_HOME\"" > $TMP_ENV_FILE
+echo "PADOGRID_WORKSPACES_HOME=\"$PADOGRID_WORKSPACES_HOME\"" >> $TMP_ENV_FILE
 echo "CLUSTER_SPECIFIED=\"$CLUSTER_SPECIFIED\"" >> $TMP_ENV_FILE
 echo "CLUSTER=\"$CLUSTER\"" >> $TMP_ENV_FILE
 if [ "$WORKSPACE" != "" ]; then
@@ -445,7 +458,7 @@ if [ "$WORKSPACE" != "" ]; then
 fi
 determineProduct
 echo "PRODUCT_HOME_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
-echo "PRODUCT_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
+#echo "PRODUCT_ARG=\"$PRODUCT_HOME\"" >> $TMP_ENV_FILE
 if [ "$JAVA_HOME" != "" ]; then
    echo "JAVA_HOME_ARG=\"$JAVA_HOME\"" >> $TMP_ENV_FILE
 fi
@@ -502,7 +515,7 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    esac
    
    # PadoGrid product dir
-   PARENT_DIR="$(dirname "$BASE_DIR")"
+   PARENT_DIR="$BASE_DIR"
 
    # Replace '/' to avoid expansion for the subsequent use.
    TEMPLATE_JAVA_HOME=$(echo $JAVA_HOME | sed 's/\//\\\//g')
