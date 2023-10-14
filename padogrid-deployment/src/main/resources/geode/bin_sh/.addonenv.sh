@@ -36,7 +36,9 @@ PRODUCT_NAME=$(getCommonProductName $PRODUCT_ARG)
 if [ "$PRODUCT_NAME" == "" ]; then
    PRODUCT_NAME="$PRODUCT"
 fi
-. $PADOGRID_HOME/$PRODUCT_NAME/bin_sh/.utilenv_$PRODUCT_NAME.sh "$@"
+if [ -f "$PADOGRID_HOME/$PRODUCT_NAME/bin_sh/.utilenv_$PRODUCT_NAME.sh" ]; then
+   . $PADOGRID_HOME/$PRODUCT_NAME/bin_sh/.utilenv_$PRODUCT_NAME.sh "$@"
+fi
 
 #
 # Source in setenv.sh that contains user configured variables
