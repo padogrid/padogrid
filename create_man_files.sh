@@ -144,6 +144,8 @@ for __PRODUCT in $PRODUCTS; do
       done
    fi
    prev_first_word=""
+   summary_in_progress="false"
+   summary_section=""
    for i in $COMMANDS; do 
       COMMAND_NAME="`basename $i`"
       # Skip pado executable. Requires PADO_HOME and man format.
@@ -281,22 +283,32 @@ for __PRODUCT in $PRODUCTS; do
             # padogrid's SUMMARY needs to be custom indented due to
             # sub-bullets.
             first_word=$(echo $line | awk '{print $1}')
-            if [[ $first_word =~ ^[A-Z].* ]]; then
-               if [ "$prev_first_word" != "" ]; then
-                  line="                    $line"
+            case $first_word in
+               Prefixes|Postfixes|APP|BUNDLE|CLUSTER|DATANODE|DOCKER|GROUP|K8S|LEADER|LOCATOR|MASTER|MEMBER|NAMENODE|POD|RWE|VM|WORKER|WORKSPACE|TOOLS|CP|Virtual|MISCELLANEOUS)
+                  echo ".SS $line" >> $MAN_FILE
+                  summary_section="$first_word"
                   prev_first_word=""
-                  echo "$line" >> $MAN_FILE
-                  continue;
-               elif [ ${#first_word} -ge 27 ]; then
-                  prev_first_word=$first_word
-                  continue;
-               fi
-               echo ".SS $line" >> $MAN_FILE
-            else
-               echo ".TP" >> $MAN_FILE
-               echo "$line" >> $MAN_FILE
-            fi 
-            prev_first_word=$first_word
+                  summary_in_progress="true"
+                  ;;
+               *)
+                  if [ "$prev_first_word" != "" ]; then
+                     line="                    $line"
+                     prev_first_word=""
+                     echo "$line" >> $MAN_FILE
+                  elif [ ${#first_word} -ge 27 ]; then
+                     prev_first_word=$first_word
+                     if [ "$summary_in_progress" == "true" ] && [ "$first_word" != "" ]; then
+                        echo ".TP" >> $MAN_FILE
+                        echo "$line" >> $MAN_FILE
+                     fi
+                  else
+                     if [ "$summary_in_progress" == "true" ] && [ "$first_word" != "" ] && [ "$summary_section" != "Postfixes" ]; then
+                        echo ".TP" >> $MAN_FILE
+                     fi
+                     echo "$line" >> $MAN_FILE
+                  fi
+                  ;;
+            esac
          else
             echo "$line" >> $MAN_FILE
          fi
