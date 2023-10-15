@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
 
 # Set BASE_DIR here to overwrite .addonenv.sh
 BASE_DIR="$(dirname "$SCRIPT_DIR")"

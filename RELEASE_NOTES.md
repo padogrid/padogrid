@@ -8,7 +8,7 @@ https://github.com/padogrid
 
 ### Release Date: 10/14/23
 
-- Overhauled the scripts to keep product specifics in their respective `bin_sh` directory in the PadoGrid distribution. This enhancement removes duplicate scripts and significantly reduces the build time.
+- Overhauled the scripts to keep the product specifics in their respective `bin_sh` directory in the PadoGrid distribution. This enhancement removes duplicate scripts and significantly reduces the build time.
 - Added Hazelcast Grafana dashboards providing the following features.
   - Main console resembling the Management Center
   - Additional metrics not found in the Management Center

@@ -54,4 +54,10 @@ JAVA_OPTS="$JAVA_OPTS -Djava.net.preferIPv4Stack \
 # Log properties for log4j2. The log file name is set in executable scripts.
 JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=$LOG_CONFIG_FILE"
 
-CLASSPATH="$APP_DIR/etc:$CLASSPATH"
+# Set Coherence addon class path. This is to handle 'none' and non-coherence clusters.
+CLASSPATH="$PADOGRID_HOME/coherence/plugins/*:$PADOGRID_HOME/coherence/lib/*:$PADOGRID_HOME/lib/*"
+if [ "$COHERENCE_HOME" != "" ]; then
+   CLASSPATH="$CLASSPATH:$COHERENCE_HOME/lib/*"
+fi
+CLASSPATH="$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*:$CLASSPATH"
+CLASSPATH="$APP_ETC_DIR:$APP_DIR/plugins/*:$APP_DIR/lib/*:$CLASSPATH"

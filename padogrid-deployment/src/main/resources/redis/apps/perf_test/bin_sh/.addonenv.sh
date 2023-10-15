@@ -60,7 +60,7 @@ if [ "$K8S_PROPERTIES" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS $K8S_PROPERTIES"
 fi
 
-# Set Redisson addon class path. This is to handle 'none' product.
-if [[ "$CLASSPATH" != *"$PADOGRID_HOME/redis/plugins"* ]]; then
-   CLASSPATH="$PADOGRID_HOME/redis/plugins/*:$PADOGRID_HOME/redis/lib/*:$CLASSPATH"
-fi
+# Set Redisson addon class path. This is to handle 'none' and non-redis clusters.
+CLASSPATH="$PADOGRID_HOME/redis/plugins/*:$PADOGRID_HOME/redis/lib/*:$PADOGRID_HOME/lib/*"
+CLASSPATH="$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*:$CLASSPATH"
+CLASSPATH="$APP_ETC_DIR:$APP_DIR/plugins/*:$APP_DIR/lib/*:$CLASSPATH"

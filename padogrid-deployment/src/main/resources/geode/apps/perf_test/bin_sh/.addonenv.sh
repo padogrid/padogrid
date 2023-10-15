@@ -50,7 +50,21 @@ fi
 # Log properties for log4j2. The log file name is set in executable scripts.
 JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=$LOG_CONFIG_FILE"
 
-# Set Geode addon class path. This is to handle 'none' product.
-if [[ "$CLASSPATH" != *"$PADOGRID_HOME/geode/plugins"* ]]; then
-   CLASSPATH="$PADOGRID_HOME/geode/plugins/*:$PADOGRID_HOME/geode/lib/*:$CLASSPATH"
+# Set Geode addon class path. This is to handle 'none' and non-geode/non-gemfire clusters.
+CLASSPATH="$PADOGRID_HOME/geode/plugins/*:$PADOGRID_HOME/geode/lib/*"
+# Exclude slf4j and log4j included in PadoGrid distribution
+for i in $PADOGRID_HOME/lib/*; do
+  if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
+     CLASSPATH="$CLASSPATH:$i"
+  fi
+done
+if [ "$GEMFIRE_HOME" != "" ]; then
+   PRODUCT_HOME=$GEMFIRE_HOME
+elif [ "$GEODE_HOME" != "" ]; then
+   PRODUCT_HOME=$GEODE_HOME
 fi
+if [ "$PRODUCT_HOME" != "" ]; then
+   CLASSPATH="$CLASSPATH:$PRODUCT_HOME/lib/geode-dependencies.jar"
+fi
+CLASSPATH="$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*:$CLASSPATH"
+CLASSPATH="$APP_DIR/plugins/*:$APP_DIR/lib/*:$CLASSPATH"

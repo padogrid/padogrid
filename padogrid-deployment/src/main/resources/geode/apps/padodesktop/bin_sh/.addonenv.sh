@@ -116,16 +116,22 @@ done
 # 
 # class path
 #
-if [ "$GEODE_HOME" == "" ]; then
-   GEODE_HOME="$GEMFIRE_HOME"
-fi
 
-CLASSPATH="$APP_DIR:$APP_DIR/plugins/*:$APP_DIR/lib/*:$APP_JARS:$GEODE_HOME/lib/*"
-if [ "$PADOGRID_HOME" != "" ]; then
-   CLASSPATH="$CLASSPATH:$PADOGRID_HOME/geode/plugins/*:$PADOGRID_HOME/geode/lib/*"
+# Set Geode addon class path. This is to handle 'none' and non-geode/non-gemfire clusters.
+CLASSPATH="$PADOGRID_HOME/geode/plugins/*:$PADOGRID_HOME/geode/lib/*"
+# Exclude slf4j and log4j included in PadoGrid distribution
+for i in $PADOGRID_HOME/lib/*; do
+  if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
+     CLASSPATH="$CLASSPATH:$i"
+  fi
+done
+if [ "$GEMFIRE_HOME" != "" ]; then
+   PRODUCT_HOME=$GEMFIRE_HOME
+elif [ "$GEODE_HOME" != "" ]; then
+   PRODUCT_HOME=$GEODE_HOME
 fi
-if [ "$PADOGRID_WORKSPACE" != "" ]; then
-   CLASSPATH="$CLASSPATH:$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*"
+if [ "$PRODUCT_HOME" != "" ]; then
+   CLASSPATH="$CLASSPATH:$PRODUCT_HOME/lib/geode-dependencies.jar"
 fi
-
-JAVA="$JAVA_HOME/bin/java"
+CLASSPATH="$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*:$CLASSPATH"
+CLASSPATH="$APP_DIR:$APP_DIR/plugins/*:$APP_DIR/lib/*:$APP_JARS:$CLASSPATH"

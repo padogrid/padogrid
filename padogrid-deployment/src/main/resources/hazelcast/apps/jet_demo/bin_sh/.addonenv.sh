@@ -50,3 +50,43 @@ fi
 # Log properties for log4j2. The log file name is set in executable scripts.
 JAVA_OPTS="$JAVA_OPTS -Dhazelcast.logging.type=log4j2 \
 -Dlog4j.configurationFile=$LOG_CONFIG_FILE"
+
+# Set Hazelcast addon class path. This is to handle 'none' and non-hazelcast clusters
+if [ "$HAZELCAST_HOME" != "" ]; then
+   if [ -f "$HAZELCAST_HOME/lib/hazelcast-enterprise-all-"* ]; then
+      for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-all-*; do
+         file=${file##*hazelcast\-enterprise\-all\-}
+         HAZELCAST_VERSION=${file%.jar}
+         IS_HAZELCAST_ENTERPRISE=true
+      done
+   elif [ -f "$HAZELCAST_HOME/lib/hazelcast-enterprise-"* ]; then
+      for file in $HAZELCAST_HOME/lib/hazelcast-enterprise-*; do
+         file=${file##*hazelcast\-enterprise\-}
+         HAZELCAST_VERSION=${file%.jar}
+         IS_HAZELCAST_ENTERPRISE=true
+      done
+   elif [ -f "$HAZELCAST_HOME/lib/hazelcast-all-"* ]; then
+      for file in $HAZELCAST_HOME/lib/hazelcast-all-*; do
+         file=${file##*hazelcast\-all\-}
+         HAZELCAST_VERSION=${file%.jar}
+      done
+   else
+      # hazelcast- is not unique. scan 5-10 versions
+      #for i in $(seq 5 10); do
+      # seq not working due to IFS change?
+         i="5"
+         if [ -f "$HAZELCAST_HOME/lib/hazelcast-$i."* ]; then
+            for file in "$HAZELCAST_HOME/lib/hazelcast-$i."*; do
+               file=${file##*hazelcast\-}
+               HAZELCAST_VERSION=${file%.jar}
+               break;
+            done
+            #break;
+         fi
+      #done
+   fi
+fi
+if [ "$HAZELCAST_VERSION" != "" ]; then
+   HAZELCAST_MAJOR_VERSION_NUMBER=${HAZELCAST_VERSION:0:1}
+   CLASSPATH="$PADOGRID_HOME/hazelcast/plugins/*:$PADOGRID_HOME/hazelcast/lib/*:$PADOGRID_HOME/hazelcast/plugins/v$HAZELCAST_MAJOR_VERSION_NUMBER/*:$PADOGRID_HOME/hazelcast/lib/v$HAZELCAST_MAJOR_VERSION_NUMBER/*:$CLASSPATH"
+fi
