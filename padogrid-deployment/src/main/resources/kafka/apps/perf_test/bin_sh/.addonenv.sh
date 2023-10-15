@@ -61,12 +61,18 @@ if [ "$K8S_PROPERTIES" != "" ]; then
    JAVA_OPTS="$JAVA_OPTS $K8S_PROPERTIES"
 fi
 
-# Set Kafka addon class path. This is to handle the 'none' product.
-if [[ "$CLASSPATH" != *"$PADOGRID_HOME/kafka/plugins"* ]]; then
-   CLASSPATH="$PADOGRID_HOME/kafka/plugins/*:$PADOGRID_HOME/kafka/lib/*:$CLASSPATH"
+# Set Kafka addon class path. This is to handle 'none' and non-kafka clusters.
+CLASSPATH="$PADOGRID_HOME/kafka/plugins/*:$PADOGRID_HOME/kafka/lib/*"
+# Exclude slf4j and log4j included in PadoGrid distribution
+for i in $PADOGRID_HOME/lib/*; do
+  if [[ "$i" != *"slf4j"* ]] && [[ "$i" != *"log4j"* ]]; then
+     CLASSPATH="$CLASSPATH:$i"
+  fi
+done
+if [ "$CONFLUENT_HOME" != "" ]; then
+   CLASSPATH="$CLASSPATH:$CONFLUENT_HOME/share/java/kafka/*"
+elif [ "$KAFKA_HOME" != "" ]; then
+   CLASSPATH="$CLASSPATH:$KAFKA_HOME/libs/*"
 fi
-
-# Include the app's lib directory. Normally, the jar files in the workspace lib
-# directory are preferred since they are shared across the workspace. However,
-# Kafka is prone to too many jar conflicts.
-CLASSPATH="$APP_DIR/lib/*:$CLASSPATH"
+CLASSPATH="$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*:$CLASSPATH"
+CLASSPATH="$APP_DIR/plugins/*:$APP_DIR/lib/*:$CLASSPATH"
