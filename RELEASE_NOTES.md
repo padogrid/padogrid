@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.30-SNAPSHOT
 
-### Release Date: 10/14/23
+### Release Date: 10/15/23
 
 - Overhauled the scripts to keep the product specifics in their respective `bin_sh` directory in the PadoGrid distribution. This enhancement removes duplicate scripts and significantly reduces the build time.
 - Added Hazelcast Grafana dashboards providing the following features.
@@ -16,6 +16,7 @@ https://github.com/padogrid
   - A workflow simulator for activating dashboards
   - A complete set of scripts for importing, exporting, and creating templates
   - Kubernetes ready
+- Updated the apps to run indepent of the cluster context. With this enhancement, you can now run each app without switching to their respective cluster.
 
 ----
 

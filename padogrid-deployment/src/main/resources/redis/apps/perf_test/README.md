@@ -1,6 +1,6 @@
 # Redisson `perf_test` App
 
-✏️  *Note that Redisson is not included in the PadoGrid distribution. To run `perf_test`, you must first run `build_app` to download the Redisson binaries ad described in the [Scripts](#scripts) section.*
+✏️  *To run the Redisson `perf_test`, you must first run `build_app` to download the Redisson binaries as described in the [Scripts](#scripts) section.*
 
 The `perf_test` app provides Redisson client programs to perform the following:
 
