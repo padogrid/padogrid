@@ -282,7 +282,7 @@ The `padogrid-perf_test` folder includes the `perf_test` app dashboards. To view
 create_app
 ```
 
-For `perf_test` details, see [perf_test README.md](../perf_test/README.md).
+For `perf_test` details, see [perf\_test README](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/hazelcast/apps/perf_test/README.md).
 
 ### 6.2. Hazelcast Dashboards
 

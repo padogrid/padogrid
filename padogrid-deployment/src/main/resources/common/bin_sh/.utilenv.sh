@@ -2019,7 +2019,6 @@ function switch_workspace
       fi
 
       # Retreive last switched cluster/pod
-
       retrieveWorkspaceEnvFile
 
       # Source in the last switched cluster (pod has no env)

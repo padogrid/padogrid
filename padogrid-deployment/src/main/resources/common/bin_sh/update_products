@@ -1080,6 +1080,8 @@ function updateEVAL_WORKSPACE_HOME_PATH
    fi
 }
 
+IS_UPDATED="false"
+
 # RWE
 if [ "$UPDATE_RWE" == "true" ]; then
    EVAL_RWE=""
@@ -1107,6 +1109,7 @@ if [ "$UPDATE_RWE" == "true" ]; then
       eval "sed -i${__SED_BACKUP} $EVAL_RWE \"$RWE_SETENV\""
       echo -e "      Updated RWE: ${CLightGreen}$RWE_NAME${CNone}"
    fi
+   IS_UPDATED="true"
 fi
 
 # Workspace(s)
@@ -1144,6 +1147,13 @@ for WORKSPACE in $WORKSPACES; do
       eval "sed -i${__SED_BACKUP} $EVAL_WORKSPACE \"$WORKSPACE_SETENV\""
       echo -e "Updated Workspace: ${CLightGreen}$WORKSPACE${CNone}"
    fi
+   IS_UPDATED="true"
 done
+
+if [ "$IS_UPDATED" == "true" ]; then
+   echo ""
+   echo "Execute the following command to apply the changes to the current workspace context."
+   echo -e "   ${CGo}switch_workspace${CNone}"
+fi
 
 echo ""
