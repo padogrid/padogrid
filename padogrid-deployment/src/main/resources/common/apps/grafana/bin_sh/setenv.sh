@@ -21,10 +21,6 @@
 # set them in this file.
 #   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
 #   DEFAULT_DATASOURCE   The default data source name. Default: padogrid-perf_test
-#   GRAFANA_USER_NAME    Grafana HTTP login user name. The user must have admin previledges. Default: admin
-#   GRAFANA_PASSWORD     Grafana HTTP login password. The user must have admin previledges. Default: admin
-#   GRAFANA_HOST         Grafana HTTP host name. Default: localhost
-#   GRAFANA_PORT         Grafana HTTP port number. Default: 3000
 #   PROMETHEUS_HOST      Prometheus HTTP host name. Default: localhost
 #   PROMETHEUS_PORT      Prometheus HTTP port number. Default: 9090
 #   EXPORT_DASHBOARD_DIR Directory to which the 'export_folder' command exports dashboards. Default: export
@@ -42,16 +38,24 @@ DEFAULT_FOLDER="padogrid-perf_test"
 #DEFAULT_DATASOURCE="Prometheus"
 
 #
-# Enter Grafana uer name and password
+# Grafana Configuration:
 #
-#GRAFANA_USER_NAME=admin
-#GRAFANA_PASSWORD=admin
+# When you first run any of the scripts bin_sh, the default 'grafana.ini' file
+# is copied from the the Grafana home directory to this app's 'etc/' directory.
+# All configurations must be done in that file.
+# 
+# etc/grafana.ini
+#
 
 #
-# Enter Grafana host and port number (HTTP)
+# Prometheus Configuration:
 #
-#GRAFANA_HOST=localhost
-#GRAFANA_PORT=3000
+# For Prometheus, the host name and port number must be configured by setting
+# PROMETHEUS_HOST and PROMETHEUS_PORT, respectively. For all others, set them
+# in the following configuration file.
+#
+# etc/prometheus.yml
+#
 
 #
 # Enter Prometheus host and port number (HTTP)
