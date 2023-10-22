@@ -32,11 +32,19 @@ APP_ETC_DIR=$APP_DIR/etc
 # Variables in use. Override them in setenv.sh.
 #   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
 #   DEFAULT_DATASOURCE   The default data source name. Default: Prometheus
+#   GRAFANA_USER_NAME    Grafana HTTP login user name. The user must have admin previledges. Default: admin
+#   GRAFANA_PASSWORD     Grafana HTTP login password. The user must have admin previledges. Default: admin
 #   PROMETHEUS_HOST      Prometheus HTTP host name. Default: localhost
 #   PROMETHEUS_PORT      Prometheus HTTP port number. Default: 9090
 #   EXPORT_DASHBOARD_DIR Directory to which the 'export_folder' command exports dashboards.
 #   EXPORT_TEMPLATE_DIR  Directory in which the 'export_to_template' command converts the exported dashboards.
 #
+
+#
+# Enter Grafana uer name and password
+#
+GRAFANA_USER_NAME=admin
+GRAFANA_PASSWORD=admin
 
 #
 # Enter Prometheus host and port number (HTTP)
@@ -72,7 +80,6 @@ DEFAULT_DATASOURCE="Prometheus"
 # -------------------------------------------------------------------------------
 
 PROMETHEUS_URL=http://$PROMETHEUS_HOST:$PROMETHEUS_PORT
-
 
 DASHBOARDS_DIR=$APP_ETC_DIR/dashboards
 TMP_DIR=$APP_DIR/tmp
@@ -117,19 +124,20 @@ if [ -f "$GRAFANA_CONFIG_FILE" ]; then
 fi
 
 # Determine GRAFANA_URL by searching the config file.
-PROTOCOL=$(grep protocol "$GRAFANA_CONFIG_FILE" |grep "^protocol *=" | sed -e 's/^.*= *//')
-if [ "$PROTOCOL" == "" ]; then
-   PROTOCOL="http"
+GRAFANA_PROTOCOL=$(grep protocol "$GRAFANA_CONFIG_FILE" |grep "^protocol *=" | sed -e 's/^.*= *//')
+if [ "$GRAFANA_PROTOCOL" == "" ]; then
+   GRAFANA_PROTOCOL="http"
 fi
-HTTP_ADDR=$(grep http_addr "$GRAFANA_CONFIG_FILE" |grep "^http_addr *=" | sed -e 's/^.*= *//')
-if [ "$HTTP_ADDR" == "" ]; then
-   HTTP_ADDR="localhost"
+GRAFANA_HTTP_ADDR=$(grep http_addr "$GRAFANA_CONFIG_FILE" |grep "^http_addr *=" | sed -e 's/^.*= *//')
+if [ "$GRAFANA_HTTP_ADDR" == "" ]; then
+   GRAFANA_HTTP_ADDR="localhost"
 fi
-HTTP_PORT=$(grep http_port "$GRAFANA_CONFIG_FILE" |grep "^http_port *=" | sed -e 's/^.*= *//')
-if [ "$HTTP_PORT" == "" ]; then
-   HTTP_ADDR="3000"
+GRAFANA_HTTP_PORT=$(grep http_port "$GRAFANA_CONFIG_FILE" |grep "^http_port *=" | sed -e 's/^.*= *//')
+if [ "$GRAFANA_HTTP_PORT" == "" ]; then
+   GRAFANA_HTTP_ADDR="3000"
 fi
-GRAFANA_URL=$PROTOCOL://$HTTP_ADDR:$HTTP_PORT
+GRAFANA_URL=$GRAFANA_PROTOCOL://$GRAFANA_HTTP_ADDR:$GRAFANA_HTTP_PORT
+GRAFANA_URL_REST=$GRAFANA_PROTOCOL://$GRAFANA_USER_NAME:$GRAFANA_PASSWORD@$GRAFANA_HTTP_ADDR:$GRAFANA_HTTP_PORT
 
 #
 # Returns the PID of the running process identified by the specified configuration
