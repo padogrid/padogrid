@@ -55,21 +55,39 @@ if [ ! -f "$PROMETHEUS_CONFIG_FILE" ]; then
 fi
 
 if [ "$ALL" == "true" ]; then
-   PIDs=$(getAllPrometheusPids "$PROMETHEUS_CONFIG_FILE")
-   if [ "$PIDs" != "" ]; then
-      kill -15 $PIDs
-      echo "All Prometheus instances stopped."
-      echo "   PIDs: $PIDs"
-   else
+   RWE_PATHS=$(getAllPrometheusRwePaths)
+   if [ "$RWE_PATHS" == "" ]; then
       echo "Prometheus instances not found. Command aborted."
+      exit
+   else
+      count=0
+      echo ""
+      for i in $RWE_PATHS; do
+         if [ $count -eq 0 ]; then
+            echo "        PID: $i"
+            kill -15 $i
+            count=1
+         else
+            echo "   RWE Path: $i"
+            echo -e "     Status: ${CRed}Down${CNone}"
+            echo ""
+            count=0
+         fi
+      done
+      echo "All Prometheus instances stopped."
+      echo ""
    fi
 else
    PID=$(getPrometheusPid "$PROMETHEUS_CONFIG_FILE")
    if [ "$PID" != "" ]; then
       kill -15 $PID
-      echo "Prometheus stopped."
-      echo "   PID: $PID"
-      echo "   LOG: $PROMETHEUS_LOG_FILE"
+      echo -e "      URL: ${CUrl}$PROMETHEUS_URL${CNone}"
+      echo "      PID: $PID"
+      echo "     Home: $PROMETHEUS_HOME"
+      echo "   Config: $PROMETHEUS_CONFIG_FILE"
+      echo "      LOG: $PROMETHEUS_LOG_FILE"
+      echo -e "   Status: ${CRed}Down${CNone}"
+      echo "Grafana stopped."
    else
       echo "Prometheus not running. Command aborted."
    fi

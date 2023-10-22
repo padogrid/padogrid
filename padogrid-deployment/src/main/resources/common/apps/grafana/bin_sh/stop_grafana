@@ -60,21 +60,39 @@ exit
 fi
 
 if [ "$ALL" == "true" ]; then
-   PIDs=$(getAllGrafanaPids "$GRAFANA_CONFIG_FILE")
-   if [ "$PIDs" != "" ]; then
-      kill -15 $PIDs
-      echo "All Grafana instances stopped."
-      echo "   PIDs: $PIDs"
-   else
+   RWE_PATHS=$(getAllGrafanaRwePaths)
+   if [ "$RWE_PATHS" == "" ]; then
       echo "Grafana instances not found. Command aborted."
+      exit
+   else
+      count=0
+      echo ""
+      for i in $RWE_PATHS; do
+         if [ $count -eq 0 ]; then
+            echo "        PID: $i"
+            kill -15 $i
+            count=1
+         else
+            echo "   RWE Path: $i"
+            echo -e "     Status: ${CRed}Down${CNone}"
+            echo ""
+            count=0
+         fi
+      done
+      echo "All Grafana instances stopped."
+      echo ""
    fi
 else
    PID=$(getGrafanaPid "$GRAFANA_CONFIG_FILE")
    if [ "$PID" != "" ]; then
       kill -15 $PID
+      echo -e "      URL: ${CUrl}$GRAFANA_URL${CNone}"
+      echo "      PID: $PID"
+      echo "     Home: $GRAFANA_HOME"
+      echo "   Config: $GRAFANA_CONFIG_FILE"
+      echo "      LOG: $LOG_DIR/grafana.log"
+      echo -e "   Status: ${CRed}Down${CNone}"
       echo "Grafana stopped."
-      echo "   PID: $PID"
-      echo "   LOG: $LOG_DIR/grafana.log"
    else
       echo "Grafana not running. Command aborted."
    fi

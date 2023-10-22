@@ -86,7 +86,7 @@ DEFAULT_DATASOURCE="Prometheus"
 
 # -------------------------------------------------------------------------------
 
-PROMETHEUS_URL=$PROMETHEUS_HOST:$PROMETHEUS_PORT
+PROMETHEUS_URL=http://$PROMETHEUS_HOST:$PROMETHEUS_PORT
 GRAFANA_URL=http://$GRAFANA_USER_NAME:$GRAFANA_PASSWORD@$GRAFANA_HOST:$GRAFANA_PORT
 
 DASHBOARDS_DIR=$APP_ETC_DIR/dashboards
@@ -167,10 +167,44 @@ function getAllPrometheusPids
    if [[ "$OS_NAME" == "CYGWIN"* ]]; then
       PIDs="$(WMIC path win32_process get Caption,Processid,Commandline | ps -wweo pid,comm,args | grep prometheus | grep "\-\-config.file" | grep -v grep | awk '{print $(NF-1)}')"
    else
-      PIDs=$(ps -wweo pid,comm,args | ps -wweo pid,comm,args | grep prometheus | grep "\-\-config.file" | grep -v grep | awk '{print $1}')
+      PIDs=$(ps -wweo pid,comm,args | grep prometheus | grep "\-\-config.file" | grep -v grep | awk '{print $1}')
    fi
    echo "$PIDs"
 }   
+
+#
+# Returns a paired list of Prometheus status: PID1 RWE_PATH1 PID2 RWE_PATH2 ...
+#
+# @required OS_NAME
+#
+function getAllPrometheusRwePaths
+{
+   # Save and change IFS
+   local OLDIFS=$IFS
+   IFS=$'\n'
+    
+   # Get all grafana servers
+   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+      array=($(WMIC path win32_process get Caption,Processid,Commandline | grep "grafana[ -]server" | grep "\-homepath"))
+   else
+      array=($(ps -wweo pid,comm,args | grep "grafana[ -]server" | grep "\-homepath"))
+      array=($(ps -wweo pid,comm,args | grep prometheus | grep "\-\-config.file" | grep -v grep))
+   fi
+   IFS=$OLDIFS
+    
+   len=${#array[@]}
+    
+   # Set RWE paths
+   local RWE_PATHS=""
+   for (( i=0; i<${len}; i++ ));
+   do
+     local PID=$(echo "${array[$i]}" | awk  '{print $1}')
+     local CONFIG_FILE=$(echo ${array[$i]} | sed -e 's/.*-config.file //')
+     local RWE_PATH=$(echo $CONFIG_FILE | awk -F "/" '{print $(NF-5)"/"$(NF-4)"/apps/"$(NF-2)}')
+     local RWE_PATHS="$RWE_PATHS $PID $RWE_PATH"
+   done
+   echo "$RWE_PATHS"
+}
 
 #
 # Returns the PID of the running process identified by the specified configuration
@@ -220,3 +254,51 @@ function getAllGrafanaPids
    fi
    echo "$PIDs"
 }
+
+#
+# Returns a paired list of Grafana status: PID1 RWE_PATH1 PID2 RWE_PATH2 ...
+#
+# @required OS_NAME
+#
+function getAllGrafanaRwePaths
+{
+   # Save and change IFS
+   local OLDIFS=$IFS
+   IFS=$'\n'
+    
+   # Get all grafana servers
+   if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+      array=($(WMIC path win32_process get Caption,Processid,Commandline | grep "grafana[ -]server" | grep "\-homepath"))
+   else
+      array=($(ps -wweo pid,comm,args | grep "grafana[ -]server" | grep "\-homepath"))
+   fi
+   IFS=$OLDIFS
+    
+   len=${#array[@]}
+    
+   # Set RWE paths
+   local RWE_PATHS=""
+   for (( i=0; i<${len}; i++ ));
+   do
+     local PID=$(echo "${array[$i]}" | awk  '{print $1}')
+     local CONFIG_FILE=$(echo ${array[$i]} | sed -e 's/.*-config //' -e 's/ -homepath.*//')
+     local RWE_PATH=$(echo $CONFIG_FILE | awk -F "/" '{print $(NF-5)"/"$(NF-4)"/apps/"$(NF-2)}')
+     local RWE_PATHS="$RWE_PATHS $PID $RWE_PATH"
+   done
+   echo "$RWE_PATHS"
+}
+
+# Determine GRAFANA_URL by searching the config file.
+PROTOCOL=$(grep protocol "$GRAFANA_CONFIG_FILE" |grep "^protocol *=" | sed -e 's/^.*= *//')
+if [ "$PROTOCOL" == "" ]; then
+   PROTOCOL="http"
+fi
+HTTP_ADDR=$(grep http_addr "$GRAFANA_CONFIG_FILE" |grep "^http_addr *=" | sed -e 's/^.*= *//')
+if [ "$HTTP_ADDR" == "" ]; then
+   HTTP_ADDR="localhost"
+fi
+HTTP_PORT=$(grep http_port "$GRAFANA_CONFIG_FILE" |grep "^http_port *=" | sed -e 's/^.*= *//')
+if [ "$HTTP_PORT" == "" ]; then
+   HTTP_ADDR="3000"
+fi
+GRAFANA_URL=$PROTOCOL://$HTTP_ADDR:$HTTP_PORT

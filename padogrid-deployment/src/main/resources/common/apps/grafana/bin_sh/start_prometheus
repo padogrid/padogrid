@@ -78,16 +78,20 @@ sleep 2
 ADDRESS_IN_USE="$([ "$(grep 'bind: address already in use' $PROMETHEUS_LOG_FILE)" != "" ] && echo "true" || echo "false")"
 if [ "$ADDRESS_IN_USE" == "true" ]; then
    echo -e >&2 "${CError}ERROR:${CNone} Address already in use. See log for details. Command aborted."
-   echo "   LOG: $PROMETHEUS_LOG_FILE"
+   echo "  LOG: $PROMETHEUS_LOG_FILE"
    exit 1
 fi
 PID="$(getPrometheusPid $PROMETHEUS_CONFIG_FILE)"
 if [ "$PID" == "" ]; then
    echo -e >&2 "${CError}ERROR:${CNone} Prometheus not started. See log file for details. Command aborted."
-   echo "   LOG: $PROMETHEUS_LOG_FILE"
+   echo "  LOG: $PROMETHEUS_LOG_FILE"
    exit 1
 fi
 
 echo "Prometheus started."
-echo "   PID: $PID"
-echo "   LOG: $PROMETHEUS_LOG_FILE"
+echo -e "      URL: ${CUrl}$PROMETHEUS_URL${CNone}"
+echo "      PID: $PID"
+echo "     Home: $PROMETHEUS_HOME"
+echo "   Config: $PROMETHEUS_CONFIG_FILE"
+echo "      LOG: $PROMETHEUS_LOG_FILE"
+echo -e "   Status: ${CGo}Running${CNone}"
