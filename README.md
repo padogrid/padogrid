@@ -14,7 +14,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
-- *October 1, 2023 - [PadoGrid v0.9.29 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.29) This release adds support for multiple plugins per MQTT virtual cluster and includes additional Grafana dashboards for Hazelcast.*
+- *October 23, 2023 - [PadoGrid v0.9.30 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.30) This release overhauls the PadoGrid commands in preparation for the v1.0.0 release. It also includes Hazelcast Grafana dashboards for monitoring multi-cluster metrics along with a complete set of scripts for exporting, creating, and importing Grafana dashboard templates.*
 - *October 1, 2023 - [Hazelcast Kubernetes Helm Charts updated.](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm) This bundle now includes support for Prometheus/Grafana.*
 - *September 23, 2023 - [Neural Network: LSTM RNN updated.](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) This bundle is now [Google Colab](https://colab.research.google.com) ready.*
 
@@ -22,11 +22,10 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Tips of the Day
 
-1. Need Grafana dashboards for monitoring Hazelcast in Kubernetes? [Hazelcast Kubernetes Helm Charts](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm).
-1. Using Power BI with GemFire? [Bundle: Power BI](https://github.com/padogrid/bundle-geode-1-app-perf_test_powerbi-cluster-powerbi) provides step-by-step instructions.
-1. Need a continuous numerical data feed simulator? Try [Data Feed Simulator](https://github.com/padogrid/bundle-none-app-simulator).
-1. Want to learn how to configure HAProxy for TLS termination? [Configuring HAProxy for TLS Termination - Mosquitto, Grafana, Prometheus, Hazelcast Management Center](https://github.com/padogrid/bundle-none-tutorial-docker-haproxy).
-1. Working with Avro and Kryo? Take a pick: [Geode/GemFire Kryo/Avro Code Generator](https://github.com/padogrid/bundle-geode-1-app-kryo_codegen) or [Hazelcast Kryo/Avro Code Generator](https://github.com/padogrid/bundle-hazelcast-4n5-app-kryo_codegen).
+1. Need Hazelcast Managment Center dashboards in Granana? Check out [Hazelcast Grafana Dashboards](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App).
+1. Testing cluster scalability? It's as simple as running [`add_member`/`remove_member`](https://github.com/padogrid/padogrid/wiki/Running-Clusters) in PadoGrid.
+1. How do I integrate database with Geode/GemFire? [GemFire/Geode and MySQL Sync](https://github.com/padogrid/bundle-geode-1-docker-dbsync_mysql).
+1. Hands on integration: Database-->Kafka-->Geode/GemFire-->Power BI. Over 20 endpoints! [Debezium-ksqlDB-Confluent Geode Connector](https://github.com/padogrid/bundle-geode-1-docker-debezium_ksqldb_confluent)
 
 ---
 
