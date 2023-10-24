@@ -32,6 +32,9 @@ APP_ETC_DIR=$APP_DIR/etc
 # Variables in use. Override them in setenv.sh.
 #   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
 #   DEFAULT_DATASOURCE   The default data source name. Default: Prometheus
+#   GRAFANA_PROTOCOL     'http' or 'https'. Default: http
+#   GRAFANA_HOST         Grafana host name. Default: localhost
+#   GRAFANA_PORT         Grafana port number. Default: 3000
 #   GRAFANA_USER_NAME    Grafana HTTP login user name. The user must have admin previledges. Default: admin
 #   GRAFANA_PASSWORD     Grafana HTTP login password. The user must have admin previledges. Default: admin
 #   PROMETHEUS_HOST      Prometheus HTTP host name. Default: localhost
@@ -43,14 +46,18 @@ APP_ETC_DIR=$APP_DIR/etc
 #
 # Enter Grafana uer name and password
 #
-GRAFANA_USER_NAME=admin
-GRAFANA_PASSWORD=admin
+GRAFANA_PROTOCOL=""
+GRAFANA_HOST=""
+GRAFANA_PORT=""
+GRAFANA_USER_NAME="admin"
+GRAFANA_PASSWORD="admin"
 
 #
 # Enter Prometheus host and port number (HTTP)
 #
-PROMETHEUS_HOST=localhost
-PROMETHEUS_PORT=9090
+PROMETHEUS_PROTOCOL="http"
+PROMETHEUS_HOST="localhost"
+PROMETHEUS_PORT="9090"
 
 #
 # Enter the directory to which the `export_folder` command exports dashboards.
@@ -79,7 +86,7 @@ DEFAULT_DATASOURCE="Prometheus"
 
 # -------------------------------------------------------------------------------
 
-PROMETHEUS_URL=http://$PROMETHEUS_HOST:$PROMETHEUS_PORT
+PROMETHEUS_URL=$PROMETHEUS_PROTOCOL://$PROMETHEUS_HOST:$PROMETHEUS_PORT
 
 DASHBOARDS_DIR=$APP_ETC_DIR/dashboards
 TMP_DIR=$APP_DIR/tmp
@@ -107,37 +114,44 @@ PROMETHEUS_OPTS="--web.listen-address="$PROMETHEUS_HOST:$PROMETHEUS_PORT" --conf
 #
 # Grafana bootstrap settings
 #
-GRAFANA_LOG_FILE="$LOG_DIR/grafana.log"
 GRAFANA_CONFIG_FILE="$APP_DIR/etc/grafana.ini"
 if [ ! -f "$GRAFANA_CONFIG_FILE" ]; then
    if [ -f "$GRAFANA_HOME/conf/defaults.ini" ]; then
       cp "$GRAFANA_HOME/conf/defaults.ini" "$GRAFANA_CONFIG_FILE"
-      GRAFANA_OPTS="-config $GRAFANA_CONFIG_FILE"
    fi
 fi
-if [[ ${OS_NAME} == CYGWIN* ]]; then
-   GRAFANA_CONFIG_FILE="$(cygpath -wp "$GRAFANA_CONFIG_FILE")"
+GRAFANA_LOG_FILE="$LOG_DIR/grafana.log"
+
+# Determine GRAFANA_URL by searching the config file.
+if [ "$GRAFANA_PROTOCOL" == "" ] && [ -f "$GRAFANA_CONFIG_FILE" ]; then
+   GRAFANA_PROTOCOL=$(grep protocol "$GRAFANA_CONFIG_FILE" |grep "^protocol *=" | sed -e 's/^.*= *//')
 fi
+if [ "$GRAFANA_HOST" == "" ] && [ -f "$GRAFANA_CONFIG_FILE" ]; then
+   GRAFANA_HOST=$(grep http_addr "$GRAFANA_CONFIG_FILE" |grep "^http_addr *=" | sed -e 's/^.*= *//')
+fi
+if [ "$GRAFANA_PORT" == "" ] && [ -f "$GRAFANA_CONFIG_FILE" ]; then
+   GRAFANA_PORT=$(grep http_port "$GRAFANA_CONFIG_FILE" |grep "^http_port *=" | sed -e 's/^.*= *//')
+fi
+
 GRAFANA_OPTS=""
 if [ -f "$GRAFANA_CONFIG_FILE" ]; then
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      GRAFANA_CONFIG_FILE="$(cygpath -wp "$GRAFANA_CONFIG_FILE")"
+   fi
    GRAFANA_OPTS="-config $GRAFANA_CONFIG_FILE"
 fi
 
-# Determine GRAFANA_URL by searching the config file.
-GRAFANA_PROTOCOL=$(grep protocol "$GRAFANA_CONFIG_FILE" |grep "^protocol *=" | sed -e 's/^.*= *//')
 if [ "$GRAFANA_PROTOCOL" == "" ]; then
    GRAFANA_PROTOCOL="http"
 fi
-GRAFANA_HTTP_ADDR=$(grep http_addr "$GRAFANA_CONFIG_FILE" |grep "^http_addr *=" | sed -e 's/^.*= *//')
-if [ "$GRAFANA_HTTP_ADDR" == "" ]; then
-   GRAFANA_HTTP_ADDR="localhost"
+if [ "$GRAFANA_HOST" == "" ]; then
+   GRAFANA_HOST="localhost"
 fi
-GRAFANA_HTTP_PORT=$(grep http_port "$GRAFANA_CONFIG_FILE" |grep "^http_port *=" | sed -e 's/^.*= *//')
-if [ "$GRAFANA_HTTP_PORT" == "" ]; then
-   GRAFANA_HTTP_ADDR="3000"
+if [ "$GRAFANA_PORT" == "" ]; then
+   GRAFANA_PORT="3000"
 fi
-GRAFANA_URL=$GRAFANA_PROTOCOL://$GRAFANA_HTTP_ADDR:$GRAFANA_HTTP_PORT
-GRAFANA_URL_REST=$GRAFANA_PROTOCOL://$GRAFANA_USER_NAME:$GRAFANA_PASSWORD@$GRAFANA_HTTP_ADDR:$GRAFANA_HTTP_PORT
+GRAFANA_URL=$GRAFANA_PROTOCOL://$GRAFANA_HOST:$GRAFANA_PORT
+GRAFANA_URL_REST=$GRAFANA_PROTOCOL://$GRAFANA_USER_NAME:$GRAFANA_PASSWORD@$GRAFANA_HOST:$GRAFANA_PORT
 
 #
 # Returns the PID of the running process identified by the specified configuration
