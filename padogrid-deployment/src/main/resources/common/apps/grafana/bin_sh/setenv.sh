@@ -21,8 +21,12 @@
 # set them in this file.
 #   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
 #   DEFAULT_DATASOURCE   The default data source name. Default: padogrid-perf_test
+#   GRAFANA_PROTOCOL     'http' or 'https'. Default: http
+#   GRAFANA_HOST         Grafana host name. Default: localhost
+#   GRAFANA_PORT         Grafana port number. Default: 3000
 #   GRAFANA_USER_NAME    Grafana HTTP login user name. The user must have admin previledges. Default: admin
 #   GRAFANA_PASSWORD     Grafana HTTP login password. The user must have admin previledges. Default: admin
+#   PROMETHEUS_PROTOCOL  'http' or 'https'. Default: http
 #   PROMETHEUS_HOST      Prometheus HTTP host name. Default: localhost
 #   PROMETHEUS_PORT      Prometheus HTTP port number. Default: 9090
 #   EXPORT_DASHBOARD_DIR Directory to which the 'export_folder' command exports dashboards. Default: export
@@ -43,19 +47,30 @@ DEFAULT_FOLDER="padogrid-perf_test"
 #
 # Grafana Configuration:
 #
-# When you first run any of the scripts bin_sh, the default 'grafana.ini' file
-# is copied from the the Grafana home directory to this app's 'etc/' directory.
-# All configurations must be done in that file.
-# 
-# etc/grafana.ini
+# When you first run any of the scripts bin_sh, if GRAFANAM_HOME exists, then
+# the default 'grafana.ini' file is copied from the the Grafana home directory
+# to this app's 'etc/' directory.
 #
+# etc/grafana.ini
+# 
+# If 'etc/grafana.ini' exists, then all Grafana configurations are done using
+# that file. This file overrides GRAFANA_* environment variables. Note that
+# this behavior different from how Prometheus is configured.
+#
+
+#
+# Enter Grafana protocol, host, and port number.
+#
+#GRAFANA_PROTOCOL="http"
+#GRAFANA_HOST="localhost"
+#GRAFANA_PORT="3000"
 
 #
 # Enter Grafana user name and password. The user name and password are used
 # to invoke the Grafana REST API.
 #
-#GRAFANA_USER_NAME=admin
-#GRAFANA_PASSWORD=admin
+#GRAFANA_USER_NAME="admin"
+#GRAFANA_PASSWORD="admin"
 
 #
 # Prometheus Configuration:
@@ -68,10 +83,11 @@ DEFAULT_FOLDER="padogrid-perf_test"
 #
 
 #
-# Enter Prometheus host and port number (HTTP)
+# Enter Prometheus protocol, host and port number
 #
-#PROMETHEUS_HOST=localhost
-#PROMETHEUS_PORT=9090
+#PROMETHEUS_PROTOCOL="http"
+#PROMETHEUS_HOST="localhost"
+#PROMETHEUS_PORT="9090"
 
 #
 # Enter the directory to which the `export_folder` command exports dashboards.
