@@ -34,60 +34,94 @@ NAME
    ./$EXECUTABLE - Update the Cluster variable in dashaboards
 
 SYNOPSIS
-   ./$EXECUTABLE [-folder folder_name] [-cluster cluster_list] [-?]
+   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-clusters cluster_list] [-?]
 
 DESCRIPTION
-   Updates the Cluster variable to all dashboards in the specified folder. The Cluster
-   variable holds a list of cluster names that each dashboard monitors. The cluster
-   names must match the 'job_name' values in the following Prometheus configuration file.
+   Updates the ClusterFilterLabel and Cluster variables to all dashboards in the specified.
+   foler .The ClusterFilterLabel variable defines the label used to filter Hazelcast clusters
+   and the Cluster variable holds a list of cluster names that each dashboard monitors.
+   Their default value are as follows.
+
+      CluterFilterLabel: $DEFAULT_LABEL
+      Cluster: $DEFAULT_CLUSTER
+
+   The '$DEFAULT_LABEL' label is associated with the 'job_name' parameter in the following
+   Prometheus configuration file.
    
       ../etc/prometheus.yml
 
-   Note that the default value of 'job_name' and the '-cluster' option is 'hazelcast'.
-   See the EXAMPLE section for adding multiple clusters to Grafana dashboards.
+   Note that the default value of 'job_name' and the '-clusters' option is '$DEFAULT_CLUSTER'.
+
+   You can substitute the default '$DEFAULT_LABEL' label with any label that the underlying
+   Prometheus server supports. For example, in Kubernetes, you may want to substitute
+   it with 'namespace' (or 'service) since a Hazelcast cluster is deployed per Kubernetes
+   namespace.
+
+   See the EXAMPLES section for adding multiple clusters to Grafana dashboards.
 
 OPTIONS
    -folder folder_name
              Folder name. Default: $DEFAULT_FOLDER
 
-   -cluster cluster_list
-             A comma-separated list of cluster names. The cluster names must match
-             the 'job_name' values in the Prometheus configuration file.
+   -label prometheus_label
+             The name of the Prometheus label to apply the cluster list filter. This
+             label is typically introduced by Prometheus. For example, you can assign a
+             list of target endpoints under the '$DEFAULT_LABEL' label as shown in the EXAMPLES
+             section below. For Kubernetes, the 'namespace' label may be more approriate
+             since all the members of a Hazelcast cluster start in the same namespace.
+             Default: $DEFAULT_LABEL
+
+   -clusters cluster_list
+             A comma-separated list of cluster names. If Prometheus is locally launched, then
+             the cluster names must match the 'job_name' values in the Prometheus configuration
+             file.
 
 DEFAULT
-   ./$EXECUTABLE -folder $DEFAULT_FOLDER -cluster $DEFAULT_CLUSTER
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTER
 
 EXAMPLES
 
-   The following example configures Prometheus with two (2) Hazelcast clusters: 'myhz'
-   and 'myhz2'.
+   Example 1: Configuring Prometheus
 
-      global:
-        scrape_interval:     5s
-        external_labels:
-          monitor: 'hazelcast'
+      The following example configures Prometheus with two (2) Hazelcast clusters: 'myhz'
+      and 'myhz2'.
 
-      scrape_configs:
-        - job_name: 'myhz'
-          static_configs:
-            - targets: [localhost:8291, localhost:8292, localhost:8293, localhost:8294, localhost:8295, localhost:8296, localhost:8297, localhost:8298, localhost:8299]
-        - job_name: 'myhz2'
-          static_configs:
-              - targets: [localhost:8391, localhost:8392, localhost:8393, localhost:8394, localhost:8395, localhost:8396, localhost:8397, localhost:8398, localhost:8399]
+         global:
+           scrape_interval:     5s
+           external_labels:
+             monitor: 'hazelcast'
 
-   To include 'myhz' and 'myhz2' in Grafana dashboards, execute this command as follows.
+         scrape_configs:
+           - job_name: 'myhz'
+             static_configs:
+               - targets: [localhost:8291, localhost:8292, localhost:8293, localhost:8294, localhost:8295, localhost:8296, localhost:8297, localhost:8298, localhost:8299]
+           - job_name: 'myhz2'
+             static_configs:
+                 - targets: [localhost:8391, localhost:8392, localhost:8393, localhost:8394, localhost:8395, localhost:8396, localhost:8397, localhost:8398, localhost:8399]
 
-      ./$EXECUTABLE -cluster "myhz,myhz2"
+      To include 'myhz' and 'myhz2' in Grafana dashboards, execute this command as follows.
 
-   The above command updates the JSON files in the following directory.
+         ./$EXECUTABLE -clusters "myhz,myhz2"
 
-      $DASHBOARDS_DIR/$DEFAULT_FOLDER
+      The above command updates the JSON files in the following directory.
 
-   You can now update the entire $DEFAULT_FOLDER folder in Granana by deleting and importing
-   it as follows.
+         $DASHBOARDS_DIR/$DEFAULT_FOLDER
 
-      ./delete_folder -folder $DEFAULT_FOLDER
-      ./import_folder -folder $DEFAULT_FOLDER
+      You can now update the entire $DEFAULT_FOLDER folder in Granana by deleting and importing
+      it as follows.
+
+         ./delete_folder -folder $DEFAULT_FOLDER
+         ./import_folder -folder $DEFAULT_FOLDER
+
+   Example 2: Kubernetes
+      
+      In Kubernetes, the default '$DEFAULT_LABEL' label may not be enough to filter clusters if there
+      more than one cluster since all the clusters are scraped under the same '$DEFAULT_LABEL' label.
+      To address this issue, Prometheus includes the 'namespace' and 'service' labels which
+      we can use to filter the clusters. For example, we can use the '-label' option to
+      specifgy the 'namespace' label as follows.
+
+      ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2"
 
 SEE ALSO
    ../etc/prometheus.yml
@@ -100,15 +134,15 @@ if [ "$FOLDER" == "" ]; then
    FOLDER="$DEFAULT_FOLDER"
 fi
 
-if [ "$CLUSTER_SPECIFIED" == "false" ]; then
+if [ "$CLUSTERS_ARG" == "" ]; then
    CLUSTERS="$DEFAULT_CLUSTER"
 else
-   CLUSTERS="$CLUSTER_ARG"
+   CLUSTERS="$CLUSTERS_ARG"
 fi
 
 query="$CLUSTERS"
 CLUSTERS=$(echo $CLUSTERS | sed 's/,/ /g')
-current="myhz"
+current=$DEFAULT_CLUSTER
 options="\"options\": ["
 INDEX=0
 for CLUSTER in $CLUSTERS; do
@@ -140,9 +174,29 @@ CLUSTER_OPTIONS="
  \"query\": \"$query\",
  \"queryValue\": \"\",
  \"skipUrlSync\": false,
- \"type\": \"custom\"
+ \"type\": \"custom\",
+ \"datasource\": \"\${DATASOURCE}\"
 }]
 "
+
+if [ "$LABEL_ARG" == "" ]; then
+   cluster_filter_label="$DEFAULT_LABEL"
+else
+   cluster_filter_label=$LABEL_ARG
+fi
+CLUSTER_FILTER_LABEL_OPTIONS="
+[
+{
+ \"hide\": 2,
+ \"name\": \"ClusterFilterLabel\",
+ \"query\": \"$cluster_filter_label\",
+ \"skipUrlSync\": false,
+ \"type\": \"constant\",
+ \"datasource\": \"\${DATASOURCE}\"
+}
+]
+"
+
 
 if [ -d "$TMP_DIR/$FOLDER" ]; then
    rm -r "$TMP_DIR/$FOLDER"
@@ -153,6 +207,8 @@ pushd "$FOLDER_PATH" > /dev/null 2>&1
 for file in *; do
    cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
                | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+               | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+               | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                " > "$TMP_DIR/$FOLDER/${file}"
 done
 popd > /dev/null 2>&1
