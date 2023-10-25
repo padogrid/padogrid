@@ -32,6 +32,7 @@ APP_ETC_DIR=$APP_DIR/etc
 # Variables in use. Override them in setenv.sh.
 #   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
 #   DEFAULT_DATASOURCE   The default data source name. Default: Prometheus
+#   DEFAULT_LABEL        The default label for filtering clusters. Default: job
 #   GRAFANA_PROTOCOL     'http' or 'https'. Default: http
 #   GRAFANA_HOST         Grafana host name. Default: localhost
 #   GRAFANA_PORT         Grafana port number. Default: 3000
@@ -78,6 +79,11 @@ DEFAULT_FOLDER="padogrid-perf_test"
 # Default data source name
 #
 DEFAULT_DATASOURCE="Prometheus"
+
+#
+# Default label for filtering clusters
+#
+DEFAULT_LABEL="job"
 
 #
 # Source in app specifics

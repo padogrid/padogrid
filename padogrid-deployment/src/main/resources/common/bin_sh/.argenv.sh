@@ -59,6 +59,7 @@ CLASSPATH_ARG=
 CONFIG_ARG=
 JET_ARG=
 NAME_ARG=
+LABEL_ARG=
 PORT_ARG=
 PORT_SPECIFIED=false
 CREATE_SCRIPT=false
@@ -85,6 +86,7 @@ HEADLESS_SPECIFIED=false
 OVERWRITE_WORKSPACE_SPECIFIED=false
 MAN_SPECIFIED=false
 CLUSTER_ARG=
+CLUSTERS_ARG=
 CLUSTER_SPECIFIED=false
 CLUSTER_TYPE_SPECIFIED=false
 CLUSTER_TYPE_ARG=
@@ -230,6 +232,8 @@ do
          JET_ARG=$i
       elif [ "$PREV" == "-name" ]; then
          NAME_ARG=$i
+      elif [ "$PREV" == "-label" ]; then
+         LABEL_ARG=$i
       elif [ "$PREV" == "-pod" ]; then
          POD=$i
       elif [ "$PREV" == "-port" ]; then
@@ -255,6 +259,8 @@ do
       elif [ "$PREV" == "-cluster" ]; then
          CLUSTER=$i
          CLUSTER_ARG=$i
+      elif [ "$PREV" == "-clusters" ]; then
+         CLUSTERS_ARG=$i
       elif [ "$PREV" == "-cluster-type" ]; then
          CLUSTER_TYPE=$i
          CLUSTER_TYPE_ARG=$i
