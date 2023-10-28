@@ -14,9 +14,9 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
+- *October 28, 2023 - [Hazelcast Multi-Cluster Demo released.](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-granfana) This bundle automates multi-cluster installtion steps and includes a full set of Grafana dashboards including a WAN discovery plugin dashboard.*
 - *October 23, 2023 - [PadoGrid v0.9.30 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.30) This release overhauls the PadoGrid commands in preparation for the v1.0.0 release. It also includes Hazelcast Grafana dashboards for monitoring multi-cluster metrics along with a complete set of scripts for exporting, creating, and importing Grafana dashboard templates.*
 - *October 1, 2023 - [Hazelcast Kubernetes Helm Charts updated.](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm) This bundle now includes support for Prometheus/Grafana.*
-- *September 23, 2023 - [Neural Network: LSTM RNN updated.](https://github.com/padogrid/bundle-hazelcast-5-app-ml_lstm-cluster-ml_jet) This bundle is now [Google Colab](https://colab.research.google.com) ready.*
 
 ---
 
