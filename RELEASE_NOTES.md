@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.31-SNAPSHOT
 
-### Release Date: 10/28/23
+### Release Date: 10/29/23
 
 - Released the [Hazelcast Multi-Cluster Demo](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-granfana) bundle. This bundle automates multi-cluster installtion steps and includes a full set of Grafana dashboards including a WAN discovery plugin dashboard.
 - Updated Grafana scripts to support Kubernetes. This update is also independently added in v0.9.30.
