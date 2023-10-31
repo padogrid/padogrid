@@ -1,4 +1,19 @@
 apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: padogrid-pvc
+  labels:
+    app: padogrid
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+
+---
+
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: padogrid-configmap
@@ -52,6 +67,9 @@ spec:
           containerPort: 3000
         - name: playground
           containerPort: 5006
+        volumeMounts:
+        - mountPath: /opt/padogrid/workspaces
+          name: padogrid-mount
         env:
         - name: NAMESPACE
           valueFrom:
@@ -60,6 +78,10 @@ spec:
         envFrom:
         - configMapRef:
             name: padogrid-configmap
+      volumes:
+      - name: padogrid-mount
+        persistentVolumeClaim:
+          claimName: padogrid-pvc
 
 ---
 
