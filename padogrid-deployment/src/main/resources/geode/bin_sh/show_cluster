@@ -164,12 +164,20 @@ function displayVmClusterLong()
    MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
    JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+
    DEBUG_ENABLED=`getClusterProperty "debug.enabled" $DEFAULT_DEBUG_ENABLED`
    DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
    JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
    JMX_START_PORT=`getClusterProperty "jmx.startPort" $DEFAULT_JMX_START_PORT`
    PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
    PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
+
+   LOCATOR_DEBUG_ENABLED=`getClusterProperty "locator.debug.enabled" $DEFAULT_LOCATOR_DEBUG_ENABLED`
+   LOCATOR_DEBUG_START_PORT=`getClusterProperty "locator.debug.startPort" $DEFAULT_LOCATOR_DEBUG_START_PORT`
+   LOCATOR_JMX_ENABLED=`getClusterProperty "locator.jmx.enabled" $DEFAULT_LOCATOR_JMX_ENABLED`
+   LOCATOR_JMX_START_PORT=`getClusterProperty "locator.jmx.startPort" $DEFAULT_LOCATOR_JMX_START_PORT`
+   LOCATOR_PROMETHEUS_ENABLED=`getClusterProperty "locator.prometheus.enabled" $DEFAULT_LOCATOR_PROMETHEUS_ENABLED`
+   LOCATOR_PROMETHEUS_START_PORT=`getClusterProperty "locator.prometheus.startPort" $DEFAULT_LOCATOR_PROMETHEUS_START_PORT`
 
    if [ "$MEMBER_HTTP_ENABLED" != "true" ]; then
       MEMBER_HTTP_PORT="Disabled"
@@ -223,15 +231,15 @@ function displayVmClusterLong()
       # Increment port numbers for host OS
       LOCATOR_HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${VM_HOST}.hostnameForClients" "$VM_HOST"`
       LOCATOR_PORT=$LOCATOR_START_PORT
-      if [ "$DEBUG_ENABLED" == "true" ]; then
-         DEBUG_PORT=$DEBUG_START_PORT
+      if [ "$LOCATOR_DEBUG_ENABLED" == "true" ]; then
+         LOCATOR_DEBUG_PORT=$LOCATOR_DEBUG_START_PORT
       fi
       if [ "$JMX_ENABLED" == "true" ]; then
          JMX_PORT=$JMX_START_PORT
          JMX_URL="service:jmx:rmi:///jndi/rmi://${LOCATOR_HOSTNAME_FOR_CLIENTS}:$JMX_PORT/jmxrmi"
       fi
-      if [ "$PROMETHEUS_ENABLED" == "true" ]; then
-         PROMETHEUS_PORT=$PROMETHEUS_START_PORT
+      if [ "$LOCATOR_PROMETHEUS_ENABLED" == "true" ]; then
+         LOCATOR_PROMETHEUS_PORT=$LOCATOR_PROMETHEUS_START_PORT
       fi
       JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
       JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
@@ -261,8 +269,8 @@ function displayVmClusterLong()
 
       echo "           VM_HOST: $VM_HOST"
       echo "      LOCATOR_PORT: $LOCATOR_PORT"
-#      echo "        DEBUG_PORT: $DEBUG_PORT"
-#      echo "   PROMETHEUS_PORT: $PROMETHEUS_PORT"
+      echo "        DEBUG_PORT: $LOCATOR_DEBUG_PORT"
+      echo "   PROMETHEUS_PORT: $LOCATOR_PROMETHEUS_PORT"
       echo -e "         PULSE_URL: $CUrl$PULSE_URL$CNone"
       echo -e "MANAGER_URL (gfsh): $CUrl$MANAGER_URL$CNone"
       echo "  JMX_MANAGER_PORT: $JMX_MANAGER_PORT"
@@ -460,12 +468,21 @@ function displayClusterLong()
    MEMBER_HTTP_START_PORT=`getClusterProperty "http.startPort" $DEFAULT_MEMBER_HTTP_START_PORT`
    JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
    JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
+
    DEBUG_ENABLED=`getClusterProperty "debug.enabled" $DEFAULT_DEBUG_ENABLED`
    DEBUG_START_PORT=`getClusterProperty "debug.startPort" $DEFAULT_DEBUG_START_PORT`
    JMX_ENABLED=`getClusterProperty "jmx.enabled" $DEFAULT_JMX_ENABLED`
    JMX_START_PORT=`getClusterProperty "jmx.startPort" $DEFAULT_JMX_START_PORT`
    PROMETHEUS_ENABLED=`getClusterProperty "prometheus.enabled" $DEFAULT_PROMETHEUS_ENABLED`
    PROMETHEUS_START_PORT=`getClusterProperty "prometheus.startPort" $DEFAULT_PROMETHEUS_START_PORT`
+
+   LOCATOR_DEBUG_ENABLED=`getClusterProperty "locator.debug.enabled" $DEFAULT_LOCATOR_DEBUG_ENABLED`
+   LOCATOR_DEBUG_START_PORT=`getClusterProperty "locator.debug.startPort" $DEFAULT_LOCATOR_DEBUG_START_PORT`
+   LOCATOR_JMX_ENABLED=`getClusterProperty "locator.jmx.enabled" $DEFAULT_LOCATOR_JMX_ENABLED`
+   LOCATOR_JMX_START_PORT=`getClusterProperty "locator.jmx.startPort" $DEFAULT_LOCATOR_JMX_START_PORT`
+   LOCATOR_PROMETHEUS_ENABLED=`getClusterProperty "locator.prometheus.enabled" $DEFAULT_LOCATOR_PROMETHEUS_ENABLED`
+   LOCATOR_PROMETHEUS_START_PORT=`getClusterProperty "locator.prometheus.startPort" $DEFAULT_LOCATOR_PROMETHEUS_START_PORT`
+
    HOST_NAME=`hostname`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" $HOST_NAME`
 
@@ -534,16 +551,16 @@ function displayClusterLong()
             LOCATOR_PORT=$LOCATOR_START_PORT
             if [ "$DEBUG_ENABLED" == "true" ]; then
                DEBUG_PORT=$DEBUG_START_PORT
-	    fi
+            fi
             JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
             JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
             if [ "$JMX_ENABLED" == "true" ]; then
                JMX_PORT=$JMX_START_PORT
                JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
-	    fi
+            fi
             if [ "$PROMETHEUS_ENABLED" == "true" ]; then
-               PROMETHEUS_PORT=$PROMETHEUS_START_PORT
-	    fi
+               LOCATOR_PROMETHEUS_PORT=$LOCATOR_PROMETHEUS_START_PORT
+            fi
 
          else
 
@@ -557,7 +574,7 @@ function displayClusterLong()
                JMX_URL="service:jmx:rmi:///jndi/rmi://${NODE}:$JMX_PORT/jmxrmi"
             fi
             if [ "$PROMETHEUS_ENABLED" == "true" ]; then
-               let PROMETHEUS_PORT=PROMETHEUS_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
+               let LOCATOR_PROMETHEUS_PORT=LOCATOR_PROMETHEUS_START_PORT+LOCATOR_NUM_NO_LEADING_ZERO-1
             fi
             
             # JMX Manager (Pulse) is always enabled
@@ -607,7 +624,7 @@ function displayClusterLong()
          fi
          echo "      LOCATOR_PORT: $LOCATOR_PORT"
          echo "        DEBUG_PORT: $DEBUG_PORT"
-         echo "   PROMETHEUS_PORT: $PROMETHEUS_PORT"
+         echo "   PROMETHEUS_PORT: $LOCATOR_PROMETHEUS_PORT"
          echo -e "         PULSE_URL: $CUrl$PULSE_URL$CNone"
          echo -e "MANAGER_URL (gfsh): $CUrl$MANAGER_URL$CNone"
          echo "  JMX_MANAGER_PORT: $JMX_MANAGER_PORT"
