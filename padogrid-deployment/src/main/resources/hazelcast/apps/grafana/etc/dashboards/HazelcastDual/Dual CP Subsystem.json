@@ -1,0 +1,761 @@
+{
+  "dashboard": {
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "${DATASOURCE}",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "description": "",
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "System",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=$Cluster&${__url_time_range}"
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main?var-Cluster=$Cluster&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Dual Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/c285e20e-3b2a-4108-bc28-69238459027a/00dual-main?var-Cluster=$Cluster&var-Cluster2=$Cluster2&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "dual hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Dual Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": [],
+        "targetBlank": true,
+        "title": "Created by PadoGrid",
+        "tooltip": "Go to PadoGrid",
+        "type": "link",
+        "url": "http://github.com/padogrid"
+      }
+    ],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 15,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "frameIndex": 1,
+          "showHeader": true
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=\"$Cluster\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "Completed Tasks",
+            "range": false,
+            "refId": "Completed Tasks"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_maximumPoolSize{$ClusterFilterLabel=\"$Cluster\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Max Pool Size",
+            "range": false,
+            "refId": "Max Pool Size"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_poolSize{$ClusterFilterLabel=\"$Cluster\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Pool Size",
+            "range": false,
+            "refId": "Pool Size"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queueSize{$ClusterFilterLabel=\"$Cluster\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Queue Size",
+            "range": false,
+            "refId": "Queue Size"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_remainingQueueCapacity{$ClusterFilterLabel=\"$Cluster\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Queue Capacity",
+            "range": false,
+            "refId": "Queue Capacity"
+          }
+        ],
+        "title": "CP Subsystem: Executors ($Cluster)",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "instance|Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value #Completed Tasks": 1,
+                "Value #Max Pool Size": 5,
+                "Value #Pool Size": 4,
+                "Value #Queue Capacity": 3,
+                "Value #Queue Size": 2,
+                "instance": 0
+              },
+              "renameByName": {
+                "Value #A": "Creation Time",
+                "Value #Access Time": "Access Time",
+                "Value #C": "",
+                "Value #Completed Tasks": "Completed Tasks",
+                "Value #Creation Time": "Creation Time",
+                "Value #Max Pool Size": "Max Pool Size",
+                "Value #Pool Size": "Pool Size",
+                "Value #Queue Capacity": "Queue Capacity",
+                "Value #Queue Size": "Queue Size",
+                "Value #Update Time": "Update Time",
+                "instance": "Member",
+                "instance 1": "Member",
+                "tag0": "Set",
+                "tag0 1": "Set"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 15,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "id": 3,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "frameIndex": 1,
+          "showHeader": true
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=\"$Cluster2\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "Completed Tasks",
+            "range": false,
+            "refId": "Completed Tasks"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_maximumPoolSize{$ClusterFilterLabel=\"$Cluster2\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Max Pool Size",
+            "range": false,
+            "refId": "Max Pool Size"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_poolSize{$ClusterFilterLabel=\"$Cluster2\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Pool Size",
+            "range": false,
+            "refId": "Pool Size"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queueSize{$ClusterFilterLabel=\"$Cluster2\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Queue Size",
+            "range": false,
+            "refId": "Queue Size"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_remainingQueueCapacity{$ClusterFilterLabel=\"$Cluster2\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Queue Capacity",
+            "range": false,
+            "refId": "Queue Capacity"
+          }
+        ],
+        "title": "CP Subsystem: Executors ($Cluster2)",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "instance|Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value #Completed Tasks": 1,
+                "Value #Max Pool Size": 5,
+                "Value #Pool Size": 4,
+                "Value #Queue Capacity": 3,
+                "Value #Queue Size": 2,
+                "instance": 0
+              },
+              "renameByName": {
+                "Value #A": "Creation Time",
+                "Value #Access Time": "Access Time",
+                "Value #C": "",
+                "Value #Completed Tasks": "Completed Tasks",
+                "Value #Creation Time": "Creation Time",
+                "Value #Max Pool Size": "Max Pool Size",
+                "Value #Pool Size": "Pool Size",
+                "Value #Queue Capacity": "Queue Capacity",
+                "Value #Queue Size": "Queue Size",
+                "Value #Update Time": "Update Time",
+                "instance": "Member",
+                "instance 1": "Member",
+                "tag0": "Set",
+                "tag0 1": "Set"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 15,
+          "w": 12,
+          "x": 0,
+          "y": 15
+        },
+        "id": 2,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=\"$Cluster\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"})",
+            "instant": false,
+            "legendFormat": "Completed Tasks",
+            "range": true,
+            "refId": "A"
+          }
+        ],
+        "title": "Completed Tasks ($Cluster)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 15,
+          "w": 12,
+          "x": 12,
+          "y": 15
+        },
+        "id": 4,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=\"$Cluster2\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"})",
+            "instant": false,
+            "legendFormat": "Completed Tasks",
+            "range": true,
+            "refId": "A"
+          }
+        ],
+        "title": "Completed Tasks ($Cluster2)",
+        "type": "timeseries"
+      }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 38,
+    "tags": [
+      "hazelcast",
+      "cp",
+      "cp subsystem"
+    ],
+    "templating": {
+      "list": [
+        {
+          "hide": 2,
+          "name": "ClusterList",
+          "query": "",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "hide": 2,
+          "name": "ClusterFilterLabel",
+          "query": "job",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": "hazelcast",
+            "value": "hazelcast"
+          },
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "Cluster",
+          "options": [
+            {
+              "selected": true,
+              "text": "hazelcast",
+              "value": "hazelcast"
+            }
+          ],
+          "query": "hazelcast",
+          "queryValue": "",
+          "skipUrlSync": false,
+          "type": "custom",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": "hazelcast",
+            "value": "hazelcast"
+          },
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "Cluster2",
+          "label": "Cluster 2",
+          "options": [
+            {
+              "selected": true,
+              "text": "hazelcast",
+              "value": "hazelcast"
+            }
+          ],
+          "query": "hazelcast",
+          "queryValue": "",
+          "skipUrlSync": false,
+          "type": "custom",
+          "datasource": "${DATASOURCE}"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-5m",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "Dual CP Subsystem",
+    "uid": "c6426a21-20fc-4e61-8b8f-46fbcd5d10d0",
+    "weekStart": ""
+  },
+  "folderId": "${FOLDER_ID}",
+  "overWrite": false
+}

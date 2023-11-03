@@ -34,11 +34,11 @@ NAME
    ./$EXECUTABLE - Update the Cluster variable in dashaboards
 
 SYNOPSIS
-   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-clusters cluster_list] [-?]
+   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-clusters cluster_list] [-type single|dual|all] [-?]
 
 DESCRIPTION
-   Updates the ClusterFilterLabel and Cluster variables to all dashboards in the specified.
-   foler .The ClusterFilterLabel variable defines the label used to filter Hazelcast clusters
+   Updates the ClusterFilterLabel and Cluster variables to all dashboards in the specified
+   folder .The ClusterFilterLabel variable defines the label used to filter Hazelcast clusters
    and the Cluster variable holds a list of cluster names that each dashboard monitors.
    Their default value are as follows.
 
@@ -56,6 +56,19 @@ DESCRIPTION
    Prometheus server supports. For example, in Kubernetes, you may want to substitute
    it with 'namespace' (or 'service) since a Hazelcast cluster is deployed per Kubernetes
    namespace.
+
+   This command supports three (3) types of folders identified by how the dashboards
+   display Hazelcast clusters as follows.
+
+      - single: Folders with dashboards diplaying metrics specific to a single cluster
+                at a time. These folders require the '-type single' option. If '-type'
+                is not specified, then it defaults to this option.
+
+      - dual:   Folders with dashboards displaying metrics from two clusters, e.g., the
+                'HazelcastDual' folder. These folders require the '-type dual' option.
+
+      - all:    Folders with dashboards displaying metrics from all clusters, e.g.,
+                the 'HazelcastAll' folder. These folders require the '-type all' option.
 
    See the EXAMPLES section for adding multiple clusters to Grafana dashboards.
 
@@ -76,6 +89,14 @@ OPTIONS
              the cluster names must match the 'job_name' values in the Prometheus configuration
              file.
 
+   -type single|dual|all
+             If 'dual', then it adds two (2) cluster pulldown menus in the toolbar.  This
+             option should be used only if the dashboards require dual clusters.
+
+            If 'all', then it does not add cluster pulldown menus in the toolbar. This
+            option should be used if the dashboards require all clusters. It supplies the
+            Grafana variable, \$ClusterList, set to a list of all clusters separated by
+            '|' (reg OR) for filtering clusters.
 DEFAULT
    ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTER
 
@@ -123,11 +144,37 @@ EXAMPLES
 
       ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2"
 
+   Example 3: Dual Clusters
+
+      Dual cluster dashboards are useful for comparing metrics between two clusters. For example,
+      the 'HazelcastDual' folder contains dashboards that display a series of paired panels for
+      monitoring two clusters in a single view. To import 'HazelcastDual' individually, you would
+      execute the following command.
+
+      ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2" -folder HazelcastDual -type dual
+
+   Example 4: All Clusters
+
+      If your dashboards require all metrics from all clusters, then you can use the option '-all'.
+      The 'HazelcastAll' folder contains dashboards that use the \$ClusterList variable in
+      regex to filter metrics. \$ClusterList is a list of clusters separated by '|' (regex OR).
+      The following imports the 'HazelcastAll' folder.
+
+      ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2" -folder HazelcastAll -type all
+
 SEE ALSO
    ../etc/prometheus.yml
 
 EOF
 exit
+fi
+
+if [ "$TYPE_ARG" == "" ]; then
+   TYPE_ARG="single"
+fi
+if [ "$TYPE_ARG" != "single" ] && [ "$TYPE_ARG" != "dual" ] && [ "$TYPE_ARG" != "all" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid type [$TYPE_ARG]. Must be 'single', 'dual', or 'all'. Command aborted."
+   exit 1
 fi
 
 if [ "$FOLDER" == "" ]; then
@@ -140,6 +187,9 @@ else
    CLUSTERS="$CLUSTERS_ARG"
 fi
 
+#
+# $Cluster, $Cluster2
+#
 query="$CLUSTERS"
 CLUSTERS=$(echo $CLUSTERS | sed 's/,/ /g')
 current=$DEFAULT_CLUSTER
@@ -154,10 +204,11 @@ for CLUSTER in $CLUSTERS; do
       options="$options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
       query="$query,$CLUSTER"
    fi
+   # cluster2 constant value for going from non-dual to dual dashboards
+   cluster2=$CLUSTER
    let INDEX=INDEX+1
 done
 options="$options ]"
-
 CLUSTER_OPTIONS="
 [
 {
@@ -178,7 +229,63 @@ CLUSTER_OPTIONS="
  \"datasource\": \"\${DATASOURCE}\"
 }]
 "
+CLUSTER2_OPTIONS="
+[
+{
+   \"current\": {
+   \"selected\": true,
+   \"text\": \"$current\",
+   \"value\": \"$current\"
+ },
+ \"hide\": 0,
+ \"includeAll\": false,
+ \"multi\": false,
+ \"name\": \"Cluster2\",
+ \"label\": \"Cluster 2\",
+ $options,
+ \"query\": \"$query\",
+ \"queryValue\": \"\",
+ \"skipUrlSync\": false,
+ \"type\": \"custom\",
+ \"datasource\": \"\${DATASOURCE}\"
+}]
+"
 
+#
+# $Cluster - constant for "all" dashboards. This value required by both non-dual and dual dashboards.
+#
+CLUSTER_CONSTANT_OPTIONS="
+[
+{
+ \"hide\": 2,
+ \"name\": \"Cluster\",
+ \"query\": \"$current\",
+ \"skipUrlSync\": false,
+ \"type\": \"constant\",
+ \"datasource\": \"\${DATASOURCE}\"
+}
+]
+"
+
+#
+# $Cluster2 - constant for non-dual dashboards. This value required by dual dashboards.
+#
+CLUSTER2_CONSTANT_OPTIONS="
+[
+{
+ \"hide\": 2,
+ \"name\": \"Cluster2\",
+ \"query\": \"$cluster2\",
+ \"skipUrlSync\": false,
+ \"type\": \"constant\",
+ \"datasource\": \"\${DATASOURCE}\"
+}
+]
+"
+
+#
+# $ClusterFilterLabel
+#
 if [ "$LABEL_ARG" == "" ]; then
    cluster_filter_label="$DEFAULT_LABEL"
 else
@@ -197,18 +304,56 @@ CLUSTER_FILTER_LABEL_OPTIONS="
 ]
 "
 
+#
+# $ClusterList
+#
+cluster_list=$(echo $CLUSTERS_ARG | sed -e "s/,/|/g" -e "s/ //g")
+CLUSTER_LIST_OPTIONS="
+[
+{
+ \"hide\": 2,
+ \"name\": \"ClusterList\",
+ \"query\": \"$cluster_list\",
+ \"skipUrlSync\": false,
+ \"type\": \"constant\",
+ \"datasource\": \"\${DATASOURCE}\"
+}
+]
+"
 
+#
+# Update templates
+#
 if [ -d "$TMP_DIR/$FOLDER" ]; then
    rm -r "$TMP_DIR/$FOLDER"
 fi
 mkdir "$TMP_DIR/$FOLDER"
 FOLDER_PATH="$DASHBOARDS_DIR/$FOLDER"
+
+case "$TYPE_ARG" in
+single)
+   CLUSTER2_OPTIONS=$CLUSTER2_CONSTANT_OPTIONS
+   ;;
+all)
+   CLUSTER_OPTIONS=$CLUSTER_CONSTANT_OPTIONS
+   CLUSTER2_OPTIONS=$CLUSTER2_CONSTANT_OPTIONS
+   ;;
+dual)
+   ;;
+esac
+
 pushd "$FOLDER_PATH" > /dev/null 2>&1
+
+
 for file in *; do
    cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+               | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+               | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
                | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
                | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+               | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+               | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
                " > "$TMP_DIR/$FOLDER/${file}"
 done
 popd > /dev/null 2>&1
