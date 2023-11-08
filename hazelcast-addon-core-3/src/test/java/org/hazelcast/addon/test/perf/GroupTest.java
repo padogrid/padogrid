@@ -1095,6 +1095,8 @@ public class GroupTest implements Constants
 			writeLine("    data: ReliableTopic");
 			writeLine("    deleted: " + delete);
 			break;
+		case sleep:
+			break;
 		case map:
 		default:
 			operation.imap = hazelcastInstance.getMap(operation.dsName);

@@ -125,11 +125,28 @@
                   "value": 228
                 }
               ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
         "gridPos": {
-          "h": 8,
+          "h": 10,
           "w": 24,
           "x": 0,
           "y": 0
@@ -376,17 +393,17 @@
       },
       {
         "collapsed": false,
+        "datasource": "${DATASOURCE}",
         "gridPos": {
           "h": 1,
           "w": 24,
           "x": 0,
-          "y": 8
+          "y": 10
         },
         "id": 28,
         "panels": [],
         "title": "Partition Threads",
-        "type": "row",
-        "datasource": "${DATASOURCE}"
+        "type": "row"
       },
       {
         "datasource": "${DATASOURCE}",
@@ -433,20 +450,30 @@
             {
               "matcher": {
                 "id": "byName",
-                "options": "tag0"
+                "options": "Error Count (sum)"
               },
               "properties": [
                 {
-                  "id": "mappings",
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "red",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
                   "value": [
                     {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
                     }
                   ]
                 }
@@ -455,820 +482,10 @@
           ]
         },
         "gridPos": {
-          "h": 8,
-          "w": 6,
+          "h": 9,
+          "w": 8,
           "x": 0,
-          "y": 9
-        },
-        "id": 19,
-        "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "fields": "",
-            "reducer": [
-              "sum"
-            ],
-            "show": false
-          },
-          "showHeader": true,
-          "sortBy": []
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_completedOperationCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
-            "format": "table",
-            "hide": false,
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "Completed Operation Batch Count"
-          }
-        ],
-        "title": "Partition Threads: Operation",
-        "transformations": [
-          {
-            "id": "joinByField",
-            "options": {
-              "byField": "instance",
-              "mode": "outer"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "instance",
-                  "Value",
-                  "tag0"
-                ],
-                "pattern": "Value.*"
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {},
-              "renameByName": {
-                "Value": "Completed Operation Count",
-                "Value #CPU": "CPU",
-                "Value #Committed Native Memory": "Committed Native Memory",
-                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
-                "Value #Completed Packet Count": "Completed Packet Count",
-                "Value #GC Major Count": "GC Major Count",
-                "Value #GC Major Time": "GC Major Time",
-                "Value #GC Minor Count": "GC Minor Count",
-                "Value #GC Minor Time": "GC Minor Time",
-                "Value #Heap Usage": "Heap Usage",
-                "Value #Total Heap": "Total Heap",
-                "Value #Used Heap": "Used Heap",
-                "Value #Used Native Memory": "Used Native Memory",
-                "instance": "Member",
-                "tag0": "Thread",
-                "tag0 2": ""
-              }
-            }
-          },
-          {
-            "id": "groupBy",
-            "options": {
-              "fields": {
-                "Complated Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "groupby"
-                },
-                "Completed Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Operation Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Packet Count": {
-                  "aggregations": [
-                    "sum"
-                  ]
-                },
-                "Member": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Thread": {
-                  "aggregations": []
-                },
-                "tag0 2": {
-                  "aggregations": []
-                }
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "table"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "auto"
-              },
-              "inspect": false
-            },
-            "mappings": [
-              {
-                "options": {
-                  "^.*(=)(\\w.*).*\"$": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "value"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 6,
-          "y": 9
-        },
-        "id": 20,
-        "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "fields": "",
-            "reducer": [
-              "sum"
-            ],
-            "show": false
-          },
-          "showHeader": true,
-          "sortBy": []
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_completedOperationBatchCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
-            "format": "table",
-            "hide": false,
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "Completed Operation Batch Count"
-          }
-        ],
-        "title": "Partition Threads: Batch",
-        "transformations": [
-          {
-            "id": "joinByField",
-            "options": {
-              "byField": "instance",
-              "mode": "outer"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "instance",
-                  "Value",
-                  "tag0"
-                ],
-                "pattern": "Value.*"
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {},
-              "renameByName": {
-                "Value": "Completed Operation Batch Count",
-                "Value #CPU": "CPU",
-                "Value #Committed Native Memory": "Committed Native Memory",
-                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
-                "Value #Completed Packet Count": "Completed Packet Count",
-                "Value #GC Major Count": "GC Major Count",
-                "Value #GC Major Time": "GC Major Time",
-                "Value #GC Minor Count": "GC Minor Count",
-                "Value #GC Minor Time": "GC Minor Time",
-                "Value #Heap Usage": "Heap Usage",
-                "Value #Total Heap": "Total Heap",
-                "Value #Used Heap": "Used Heap",
-                "Value #Used Native Memory": "Used Native Memory",
-                "instance": "Member",
-                "tag0": "Thread",
-                "tag0 2": ""
-              }
-            }
-          },
-          {
-            "id": "groupBy",
-            "options": {
-              "fields": {
-                "Complated Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "groupby"
-                },
-                "Completed Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Packet Count": {
-                  "aggregations": [
-                    "sum"
-                  ]
-                },
-                "Member": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Thread": {
-                  "aggregations": []
-                },
-                "tag0 2": {
-                  "aggregations": []
-                }
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "table"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "auto"
-              },
-              "inspect": false
-            },
-            "mappings": [
-              {
-                "options": {
-                  "^.*(=)(\\w.*).*\"$": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "value"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 12,
-          "y": 9
-        },
-        "id": 22,
-        "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "fields": "",
-            "reducer": [
-              "sum"
-            ],
-            "show": false
-          },
-          "showHeader": true,
-          "sortBy": []
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_completedRunnableCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
-            "format": "table",
-            "hide": false,
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "Completed Operation Batch Count"
-          }
-        ],
-        "title": "Partition Threads: Runnable",
-        "transformations": [
-          {
-            "id": "joinByField",
-            "options": {
-              "byField": "instance",
-              "mode": "outer"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "instance",
-                  "Value",
-                  "tag0"
-                ],
-                "pattern": "Value.*"
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {},
-              "renameByName": {
-                "Value": "Completed Runnable Count",
-                "Value #CPU": "CPU",
-                "Value #Committed Native Memory": "Committed Native Memory",
-                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
-                "Value #Completed Packet Count": "Completed Packet Count",
-                "Value #GC Major Count": "GC Major Count",
-                "Value #GC Major Time": "GC Major Time",
-                "Value #GC Minor Count": "GC Minor Count",
-                "Value #GC Minor Time": "GC Minor Time",
-                "Value #Heap Usage": "Heap Usage",
-                "Value #Total Heap": "Total Heap",
-                "Value #Used Heap": "Used Heap",
-                "Value #Used Native Memory": "Used Native Memory",
-                "instance": "Member",
-                "tag0": "Thread",
-                "tag0 2": ""
-              }
-            }
-          },
-          {
-            "id": "groupBy",
-            "options": {
-              "fields": {
-                "Complated Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "groupby"
-                },
-                "Completed Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Packet Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Partition Specific Runnable Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Runnable Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Member": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Thread": {
-                  "aggregations": []
-                },
-                "tag0 2": {
-                  "aggregations": []
-                }
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "table"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "auto"
-              },
-              "inspect": false
-            },
-            "mappings": [
-              {
-                "options": {
-                  "^.*(=)(\\w.*).*\"$": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "value"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 18,
-          "y": 9
-        },
-        "id": 21,
-        "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "fields": "",
-            "reducer": [
-              "sum"
-            ],
-            "show": false
-          },
-          "showHeader": true,
-          "sortBy": []
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_completedPartitionSpecificRunnableCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
-            "format": "table",
-            "hide": false,
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "Completed Operation Batch Count"
-          }
-        ],
-        "title": "Partition Threads: Partition Specific Runnable",
-        "transformations": [
-          {
-            "id": "joinByField",
-            "options": {
-              "byField": "instance",
-              "mode": "outer"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "instance",
-                  "Value",
-                  "tag0"
-                ],
-                "pattern": "Value.*"
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {},
-              "renameByName": {
-                "Value": "Completed Partition Specific Runnable Count",
-                "Value #CPU": "CPU",
-                "Value #Committed Native Memory": "Committed Native Memory",
-                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
-                "Value #Completed Packet Count": "Completed Packet Count",
-                "Value #GC Major Count": "GC Major Count",
-                "Value #GC Major Time": "GC Major Time",
-                "Value #GC Minor Count": "GC Minor Count",
-                "Value #GC Minor Time": "GC Minor Time",
-                "Value #Heap Usage": "Heap Usage",
-                "Value #Total Heap": "Total Heap",
-                "Value #Used Heap": "Used Heap",
-                "Value #Used Native Memory": "Used Native Memory",
-                "instance": "Member",
-                "tag0": "Thread",
-                "tag0 2": ""
-              }
-            }
-          },
-          {
-            "id": "groupBy",
-            "options": {
-              "fields": {
-                "Complated Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "groupby"
-                },
-                "Completed Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Packet Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Partition Specific Runnable Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Member": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Thread": {
-                  "aggregations": []
-                },
-                "tag0 2": {
-                  "aggregations": []
-                }
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "table"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "auto"
-              },
-              "inspect": false
-            },
-            "mappings": [
-              {
-                "options": {
-                  "^.*(=)(\\w.*).*\"$": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "value"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 0,
-          "y": 17
+          "y": 11
         },
         "id": 24,
         "options": {
@@ -1299,7 +516,7 @@
             "refId": "Completed Operation Batch Count"
           }
         ],
-        "title": "Partition Threads: Error",
+        "title": "Partition Threads: Error Count",
         "transformations": [
           {
             "id": "joinByField",
@@ -1476,217 +693,19 @@
                   ]
                 }
               ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 6,
-          "y": 17
-        },
-        "id": 27,
-        "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "fields": "",
-            "reducer": [
-              "sum"
-            ],
-            "show": false
-          },
-          "showHeader": true,
-          "sortBy": []
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_errorCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
-            "format": "table",
-            "hide": false,
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "Completed Operation Batch Count"
-          }
-        ],
-        "title": "Partition Threads: Error",
-        "transformations": [
-          {
-            "id": "joinByField",
-            "options": {
-              "byField": "instance",
-              "mode": "outer"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "instance",
-                  "Value",
-                  "tag0"
-                ],
-                "pattern": "Value.*"
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {},
-              "renameByName": {
-                "Value": "Error Count",
-                "Value #CPU": "CPU",
-                "Value #Committed Native Memory": "Committed Native Memory",
-                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
-                "Value #Completed Packet Count": "Completed Packet Count",
-                "Value #GC Major Count": "GC Major Count",
-                "Value #GC Major Time": "GC Major Time",
-                "Value #GC Minor Count": "GC Minor Count",
-                "Value #GC Minor Time": "GC Minor Time",
-                "Value #Heap Usage": "Heap Usage",
-                "Value #Total Heap": "Total Heap",
-                "Value #Used Heap": "Used Heap",
-                "Value #Used Native Memory": "Used Native Memory",
-                "instance": "Member",
-                "tag0": "Thread",
-                "tag0 2": ""
-              }
-            }
-          },
-          {
-            "id": "groupBy",
-            "options": {
-              "fields": {
-                "Complated Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "groupby"
-                },
-                "Completed Operation Batch Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Packet Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Partition Specific Runnable Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Completed Total Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Error Count": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Member": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Thread": {
-                  "aggregations": []
-                },
-                "tag0 2": {
-                  "aggregations": []
-                }
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "table"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
             },
-            "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "auto"
-              },
-              "inspect": false
-            },
-            "mappings": [
-              {
-                "options": {
-                  "^.*(=)(\\w.*).*\"$": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "value"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": [
             {
               "matcher": {
                 "id": "byName",
-                "options": "tag0"
+                "options": "Member"
               },
               "properties": [
                 {
-                  "id": "mappings",
+                  "id": "links",
                   "value": [
                     {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
                     }
                   ]
                 }
@@ -1695,10 +714,10 @@
           ]
         },
         "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 12,
-          "y": 17
+          "h": 9,
+          "w": 8,
+          "x": 8,
+          "y": 11
         },
         "id": 25,
         "options": {
@@ -1729,7 +748,7 @@
             "refId": "Completed Operation Batch Count"
           }
         ],
-        "title": "Partition Threads: Normal Pending",
+        "title": "Partition Threads: Normal Pending Count",
         "transformations": [
           {
             "id": "joinByField",
@@ -1906,14 +925,31 @@
                   ]
                 }
               ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
         "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 18,
-          "y": 17
+          "h": 9,
+          "w": 8,
+          "x": 16,
+          "y": 11
         },
         "id": 26,
         "options": {
@@ -1944,7 +980,7 @@
             "refId": "Completed Operation Batch Count"
           }
         ],
-        "title": "Partition Threads: Priority Pending",
+        "title": "Partition Threads: Priority Pending Count",
         "transformations": [
           {
             "id": "joinByField",
@@ -2061,6 +1097,1357 @@
           }
         ],
         "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "^.*(=)(\\w.*).*\"$": {
+                          "index": 0,
+                          "text": "$2"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 8,
+          "x": 0,
+          "y": 20
+        },
+        "id": 29,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedTotalCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Completed Operation Batch Count"
+          }
+        ],
+        "title": "Partition Threads: Completed Total Count",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "Value",
+                  "tag0"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Completed Total Count",
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
+                "Value #Completed Packet Count": "Completed Packet Count",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member",
+                "tag0": "Thread",
+                "tag0 2": ""
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Complated Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "groupby"
+                },
+                "Completed Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Packet Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Partition Specific Runnable Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Total Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Member": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Normal Pending Count": {
+                  "aggregations": [],
+                  "operation": "aggregate"
+                },
+                "Priority Pending Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Thread": {
+                  "aggregations": []
+                },
+                "tag0 2": {
+                  "aggregations": []
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "^.*(=)(\\w.*).*\"$": {
+                          "index": 0,
+                          "text": "$2"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 8,
+          "x": 8,
+          "y": 20
+        },
+        "id": 19,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": false,
+              "displayName": "Completed Operation Count (sum)"
+            }
+          ]
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedOperationCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Completed Operation Batch Count"
+          }
+        ],
+        "title": "Partition Threads: Completed Operation Count",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "Value",
+                  "tag0"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Completed Operation Count",
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
+                "Value #Completed Packet Count": "Completed Packet Count",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member",
+                "tag0": "Thread",
+                "tag0 2": ""
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Complated Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "groupby"
+                },
+                "Completed Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Operation Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Packet Count": {
+                  "aggregations": [
+                    "sum"
+                  ]
+                },
+                "Member": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Thread": {
+                  "aggregations": []
+                },
+                "tag0 2": {
+                  "aggregations": []
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "^.*(=)(\\w.*).*\"$": {
+                          "index": 0,
+                          "text": "$2"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 8,
+          "x": 16,
+          "y": 20
+        },
+        "id": 20,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedOperationBatchCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Completed Operation Batch Count"
+          }
+        ],
+        "title": "Partition Threads: Completed Operation Batch Count",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "Value",
+                  "tag0"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Completed Operation Batch Count",
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
+                "Value #Completed Packet Count": "Completed Packet Count",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member",
+                "tag0": "Thread",
+                "tag0 2": ""
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Complated Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "groupby"
+                },
+                "Completed Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Packet Count": {
+                  "aggregations": [
+                    "sum"
+                  ]
+                },
+                "Member": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Thread": {
+                  "aggregations": []
+                },
+                "tag0 2": {
+                  "aggregations": []
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "^.*(=)(\\w.*).*\"$": {
+                          "index": 0,
+                          "text": "$2"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member L ink",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 8,
+          "x": 0,
+          "y": 29
+        },
+        "id": 22,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedRunnableCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Completed Operation Batch Count"
+          }
+        ],
+        "title": "Partition Threads: Completed Runnable Count",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "Value",
+                  "tag0"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Completed Runnable Count",
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
+                "Value #Completed Packet Count": "Completed Packet Count",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member",
+                "tag0": "Thread",
+                "tag0 2": ""
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Complated Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "groupby"
+                },
+                "Completed Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Packet Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Partition Specific Runnable Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Runnable Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Member": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Thread": {
+                  "aggregations": []
+                },
+                "tag0 2": {
+                  "aggregations": []
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "^.*(=)(\\w.*).*\"$": {
+                          "index": 0,
+                          "text": "$2"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 8,
+          "x": 8,
+          "y": 29
+        },
+        "id": 21,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedPartitionSpecificRunnableCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Completed Operation Batch Count"
+          }
+        ],
+        "title": "Partition Threads: Completed Partition Specific Runnable Count",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "Value",
+                  "tag0"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Completed Partition Specific Runnable Count",
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
+                "Value #Completed Packet Count": "Completed Packet Count",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member",
+                "tag0": "Thread",
+                "tag0 2": ""
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Complated Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "groupby"
+                },
+                "Completed Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Packet Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Partition Specific Runnable Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Member": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Thread": {
+                  "aggregations": []
+                },
+                "tag0 2": {
+                  "aggregations": []
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "^.*(=)(\\w.*).*\"$": {
+                          "index": 0,
+                          "text": "$2"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 8,
+          "x": 16,
+          "y": 29
+        },
+        "id": 27,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_completedPacketCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"operation.thread\",tag0=~\".*partition-operation.thread.*\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Completed Operation Batch Count"
+          }
+        ],
+        "title": "Partition Threads: Completed Packet Count",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "instance",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "Value",
+                  "tag0"
+                ],
+                "pattern": "Value.*"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "Completed Packet Count",
+                "Value #CPU": "CPU",
+                "Value #Committed Native Memory": "Committed Native Memory",
+                "Value #Completed Operation Batch Count": "Complated Operation Batch Count",
+                "Value #Completed Packet Count": "Completed Packet Count",
+                "Value #GC Major Count": "GC Major Count",
+                "Value #GC Major Time": "GC Major Time",
+                "Value #GC Minor Count": "GC Minor Count",
+                "Value #GC Minor Time": "GC Minor Time",
+                "Value #Heap Usage": "Heap Usage",
+                "Value #Total Heap": "Total Heap",
+                "Value #Used Heap": "Used Heap",
+                "Value #Used Native Memory": "Used Native Memory",
+                "instance": "Member",
+                "tag0": "Thread",
+                "tag0 2": ""
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Complated Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "groupby"
+                },
+                "Completed Operation Batch Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Packet Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Partition Specific Runnable Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Completed Total Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Error Count": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Member": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Thread": {
+                  "aggregations": []
+                },
+                "tag0 2": {
+                  "aggregations": []
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
       }
     ],
     "refresh": "5s",
@@ -2073,14 +2460,6 @@
       "list": [
         {
           "hide": 2,
-          "name": "ClusterList",
-          "query": "",
-          "skipUrlSync": false,
-          "type": "constant",
-          "datasource": "${DATASOURCE}"
-        },
-        {
-          "hide": 2,
           "name": "ClusterFilterLabel",
           "query": "job",
           "skipUrlSync": false,
@@ -2090,8 +2469,8 @@
         {
           "current": {
             "selected": true,
-            "text": "hazelcast",
-            "value": "hazelcast"
+            "text": "myhz1",
+            "value": "myhz1"
           },
           "hide": 0,
           "includeAll": false,
@@ -2100,11 +2479,26 @@
           "options": [
             {
               "selected": true,
-              "text": "hazelcast",
-              "value": "hazelcast"
+              "text": "myhz1",
+              "value": "myhz1"
+            },
+            {
+              "selected": false,
+              "text": "myhz2",
+              "value": "myhz2"
+            },
+            {
+              "selected": false,
+              "text": "wan1",
+              "value": "wan1"
+            },
+            {
+              "selected": false,
+              "text": "wan2",
+              "value": "wan2"
             }
           ],
-          "query": "hazelcast",
+          "query": "myhz1,myhz2,wan1,wan2",
           "queryValue": "",
           "skipUrlSync": false,
           "type": "custom",
@@ -2113,7 +2507,7 @@
         {
           "hide": 2,
           "name": "Cluster2",
-          "query": "hazelcast",
+          "query": "wan2",
           "skipUrlSync": false,
           "type": "constant",
           "datasource": "${DATASOURCE}"
