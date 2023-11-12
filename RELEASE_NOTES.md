@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.31-SNAPSHOT
 
-### Release Date: 11/09/23
+### Release Date: 11/11/23
 
 - Added a complete suite of Grafana dashboards for Hazelcast. There are now three types of dashboards: single, dual, and all. The single type monitors a `single` cluster. The `dual` type monitors two (2) clusters side-by-side. The `all` type federates all clusters.
 - Released the [Hazelcast Multi-Cluster Demo](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-granfana) bundle. This bundle automates multi-cluster installtion steps and includes a full set of Grafana dashboards including a WAN discovery plugin dashboard.
