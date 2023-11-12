@@ -34,7 +34,7 @@ NAME
    ./$EXECUTABLE - Update the Cluster variable in dashaboards
 
 SYNOPSIS
-   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-clusters cluster_list] [-type single|dual|all] [-?]
+   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-clusters cluster_list] [-type single|dual|all] [-readonly] [-?]
 
 DESCRIPTION
    Updates the ClusterFilterLabel and Cluster variables to all dashboards in the specified
@@ -95,8 +95,12 @@ OPTIONS
 
             If 'all', then it does not add cluster pulldown menus in the toolbar. This
             option should be used if the dashboards require all clusters. It supplies the
-            Grafana variable, \$ClusterList, set to a list of all clusters separated by
-            '|' (reg OR) for filtering clusters.
+            Grafana variable, \$ClusterList, set to a comma-separated list of all clusters
+            for filtering clusters.
+  
+   -readonly
+           If specified, then the dashboards are for read only. Default: editable
+
 DEFAULT
    ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTER
 
@@ -157,7 +161,7 @@ EXAMPLES
 
       If your dashboards require all metrics from all clusters, then you can use the option '-all'.
       The 'HazelcastAll' folder contains dashboards that use the \$ClusterList variable in
-      regex to filter metrics. \$ClusterList is a list of clusters separated by '|' (regex OR).
+      regex to filter metrics. \$ClusterList is a comma-separated list of clusters.
       The following imports the 'HazelcastAll' folder.
 
       ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2" -folder HazelcastAll -type all
@@ -193,22 +197,28 @@ fi
 query="$CLUSTERS"
 CLUSTERS=$(echo $CLUSTERS | sed 's/,/ /g')
 current=$DEFAULT_CLUSTER
-options="\"options\": ["
+cluster_options="\"options\": ["
+cluster_list_options="\"options\": ["
 INDEX=0
 for CLUSTER in $CLUSTERS; do
    if [ $INDEX -eq 0 ]; then
       current="$CLUSTER"
-      options="$options {\"selected\": true, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
+      cluster_options="$cluster_options {\"selected\": true, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
+      cluster_list_options="$cluster_list_options {\"selected\": true, \"text\": \"All\", \"\$__all\": \"$CLUSTER\"}"
+      cluster_list_options="$cluster_list_options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
       query="$CLUSTER"
    else
-      options="$options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
+      cluster_options="$cluster_options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
+      cluster_list_options="$cluster_list_options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
       query="$query,$CLUSTER"
    fi
    # cluster2 constant value for going from non-dual to dual dashboards
    cluster2=$CLUSTER
    let INDEX=INDEX+1
 done
-options="$options ]"
+cluster_options="$cluster_options ]"
+cluster_list_options="$cluster_list_options ]"
+
 CLUSTER_OPTIONS="
 [
 {
@@ -221,7 +231,28 @@ CLUSTER_OPTIONS="
  \"includeAll\": false,
  \"multi\": false,
  \"name\": \"Cluster\",
- $options,
+ $cluster_options,
+ \"query\": \"$query\",
+ \"queryValue\": \"\",
+ \"skipUrlSync\": false,
+ \"type\": \"custom\",
+ \"datasource\": \"\${DATASOURCE}\"
+}]
+"
+CLUSTER_LIST_OPTIONS="
+[
+{
+   \"current\": {
+   \"selected\": true,
+   \"text\": \"All\",
+   \"value\": \"All\"
+ },
+ \"hide\": 0,
+ \"includeAll\": true,
+ \"label\": \"Clusters\",
+ \"multi\": true,
+ \"name\": \"ClusterList\",
+ $cluster_list_options,
  \"query\": \"$query\",
  \"queryValue\": \"\",
  \"skipUrlSync\": false,
@@ -242,7 +273,7 @@ CLUSTER2_OPTIONS="
  \"multi\": false,
  \"name\": \"Cluster2\",
  \"label\": \"Cluster 2\",
- $options,
+ $cluster_options,
  \"query\": \"$query\",
  \"queryValue\": \"\",
  \"skipUrlSync\": false,
@@ -307,19 +338,19 @@ CLUSTER_FILTER_LABEL_OPTIONS="
 #
 # $ClusterList
 #
-cluster_list=$(echo $CLUSTERS_ARG | sed -e "s/,/|/g" -e "s/ //g")
-CLUSTER_LIST_OPTIONS="
-[
-{
- \"hide\": 2,
- \"name\": \"ClusterList\",
- \"query\": \"$cluster_list\",
- \"skipUrlSync\": false,
- \"type\": \"constant\",
- \"datasource\": \"\${DATASOURCE}\"
-}
-]
-"
+#cluster_list="$CLUSTERS_ARG"
+#CLUSTER_LIST_OPTIONS="
+#[
+#{
+# \"hide\": 2,
+# \"name\": \"ClusterList\",
+# \"query\": \"$cluster_list\",
+# \"skipUrlSync\": false,
+# \"type\": \"constant\",
+# \"datasource\": \"\${DATASOURCE}\"
+#}
+#]
+#"
 
 #
 # Update templates
@@ -343,19 +374,36 @@ dual)
 esac
 
 pushd "$FOLDER_PATH" > /dev/null 2>&1
+case "$TYPE_ARG" in
+all)
+   for file in *; do
+      cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+   done
+   ;;
 
-
-for file in *; do
-   cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
-               | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
-               | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
-               | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
-               | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
-               | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
-               | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
-               | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
-               " > "$TMP_DIR/$FOLDER/${file}"
-done
+*)
+   for file in *; do
+      cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+   done
+;;
+esac
 popd > /dev/null 2>&1
 
 cp -r $TMP_DIR/$FOLDER/* "$FOLDER_PATH/"

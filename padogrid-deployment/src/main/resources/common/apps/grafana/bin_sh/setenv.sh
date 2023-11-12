@@ -98,3 +98,13 @@ DEFAULT_FOLDER="padogrid-perf_test"
 # Enter the template directory where the exported files to be converted.
 #
 #EXPORT_TEMPLATE_DIR=$APP_DIR/templates
+
+#
+# Folders provided by PadoGrid. If you want to use
+# 'update_cluster_templating_padogrid' to update your folders, then list
+# them using the following environment variables. Folder names must not
+# include spaces.
+#
+SINGLE_FOLDERS="Hazelcast"
+DUAL_FOLDERS="HazelcastDual"
+ALL_FOLDERS="HazelcastAll"

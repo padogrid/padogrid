@@ -316,3 +316,13 @@ function getAllGrafanaRwePaths
    echo "$RWE_PATHS"
 }
 
+EDITABLE="true"
+READONLY_SPECIFIED="false"
+for i in "$@"; do
+   case "$i" in 
+   -readonly)
+      READONLY_SPECIFIED="true"
+      EDITABLE="false"
+      ;;
+   esac
+done

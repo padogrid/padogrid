@@ -141,7 +141,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "",
+        "description": "Name of member clustered in $Cluster",
         "gridPos": {
           "h": 6,
           "w": 4,
@@ -175,6 +175,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: free vs. used memory",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -267,6 +268,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: Member resource overview",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -596,6 +598,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: member CPU load",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -681,11 +684,12 @@
             "refId": "A"
           }
         ],
-        "title": "CPU Load (Per Member)",
+        "title": "CPU Load",
         "type": "timeseries"
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: total swap space size",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -776,6 +780,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: Member minor and major GC count",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -876,6 +881,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: member used native memory",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -966,6 +972,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: member memories. Keep the used memory below 80% of the max memory.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1076,6 +1083,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: Member used heap",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1167,6 +1175,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: sum of used memory of all maps. This metric appears to apply to native memory only.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1261,7 +1270,8 @@
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_usedMemory{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\"})",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_usedMemory{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"})",
             "hide": false,
             "instant": false,
             "legendFormat": "Used Memory Maps",
@@ -1271,7 +1281,7 @@
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_freeMemory{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\"})",
+            "expr": "sum(com_hazelcast_Metrics_freeMemory{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"})",
             "hide": false,
             "instant": false,
             "legendFormat": "Free Memory",
@@ -1281,7 +1291,8 @@
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
-            "expr": "sum(com_hazelcast_Metrics_maxHeap{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\"})",
+            "expr": "sum(com_hazelcast_Metrics_maxHeap{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"})",
+            "hide": true,
             "instant": false,
             "legendFormat": "Max Heap",
             "range": true,
@@ -1293,6 +1304,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Member: member number of threads",
         "fieldConfig": {
           "defaults": {
             "color": {

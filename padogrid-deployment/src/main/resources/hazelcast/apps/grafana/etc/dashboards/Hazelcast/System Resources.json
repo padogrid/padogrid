@@ -113,6 +113,7 @@
     "panels": [
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Cluster up time determined by the oldest member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -171,6 +172,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Cluster member resource overview",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -534,6 +536,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Free vs. used memory: sum of all member memories",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -560,7 +563,7 @@
                   "id": "color",
                   "value": {
                     "fixedColor": "red",
-                    "mode": "fixed"
+                    "mode": "palette-classic"
                   }
                 }
               ]
@@ -575,10 +578,16 @@
         },
         "id": 10,
         "options": {
+          "displayLabels": [
+            "name",
+            "value",
+            "percent"
+          ],
           "legend": {
             "displayMode": "list",
             "placement": "bottom",
-            "showLegend": true
+            "showLegend": false,
+            "values": []
           },
           "pieType": "pie",
           "reduceOptions": {
@@ -622,6 +631,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of partitions per member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -697,6 +707,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: GC minor and major count of the member with the highest value",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -792,11 +803,12 @@
             "refId": "GC Max"
           }
         ],
-        "title": "GC Count: Minor, Major (Aggregate)",
+        "title": "Max GC Count: Minor, Major (Aggregate)",
         "type": "timeseries"
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: System CPU load of the member with the highest value",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -887,6 +899,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Sum of all member heap memories",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -975,6 +988,16 @@
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_committedHeap{$ClusterFilterLabel=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Committed Heap",
+            "range": true,
+            "refId": "Comitted Heap"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
             "expr": "sum(com_hazelcast_Metrics_freeHeap{$ClusterFilterLabel=\"$Cluster\"})",
             "hide": false,
             "instant": false,
@@ -997,6 +1020,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Sum of all member used heap memories",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1088,6 +1112,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Sum of all member used native memories",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1168,9 +1193,39 @@
             "editorMode": "code",
             "expr": "sum(com_hazelcast_Metrics_usedNative{$ClusterFilterLabel=\"$Cluster\"})",
             "instant": false,
-            "legendFormat": "{{instance}}",
+            "legendFormat": "Used Native",
             "range": true,
             "refId": "A"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_committedNative{$ClusterFilterLabel=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Committed Native",
+            "range": true,
+            "refId": "B"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_freeNative{$ClusterFilterLabel=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Free Native",
+            "range": true,
+            "refId": "C"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_maxNative{$ClusterFilterLabel=\"$Cluster\"})",
+            "hide": false,
+            "instant": false,
+            "legendFormat": "Max Native",
+            "range": true,
+            "refId": "D"
           }
         ],
         "title": "Used Native (Aggregate)",
@@ -1178,6 +1233,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Physical memory of the member with the highest value",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1280,6 +1336,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Sum of all member threads",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1389,6 +1446,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Sum of all member committed heap memories",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1500,6 +1558,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Sum of all member owned entry memory costs",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1601,6 +1660,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Sum of all member free swap space sizes",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1643,7 +1703,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -1700,6 +1761,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Open filed descriptor count of the member with the highest value",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1742,7 +1804,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -1812,6 +1875,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Free memory per member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1854,8 +1918,8 @@
         "id": 9,
         "options": {
           "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
+            "displayMode": "table",
+            "placement": "right",
             "showLegend": true
           },
           "pieType": "pie",
@@ -1889,6 +1953,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Partition count per member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1931,8 +1996,8 @@
         "id": 8,
         "options": {
           "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
+            "displayMode": "table",
+            "placement": "right",
             "showLegend": true
           },
           "pieType": "pie",
@@ -1966,6 +2031,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: GC minor and major count of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -2008,7 +2074,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2065,12 +2132,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: System CPU load of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2106,7 +2175,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2153,12 +2223,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Heap memory of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2194,7 +2266,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2261,12 +2334,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Used heap memory of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2302,7 +2377,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2350,12 +2426,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Used native memory of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2391,7 +2469,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2438,12 +2517,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Physical memory of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2479,7 +2560,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2538,12 +2620,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Thread count of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2579,7 +2663,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2645,12 +2730,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Swap space size of each member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2686,7 +2773,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -2743,12 +2831,14 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of open and max file descriptors per member",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -2784,7 +2874,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",

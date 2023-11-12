@@ -296,6 +296,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of backup entries held by the member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -345,6 +346,166 @@
           "w": 12,
           "x": 12,
           "y": 0
+        },
+        "id": 19,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_backupEntryCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Backup Entries",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Memory cost of owned multimap entries on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 7
         },
         "id": 2,
         "options": {
@@ -455,6 +616,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Memory cost of owned multimap entries on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -502,10 +664,10 @@
         "gridPos": {
           "h": 7,
           "w": 12,
-          "x": 0,
+          "x": 12,
           "y": 7
         },
-        "id": 8,
+        "id": 20,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -533,7 +695,7 @@
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "expr": "com_hazelcast_Metrics_backupEntryCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
             "format": "time_series",
             "instant": true,
             "legendFormat": "__auto",
@@ -541,7 +703,7 @@
             "refId": "A"
           }
         ],
-        "title": "MUlti Maps: Events",
+        "title": "Multi Maps: Backup Memory",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -614,6 +776,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Memory cost of owned multimap entries on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -661,8 +824,8 @@
         "gridPos": {
           "h": 7,
           "w": 12,
-          "x": 12,
-          "y": 7
+          "x": 0,
+          "y": 14
         },
         "id": 9,
         "options": {
@@ -773,165 +936,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "fillOpacity": 80,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineWidth": 1,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 7,
-          "w": 12,
-          "x": 0,
-          "y": 14
-        },
-        "id": 12,
-        "options": {
-          "barRadius": 0,
-          "barWidth": 0.97,
-          "fullHighlight": false,
-          "groupWidth": 0.7,
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "right",
-            "showLegend": true
-          },
-          "orientation": "auto",
-          "showValue": "never",
-          "stacking": "normal",
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          },
-          "xTickLabelRotation": 0,
-          "xTickLabelSpacing": 0
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_putCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
-          }
-        ],
-        "title": "Multi Maps: Put Count",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "instance"
-              ],
-              "value": "tag0"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "instance",
-              "renamePattern": "Member"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
-            }
-          },
-          {
-            "id": "calculateField",
-            "options": {
-              "mode": "reduceRow",
-              "reduce": {
-                "include": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\""
-                ],
-                "reducer": "sum"
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "^.*(=)(\\w.*).*\"$",
-              "renamePattern": "$2"
-            }
-          }
-        ],
-        "type": "barchart"
-      },
-      {
-        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Memory cost of owned multimap entries on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -982,7 +987,7 @@
           "x": 12,
           "y": 14
         },
-        "id": 11,
+        "id": 8,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -1010,7 +1015,7 @@
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_getCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
             "format": "time_series",
             "instant": true,
             "legendFormat": "__auto",
@@ -1018,7 +1023,7 @@
             "refId": "A"
           }
         ],
-        "title": "Multi Maps: Get Count",
+        "title": "MUlti Maps: Events",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -1091,6 +1096,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of expirations happened on locally owned entries, backups are not included",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1140,6 +1146,326 @@
           "w": 12,
           "x": 0,
           "y": 21
+        },
+        "id": 21,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "none",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_expirationCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Expirations",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of evictions happened on locally owned entries, backups are not included",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 21
+        },
+        "id": 23,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "none",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_evictionCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Evictions",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of local queries executed on the multimap (it may be imprecise for queries involving partition predicates (PartitionPredicate) on the off-heap storage)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 28
         },
         "id": 18,
         "options": {
@@ -1250,6 +1576,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total number of indexed local queries performed on the multimap",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1298,7 +1625,1287 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 21
+          "y": 28
+        },
+        "id": 24,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "none",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_indexedQueryCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Indexed Query Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total number of other operations performed on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 35
+        },
+        "id": 25,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Other Operations",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total heap cost of the Merkle trees used",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 35
+        },
+        "id": 26,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_merkleTreesCost{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps:  Merkle Trees Used Heap (WAN)",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of locked entries that the member owns",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 42
+        },
+        "id": 27,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lockedEntryCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Locked Entries",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of updated but not persisted yet entries, dirty entries, that the member owns",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 42
+        },
+        "id": 28,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_dirtyEntryCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Dirty Entries",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Number of local put operations on the multimap",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 49
+        },
+        "id": 12,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_putCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Put Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of local set operations on the multimap",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 49
+        },
+        "id": 11,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_setCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Set Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of local get operations on the multimap",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 56
+        },
+        "id": 29,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "normal",
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_getCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Multi Maps: Get Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of local remove operations on the multimap",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 56
         },
         "id": 13,
         "options": {
@@ -1409,6 +3016,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Maximum latency of local put operations",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1457,7 +3065,7 @@
           "h": 7,
           "w": 12,
           "x": 0,
-          "y": 28
+          "y": 63
         },
         "id": 14,
         "options": {
@@ -1568,6 +3176,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Maximum latency of local set operations",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1616,7 +3225,7 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 28
+          "y": 63
         },
         "id": 17,
         "options": {
@@ -1727,6 +3336,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Maximum latency of local get operations",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1775,7 +3385,7 @@
           "h": 7,
           "w": 12,
           "x": 0,
-          "y": 35
+          "y": 70
         },
         "id": 15,
         "options": {
@@ -1886,6 +3496,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Maximum latency of local remove operations",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1934,7 +3545,7 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 35
+          "y": 70
         },
         "id": 16,
         "options": {

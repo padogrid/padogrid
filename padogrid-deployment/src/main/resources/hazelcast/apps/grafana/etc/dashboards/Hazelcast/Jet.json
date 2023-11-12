@@ -124,7 +124,7 @@
     "panels": [
       {
         "datasource": "${DATASOURCE}",
-        "description": "",
+        "description": "$Cluster: Job status",
         "fieldConfig": {
           "defaults": {
             "custom": {
@@ -230,9 +230,21 @@
             "format": "table",
             "hide": false,
             "instant": true,
-            "legendFormat": "Started",
+            "legendFormat": "Execution Started",
             "range": false,
-            "refId": "Started"
+            "refId": "Execution Started"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_jobs_executionTerminated{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Execution Terminated",
+            "range": false,
+            "refId": "Execution Terminated"
           }
         ],
         "title": "Jobs",
@@ -265,13 +277,14 @@
               "excludeByName": {},
               "indexByName": {
                 "Value #Completed Successfully": 3,
+                "Value #Execution Started": 2,
                 "Value #Failed": 4,
-                "Value #Started": 2,
                 "Value #Submitted": 1,
                 "instance": 0
               },
               "renameByName": {
                 "Value #Completed Successfully": "Completed",
+                "Value #Execution Started": "Execution Started",
                 "Value #Failed": "Failed",
                 "Value #Started": "Started",
                 "Value #Submitted": "Submitted",
@@ -295,7 +308,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "",
+        "description": "$Cluster: Number of computational jobs submitted.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -385,7 +398,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "",
+        "description": "$Cluster: Number of computational job executions started. Each job can execute multiple times, for example when it’s restarted or suspended and then resumed.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -475,7 +488,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "",
+        "description": "$Cluster: Number of computational jobs successfully completed.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -565,7 +578,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "",
+        "description": "$Cluster: Number of computational jobs that have failed.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -651,6 +664,96 @@
           }
         ],
         "title": "Jobs: Completed with Failure",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of computational job executions finished. Each job can execute multiple times, for example when it’s restarted or suspended and then resumed.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 25
+        },
+        "id": 25,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "com_hazelcast_jet_Metrics_jobs_executionTerminated{$ClusterFilterLabel=\"$Cluster\"}",
+            "instant": false,
+            "legendFormat": "{{instance}}",
+            "range": true,
+            "refId": "A"
+          }
+        ],
+        "title": "Jobs: Execution Terminated",
         "type": "timeseries"
       }
     ],

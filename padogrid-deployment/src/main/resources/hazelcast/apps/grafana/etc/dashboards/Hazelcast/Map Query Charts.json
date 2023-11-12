@@ -27,7 +27,7 @@
         "title": "Tables",
         "tooltip": "",
         "type": "link",
-        "url": "/d/d6cdea86-91be-4bd4-b9c2-1e949f708dd8/replicated-maps-rows&${__url_time_range}"
+        "url": "/d/a05e07eb-ee7b-4d1f-ae8d-282d10b88053/map-query-tables?var-Cluster=$Cluster&${__url_time_range}"
       },
       {
         "asDropdown": false,
@@ -136,7 +136,7 @@
     "panels": [
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Number of entries owned on this member",
+        "description": "$Cluster: Number of queries executed and indexed local queries performed on all maps",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -148,33 +148,33 @@
               "axisColorMode": "text",
               "axisLabel": "",
               "axisPlacement": "auto",
-              "fillOpacity": 80,
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
               "gradientMode": "none",
               "hideFrom": {
                 "legend": false,
                 "tooltip": false,
                 "viz": false
               },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
               "lineWidth": 1,
+              "pointSize": 5,
               "scaleDistribution": {
                 "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
               },
               "thresholdsStyle": {
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -188,7 +188,108 @@
                 }
               ]
             },
-            "unit": "short"
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 2,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"map\"})",
+            "interval": "",
+            "legendFormat": "Query Count",
+            "range": true,
+            "refId": "A"
+          },
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "sum(com_hazelcast_Metrics_indexedQueryCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"map\"})",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Indexed Query Count",
+            "range": true,
+            "refId": "B"
+          }
+        ],
+        "title": "Map Query Count (aggregate)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Average hit time on the index across all members in the cluster",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "ns"
           },
           "overrides": []
         },
@@ -196,213 +297,38 @@
           "h": 10,
           "w": 12,
           "x": 0,
-          "y": 0
-        },
-        "id": 5,
-        "options": {
-          "barRadius": 0,
-          "barWidth": 0.97,
-          "fullHighlight": false,
-          "groupWidth": 0.7,
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "right",
-            "showLegend": true
-          },
-          "orientation": "auto",
-          "showValue": "never",
-          "stacking": "normal",
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          },
-          "xTickLabelRotation": 0,
-          "xTickLabelSpacing": 0
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
-          }
-        ],
-        "title": "Replicated Maps: Entries",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "tag0"
-              ],
-              "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "desc": false,
-                  "field": "Map"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "barchart"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Memory cost of owned entries on this member",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "fillOpacity": 80,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineWidth": 1,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 10,
-          "w": 12,
-          "x": 12,
-          "y": 0
+          "y": 10
         },
         "id": 4,
         "options": {
-          "barRadius": 0,
-          "barWidth": 0.97,
-          "fullHighlight": false,
-          "groupWidth": 0.7,
           "legend": {
             "calcs": [],
             "displayMode": "list",
-            "placement": "right",
+            "placement": "bottom",
             "showLegend": true
           },
-          "orientation": "auto",
-          "showValue": "never",
-          "stacking": "normal",
           "tooltip": {
             "mode": "single",
             "sort": "none"
-          },
-          "xTickLabelRotation": 0,
-          "xTickLabelSpacing": 0
+          }
         },
-        "pluginVersion": "10.1.1",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
+            "expr": "avg(com_hazelcast_Metrics_averageHitLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"})",
+            "interval": "",
+            "legendFormat": "Average Hit Latency",
+            "range": true,
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Entry Memory",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "tag0"
-              ],
-              "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "desc": false,
-                  "field": "Map"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "barchart"
+        "title": "Indexes: Average Hit Latency",
+        "type": "timeseries"
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Number of hits (reads) of the locally owned entries",
+        "description": "$Cluster: Average total latencies for index write operations across all members in the cluster",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -414,33 +340,33 @@
               "axisColorMode": "text",
               "axisLabel": "",
               "axisPlacement": "auto",
-              "fillOpacity": 80,
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
               "gradientMode": "none",
               "hideFrom": {
                 "legend": false,
                 "tooltip": false,
                 "viz": false
               },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
               "lineWidth": 1,
+              "pointSize": 5,
               "scaleDistribution": {
                 "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
               },
               "thresholdsStyle": {
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -454,221 +380,66 @@
                 }
               ]
             },
-            "unit": "short"
+            "unit": "ns"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
-          "w": 12,
-          "x": 0,
-          "y": 10
-        },
-        "id": 9,
-        "options": {
-          "barRadius": 0,
-          "barWidth": 0.97,
-          "fullHighlight": false,
-          "groupWidth": 0.7,
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "right",
-            "showLegend": true
-          },
-          "orientation": "auto",
-          "showValue": "never",
-          "stacking": "normal",
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          },
-          "xTickLabelRotation": 0,
-          "xTickLabelSpacing": 0
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
-          }
-        ],
-        "title": "Replicated Maps: Hits",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "tag0"
-              ],
-              "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "desc": false,
-                  "field": "Map"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "barchart"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Number of entries owned on this member",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "fillOpacity": 80,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineWidth": 1,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
           "x": 12,
           "y": 10
         },
-        "id": 8,
+        "id": 28,
         "options": {
-          "barRadius": 0,
-          "barWidth": 0.97,
-          "fullHighlight": false,
-          "groupWidth": 0.7,
           "legend": {
             "calcs": [],
             "displayMode": "list",
-            "placement": "right",
+            "placement": "bottom",
             "showLegend": true
           },
-          "orientation": "auto",
-          "showValue": "never",
-          "stacking": "normal",
           "tooltip": {
             "mode": "single",
             "sort": "none"
-          },
-          "xTickLabelRotation": 0,
-          "xTickLabelSpacing": 0
+          }
         },
-        "pluginVersion": "10.1.1",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
-          }
-        ],
-        "title": "Replicated Maps: Events",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "tag0"
-              ],
-              "value": "instance"
-            }
+            "expr": "avg(com_hazelcast_Metrics_totalInsertLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"})",
+            "interval": "",
+            "legendFormat": "Average Total Insert Latency",
+            "range": true,
+            "refId": "Insert Latency"
           },
           {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
-            }
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "avg(com_hazelcast_Metrics_totalUpdateLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"})",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Average Total Update Latency",
+            "range": true,
+            "refId": "Update Latency"
           },
           {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "desc": false,
-                  "field": "Map"
-                }
-              ]
-            }
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "expr": "avg(com_hazelcast_Metrics_totalRemoveLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"})",
+            "hide": false,
+            "interval": "",
+            "legendFormat": "Average Total Remove Latency",
+            "range": true,
+            "refId": "Remove Latency"
           }
         ],
-        "type": "barchart"
+        "title": "Indexes: Map Average Total Latencies",
+        "type": "timeseries"
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Total number of other operations performed on this member",
+        "description": "$Cluster: Number of insert operations performed on the index",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -695,18 +466,7 @@
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -725,12 +485,12 @@
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
           "x": 0,
-          "y": 21
+          "y": 20
         },
-        "id": 15,
+        "id": 21,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -744,44 +504,39 @@
           },
           "orientation": "auto",
           "showValue": "never",
-          "stacking": "normal",
+          "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
           "xTickLabelSpacing": 0
         },
-        "pluginVersion": "10.1.1",
+        "pluginVersion": "10.2.0",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_numberOfOtherOperations{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "expr": "com_hazelcast_Metrics_insertCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
             "format": "time_series",
             "instant": true,
+            "interval": "",
             "legendFormat": "__auto",
             "range": false,
-            "refId": "A"
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Other Operations",
+        "title": "Indexes: Insert Count",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
+                "tag1",
                 "tag0"
               ],
               "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
             }
           },
           {
@@ -790,10 +545,26 @@
               "fields": {},
               "sort": [
                 {
-                  "desc": false,
-                  "field": "Map"
+                  "field": "tag1"
                 }
               ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
             }
           }
         ],
@@ -801,7 +572,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "Total number of operations on this member",
+        "description": "$Cluster: Total latency of update operations performed on the index",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -828,18 +599,7 @@
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -853,17 +613,17 @@
                 }
               ]
             },
-            "unit": "short"
+            "unit": "ns"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
           "x": 12,
-          "y": 21
+          "y": 20
         },
-        "id": 16,
+        "id": 22,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -877,44 +637,39 @@
           },
           "orientation": "auto",
           "showValue": "never",
-          "stacking": "normal",
+          "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
           "xTickLabelSpacing": 0
         },
-        "pluginVersion": "10.1.1",
+        "pluginVersion": "10.2.0",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_total{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "expr": "com_hazelcast_Metrics_totalInsertLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
             "format": "time_series",
             "instant": true,
+            "interval": "",
             "legendFormat": "__auto",
             "range": false,
-            "refId": "A"
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Total Operations",
+        "title": "Indexes: Total Insert Latency",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
+                "tag1",
                 "tag0"
               ],
               "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
             }
           },
           {
@@ -923,10 +678,26 @@
               "fields": {},
               "sort": [
                 {
-                  "desc": false,
-                  "field": "Map"
+                  "field": "tag1"
                 }
               ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
             }
           }
         ],
@@ -934,7 +705,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Number of put operations on this member",
+        "description": "$Cluster: Number of update operations performed on the index",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -961,18 +732,7 @@
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -991,12 +751,12 @@
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
           "x": 0,
-          "y": 32
+          "y": 30
         },
-        "id": 13,
+        "id": 23,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -1010,44 +770,39 @@
           },
           "orientation": "auto",
           "showValue": "never",
-          "stacking": "normal",
+          "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
           "xTickLabelSpacing": 0
         },
-        "pluginVersion": "10.1.1",
+        "pluginVersion": "10.2.0",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_putCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "expr": "com_hazelcast_Metrics_updateCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
             "format": "time_series",
             "instant": true,
+            "interval": "",
             "legendFormat": "__auto",
             "range": false,
-            "refId": "A"
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Put Count",
+        "title": "Indexes: Update Count",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
+                "tag1",
                 "tag0"
               ],
               "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
             }
           },
           {
@@ -1056,10 +811,26 @@
               "fields": {},
               "sort": [
                 {
-                  "desc": false,
-                  "field": "Map"
+                  "field": "tag1"
                 }
               ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
             }
           }
         ],
@@ -1067,7 +838,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Number of get operations on this member",
+        "description": "$Cluster: Total latency of update operations performed on the index",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1094,18 +865,7 @@
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1119,17 +879,17 @@
                 }
               ]
             },
-            "unit": "short"
+            "unit": "ns"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
           "x": 12,
-          "y": 32
+          "y": 30
         },
-        "id": 12,
+        "id": 19,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -1143,44 +903,39 @@
           },
           "orientation": "auto",
           "showValue": "never",
-          "stacking": "normal",
+          "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
           "xTickLabelSpacing": 0
         },
-        "pluginVersion": "10.1.1",
+        "pluginVersion": "10.2.0",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_getCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "expr": "com_hazelcast_Metrics_totalUpdateLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
             "format": "time_series",
             "instant": true,
+            "interval": "",
             "legendFormat": "__auto",
             "range": false,
-            "refId": "A"
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Get Count",
+        "title": "Indexes: Total Update Latency",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
+                "tag1",
                 "tag0"
               ],
               "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
             }
           },
           {
@@ -1189,10 +944,32 @@
               "fields": {},
               "sort": [
                 {
-                  "desc": false,
-                  "field": "Map"
+                  "field": "tag1"
                 }
               ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "reducer": "lastNotNull"
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Last *": true,
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
             }
           }
         ],
@@ -1200,7 +977,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Number of remove operations on this member",
+        "description": "$Cluster: Number of remove operations performed on the index",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1227,18 +1004,7 @@
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1257,12 +1023,12 @@
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
           "x": 0,
-          "y": 43
+          "y": 40
         },
-        "id": 14,
+        "id": 24,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -1276,44 +1042,39 @@
           },
           "orientation": "auto",
           "showValue": "never",
-          "stacking": "normal",
+          "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
           "xTickLabelSpacing": 0
         },
-        "pluginVersion": "10.1.1",
+        "pluginVersion": "10.2.0",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
             "format": "time_series",
             "instant": true,
+            "interval": "",
             "legendFormat": "__auto",
             "range": false,
-            "refId": "A"
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Remove Count",
+        "title": "Indexes: Remove Count",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
+                "tag1",
                 "tag0"
               ],
               "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
             }
           },
           {
@@ -1322,10 +1083,26 @@
               "fields": {},
               "sort": [
                 {
-                  "desc": false,
-                  "field": "Map"
+                  "field": "tag1"
                 }
               ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
             }
           }
         ],
@@ -1333,7 +1110,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Total latency of put operations",
+        "description": "$Cluster: Total latency of remove operations performed on the index",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1360,18 +1137,140 @@
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
                 },
-                "type": "regex"
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "ns"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 12,
+          "x": 12,
+          "y": 40
+        },
+        "id": 20,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "none",
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalRemoveLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Total Remove Latency",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
               }
-            ],
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total number of index hits (the value of this metric may be greater than the map.index.queryCount since a single query may hit the same index more than once)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1390,10 +1289,10 @@
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
-          "x": 12,
-          "y": 43
+          "x": 0,
+          "y": 50
         },
         "id": 7,
         "options": {
@@ -1411,54 +1310,67 @@
           "showValue": "never",
           "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
           "xTickLabelSpacing": 0
         },
-        "pluginVersion": "10.1.1",
+        "pluginVersion": "10.2.0",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_maxPutLatency{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "expr": "com_hazelcast_Metrics_hitCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
             "format": "time_series",
             "instant": true,
+            "interval": "",
             "legendFormat": "__auto",
             "range": false,
-            "refId": "A"
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Max Put Latency",
+        "title": "Indexes: Average Hit Count",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
+                "tag1",
                 "tag0"
               ],
               "value": "instance"
             }
           },
           {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
-            }
-          },
-          {
+            "disabled": true,
             "id": "sortBy",
             "options": {
               "fields": {},
               "sort": [
                 {
-                  "desc": false,
-                  "field": "Map"
+                  "field": "tag1"
                 }
               ]
+            }
+          },
+          {
+            "disabled": true,
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
             }
           }
         ],
@@ -1466,7 +1378,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Total latency of get operations",
+        "description": "$Cluster: Average hit latency for the index on each member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1493,18 +1405,7 @@
                 "mode": "off"
               }
             },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
+            "mappings": [],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1518,150 +1419,17 @@
                 }
               ]
             },
-            "unit": "short"
+            "unit": "ns"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 11,
-          "w": 12,
-          "x": 0,
-          "y": 54
-        },
-        "id": 10,
-        "options": {
-          "barRadius": 0,
-          "barWidth": 0.97,
-          "fullHighlight": false,
-          "groupWidth": 0.7,
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "right",
-            "showLegend": true
-          },
-          "orientation": "auto",
-          "showValue": "never",
-          "stacking": "none",
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          },
-          "xTickLabelRotation": 0,
-          "xTickLabelSpacing": 0
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_maxGetLatency{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
-          }
-        ],
-        "title": "Replicated Maps: Max Get Latency",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "tag0"
-              ],
-              "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "desc": false,
-                  "field": "Map"
-                }
-              ]
-            }
-          }
-        ],
-        "type": "barchart"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "description": "$Cluster: Total latency of remove operations",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "fillOpacity": 80,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineWidth": 1,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [
-              {
-                "options": {
-                  "pattern": "^.*(=)(\\w.*).*\"$",
-                  "result": {
-                    "index": 0,
-                    "text": "$2"
-                  }
-                },
-                "type": "regex"
-              }
-            ],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 11,
+          "h": 10,
           "w": 12,
           "x": 12,
-          "y": 54
+          "y": 50
         },
-        "id": 11,
+        "id": 9,
         "options": {
           "barRadius": 0,
           "barWidth": 0.97,
@@ -1677,42 +1445,36 @@
           "showValue": "never",
           "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
           "xTickLabelSpacing": 0
         },
-        "pluginVersion": "10.1.1",
+        "pluginVersion": "10.2.0",
         "targets": [
           {
             "datasource": "${DATASOURCE}",
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_maxRemoveLatency{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "expr": "com_hazelcast_Metrics_averageHitLatency{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
             "format": "time_series",
             "instant": true,
+            "interval": "",
             "legendFormat": "__auto",
             "range": false,
-            "refId": "A"
+            "refId": "Hit"
           }
         ],
-        "title": "Replicated Maps: Max Remove Latency",
+        "title": "Average Index Hit Latency",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
-                "tag0"
+                "tag1"
               ],
               "value": "instance"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "tag0",
-              "renamePattern": "Map"
             }
           },
           {
@@ -1721,10 +1483,424 @@
               "fields": {},
               "sort": [
                 {
-                  "desc": false,
-                  "field": "Map"
+                  "field": "tag1"
                 }
               ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag1": "Map"
+              }
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Average selectivity of the hits served by the index on this member (the returned value is in the range from 0.0 to 1.0 - values close to 1.0 indicate a high selectivity meaning the index is efficient; values close to 0.0 indicate a low selectivity meaning the index efficiency is approaching an efficiency of a simple full scan)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "percentunit"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 12,
+          "x": 0,
+          "y": 60
+        },
+        "id": 25,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "none",
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_averageHitSelectivity{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Aveage Hit Selectivity",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total number of queries served by the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 12,
+          "x": 12,
+          "y": 60
+        },
+        "id": 26,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "none",
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Query Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          }
+        ],
+        "type": "barchart"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Local memory cost of the index (for on-heap indexes in OBJECT or BINARY formats, the returned value is just a best-effort approximation and doesn’t indicate a precise on-heap memory usage of the index)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 12,
+          "x": 0,
+          "y": 70
+        },
+        "id": 27,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "never",
+          "stacking": "none",
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_memoryCost{$ClusterFilterLabel=\"$Cluster\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Memory Cost",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "tag0": "Index",
+                "tag1": "Map"
+              }
             }
           }
         ],
@@ -1735,8 +1911,10 @@
     "schemaVersion": 38,
     "tags": [
       "hazelcast",
-      "data structure",
-      "replicated map"
+      "map",
+      "query",
+      "index",
+      "partitioned map"
     ],
     "templating": {
       "list": [
@@ -1778,14 +1956,6 @@
           "skipUrlSync": false,
           "type": "constant",
           "datasource": "${DATASOURCE}"
-        },
-        {
-          "datasource": "${DATASOURCE}",
-          "filters": [],
-          "hide": 0,
-          "name": "Filters",
-          "skipUrlSync": false,
-          "type": "adhoc"
         }
       ]
     },
@@ -1795,8 +1965,8 @@
     },
     "timepicker": {},
     "timezone": "",
-    "title": "Replicated Maps Rows Charts",
-    "uid": "da6b0ba1-fd16-4ccc-8ed1-e5ea7d51a14b",
+    "title": "Map Query Charts",
+    "uid": "ba66348a-5414-4633-912a-2556d33ea6fc",
     "weekStart": ""
   },
   "folderId": "${FOLDER_ID}",
