@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+DEFAULT_FOLDER="Hazelcast"
+DEFAULT_CLUSTER="hazelcast"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Export PadoGrid dashboards, create templates, update variables, and re-import to Grafana
+
+SYNOPSIS
+   ./$EXECUTABLE [-readonly] [-?]
+
+
+DESCRIPTION
+   Exports PadoGrid dashboards, create templates, update variables, and re-import to Grafana.
+
+OPTIONS
+   -readonly
+           If specified, then the dashboards are for read only. Default: editable
+
+DEFAULT
+   ./$EXECUTABLE
+
+SEE ALSO
+   export_folder(1), copy_template_to_etc(1), update_cluster_templating_padogrid(1),
+   delete_folder(1), import_folder(1)
+
+EOF
+exit
+fi
+
+# Export all and create templates
+./export_folder -folder Hazelcast
+./export_folder -folder HazelcastDual
+./export_folder -folder HazelcastAll
+./export_to_template
+./copy_template_to_etc -folder Hazelcast
+./copy_template_to_etc -folder HazelcastDual
+./copy_template_to_etc -folder HazelcastAll
+
+# Update PadoGrid folders
+./update_cluster_templating_padogrid -clusters myhz1,myhz2,wan1,wan2 -readonly $READONLY_SPECIFIED
+
+# Delete PadoGrid folders in Grafana
+echo "Deleting Hazelcast..."
+./delete_folder -folder Hazelcast
+echo "Deleting HazelcastDual..."
+./delete_folder -folder HazelcastDual
+echo "Deleting HazelcastAll..."
+./delete_folder -folder HazelcastAll
+
+# Re-import PadoGrid folders in Grafana
+./import_folder -folder Hazelcast
+./import_folder -folder HazelcastDual
+./import_folder -folder HazelcastAll

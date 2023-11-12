@@ -1,0 +1,2240 @@
+{
+  "dashboard": {
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "${DATASOURCE}",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Charts",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/da723716-997f-483b-8759-8b4cdaf8ecad/all-map-query-charts?${__url_time_range}"
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main?var-Cluster=$Cluster&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Dual Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/c285e20e-3b2a-4108-bc28-69238459027a/00dual-main?var-Cluster=$Cluster&var-Cluster2=$Cluster2&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "dual hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Dual Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "All Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/d3a660bb-5588-491e-849b-6e40b6c0de0e/00main-all?${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "all hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "All Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": [],
+        "targetBlank": true,
+        "title": "Created by PadoGrid",
+        "tooltip": "Go to PadoGrid",
+        "type": "link",
+        "url": "http://github.com/padogrid"
+      }
+    ],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Number of queries executed on the map (it may be imprecise for queries involving partition predicates (PartitionPredicate) on the off-heap storage)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "green",
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 19,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Query Count",
+        "transformations": [
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "tag0"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          },
+          {
+            "disabled": true,
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag0"
+                }
+              ]
+            }
+          },
+          {
+            "id": "groupingToMatrix",
+            "options": {
+              "columnField": "tag0",
+              "rowField": "job",
+              "valueField": "Value (sum)"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 4,
+                "localhost:8192": 5,
+                "localhost:8193": 11,
+                "localhost:8291": 12,
+                "localhost:8292": 8,
+                "localhost:8293": 10,
+                "localhost:8391": 7,
+                "localhost:8392": 9,
+                "localhost:8393": 3,
+                "localhost:8491": 6,
+                "localhost:8492": 2,
+                "localhost:8493": 13,
+                "tag0": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "job\\tag0": "Cluster",
+                "tag0": "Map",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Total number of indexed local queries performed on the map",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "green",
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 24,
+          "x": 0,
+          "y": 7
+        },
+        "id": 23,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_indexedQueryCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexed Query Count",
+        "transformations": [
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "tag0"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          },
+          {
+            "disabled": true,
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag0"
+                }
+              ]
+            }
+          },
+          {
+            "id": "groupingToMatrix",
+            "options": {
+              "columnField": "tag0",
+              "rowField": "job",
+              "valueField": "Value (sum)"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 4,
+                "localhost:8192": 5,
+                "localhost:8193": 11,
+                "localhost:8291": 12,
+                "localhost:8292": 8,
+                "localhost:8293": 10,
+                "localhost:8391": 7,
+                "localhost:8392": 9,
+                "localhost:8393": 3,
+                "localhost:8491": 6,
+                "localhost:8492": 2,
+                "localhost:8493": 13,
+                "tag0": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "job\\tag0": "Cluster",
+                "tag0": "Map",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Number of insert operations performed on the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 211
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 14
+        },
+        "id": 11,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_insertCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Insert Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "job",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true,
+                "job": false
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Total latency of insert operations performed on the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "ns"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 24,
+          "x": 0,
+          "y": 22
+        },
+        "id": 15,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalInsertLatency{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Total Insert Latency",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0",
+                "job"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Number of update operations performed on the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 211
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 29
+        },
+        "id": 24,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_updateCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Update Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "job",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true,
+                "job": false
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Total latency of update operations performed on the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "ns"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 24,
+          "x": 0,
+          "y": 37
+        },
+        "id": 25,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalUpdateLatency{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Total Update Latency",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0",
+                "job"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Number of remove operations performed on the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 211
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 44
+        },
+        "id": 26,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Remove Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "job",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true,
+                "job": false
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Total latency of remove operations performed on the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                }
+              ]
+            },
+            "unit": "ns"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 24,
+          "x": 0,
+          "y": 52
+        },
+        "id": 27,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalRemoveLatency{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Total Remove Latency",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0",
+                "job"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Total number of index hits (the value of this metric may be greater than the map.index.queryCount since a single query may hit the same index more than once)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 211
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 59
+        },
+        "id": 28,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_hitCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Average Hit Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "job",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true,
+                "job": false
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Average hit latency for the index on each member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                }
+              ]
+            },
+            "unit": "ns"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 24,
+          "x": 0,
+          "y": 67
+        },
+        "id": 29,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_averageHitLatency{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Average Hit Latency",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "tag0",
+                "job"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Total number of queries served by the index",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 211
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 74
+        },
+        "id": 31,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Query Count",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "job",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true,
+                "job": false
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Average selectivity of the hits served by the index on this member (the returned value is in the range from 0.0 to 1.0 - values close to 1.0 indicate a high selectivity meaning the index is efficient; values close to 0.0 indicate a low selectivity meaning the index efficiency is approaching an efficiency of a simple full scan)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                }
+              ]
+            },
+            "unit": "percentunit"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 211
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 82
+        },
+        "id": 30,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_averageHitSelectivity{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Aveage Hit Selectivity",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "job",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true,
+                "job": false
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "Local memory cost of the index (for on-heap indexes in OBJECT or BINARY formats, the returned value is just a best-effort approximation and doesn’t indicate a precise on-heap memory usage of the index)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "^.*(=)(\\w.*).*\"$": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 211
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 90
+        },
+        "id": 32,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_memoryCost{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
+            "format": "time_series",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Hit"
+          }
+        ],
+        "title": "Indexes: Memory Cost",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag1",
+                "job",
+                "tag0"
+              ],
+              "value": "instance"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "tag1"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(\".*=)(.*)\"",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true,
+                "job": false
+              },
+              "indexByName": {
+                "job": 0,
+                "localhost:8191": 3,
+                "localhost:8192": 4,
+                "localhost:8193": 7,
+                "localhost:8291": 8,
+                "localhost:8292": 5,
+                "localhost:8293": 6,
+                "tag0": 2,
+                "tag1": 1
+              },
+              "renameByName": {
+                "job": "Cluster",
+                "tag0": "Index",
+                "tag1": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 38,
+    "tags": [
+      "query",
+      "index",
+      "map",
+      "imap",
+      "partitioned map",
+      "all hazelcast"
+    ],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "All"
+          },
+          "hide": 0,
+          "includeAll": true,
+          "label": "Clusters",
+          "multi": true,
+          "name": "ClusterList",
+          "options": [
+            {
+              "selected": true,
+              "text": "All",
+              "$__all": "hazelcast"
+            },
+            {
+              "selected": false,
+              "text": "hazelcast",
+              "value": "hazelcast"
+            }
+          ],
+          "query": "hazelcast",
+          "queryValue": "",
+          "skipUrlSync": false,
+          "type": "custom",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "hide": 2,
+          "name": "ClusterFilterLabel",
+          "query": "job",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "hide": 2,
+          "name": "Cluster",
+          "query": "hazelcast",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "hide": 2,
+          "name": "Cluster2",
+          "query": "hazelcast",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-5m",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "All Map Query Tables",
+    "uid": "b3767432-9d15-4255-a06d-34e1415dfc57",
+    "weekStart": ""
+  },
+  "folderId": "${FOLDER_ID}",
+  "overWrite": false
+}
