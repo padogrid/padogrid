@@ -22,7 +22,6 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 EXECUTABLE="`basename $0`"
 
 DEFAULT_FOLDER="Hazelcast"
-DEFAULT_CLUSTER="hazelcast"
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -43,14 +42,14 @@ DESCRIPTION
    Their default value are as follows.
 
       CluterFilterLabel: $DEFAULT_LABEL
-      Cluster: $DEFAULT_CLUSTER
+      Cluster: $DEFAULT_CLUSTERS
 
    The '$DEFAULT_LABEL' label is associated with the 'job_name' parameter in the following
    Prometheus configuration file.
    
       ../etc/prometheus.yml
 
-   Note that the default value of 'job_name' and the '-clusters' option is '$DEFAULT_CLUSTER'.
+   Note that the default value of 'job_name' and the '-clusters' option is '$DEFAULT_CLUSTERS'.
 
    You can substitute the default '$DEFAULT_LABEL' label with any label that the underlying
    Prometheus server supports. For example, in Kubernetes, you may want to substitute
@@ -87,7 +86,7 @@ OPTIONS
    -clusters cluster_list
              A comma-separated list of cluster names. If Prometheus is locally launched, then
              the cluster names must match the 'job_name' values in the Prometheus configuration
-             file.
+             file. Default: $DEFAULT_CLUSTERS
 
    -type single|dual|all
              If 'dual', then it adds two (2) cluster pulldown menus in the toolbar.  This
@@ -102,7 +101,7 @@ OPTIONS
            If specified, then the dashboards are for read only. Default: editable
 
 DEFAULT
-   ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTER
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTERS
 
 EXAMPLES
 
@@ -173,6 +172,10 @@ EOF
 exit
 fi
 
+if [ "$FOLDER" == "" ]; then
+   FOLDER="$DEFAULT_FOLDER"
+fi
+
 if [ "$TYPE_ARG" == "" ]; then
    TYPE_ARG="single"
 fi
@@ -181,22 +184,13 @@ if [ "$TYPE_ARG" != "single" ] && [ "$TYPE_ARG" != "dual" ] && [ "$TYPE_ARG" != 
    exit 1
 fi
 
-if [ "$FOLDER" == "" ]; then
-   FOLDER="$DEFAULT_FOLDER"
-fi
-
-if [ "$CLUSTERS_ARG" == "" ]; then
-   CLUSTERS="$DEFAULT_CLUSTER"
-else
-   CLUSTERS="$CLUSTERS_ARG"
-fi
 
 #
 # $Cluster, $Cluster2
 #
 query="$CLUSTERS"
 CLUSTERS=$(echo $CLUSTERS | sed 's/,/ /g')
-current=$DEFAULT_CLUSTER
+current=$DEFAULT_CLUSTERS
 cluster_options="\"options\": ["
 cluster_list_options="\"options\": ["
 INDEX=0
@@ -317,11 +311,7 @@ CLUSTER2_CONSTANT_OPTIONS="
 #
 # $ClusterFilterLabel
 #
-if [ "$LABEL_ARG" == "" ]; then
-   cluster_filter_label="$DEFAULT_LABEL"
-else
-   cluster_filter_label=$LABEL_ARG
-fi
+cluster_filter_label="$LABEL"
 CLUSTER_FILTER_LABEL_OPTIONS="
 [
 {

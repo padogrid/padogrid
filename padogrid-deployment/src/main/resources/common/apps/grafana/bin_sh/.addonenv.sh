@@ -86,6 +86,11 @@ DEFAULT_DATASOURCE="Prometheus"
 DEFAULT_LABEL="job"
 
 #
+# Default cluter list (comma-separated)
+#
+DEFAULT_CLUSTERS="hazelcast"
+
+#
 # Source in app specifics
 #
 . $APP_DIR/bin_sh/setenv.sh
@@ -326,3 +331,15 @@ for i in "$@"; do
       ;;
    esac
 done
+
+if [ "$CLUSTERS_ARG" == "" ]; then
+   CLUSTERS="$DEFAULT_CLUSTERS"
+else
+   CLUSTERS="$CLUSTERS_ARG"
+fi
+
+if [ "$LABEL_ARG" == "" ]; then
+   LABEL="$DEFAULT_LABEL"
+else
+   LABEL="$LABEL_ARG"
+fi

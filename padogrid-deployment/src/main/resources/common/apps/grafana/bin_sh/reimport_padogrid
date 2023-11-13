@@ -21,9 +21,6 @@ SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
 EXECUTABLE="`basename $0`"
 
-DEFAULT_FOLDER="Hazelcast"
-DEFAULT_CLUSTER="hazelcast"
-
 if [ "$HELP" == "true" ]; then
 cat <<EOF
 
@@ -34,8 +31,20 @@ NAME
    ./$EXECUTABLE - Export PadoGrid dashboards, create templates, update variables, and re-import to Grafana
 
 SYNOPSIS
-   ./$EXECUTABLE [-readonly] [-?]
+   ./$EXECUTABLE [-readonly] [-label prometheus_label] [-clusters cluster_list] [-?]
 
+   -label prometheus_label
+             The name of the Prometheus label to apply the cluster list filter. This
+             label is typically introduced by Prometheus. For example, you can assign a
+             list of target endpoints under the '$DEFAULT_LABEL' label as shown in the EXAMPLES
+             section below. For Kubernetes, the 'namespace' label may be more approriate
+             since all the members of a Hazelcast cluster start in the same namespace.
+             Default: $DEFAULT_LABEL
+
+   -clusters cluster_list
+             A comma-separated list of cluster names. If Prometheus is locally launched, then
+             the cluster names must match the 'job_name' values in the Prometheus configuration
+             file. Default: $DEFAULT_CLUSTERS
 
 DESCRIPTION
    Exports PadoGrid dashboards, create templates, update variables, and re-import to Grafana.
@@ -65,7 +74,11 @@ fi
 ./copy_template_to_etc -folder HazelcastAll
 
 # Update PadoGrid folders
-./update_cluster_templating_padogrid -clusters myhz1,myhz2,wan1,wan2 -readonly $READONLY_SPECIFIED
+if [ "$READONLY_SPECIFIED" == "true" ]; then
+   ./update_cluster_templating_padogrid -label $LABEL -clusters $CLUSTERS -readonly
+else
+   ./update_cluster_templating_padogrid -label $LABEL -clusters $CLUSTERS
+fi
 
 # Delete PadoGrid folders in Grafana
 echo "Deleting Hazelcast..."

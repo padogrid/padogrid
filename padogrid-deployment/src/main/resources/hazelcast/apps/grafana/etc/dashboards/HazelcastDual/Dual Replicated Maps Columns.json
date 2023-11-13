@@ -124,6 +124,7 @@
     "panels": [
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of entries owned on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -282,6 +283,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Number of entries owned on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -440,6 +442,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Memory cost of owned entries on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -598,6 +601,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Memory cost of owned entries on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -756,6 +760,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of hits (reads) of the locally owned entries",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -812,322 +817,6 @@
           "w": 12,
           "x": 0,
           "y": 14
-        },
-        "id": 8,
-        "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "fields": "",
-            "reducer": [
-              "sum"
-            ],
-            "show": true
-          },
-          "showHeader": true,
-          "sortBy": []
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
-          }
-        ],
-        "title": "Replicated Maps: Events ($Cluster)",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "instance"
-              ],
-              "value": "tag0"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "instance",
-              "renamePattern": "Member"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
-            }
-          },
-          {
-            "id": "calculateField",
-            "options": {
-              "mode": "reduceRow",
-              "reduce": {
-                "include": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\""
-                ],
-                "reducer": "sum"
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "^.*(=)(\\w.*).*\"$",
-              "renamePattern": "$2"
-            }
-          }
-        ],
-        "type": "table"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "color-text"
-              },
-              "inspect": false
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "Member"
-              },
-              "properties": [
-                {
-                  "id": "links",
-                  "value": [
-                    {
-                      "title": "Member Link",
-                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
-                    }
-                  ]
-                },
-                {
-                  "id": "color",
-                  "value": {
-                    "fixedColor": "blue",
-                    "mode": "fixed"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 7,
-          "w": 12,
-          "x": 12,
-          "y": 14
-        },
-        "id": 19,
-        "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "fields": "",
-            "reducer": [
-              "sum"
-            ],
-            "show": true
-          },
-          "showHeader": true,
-          "sortBy": []
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster2\",prefix=\"replicatedMap\"}",
-            "format": "time_series",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "A"
-          }
-        ],
-        "title": "Replicated Maps: Events ($Cluster2)",
-        "transformations": [
-          {
-            "id": "joinByLabels",
-            "options": {
-              "join": [
-                "instance"
-              ],
-              "value": "tag0"
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "instance",
-              "renamePattern": "Member"
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
-            }
-          },
-          {
-            "id": "calculateField",
-            "options": {
-              "mode": "reduceRow",
-              "reduce": {
-                "include": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\""
-                ],
-                "reducer": "sum"
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Member"
-                }
-              ]
-            }
-          },
-          {
-            "id": "renameByRegex",
-            "options": {
-              "regex": "^.*(=)(\\w.*).*\"$",
-              "renamePattern": "$2"
-            }
-          }
-        ],
-        "type": "table"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
-            },
-            "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "color-text"
-              },
-              "inspect": false
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "Member"
-              },
-              "properties": [
-                {
-                  "id": "links",
-                  "value": [
-                    {
-                      "title": "Member Link",
-                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
-                    }
-                  ]
-                },
-                {
-                  "id": "color",
-                  "value": {
-                    "fixedColor": "blue",
-                    "mode": "fixed"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 7,
-          "w": 12,
-          "x": 0,
-          "y": 21
         },
         "id": 9,
         "options": {
@@ -1231,6 +920,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Number of hits (reads) of the locally owned entries",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1286,7 +976,7 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 21
+          "y": 14
         },
         "id": 20,
         "options": {
@@ -1390,6 +1080,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of entries owned on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1445,7 +1136,965 @@
           "h": 7,
           "w": 12,
           "x": 0,
+          "y": 21
+        },
+        "id": 8,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Replicated Maps: Events ($Cluster)",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Number of entries owned on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 21
+        },
+        "id": 19,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster2\",prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Replicated Maps: Events ($Cluster2)",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total number of other operations performed on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
           "y": 28
+        },
+        "id": 27,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "enablePagination": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfOtherOperations{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Replicated Maps: Other Operations",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Total number of other operations performed on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 28
+        },
+        "id": 29,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "enablePagination": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfOtherOperations{$ClusterFilterLabel=\"$Cluster2\",prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Replicated Maps: Other Operations ($Cluster2)",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total number of operations on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 36
+        },
+        "id": 28,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "enablePagination": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_total{$ClusterFilterLabel=\"$Cluster\",prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Replicated Maps: Total Operations",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Total number of operations on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 36
+        },
+        "id": 30,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "enablePagination": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": "${DATASOURCE}",
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_total{$ClusterFilterLabel=\"$Cluster2\",prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          }
+        ],
+        "title": "Replicated Maps: Total Operations ($Cluster2)",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "instance"
+              ],
+              "value": "tag0"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\"",
+                  "Member"
+                ],
+                "pattern": "(.*=[a-zA-Z0-9].*)"
+              }
+            }
+          },
+          {
+            "id": "calculateField",
+            "options": {
+              "mode": "reduceRow",
+              "reduce": {
+                "include": [
+                  "\"name=eligibility\"",
+                  "\"name=map1\"",
+                  "\"name=map2\"",
+                  "\"name=profile\"",
+                  "\"name=summary\""
+                ],
+                "reducer": "sum"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Member"
+                }
+              ]
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^.*(=)(\\w.*).*\"$",
+              "renamePattern": "$2"
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of put operations on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 44
         },
         "id": 12,
         "options": {
@@ -1549,6 +2198,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Number of put operations on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1604,7 +2254,7 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 28
+          "y": 44
         },
         "id": 21,
         "options": {
@@ -1708,6 +2358,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of get operations on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1763,7 +2414,7 @@
           "h": 7,
           "w": 12,
           "x": 0,
-          "y": 35
+          "y": 51
         },
         "id": 11,
         "options": {
@@ -1867,6 +2518,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Number of get operations on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1922,7 +2574,7 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 35
+          "y": 51
         },
         "id": 22,
         "options": {
@@ -2026,6 +2678,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Number of remove operations on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -2043,7 +2696,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -2080,7 +2734,7 @@
           "h": 7,
           "w": 12,
           "x": 0,
-          "y": 42
+          "y": 58
         },
         "id": 13,
         "options": {
@@ -2184,6 +2838,7 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Number of remove operations on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -2201,7 +2856,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -2238,7 +2894,7 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 42
+          "y": 58
         },
         "id": 23,
         "options": {
@@ -2342,10 +2998,11 @@
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total latency of put operations ($Cluster)",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "continuous-GrYlRd"
             },
             "custom": {
               "align": "auto",
@@ -2359,7 +3016,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -2396,9 +3054,9 @@
           "h": 7,
           "w": 12,
           "x": 0,
-          "y": 49
+          "y": 65
         },
-        "id": 14,
+        "id": 31,
         "options": {
           "cellHeight": "sm",
           "footer": {
@@ -2407,7 +3065,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -2426,7 +3084,7 @@
             "refId": "A"
           }
         ],
-        "title": "Replicated Maps: Max Put Latency ($Cluster)",
+        "title": "Replicated Maps: Max Put Latency",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -2493,16 +3151,27 @@
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
             }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {}
+            }
           }
         ],
         "type": "table"
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Total latency of put operations",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "continuous-GrYlRd"
             },
             "custom": {
               "align": "auto",
@@ -2516,7 +3185,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -2553,9 +3223,9 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 49
+          "y": 65
         },
-        "id": 24,
+        "id": 34,
         "options": {
           "cellHeight": "sm",
           "footer": {
@@ -2564,7 +3234,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -2650,16 +3320,27 @@
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
             }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {}
+            }
           }
         ],
         "type": "table"
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total latency of get operations",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "continuous-GrYlRd"
             },
             "custom": {
               "align": "auto",
@@ -2673,7 +3354,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -2710,9 +3392,9 @@
           "h": 7,
           "w": 12,
           "x": 0,
-          "y": 56
+          "y": 72
         },
-        "id": 15,
+        "id": 32,
         "options": {
           "cellHeight": "sm",
           "footer": {
@@ -2721,7 +3403,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -2807,16 +3489,27 @@
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
             }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {}
+            }
           }
         ],
         "type": "table"
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Total latency of get operations",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "continuous-GrYlRd"
             },
             "custom": {
               "align": "auto",
@@ -2830,7 +3523,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -2867,9 +3561,9 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 56
+          "y": 72
         },
-        "id": 25,
+        "id": 37,
         "options": {
           "cellHeight": "sm",
           "footer": {
@@ -2878,7 +3572,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -2964,16 +3658,27 @@
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
             }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {}
+            }
           }
         ],
         "type": "table"
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster: Total latency of remove operations",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "continuous-GrYlRd"
             },
             "custom": {
               "align": "auto",
@@ -2987,7 +3692,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -3024,9 +3730,9 @@
           "h": 7,
           "w": 12,
           "x": 0,
-          "y": 63
+          "y": 79
         },
-        "id": 16,
+        "id": 33,
         "options": {
           "cellHeight": "sm",
           "footer": {
@@ -3035,7 +3741,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -3121,16 +3827,27 @@
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
             }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {}
+            }
           }
         ],
         "type": "table"
       },
       {
         "datasource": "${DATASOURCE}",
+        "description": "$Cluster2: Total latency of remove operations",
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "continuous-GrYlRd"
             },
             "custom": {
               "align": "auto",
@@ -3144,7 +3861,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 }
               ]
             },
@@ -3181,9 +3899,9 @@
           "h": 7,
           "w": 12,
           "x": 12,
-          "y": 63
+          "y": 79
         },
-        "id": 26,
+        "id": 36,
         "options": {
           "cellHeight": "sm",
           "footer": {
@@ -3192,7 +3910,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -3277,6 +3995,16 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Total": true
+              },
+              "indexByName": {},
+              "renameByName": {}
             }
           }
         ],
