@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -111,8 +114,11 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
-        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "CP subsystem executor management status",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -186,7 +192,7 @@
           ]
         },
         "gridPos": {
-          "h": 23,
+          "h": 16,
           "w": 24,
           "x": 0,
           "y": 0
@@ -209,7 +215,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
@@ -220,7 +229,10 @@
             "refId": "Completed Tasks"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_maximumPoolSize{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
@@ -232,7 +244,10 @@
             "refId": "Max Pool Size"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_poolSize{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
@@ -244,7 +259,10 @@
             "refId": "Pool Size"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_queueSize{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
@@ -256,7 +274,10 @@
             "refId": "Queue Size"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_remainingQueueCapacity{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
@@ -342,9 +363,103 @@
           }
         ],
         "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of CP subsystem management completed executor tasks",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 15,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        },
+        "id": 17,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "expr": "com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"executor.internal\", tag0=\"\\\"name=hz:cpSubsystemManagement\\\"\"}",
+            "instant": false,
+            "legendFormat": "{{job}} {{instance}}",
+            "range": true,
+            "refId": "A"
+          }
+        ],
+        "title": "Completed Tasks",
+        "transformations": [],
+        "type": "timeseries"
       }
     ],
-    "refresh": "5s",
+    "refresh": false,
     "schemaVersion": 38,
     "tags": [
       "all hazelcast",
@@ -354,33 +469,50 @@
     "templating": {
       "list": [
         {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
           "current": {
             "selected": true,
-            "text": "All",
-            "value": "All"
+            "text": [
+              "All"
+            ],
+            "value": [
+              ""
+            ]
           },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
           "multi": true,
           "name": "ClusterList",
-          "options": [
-            {
-              "selected": true,
-              "text": "All",
-              "$__all": "hazelcast"
-            },
-            {
-              "selected": false,
-              "text": "hazelcast",
-              "value": "hazelcast"
-            }
-          ],
-          "query": "hazelcast",
-          "queryValue": "",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
           "skipUrlSync": false,
-          "type": "custom",
-          "datasource": "${DATASOURCE}"
+          "sort": 0,
+          "type": "query"
         },
         {
           "hide": 2,
@@ -407,7 +539,10 @@
           "datasource": "${DATASOURCE}"
         },
         {
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "filters": [],
           "hide": 0,
           "name": "Filters",

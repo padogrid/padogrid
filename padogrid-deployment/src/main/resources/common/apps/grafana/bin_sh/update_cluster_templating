@@ -30,22 +30,54 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   ./$EXECUTABLE - Update the Cluster variable in dashaboards
+   ./$EXECUTABLE - Update the cluster specific variables in all dashaboards
 
 SYNOPSIS
    ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-clusters cluster_list] [-type single|dual|all] [-readonly] [-?]
 
 DESCRIPTION
-   Updates the ClusterFilterLabel and Cluster variables to all dashboards in the specified
-   folder .The ClusterFilterLabel variable defines the label used to filter Hazelcast clusters
-   and the Cluster variable holds a list of cluster names that each dashboard monitors.
-   Their default value are as follows.
+   Updates cluster specific variables in all dashboards. The cluster variable take
+   different values depending on the folder types as described below.
 
-      CluterFilterLabel: $DEFAULT_LABEL
-      Cluster: $DEFAULT_CLUSTERS
+   There are three (3) folder types identified by how the dashboards display Hazelcast
+   clusters as follows.
 
-   The '$DEFAULT_LABEL' label is associated with the 'job_name' parameter in the following
-   Prometheus configuration file.
+      - single: Folders with dashboards diplaying metrics specific to a single cluster
+                at a time. For example, the 'Hazelcast' folder displays metrics from
+                a single cluster. These folders require the '-type single' option. If
+                '-type' is not specified, then it defaults to this option.
+
+      - dual:   Folders with dashboards displaying metrics from two clusters. For example,
+                the 'HazelcastDual' folder displays metrics from two clusters side
+                by side providing a quick way to compare them. These folders require the
+                '-type dual' option.
+
+      - all:    Folders with dashboards displaying metrics from all clusters. For
+                example, the 'HazelcastAll' folder provides federated views of metrics 
+                from all clusters. These folders require the '-type all' option.
+
+   The following cluster variables are set in each Grafana dashboard.
+
+      - DataSource:  Data source variable. This variable automatically captures all
+                     Prometheus instances.
+
+      - Cluster:     This variable is for selecting the first cluster. It is available
+                     in both 'single' and 'dual' dashboards. It is automatically set to
+                     all the custers pertaining to the selected Prometheus instance.
+
+      - Cluster2:    This variable is for selecting the second cluster in the 'dual'
+                     dashboards. It is automatically set to all the custers pertaining
+                     to the selected Prometheus instance.
+
+      - ClusterList: This variable is for selecting multiple clusters in the 'all'
+                     dashboards.
+
+      - ClusterFilterLabel: This variable defines the label used to filter Hazelcast
+                     clusters. It is set by specifying the '-label' option. The
+                     default value is '$DEFAULT_LABEL'.
+
+   The default value '$DEFAULT_LABEL' of ClusterFilterLabel is associated with the
+   'job_name' parameter in the following Prometheus configuration file.
    
       ../etc/prometheus.yml
 
@@ -56,19 +88,6 @@ DESCRIPTION
    it with 'namespace' (or 'service) since a Hazelcast cluster is deployed per Kubernetes
    namespace.
 
-   This command supports three (3) types of folders identified by how the dashboards
-   display Hazelcast clusters as follows.
-
-      - single: Folders with dashboards diplaying metrics specific to a single cluster
-                at a time. These folders require the '-type single' option. If '-type'
-                is not specified, then it defaults to this option.
-
-      - dual:   Folders with dashboards displaying metrics from two clusters, e.g., the
-                'HazelcastDual' folder. These folders require the '-type dual' option.
-
-      - all:    Folders with dashboards displaying metrics from all clusters, e.g.,
-                the 'HazelcastAll' folder. These folders require the '-type all' option.
-
    See the EXAMPLES section for adding multiple clusters to Grafana dashboards.
 
 OPTIONS
@@ -77,25 +96,39 @@ OPTIONS
 
    -label prometheus_label
              The name of the Prometheus label to apply the cluster list filter. This
-             label is typically introduced by Prometheus. For example, you can assign a
-             list of target endpoints under the '$DEFAULT_LABEL' label as shown in the EXAMPLES
-             section below. For Kubernetes, the 'namespace' label may be more approriate
-             since all the members of a Hazelcast cluster start in the same namespace.
-             Default: $DEFAULT_LABEL
+             label is typically introduced by Prometheus. For example, you can assign
+             a list of target endpoints under the '$DEFAULT_LABEL' label as shown in
+             the EXAMPLES section below. For Kubernetes, the 'namespace' label may be
+             more approriate since all the members of a Hazelcast cluster start in the
+             same namespace. Default: $DEFAULT_LABEL
 
    -clusters cluster_list
-             A comma-separated list of cluster names. If Prometheus is locally launched, then
-             the cluster names must match the 'job_name' values in the Prometheus configuration
-             file. Default: $DEFAULT_CLUSTERS
+             A comma-separated pair of default target cluster names. This option only
+             applies to the 'dual' and 'all' dashboards which pass these values
+             when switching to from dual to single, all to single, and all to dual.
+             They are used to set the cluster pulldown values. Without them, the
+             cluster pulldown menus will not have values leading to invalid cluster
+             errors.
+             
+             If this option is not specified then the default cluster, then it sets
+             the default pair of '$DEFAULT_CLUSTERS'.
+
+             The cluster names must match the 'job_name' values in the Prometheus
+             configuration file. For Kubernetes, see below for details.
+
+             Default: $DEFAULT_CLUSTERS
 
    -type single|dual|all
+             If 'single', then it adds a single pulldown menu in the toolbar. This
+             option is default and should be used if dashboards can show only one (1)
+             cluster at a time.
+
              If 'dual', then it adds two (2) cluster pulldown menus in the toolbar.  This
              option should be used only if the dashboards require dual clusters.
 
-            If 'all', then it does not add cluster pulldown menus in the toolbar. This
-            option should be used if the dashboards require all clusters. It supplies the
-            Grafana variable, \$ClusterList, set to a comma-separated list of all clusters
-            for filtering clusters.
+            If 'all', then it adds a single cluster pulldown menu with multiple section
+            enabled in the toolbar. This option should be used if the dashboards require
+            all clusters.
   
    -readonly
            If specified, then the dashboards are for read only. Default: editable
@@ -139,11 +172,11 @@ EXAMPLES
 
    Example 2: Kubernetes
       
-      In Kubernetes, the default '$DEFAULT_LABEL' label may not be enough to filter clusters if there
-      more than one cluster since all the clusters are scraped under the same '$DEFAULT_LABEL' label.
-      To address this issue, Prometheus includes the 'namespace' and 'service' labels which
-      we can use to filter the clusters. For example, we can use the '-label' option to
-      specifgy the 'namespace' label as follows.
+      In Kubernetes, the default '$DEFAULT_LABEL' label may not be enough to filter clusters if
+      there are more than one cluster since all the clusters are scraped under the same
+      '$DEFAULT_LABEL' label. To address this issue, Prometheus includes the 'namespace' and
+      'service' labels which we can use to filter the clusters. For example, we can use the
+      '-label' option to specify the 'namespace' label as follows.
 
       ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2"
 
@@ -160,8 +193,7 @@ EXAMPLES
 
       If your dashboards require all metrics from all clusters, then you can use the option '-all'.
       The 'HazelcastAll' folder contains dashboards that use the \$ClusterList variable in
-      regex to filter metrics. \$ClusterList is a comma-separated list of clusters.
-      The following imports the 'HazelcastAll' folder.
+      regex to filter metrics. The following imports the 'HazelcastAll' folder.
 
       ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2" -folder HazelcastAll -type all
 
@@ -188,92 +220,146 @@ fi
 #
 # $Cluster, $Cluster2
 #
-query="$CLUSTERS"
 CLUSTERS=$(echo $CLUSTERS | sed 's/,/ /g')
-current=$DEFAULT_CLUSTERS
-cluster_options="\"options\": ["
-cluster_list_options="\"options\": ["
+cluster=$DEFAULT_CLUSTERS
+cluster2=$DEFAULT_CLUSTERS
 INDEX=0
 for CLUSTER in $CLUSTERS; do
    if [ $INDEX -eq 0 ]; then
-      current="$CLUSTER"
-      cluster_options="$cluster_options {\"selected\": true, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
-      cluster_list_options="$cluster_list_options {\"selected\": true, \"text\": \"All\", \"\$__all\": \"$CLUSTER\"}"
-      cluster_list_options="$cluster_list_options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
-      query="$CLUSTER"
-   else
-      cluster_options="$cluster_options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
-      cluster_list_options="$cluster_list_options, {\"selected\": false, \"text\": \"$CLUSTER\", \"value\": \"$CLUSTER\"}"
-      query="$query,$CLUSTER"
+      cluster="$CLUSTER"
    fi
    # cluster2 constant value for going from non-dual to dual dashboards
    cluster2=$CLUSTER
    let INDEX=INDEX+1
 done
-cluster_options="$cluster_options ]"
-cluster_list_options="$cluster_list_options ]"
+
+DATASOURCE_OPTIONS="
+[
+{
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Source\",
+  \"multi\": false,
+  \"name\": \"DataSource\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+CLUSTER_LIST_OPTIONS="
+[
+{
+  \"current\": {
+    \"selected\": true,
+    \"text\": [
+      \"All\"
+    ],
+    \"value\": [
+      \"$__all\"
+    ]
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(job)\",
+  \"hide\": 0,
+  \"includeAll\": true,
+  \"label\": \"Clusters\",
+  \"multi\": true,
+  \"name\": \"ClusterList\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(job)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"\",
+  \"skipUrlSync\": false,
+  \"sort\": 0,
+  \"type\": \"query\"
+}
+]
+"
 
 CLUSTER_OPTIONS="
 [
 {
-   \"current\": {
-   \"selected\": true,
-   \"text\": \"$current\",
-   \"value\": \"$current\"
- },
- \"hide\": 0,
- \"includeAll\": false,
- \"multi\": false,
- \"name\": \"Cluster\",
- $cluster_options,
- \"query\": \"$query\",
- \"queryValue\": \"\",
- \"skipUrlSync\": false,
- \"type\": \"custom\",
- \"datasource\": \"\${DATASOURCE}\"
-}]
+  \"current\": {
+    \"selected\": true,
+    \"text\": [
+      \"\"
+    ],
+    \"value\": [
+      \"\"
+    ]
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(job)\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Cluster\",
+  \"multi\": false,
+  \"name\": \"Cluster\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(job)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"\",
+  \"skipUrlSync\": false,
+  \"sort\": 0,
+  \"type\": \"query\"
+}
+]
 "
-CLUSTER_LIST_OPTIONS="
-[
-{
-   \"current\": {
-   \"selected\": true,
-   \"text\": \"All\",
-   \"value\": \"All\"
- },
- \"hide\": 0,
- \"includeAll\": true,
- \"label\": \"Clusters\",
- \"multi\": true,
- \"name\": \"ClusterList\",
- $cluster_list_options,
- \"query\": \"$query\",
- \"queryValue\": \"\",
- \"skipUrlSync\": false,
- \"type\": \"custom\",
- \"datasource\": \"\${DATASOURCE}\"
-}]
-"
+
 CLUSTER2_OPTIONS="
 [
 {
-   \"current\": {
-   \"selected\": true,
-   \"text\": \"$current\",
-   \"value\": \"$current\"
- },
- \"hide\": 0,
- \"includeAll\": false,
- \"multi\": false,
- \"name\": \"Cluster2\",
- \"label\": \"Cluster 2\",
- $cluster_options,
- \"query\": \"$query\",
- \"queryValue\": \"\",
- \"skipUrlSync\": false,
- \"type\": \"custom\",
- \"datasource\": \"\${DATASOURCE}\"
-}]
+  \"current\": {
+    \"selected\": true,
+    \"text\": [
+      \"\"
+    ],
+    \"value\": [
+      \"\"
+    ]
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(job)\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Cluster2\",
+  \"multi\": false,
+  \"name\": \"Cluster2\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(job)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"\",
+  \"skipUrlSync\": false,
+  \"sort\": 0,
+  \"type\": \"query\"
+}
+]
 "
 
 #
@@ -284,7 +370,7 @@ CLUSTER_CONSTANT_OPTIONS="
 {
  \"hide\": 2,
  \"name\": \"Cluster\",
- \"query\": \"$current\",
+ \"query\": \"$cluster\",
  \"skipUrlSync\": false,
  \"type\": \"constant\",
  \"datasource\": \"\${DATASOURCE}\"
@@ -326,23 +412,6 @@ CLUSTER_FILTER_LABEL_OPTIONS="
 "
 
 #
-# $ClusterList
-#
-#cluster_list="$CLUSTERS_ARG"
-#CLUSTER_LIST_OPTIONS="
-#[
-#{
-# \"hide\": 2,
-# \"name\": \"ClusterList\",
-# \"query\": \"$cluster_list\",
-# \"skipUrlSync\": false,
-# \"type\": \"constant\",
-# \"datasource\": \"\${DATASOURCE}\"
-#}
-#]
-#"
-
-#
 # Update templates
 #
 if [ -d "$TMP_DIR/$FOLDER" ]; then
@@ -367,7 +436,8 @@ pushd "$FOLDER_PATH" > /dev/null 2>&1
 case "$TYPE_ARG" in
 all)
    for file in *; do
-      cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+      cat "$file" | jq "
+                  del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
                   | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
                   | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
                   | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
@@ -375,6 +445,8 @@ all)
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
    done
@@ -382,13 +454,16 @@ all)
 
 *)
    for file in *; do
-      cat "$file" | jq "del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+      cat "$file" | jq "
+                  del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
                   | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
                   | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
                   | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
    done

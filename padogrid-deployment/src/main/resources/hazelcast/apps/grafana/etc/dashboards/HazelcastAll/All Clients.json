@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -111,7 +114,11 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Client connections and activities overview",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -305,7 +312,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_count{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"client.endpoint\"}",
@@ -317,7 +327,10 @@
             "refId": "Clients"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_queueSize{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"executor.internal\",tag0=\"\\\"name=hz:client-query\\\"\"}",
@@ -329,7 +342,10 @@
             "refId": "Query Queue Size"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"executor.internal\",tag0=\"\\\"name=hz:client-query\\\"\"}",
@@ -341,7 +357,10 @@
             "refId": "Completed Queries"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_completedTasks{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"executor.internal\",tag0=\"\\\"name=hz:client-blocking-tasks\\\"\"}",
@@ -353,7 +372,10 @@
             "refId": "Completed Blocking Tasks"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_poolSize{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"executor.internal\",tag0=\"\\\"name=hz:client-blocking-tasks\\\"\"}",
@@ -365,7 +387,10 @@
             "refId": "Pool Size"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_maximumPoolSize{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"executor.internal\",tag0=\"\\\"name=hz:client-blocking-tasks\\\"\"}",
@@ -377,7 +402,10 @@
             "refId": "Max Pool Size"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_remainingQueueCapacity{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"executor.internal\",tag0=\"\\\"name=hz:client-blocking-tasks\\\"\"}",
@@ -389,7 +417,10 @@
             "refId": "Remaining Queue Capacity"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_totalRegistrations{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"client.endpoint\"}",
@@ -551,33 +582,50 @@
     "templating": {
       "list": [
         {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
           "current": {
             "selected": true,
-            "text": "All",
-            "value": "All"
+            "text": [
+              "All"
+            ],
+            "value": [
+              ""
+            ]
           },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
           "multi": true,
           "name": "ClusterList",
-          "options": [
-            {
-              "selected": true,
-              "text": "All",
-              "$__all": "hazelcast"
-            },
-            {
-              "selected": false,
-              "text": "hazelcast",
-              "value": "hazelcast"
-            }
-          ],
-          "query": "hazelcast",
-          "queryValue": "",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
           "skipUrlSync": false,
-          "type": "custom",
-          "datasource": "${DATASOURCE}"
+          "sort": 0,
+          "type": "query"
         },
         {
           "hide": 2,
@@ -604,7 +652,10 @@
           "datasource": "${DATASOURCE}"
         },
         {
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "filters": [],
           "hide": 0,
           "name": "Filters",

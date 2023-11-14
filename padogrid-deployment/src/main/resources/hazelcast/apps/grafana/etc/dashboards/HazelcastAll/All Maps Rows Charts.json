@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -123,7 +126,28 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "collapsed": false,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 40,
+        "panels": [],
+        "title": "Row title",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of map entries owned by the member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -151,7 +175,7 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 0
+          "y": 1
         },
         "id": 14,
         "options": {
@@ -171,7 +195,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
@@ -313,7 +340,11 @@
         "type": "bargauge"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of backup entries held by the member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -341,7 +372,7 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 0
+          "y": 1
         },
         "id": 24,
         "options": {
@@ -361,7 +392,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_backupEntryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
@@ -372,7 +406,7 @@
             "refId": "Entries"
           }
         ],
-        "title": "Maps: Backups",
+        "title": "Maps: Backup Entries",
         "transformations": [
           {
             "id": "filterFieldsByName",
@@ -503,387 +537,11 @@
         "type": "bargauge"
       },
       {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "continuous-GrYlRd"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": []
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
         },
-        "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 0,
-          "y": 12
-        },
-        "id": 25,
-        "options": {
-          "displayMode": "lcd",
-          "minVizHeight": 10,
-          "minVizWidth": 0,
-          "namePlacement": "auto",
-          "orientation": "horizontal",
-          "reduceOptions": {
-            "calcs": [],
-            "fields": "",
-            "values": true
-          },
-          "showUnfilled": true,
-          "valueMode": "color"
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
-            "format": "table",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "Entries"
-          }
-        ],
-        "title": "Maps: Hits",
-        "transformations": [
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "instance",
-                  "job",
-                  "tag0",
-                  "Value"
-                ]
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {
-                "Value": 2,
-                "instance": 3,
-                "job": 0,
-                "tag0": 1
-              },
-              "renameByName": {
-                "Value": "Entries",
-                "job": "Cluster",
-                "tag0": "Map"
-              }
-            }
-          },
-          {
-            "id": "groupBy",
-            "options": {
-              "fields": {
-                "Cluster": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Entries": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Map": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Value": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #A": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #B": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #Backups": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #Entries": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "instance": {
-                  "aggregations": [
-                    "last"
-                  ]
-                },
-                "job": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "tag0": {
-                  "aggregations": [
-                    "lastNotNull"
-                  ],
-                  "operation": "groupby"
-                }
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Cluster"
-                }
-              ]
-            }
-          },
-          {
-            "id": "filterByValue",
-            "options": {
-              "filters": [
-                {
-                  "config": {
-                    "id": "regex",
-                    "options": {
-                      "value": "__.*"
-                    }
-                  },
-                  "fieldName": "Map"
-                }
-              ],
-              "match": "any",
-              "type": "exclude"
-            }
-          }
-        ],
-        "type": "bargauge"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "continuous-GrYlRd"
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 12,
-          "w": 12,
-          "x": 12,
-          "y": 12
-        },
-        "id": 26,
-        "options": {
-          "displayMode": "lcd",
-          "minVizHeight": 10,
-          "minVizWidth": 0,
-          "namePlacement": "auto",
-          "orientation": "horizontal",
-          "reduceOptions": {
-            "calcs": [],
-            "fields": "",
-            "values": true
-          },
-          "showUnfilled": true,
-          "valueMode": "color"
-        },
-        "pluginVersion": "10.2.0",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
-            "format": "table",
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "Entries"
-          }
-        ],
-        "title": "Maps: Events",
-        "transformations": [
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "instance",
-                  "job",
-                  "tag0",
-                  "Value"
-                ]
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {
-                "Value": 2,
-                "instance": 3,
-                "job": 0,
-                "tag0": 1
-              },
-              "renameByName": {
-                "Value": "Entries",
-                "job": "Cluster",
-                "tag0": "Map"
-              }
-            }
-          },
-          {
-            "id": "groupBy",
-            "options": {
-              "fields": {
-                "Cluster": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Entries": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Map": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "Value": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #A": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #B": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #Backups": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "Value #Entries": {
-                  "aggregations": [
-                    "sum"
-                  ],
-                  "operation": "aggregate"
-                },
-                "instance": {
-                  "aggregations": [
-                    "last"
-                  ]
-                },
-                "job": {
-                  "aggregations": [],
-                  "operation": "groupby"
-                },
-                "tag0": {
-                  "aggregations": [
-                    "lastNotNull"
-                  ],
-                  "operation": "groupby"
-                }
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [
-                {
-                  "field": "Cluster"
-                }
-              ]
-            }
-          },
-          {
-            "id": "filterByValue",
-            "options": {
-              "filters": [
-                {
-                  "config": {
-                    "id": "regex",
-                    "options": {
-                      "value": "__.*"
-                    }
-                  },
-                  "fieldName": "Map"
-                }
-              ],
-              "match": "any",
-              "type": "exclude"
-            }
-          }
-        ],
-        "type": "bargauge"
-      },
-      {
-        "datasource": "${DATASOURCE}",
+        "description": "Memory cost of owned map entries on this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -911,7 +569,7 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 24
+          "y": 13
         },
         "id": 27,
         "options": {
@@ -931,7 +589,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
@@ -1073,7 +734,11 @@
         "type": "bargauge"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Memory cost of backup entries in this member",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1101,7 +766,7 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 24
+          "y": 13
         },
         "id": 28,
         "options": {
@@ -1121,7 +786,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_backupEntryMemoryCost{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
@@ -1263,7 +931,11 @@
         "type": "bargauge"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of reads of the locally owned entries",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1291,9 +963,9 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 36
+          "y": 25
         },
-        "id": 29,
+        "id": 25,
         "options": {
           "displayMode": "lcd",
           "minVizHeight": 10,
@@ -1311,10 +983,13 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_dirtyEntryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
             "format": "table",
             "instant": true,
             "legendFormat": "__auto",
@@ -1322,7 +997,7 @@
             "refId": "Entries"
           }
         ],
-        "title": "Maps: Dirty Entries",
+        "title": "Maps: Hits",
         "transformations": [
           {
             "id": "filterFieldsByName",
@@ -1453,7 +1128,11 @@
         "type": "bargauge"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of local events received on the map",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1481,9 +1160,9 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 36
+          "y": 25
         },
-        "id": 30,
+        "id": 26,
         "options": {
           "displayMode": "lcd",
           "minVizHeight": 10,
@@ -1501,10 +1180,13 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_lockedEntryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
             "format": "table",
             "instant": true,
             "legendFormat": "__auto",
@@ -1512,7 +1194,7 @@
             "refId": "Entries"
           }
         ],
-        "title": "Maps: Locked Entries",
+        "title": "Maps: Events",
         "transformations": [
           {
             "id": "filterFieldsByName",
@@ -1643,7 +1325,11 @@
         "type": "bargauge"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of expirations happened on locally owned entries, backups are not included",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1654,7 +1340,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -1670,9 +1357,9 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 48
+          "y": 37
         },
-        "id": 31,
+        "id": 41,
         "options": {
           "displayMode": "lcd",
           "minVizHeight": 10,
@@ -1690,7 +1377,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_expirationCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
@@ -1832,7 +1522,11 @@
         "type": "bargauge"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of evictions happened on locally owned entries, backups are not included",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1843,7 +1537,8 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green"
+                  "color": "green",
+                  "value": null
                 },
                 {
                   "color": "red",
@@ -1859,7 +1554,401 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 48
+          "y": 37
+        },
+        "id": 42,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_evictionCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Maps: Evictions",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of queries executed on the map (it may be imprecise for queries involving partition predicates (PartitionPredicate) on the off-heap storage)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 0,
+          "y": 49
+        },
+        "id": 39,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Maps: Query Count",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Total number of indexed local queries performed on the map",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 12,
+          "y": 49
         },
         "id": 32,
         "options": {
@@ -1879,10 +1968,13 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_evictionCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "expr": "com_hazelcast_Metrics_indexedQueryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
             "format": "table",
             "instant": true,
             "legendFormat": "__auto",
@@ -1890,7 +1982,1386 @@
             "refId": "Entries"
           }
         ],
-        "title": "Maps: Evictions",
+        "title": "Maps: Indexed Query Count",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Total number of other operations performed on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 0,
+          "y": 61
+        },
+        "id": 31,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfOtherOperations{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Maps: Other Operations",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Total heap cost of the Merkle trees used",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 12,
+          "y": 61
+        },
+        "id": 37,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_merkleTreesCost{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Maps: Merkle Trees Used Heap (WAN)",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of locked entries that the member owns",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 0,
+          "y": 73
+        },
+        "id": 30,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lockedEntryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Maps: Locked Entries",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of updated but not persisted yet entries, dirty entries, that the member owns",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 12,
+          "y": 73
+        },
+        "id": 29,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_dirtyEntryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Maps: Dirty Entries",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of forced evictions happened on locally owned entries, backups are not included",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 0,
+          "y": 85
+        },
+        "id": 33,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_forceEvictedEntryCount{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Maps: Force Evicted Entries",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Memory cost of owned map entries on this member",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "bytes"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 12,
+          "y": 85
+        },
+        "id": 38,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_memoryCost{$ClusterFilterLabel=~\"($ClusterList)\",prefix=\"map.index\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Indexes: Memory Cost",
+        "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": [
+                  "instance",
+                  "job",
+                  "tag0",
+                  "Value"
+                ]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "Value": 2,
+                "instance": 3,
+                "job": 0,
+                "tag0": 1
+              },
+              "renameByName": {
+                "Value": "Entries",
+                "job": "Cluster",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "groupBy",
+            "options": {
+              "fields": {
+                "Cluster": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Map": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "Value": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #A": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #B": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Backups": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "Value #Entries": {
+                  "aggregations": [
+                    "sum"
+                  ],
+                  "operation": "aggregate"
+                },
+                "instance": {
+                  "aggregations": [
+                    "last"
+                  ]
+                },
+                "job": {
+                  "aggregations": [],
+                  "operation": "groupby"
+                },
+                "tag0": {
+                  "aggregations": [
+                    "lastNotNull"
+                  ],
+                  "operation": "groupby"
+                }
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of off loaded map store operations waiting to be processed",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 12,
+          "x": 0,
+          "y": 97
+        },
+        "id": 35,
+        "options": {
+          "displayMode": "lcd",
+          "minVizHeight": 10,
+          "minVizWidth": 0,
+          "namePlacement": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_waitingToBeProcessedCount{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"map.store.offloaded.operations\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "Entries"
+          }
+        ],
+        "title": "Map Store: Waiting To Be Processed Count",
         "transformations": [
           {
             "id": "filterFieldsByName",
@@ -2033,33 +3504,50 @@
     "templating": {
       "list": [
         {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
           "current": {
             "selected": true,
-            "text": "All",
-            "value": "All"
+            "text": [
+              "All"
+            ],
+            "value": [
+              ""
+            ]
           },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
           "multi": true,
           "name": "ClusterList",
-          "options": [
-            {
-              "selected": true,
-              "text": "All",
-              "$__all": "hazelcast"
-            },
-            {
-              "selected": false,
-              "text": "hazelcast",
-              "value": "hazelcast"
-            }
-          ],
-          "query": "hazelcast",
-          "queryValue": "",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
           "skipUrlSync": false,
-          "type": "custom",
-          "datasource": "${DATASOURCE}"
+          "sort": 0,
+          "type": "query"
         },
         {
           "hide": 2,
@@ -2086,7 +3574,10 @@
           "datasource": "${DATASOURCE}"
         },
         {
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "filters": [],
           "hide": 0,
           "name": "Filters",
@@ -2094,7 +3585,10 @@
           "type": "adhoc"
         },
         {
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "description": "",
           "hide": 2,
           "label": "Cluster 3",
@@ -2104,7 +3598,10 @@
           "type": "constant"
         },
         {
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "description": "",
           "hide": 2,
           "label": "Cluster 4",

@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -111,7 +114,11 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Member resource usage overview",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -287,7 +294,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_systemCpuLoad{$ClusterFilterLabel=~\"$ClusterList\"}",
@@ -299,7 +309,10 @@
             "refId": "CPU"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_usedMemory{$ClusterFilterLabel=~\"$ClusterList\"}",
@@ -311,7 +324,10 @@
             "refId": "Used Heap"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_totalMemory{$ClusterFilterLabel=~\"$ClusterList\"}",
@@ -323,7 +339,10 @@
             "refId": "Total Heap"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_usedMemory/com_hazelcast_Metrics_totalMemory{$ClusterFilterLabel=~\"$ClusterList\"}",
@@ -335,7 +354,10 @@
             "refId": "Heap Usage"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_usedNative{$ClusterFilterLabel=~\"$ClusterList\"}",
@@ -347,7 +369,10 @@
             "refId": "Used Native Memory"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_committedNative{$ClusterFilterLabel=~\"$ClusterList\"}",
@@ -359,7 +384,10 @@
             "refId": "Committed Native Memory"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "jvm_gc_collection_seconds_count{$ClusterFilterLabel=~\"$ClusterList\",gc=~\".+Old Generation\"}",
@@ -371,7 +399,10 @@
             "refId": "GC Major Count"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "jvm_gc_collection_seconds_sum{$ClusterFilterLabel=~\"$ClusterList\",gc=~\".+Old Generation\"}",
@@ -383,7 +414,10 @@
             "refId": "GC Major Time"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "jvm_gc_collection_seconds_count{$ClusterFilterLabel=~\"$ClusterList\",gc=~\".+Young Generation\"}",
@@ -395,7 +429,10 @@
             "refId": "GC Minor Count"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "jvm_gc_collection_seconds_sum{$ClusterFilterLabel=~\"$ClusterList\",gc=~\".+Young Generation\"}",
@@ -540,33 +577,50 @@
     "templating": {
       "list": [
         {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
           "current": {
             "selected": true,
-            "text": "All",
-            "value": "All"
+            "text": [
+              "All"
+            ],
+            "value": [
+              ""
+            ]
           },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
           "multi": true,
           "name": "ClusterList",
-          "options": [
-            {
-              "selected": true,
-              "text": "All",
-              "$__all": "hazelcast"
-            },
-            {
-              "selected": false,
-              "text": "hazelcast",
-              "value": "hazelcast"
-            }
-          ],
-          "query": "hazelcast",
-          "queryValue": "",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
           "skipUrlSync": false,
-          "type": "custom",
-          "datasource": "${DATASOURCE}"
+          "sort": 0,
+          "type": "query"
         },
         {
           "hide": 2,
@@ -593,7 +647,10 @@
           "datasource": "${DATASOURCE}"
         },
         {
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "filters": [],
           "hide": 0,
           "name": "Filters",

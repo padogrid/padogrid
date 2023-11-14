@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -123,8 +126,108 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
-        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of local queries performed on all maps",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "left",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 2,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=~\"$ClusterList\"}",
+            "interval": "",
+            "legendFormat": "{{job}} {{instance}} {{tag0}}",
+            "range": true,
+            "refId": "A"
+          }
+        ],
+        "title": "Maps: Query Count",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "Number of indexed local queries performed on all maps. Compare with the Query Count chart and look for queries that are not indexed with high counts. By properly indexing, you can increase query performance. ",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -184,7 +287,7 @@
           "h": 11,
           "w": 24,
           "x": 0,
-          "y": 0
+          "y": 12
         },
         "id": 5,
         "options": {
@@ -202,26 +305,20 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map\"}",
-            "interval": "",
-            "legendFormat": "{{job}} {{instance}} {{tag0}}",
-            "range": true,
-            "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "expr": "com_hazelcast_Metrics_indexedQueryCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map\"}",
-            "hide": true,
+            "hide": false,
             "interval": "",
             "legendFormat": "Indexed Quer {{instance}}",
             "range": true,
             "refId": "B"
           }
         ],
-        "title": "Map Query Count",
+        "title": "Maps: Indexed Query Count",
         "transformations": [
           {
             "id": "filterFieldsByName",
@@ -231,98 +328,10 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
-        "description": "mw/customers and nw/orders queries",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "left",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "smooth",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "locale"
-          },
-          "overrides": []
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
         },
-        "gridPos": {
-          "h": 15,
-          "w": 24,
-          "x": 0,
-          "y": 11
-        },
-        "id": 2,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "table",
-            "placement": "right",
-            "showLegend": true
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "editorMode": "code",
-            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=~\"$ClusterList\"}",
-            "interval": "",
-            "legendFormat": "{{job}} {{instance}} {{tag0}}",
-            "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Map Query Count (aggregate)",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "${DATASOURCE}",
         "description": "Number of insert operations performed on the index",
         "fieldConfig": {
           "defaults": {
@@ -382,7 +391,7 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 26
+          "y": 23
         },
         "id": 8,
         "options": {
@@ -409,7 +418,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_insertCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -463,7 +475,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Total latency of insert operations performed on the index",
         "fieldConfig": {
           "defaults": {
@@ -523,7 +538,7 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 26
+          "y": 23
         },
         "id": 9,
         "options": {
@@ -550,7 +565,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_totalInsertLatency{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -604,7 +622,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Number of update operations performed on the index",
         "fieldConfig": {
           "defaults": {
@@ -664,7 +685,7 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 38
+          "y": 35
         },
         "id": 10,
         "options": {
@@ -691,7 +712,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_updateCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -745,7 +769,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Total latency of update operations performed on the index",
         "fieldConfig": {
           "defaults": {
@@ -805,7 +832,7 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 38
+          "y": 35
         },
         "id": 11,
         "options": {
@@ -832,7 +859,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_totalUpdateLatency{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -886,7 +916,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Number of remove operations performed on the index",
         "fieldConfig": {
           "defaults": {
@@ -946,7 +979,7 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 50
+          "y": 47
         },
         "id": 12,
         "options": {
@@ -973,7 +1006,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -1027,7 +1063,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Total latency of remove operations performed on the index",
         "fieldConfig": {
           "defaults": {
@@ -1087,7 +1126,7 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 50
+          "y": 47
         },
         "id": 13,
         "options": {
@@ -1114,7 +1153,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_totalRemoveLatency{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -1168,7 +1210,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Total number of index hits (the value of this metric may be greater than the map.index.queryCount since a single query may hit the same index more than once)",
         "fieldConfig": {
           "defaults": {
@@ -1228,7 +1273,7 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 62
+          "y": 59
         },
         "id": 14,
         "options": {
@@ -1255,7 +1300,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_hitCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -1309,7 +1357,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Total number of queries served by the index",
         "fieldConfig": {
           "defaults": {
@@ -1369,7 +1420,7 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 62
+          "y": 59
         },
         "id": 16,
         "options": {
@@ -1396,7 +1447,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -1450,7 +1504,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Average selectivity of the hits served by the index on this member (the returned value is in the range from 0.0 to 1.0 - values close to 1.0 indicate a high selectivity meaning the index is efficient; values close to 0.0 indicate a low selectivity meaning the index efficiency is approaching an efficiency of a simple full scan)",
         "fieldConfig": {
           "defaults": {
@@ -1500,7 +1557,7 @@
           "h": 12,
           "w": 12,
           "x": 0,
-          "y": 74
+          "y": 71
         },
         "id": 7,
         "options": {
@@ -1527,7 +1584,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_averageHitSelectivity{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -1591,7 +1651,10 @@
         "type": "barchart"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Local memory cost of the index (for on-heap indexes in OBJECT or BINARY formats, the returned value is just a best-effort approximation and doesn’t indicate a precise on-heap memory usage of the index)",
         "fieldConfig": {
           "defaults": {
@@ -1651,7 +1714,7 @@
           "h": 12,
           "w": 12,
           "x": 12,
-          "y": 74
+          "y": 71
         },
         "id": 15,
         "options": {
@@ -1678,7 +1741,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_memoryCost{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"map.index\"}",
@@ -1744,33 +1810,50 @@
     "templating": {
       "list": [
         {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
           "current": {
             "selected": true,
-            "text": "All",
-            "value": "All"
+            "text": [
+              "All"
+            ],
+            "value": [
+              ""
+            ]
           },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
           "multi": true,
           "name": "ClusterList",
-          "options": [
-            {
-              "selected": true,
-              "text": "All",
-              "$__all": "hazelcast"
-            },
-            {
-              "selected": false,
-              "text": "hazelcast",
-              "value": "hazelcast"
-            }
-          ],
-          "query": "hazelcast",
-          "queryValue": "",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
           "skipUrlSync": false,
-          "type": "custom",
-          "datasource": "${DATASOURCE}"
+          "sort": 0,
+          "type": "query"
         },
         {
           "hide": 2,

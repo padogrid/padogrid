@@ -108,3 +108,8 @@ DEFAULT_FOLDER="padogrid-perf_test"
 SINGLE_FOLDERS="Hazelcast"
 DUAL_FOLDERS="HazelcastDual"
 ALL_FOLDERS="HazelcastAll"
+
+#
+# Regex for filtering Prometheus data source names. Empty string includes all.
+#
+#DATASOURCE_REGEX=""

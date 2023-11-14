@@ -64,9 +64,18 @@ if [ ! -d $EXPORT_TEMPLATE_DIR ]; then
    mkdir $EXPORT_TEMPLATE_DIR
 fi
 
+DATASOURCE_OPTION="{
+ \"type\": \"prometheus\",
+ \"uid\": \"\${DataSource}\"
+}
+"
+
 pushd $EXPORT_DASHBOARD_DIR > /dev/null 2>&1
 for EXPORT_FOLDER_DIR in *; do
    FOLDER_NAME=$(basename "$EXPORT_FOLDER_DIR")
+#   if [ "$FOLDER_NAME" != "Test" ]; then
+#      continue;
+#   fi
    
    # Create the folder dir in the template dir
    if [ -d $EXPORT_TEMPLATE_DIR/$FOLDER_NAME ]; then
@@ -79,10 +88,11 @@ for EXPORT_FOLDER_DIR in *; do
    if [ ! -z "$(ls -A $FOLDER_NAME)" ]; then
       pushd $FOLDER_NAME > /dev/null 2>&1
       for file in *; do
-        `cat "$file" | jq ".dashboard.annotations.list[].datasource=\"\\${DATASOURCE}\" 
-                     | .dashboard.panels[].datasource=\"\\${DATASOURCE}\" 
-                     | .dashboard.panels[].targets[]?.datasource=\"\\${DATASOURCE}\" 
-                     | .dashboard.templating.list[]?.datasource=\"\\${DATASOURCE}\" 
+#        `cat "$file" | jq --arg DATASOURCE $DATASOURCE_OPTION ".dashboard.annotations.list[].datasource=\"$DATASOURCE_OPTION\" 
+        `cat "$file" | jq ".dashboard.annotations.list[].datasource=$DATASOURCE_OPTION
+                     | .dashboard.panels[].datasource=$DATASOURCE_OPTION
+                     | .dashboard.panels[].targets[]?.datasource=$DATASOURCE_OPTION
+                     | .dashboard.templating.list[]?.datasource=$DATASOURCE_OPTION
                      | del(.meta) 
                      | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
                      | del(.dashboard.version, .dashboard.id)

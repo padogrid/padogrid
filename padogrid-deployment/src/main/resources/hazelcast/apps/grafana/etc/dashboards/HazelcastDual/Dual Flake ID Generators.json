@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -111,7 +114,10 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "$Cluster: Flake ID generator creation time, total number of times the Flake ID generator has been used to generate a new ID batch, total number of IDs generated (the sum of IDs for all batches)",
         "fieldConfig": {
           "defaults": {
@@ -207,7 +213,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_creationTime{$ClusterFilterLabel=\"$Cluster\",prefix=\"flakeIdGenerator\"}",
@@ -218,7 +227,10 @@
             "refId": "Creation Time"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_batchCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"flakeIdGenerator\"}",
@@ -230,7 +242,10 @@
             "refId": "Batch Count"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_idCount{$ClusterFilterLabel=\"$Cluster\",prefix=\"flakeIdGenerator\"}",
@@ -296,7 +311,10 @@
         "type": "table"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "$Cluster2: Flake ID generator creation time, total number of times the Flake ID generator has been used to generate a new ID batch, total number of IDs generated (the sum of IDs for all batches)",
         "fieldConfig": {
           "defaults": {
@@ -392,7 +410,10 @@
         "pluginVersion": "10.2.0",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_creationTime{$ClusterFilterLabel=\"$Cluster2\",prefix=\"flakeIdGenerator\"}",
@@ -403,7 +424,10 @@
             "refId": "Creation Time"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_batchCount{$ClusterFilterLabel=\"$Cluster2\",prefix=\"flakeIdGenerator\"}",
@@ -415,7 +439,10 @@
             "refId": "Batch Count"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
             "exemplar": false,
             "expr": "com_hazelcast_Metrics_idCount{$ClusterFilterLabel=\"$Cluster2\",prefix=\"flakeIdGenerator\"}",
@@ -491,6 +518,20 @@
     "templating": {
       "list": [
         {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
           "hide": 2,
           "name": "ClusterFilterLabel",
           "query": "job",
@@ -501,49 +542,66 @@
         {
           "current": {
             "selected": true,
-            "text": "hazelcast",
-            "value": "hazelcast"
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
           },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
           "hide": 0,
           "includeAll": false,
+          "label": "Cluster",
           "multi": false,
           "name": "Cluster",
-          "options": [
-            {
-              "selected": true,
-              "text": "hazelcast",
-              "value": "hazelcast"
-            }
-          ],
-          "query": "hazelcast",
-          "queryValue": "",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
           "skipUrlSync": false,
-          "type": "custom",
-          "datasource": "${DATASOURCE}"
+          "sort": 0,
+          "type": "query"
         },
         {
           "current": {
             "selected": true,
-            "text": "hazelcast",
-            "value": "hazelcast"
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
           },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
           "hide": 0,
           "includeAll": false,
+          "label": "Cluster2",
           "multi": false,
           "name": "Cluster2",
-          "label": "Cluster 2",
-          "options": [
-            {
-              "selected": true,
-              "text": "hazelcast",
-              "value": "hazelcast"
-            }
-          ],
-          "query": "hazelcast",
-          "queryValue": "",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
           "skipUrlSync": false,
-          "type": "custom",
-          "datasource": "${DATASOURCE}"
+          "sort": 0,
+          "type": "query"
         }
       ]
     },

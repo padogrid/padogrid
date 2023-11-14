@@ -88,7 +88,7 @@ DEFAULT_LABEL="job"
 #
 # Default cluter list (comma-separated)
 #
-DEFAULT_CLUSTERS="hazelcast"
+DEFAULT_CLUSTERS="hazelcast,hazelcast"
 
 #
 # Source in app specifics
@@ -320,6 +320,11 @@ function getAllGrafanaRwePaths
    done
    echo "$RWE_PATHS"
 }
+
+#
+# Regex for filtering Prometheus data source names. Empty string includes all.
+#
+DATASOURCE_REGEX=""
 
 EDITABLE="true"
 READONLY_SPECIFIED="false"

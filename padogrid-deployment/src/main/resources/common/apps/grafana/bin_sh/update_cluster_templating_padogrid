@@ -51,15 +51,26 @@ DESCRIPTION
              namespace. Default: $DEFAULT_LABEL
 
    -clusters cluster_list
-             A comma-separated list of cluster names. If Prometheus is locally launched, then
-             the cluster names must match the 'job_name' values in the Prometheus configuration
-             file.
+             A comma-separated pair of default target cluster names. This option only
+             applies to the 'dual' and 'all' dashboards which pass these values
+             when switching to from dual to single, all to single, and all to dual.
+             They are used to set the cluster pulldown values. Without them, the
+             cluster pulldown menus will not have values leading to invalid cluster
+             errors.
+             
+             If this option is not specified then the default cluster, then it sets
+             the default pair of '$DEFAULT_CLUSTERS'.
+
+             The cluster names must match the 'job_name' values in the Prometheus
+             configuration file. For Kubernetes, see below for details.
+
+             Default: $DEFAULT_CLUSTERS
 
    -readonly
            If specified, then the dashboards are for read only. Default: editable
 
 DEFAULT
-   ./$EXECUTABLE -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTER
+   ./$EXECUTABLE -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTERS
 
 SEE ALSO
    update_cluster_templating(1)
