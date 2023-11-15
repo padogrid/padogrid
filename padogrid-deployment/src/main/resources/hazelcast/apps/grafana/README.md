@@ -252,7 +252,9 @@ ls etc/dashboards
 The following dashboard folders are included in this distribution.
 
 - **padogrid-perf_test** - A set of dashboards for monitoring the metrics specific to the `perf_test` app.
-- **Hazelcast** - A set of dashboards for monitoring one or more Hazelcast clusters. The dashboards resemble the Management Center including additional metrics.
+- **Hazelcast** - A set of dashboards for monitoring a single Hazelcast cluster.
+- **HazelcastDual** - A set of dashboards for comparing two (2) Hazelcast clusters side-by-side.
+- **HazelcastAll** - A set of dashboards for federating multiple Hazelcast clusters.
 
 To import the default folder, i.e., `padogrid-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as folllows:
 
@@ -261,7 +263,7 @@ cd bin_sh
 ./import_folder
 ```
 
-To import other folders, specify the `-folder` or `-all` option.
+To import folders individually, specify the `-folder` or `-all` option.
 
 ```bash
 # To import the padogrid-perf_test folder in 'etc/dashboards':
@@ -269,6 +271,12 @@ To import other folders, specify the `-folder` or `-all` option.
 
 # To import the Hazelcast folder in 'etc/dashboards':
 ./import_folder -folder Hazelcast
+
+# To import the HazelcastDual folder in 'etc/dashboards':
+./import_folder -folder HazelcastDual
+
+# To import the HazelcastAll folder in 'etc/dashboards':
+./import_folder -folder HazelcastAll
 
 # To imporal all folders in 'etc/dashboards':
 ./import_folder -all
@@ -286,24 +294,11 @@ For `perf_test` details, see [perf\_test README](https://github.com/padogrid/pad
 
 ### 6.2. Hazelcast Dashboards
 
-The `Hazelcast` folder contains the main dashboard named, `00Main`. This dashboard is the main console for navigating all the dashboards in the `Hazelcast` folder. It has the layout similar to the Management Center as shown in the screen shot in Section [10.2 Hazelcast Folder](#102-hazelcast-folder).
+The `Hazelcast*` folders contain the main dashboard with the prefix, `00Main`. The main dashboards are the main console for navigating all the dashboards in the respective folder. They have the layout similar to the Management Center as shown in the screen shot in Section [10.2 Hazelcast Folder](#102-hazelcast-folder).
 
 To quickly activate the dashboards with data, you can run [`perf_test`](../perf_test/README.md) with the `group-workflow-*.properties` files.
 
-The Hazelcast dasboards support multiple clusters. To include multiple clusters, you must add them in the `etc/prometheus.yml` file. You can use the the included [`etc/prometheus-clusters.yml`](etc/prometheus-clusters.yml) as an example. This file configures two (2) Hazelast clusters named, 'myhz' and 'myhz2'.
-
-In addtion to the updating the `etc/prometheus.yml` file, the cluster names must be updated in the dashboards. The following example updates the dashboards with `myhz` and `myhz2`.
-
-```bash
-./update_cluster_templating -cluster "myhz,myhz2"
-```
-
-To apply the cluster name changes, you need to import the updated dashboards. If the dashboards have already been imported then you need to first delete them and import them back as follows.
-
-```bash
-./delete_folder -folder Hazelcast
-./import_folder -folder Hazelcast
-```
+The Hazelcast dasboards support multiple clusters. If you are running Prometheus in PadoGrid, then to include multiple clusters, you must add them in the `etc/prometheus.yml` file. You can use the the included [`etc/prometheus-clusters.yml`](etc/prometheus-clusters.yml) as an example. This file configures two (2) Hazelast clusters named, 'myhz' and 'myhz2'.
 
 ## 7. Exporting Dashboards
 
@@ -323,6 +318,37 @@ You must convert the exported dashboards to templates by executing the `export_t
 # Convert the exported folders to templates. The templates are placed in
 # the templates/ directory. See the usage for details.
 ./export_to_template
+```
+
+### 8.1. Synchronizing `Hazelcast*` Folders
+
+## 8. Synchronizing Folders
+
+The following command sequence synchronizes the browser dashboards and templates. 
+
+```bash
+./export_folder -folder Hazelcast
+./export_to_template
+./copy_template_to_etc -folder Hazelcast
+./update_cluster_templating_padogrid
+```
+
+
+If you made changes to dashboards from the browser and want to save them in the templates, then you must follow 
+
+, then you can execute several commands in the `bin_sh` directory. An easier way to accomplish the same  execute the 'sync_hazelcast_folders` command.
+execute the `sync_hazelcast_folders` command. This command exports all of the dashboards in the `Hazelcast*` folders, creates templates, applies the required Grafana variables to the templates, and re-imports the templates to Grafana. Upon completion of `sync_hazelcast_folders` execution, the browser contents and the template files in `etc/dashboards/Hazelcast*` will be in sync.
+
+```bash
+# Using 'job':
+./sync_hazelcast_folders -label job
+# To make dashboards read only
+./sync_hazelcast_folders -label job -readonly
+
+# For Kubernetes:
+./sync_hazelcast_folders -label namespace
+# To make dashboards read only
+./sync_hazelcast_folders -label namespace -readonly
 ```
 
 ## 9. Other Commands

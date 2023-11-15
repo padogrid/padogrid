@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -17,6 +20,18 @@
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/efe1db63-f668-47ff-abc1-628930e3a365/00main-perf-test?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
+      },
       {
         "asDropdown": true,
         "icon": "external link",
@@ -47,7 +62,10 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "",
         "fieldConfig": {
           "defaults": {
@@ -55,9 +73,10 @@
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
-              "axisLabel": "CPU",
+              "axisLabel": "Put Latency (msec)",
               "axisPlacement": "auto",
               "barAlignment": 0,
               "drawStyle": "line",
@@ -99,104 +118,15 @@
                 }
               ]
             },
-            "unit": "percent"
+            "unit": "short"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 5,
-          "w": 24,
+          "h": 7,
+          "w": 23,
           "x": 0,
           "y": 0
-        },
-        "id": 4,
-        "links": [],
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": false
-          },
-          "tooltip": {
-            "mode": "multi",
-            "sort": "none"
-          }
-        },
-        "pluginVersion": "10.1.1",
-        "targets": [
-          {
-            "datasource": "${DATASOURCE}",
-            "expr": "java_lang_OperatingSystem_SystemCpuLoad",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "refId": "A"
-          }
-        ],
-        "title": "System CPU",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "${DATASOURCE}",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "Memory Used (MiB)",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 10,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "never",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "bytes"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 5,
-          "w": 24,
-          "x": 0,
-          "y": 5
         },
         "id": 6,
         "links": [],
@@ -215,36 +145,38 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_used{area=\"heap\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "expr": "com_hazelcast_Metrics_totalPutLatency{$ClusterFilterLabel=\"$Cluster\",tag0=\"\\\"name=eligibility\\\"\"}/com_hazelcast_Metrics_putCount{tag0=\"\\\"name=eligibility\\\"\"}",
             "format": "time_series",
             "intervalFactor": 1,
-            "legendFormat": "Used: {{instance}}",
+            "legendFormat": "{{instance}}",
+            "range": true,
             "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_max{area=\"heap\"}",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Max: {{instance}}",
-            "refId": "B"
           }
         ],
-        "title": "Heap (Used vs. Max)",
+        "title": "Put Latency (eligibility)",
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "",
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
-              "axisLabel": "Memory Used (MiB)",
+              "axisLabel": "Put Latency (msec)",
               "axisPlacement": "auto",
               "barAlignment": 0,
               "drawStyle": "line",
@@ -286,15 +218,15 @@
                 }
               ]
             },
-            "unit": "bytes"
+            "unit": "short"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 6,
-          "w": 24,
+          "h": 8,
+          "w": 23,
           "x": 0,
-          "y": 10
+          "y": 7
         },
         "id": 2,
         "links": [],
@@ -313,35 +245,118 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_used{area=\"nonheap\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "expr": "com_hazelcast_Metrics_totalPutLatency{$ClusterFilterLabel=\"$Cluster\",tag0=\"\\\"name=profile\\\"\"}/com_hazelcast_Metrics_putCount{tag0=\"\\\"name=profile\\\"\"}",
             "format": "time_series",
             "intervalFactor": 1,
-            "legendFormat": "Used: {{instance}}",
+            "legendFormat": "{{instance}}",
+            "range": true,
             "refId": "A"
-          },
-          {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_committed{area=\"nonheap\"}",
-            "format": "time_series",
-            "intervalFactor": 1,
-            "legendFormat": "Committed: {{instance}}",
-            "refId": "B"
           }
         ],
-        "title": "Non-Heap",
+        "title": "Put Latency (profile)",
         "type": "timeseries"
       }
     ],
     "refresh": "5s",
     "schemaVersion": 38,
-    "style": "dark",
     "tags": [
-      "perf_test-system",
+      "perf_test-put",
       "perf_test"
     ],
     "templating": {
-      "list": []
+      "list": [
+        {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
+          "hide": 2,
+          "name": "ClusterFilterLabel",
+          "query": "job",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Cluster",
+          "multi": false,
+          "name": "Cluster",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 2,
+          "includeAll": false,
+          "label": "Cluster2",
+          "multi": false,
+          "name": "Cluster2",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
     },
     "time": {
       "from": "now-15m",
@@ -349,6 +364,7 @@
     },
     "timepicker": {
       "refresh_intervals": [
+        "2s",
         "5s",
         "10s",
         "30s",
@@ -373,8 +389,8 @@
       ]
     },
     "timezone": "",
-    "title": "System Load",
-    "uid": "f70267e0-3d39-4a9c-abc5-ab95a78d2b54",
+    "title": "Put Operations",
+    "uid": "c1e4a3bc-3fb6-481c-a819-8cce943e972f",
     "weekStart": ""
   },
   "folderId": "${FOLDER_ID}",

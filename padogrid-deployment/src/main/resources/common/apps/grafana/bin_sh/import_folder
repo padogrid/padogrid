@@ -51,8 +51,15 @@ DESCRIPTION
    $DASHBOARDS_DIR
 
 OPTIONS
-   -dataosource datasource_name
-             Datasource name. Default: $DEFAULT_DATASOURCE
+   -datasource datasource_name
+             Creates a Prometheus data source instance with the specified name
+             and the following URL:
+
+                $PROMETHEUS_URL
+             
+             You can change the the URL in the 'setenv.sh' file.
+              
+             Default: $DEFAULT_DATASOURCE
 
    -folder folder_name
              Folder name. Default: $DEFAULT_FOLDER
@@ -80,10 +87,10 @@ fi
 ./create_datasource_prometheus -datasource $DATASOURCE
 
 for FOLDER in $FOLDERS; do
-   # 2. Create the perf_test folder to which all of the dashboards are to be imported.
+   # 2. Create the folder to which all of the dashboards are to be imported.
    ./create_folder -folder $FOLDER
 
-   # 3. Get all folders from Grafana and find the perf_test folder ID
+   # 3. Get all folders from Grafana and find this folder's folder ID
    TMP_FILE=$TMP_DIR/folders-$FOLDER.json
    ./get_folders > $TMP_FILE
    __ID=`./get_folder_id -folder $FOLDER`

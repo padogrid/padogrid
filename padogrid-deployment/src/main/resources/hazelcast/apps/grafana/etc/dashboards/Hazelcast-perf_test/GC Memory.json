@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -18,6 +21,18 @@
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/efe1db63-f668-47ff-abc1-628930e3a365/00main-perf-test?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
+      },
       {
         "asDropdown": true,
         "icon": "external link",
@@ -48,7 +63,36 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "",
+        "gridPos": {
+          "h": 4,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 9,
+        "options": {
+          "code": {
+            "language": "plaintext",
+            "showLineNumbers": false,
+            "showMiniMap": false
+          },
+          "content": "*This dashboard displays PS (Parallel Scavenge) garbage collector metrics, which are typically used in JDK 9+.*\n\n[Go to G1 Garbage Collector](/d/b37afb56-a1ba-4146-9b90-d3159850e518/g1-gc-time?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range})",
+          "mode": "markdown"
+        },
+        "pluginVersion": "10.2.0",
+        "title": "G1 Garbage Collector",
+        "type": "text"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "",
         "fieldConfig": {
           "defaults": {
@@ -56,6 +100,7 @@
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -108,7 +153,7 @@
           "h": 5,
           "w": 12,
           "x": 0,
-          "y": 0
+          "y": 4
         },
         "id": 5,
         "links": [],
@@ -127,16 +172,22 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_used{area=\"heap\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_memory_bytes_used{$ClusterFilterLabel=\"$Cluster\",area=\"heap\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Used: {{instance}}",
             "refId": "A"
           },
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_bytes_max{area=\"heap\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_memory_bytes_max{$ClusterFilterLabel=\"$Cluster\",area=\"heap\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Max: {{instance}}",
@@ -147,7 +198,10 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "",
         "fieldConfig": {
           "defaults": {
@@ -155,6 +209,7 @@
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -207,7 +262,7 @@
           "h": 5,
           "w": 12,
           "x": 12,
-          "y": 0
+          "y": 4
         },
         "id": 8,
         "links": [],
@@ -226,9 +281,12 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_bytes_used{area=\"nonheap\"}",
+            "expr": "jvm_memory_bytes_used{$ClusterFilterLabel=\"$Cluster\", area=\"nonheap\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Used: {{instance}}",
@@ -236,9 +294,12 @@
             "refId": "A"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_bytes_committed{area=\"nonheap\"}",
+            "expr": "jvm_memory_bytes_committed{$ClusterFilterLabel=\"$Cluster\",area=\"nonheap\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Committed: {{instance}}",
@@ -250,13 +311,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -309,7 +374,7 @@
           "h": 5,
           "w": 12,
           "x": 0,
-          "y": 5
+          "y": 9
         },
         "id": 2,
         "links": [],
@@ -328,9 +393,12 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_pool_bytes_used{pool=~\".+Eden Space\"}",
+            "expr": "jvm_memory_pool_bytes_used{$ClusterFilterLabel=\"$Cluster\",pool=~\".+Eden Space\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Used: {{instance}}",
@@ -338,9 +406,12 @@
             "refId": "A"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_pool_bytes_committed{pool=\".Eden Space\"}",
+            "expr": "jvm_memory_pool_bytes_committed{$ClusterFilterLabel=\"$Cluster\",pool=\".Eden Space\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Committed: {{instance}}",
@@ -352,13 +423,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -411,7 +486,7 @@
           "h": 5,
           "w": 12,
           "x": 12,
-          "y": 5
+          "y": 9
         },
         "id": 6,
         "links": [],
@@ -430,16 +505,22 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_pool_bytes_used{pool=\"Metaspace\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_memory_pool_bytes_used{$ClusterFilterLabel=\"$Cluster\",pool=\"Metaspace\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Used: {{instance}}",
             "refId": "A"
           },
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_memory_pool_bytes_committed{pool=\"Metaspace\"} ",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_memory_pool_bytes_committed{$ClusterFilterLabel=\"$Cluster\",pool=\"Metaspace\"} ",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Committed: {{instance}}",
@@ -450,13 +531,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -509,7 +594,7 @@
           "h": 5,
           "w": 12,
           "x": 0,
-          "y": 10
+          "y": 14
         },
         "id": 4,
         "links": [],
@@ -528,9 +613,12 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_pool_bytes_used{pool=~\".+Old Gen\"}",
+            "expr": "jvm_memory_pool_bytes_used{$ClusterFilterLabel=\"$Cluster\",pool=~\".+Old Gen\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Used: {{instance}}",
@@ -538,9 +626,12 @@
             "refId": "A"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_pool_bytes_committed{pool=~\".+Old Gen\"}",
+            "expr": "jvm_memory_pool_bytes_committed{$ClusterFilterLabel=\"$Cluster\",pool=~\".+Old Gen\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Committed: {{instance}}",
@@ -552,13 +643,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -611,7 +706,7 @@
           "h": 5,
           "w": 12,
           "x": 12,
-          "y": 10
+          "y": 14
         },
         "id": 3,
         "links": [],
@@ -630,9 +725,12 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_pool_bytes_used{pool=~\".+Survivor Space\"}",
+            "expr": "jvm_memory_pool_bytes_used{$ClusterFilterLabel=\"$Cluster\",pool=~\".+Survivor Space\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Used: {{instance}}",
@@ -640,9 +738,12 @@
             "refId": "A"
           },
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_memory_pool_bytes_committed{pool=~\".+Survivor Space\"}",
+            "expr": "jvm_memory_pool_bytes_committed{$ClusterFilterLabel=\"$Cluster\",pool=~\".+Survivor Space\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "Committed: {{instance}}",
@@ -656,13 +757,99 @@
     ],
     "refresh": "5s",
     "schemaVersion": 38,
-    "style": "dark",
     "tags": [
       "gc",
       "perf_test"
     ],
     "templating": {
-      "list": []
+      "list": [
+        {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
+          "hide": 2,
+          "name": "ClusterFilterLabel",
+          "query": "job",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Cluster",
+          "multi": false,
+          "name": "Cluster",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 2,
+          "includeAll": false,
+          "label": "Cluster2",
+          "multi": false,
+          "name": "Cluster2",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
     },
     "time": {
       "from": "now-5m",

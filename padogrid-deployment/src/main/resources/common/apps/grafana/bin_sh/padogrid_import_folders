@@ -28,10 +28,10 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   ./$EXECUTABLE - Export PadoGrid dashboards, create templates, update variables, and re-import to Grafana
+   ./$EXECUTABLE - Update and import PadoGrid provided dashboard templates
 
 SYNOPSIS
-   ./$EXECUTABLE [-readonly] [-label prometheus_label] [-clusters cluster_list] [-?]
+   ./$EXECUTABLE [-readonly] [-label prometheus_label] [-?]
 
    -label prometheus_label
              The name of the Prometheus label to apply the cluster list filter. This
@@ -41,13 +41,12 @@ SYNOPSIS
              since all the members of a Hazelcast cluster start in the same namespace.
              Default: $DEFAULT_LABEL
 
-   -clusters cluster_list
-             A comma-separated list of cluster names. If Prometheus is locally launched, then
-             the cluster names must match the 'job_name' values in the Prometheus configuration
-             file. Default: $DEFAULT_CLUSTERS
-
 DESCRIPTION
-   Exports PadoGrid dashboards, create templates, update variables, and re-import to Grafana.
+   Updates and imports the PadoGrid provided dashboard templates. This command
+   replaces the following folders in Grafana with the repective templates
+   in the 'etc/dashboards' directory.
+
+   $PADOGRID_FOLDERS
 
 OPTIONS
    -readonly
@@ -57,38 +56,27 @@ DEFAULT
    ./$EXECUTABLE
 
 SEE ALSO
-   export_folder(1), copy_template_to_etc(1), update_cluster_templating_padogrid(1),
-   delete_folder(1), import_folder(1)
+   padogrid_export_folders(1), padogrid_sync_folders(1) 
 
 EOF
 exit
 fi
 
-# Export all and create templates
-./export_folder -folder Hazelcast
-./export_folder -folder HazelcastDual
-./export_folder -folder HazelcastAll
-./export_to_template
-./copy_template_to_etc -folder Hazelcast
-./copy_template_to_etc -folder HazelcastDual
-./copy_template_to_etc -folder HazelcastAll
-
 # Update PadoGrid folders
 if [ "$READONLY_SPECIFIED" == "true" ]; then
-   ./update_cluster_templating_padogrid -label $LABEL -clusters $CLUSTERS -readonly
+   ./padogrid_update_cluster_templating -label $LABEL -readonly
 else
-   ./update_cluster_templating_padogrid -label $LABEL -clusters $CLUSTERS
+   ./padogrid_update_cluster_templating -label $LABEL
 fi
 
 # Delete PadoGrid folders in Grafana
-echo "Deleting Hazelcast..."
-./delete_folder -folder Hazelcast
-echo "Deleting HazelcastDual..."
-./delete_folder -folder HazelcastDual
-echo "Deleting HazelcastAll..."
-./delete_folder -folder HazelcastAll
+for FOLDER in $PADOGRID_FOLDERS; do
+   echo "Deleting $FOLDER..."
+   ./delete_folder -folder $FOLDER
+done
 
 # Re-import PadoGrid folders in Grafana
-./import_folder -folder Hazelcast
-./import_folder -folder HazelcastDual
-./import_folder -folder HazelcastAll
+for FOLDER in $PADOGRID_FOLDERS; do
+   echo "Importing $FOLDER..."
+   ./import_folder -folder $FOLDER
+done

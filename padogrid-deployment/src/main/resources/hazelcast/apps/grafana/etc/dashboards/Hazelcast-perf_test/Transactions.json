@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -17,6 +20,18 @@
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/efe1db63-f668-47ff-abc1-628930e3a365/00main-perf-test?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
+      },
       {
         "asDropdown": true,
         "icon": "external link",
@@ -47,7 +62,10 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "Average transaction time measured from each member.",
         "fieldConfig": {
           "defaults": {
@@ -55,6 +73,7 @@
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "Member Average Time (msec)",
@@ -126,9 +145,12 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "com_hazelcast_Metrics_totalExecutionTime{tag0=\"\\\"name=elig-executor\\\"\"}/com_hazelcast_Metrics_completed{tag0=\"\\\"name=elig-executor\\\"\"}",
+            "expr": "com_hazelcast_Metrics_totalExecutionTime{$ClusterFilterLabel=\"$Cluster\",tag0=\"\\\"name=elig-executor\\\"\"}/com_hazelcast_Metrics_completed{tag0=\"\\\"name=elig-executor\\\"\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -140,13 +162,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "Get Operation Average Time (msec)",
@@ -218,9 +244,12 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "com_hazelcast_Metrics_totalMaxGetLatency{tag0=\"\\\"name=profile\\\"\"}/com_hazelcast_Metrics_getCount{tag0=\"\\\"name=profile\\\"\"}",
+            "expr": "com_hazelcast_Metrics_totalMaxGetLatency{$ClusterFilterLabel=\"$Cluster\",tag0=\"\\\"name=profile\\\"\"}/com_hazelcast_Metrics_getCount{tag0=\"\\\"name=profile\\\"\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -234,13 +263,99 @@
     ],
     "refresh": "5s",
     "schemaVersion": 38,
-    "style": "dark",
     "tags": [
       "perf_test-transactions",
       "perf_test"
     ],
     "templating": {
-      "list": []
+      "list": [
+        {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
+          "hide": 2,
+          "name": "ClusterFilterLabel",
+          "query": "job",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Cluster",
+          "multi": false,
+          "name": "Cluster",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 2,
+          "includeAll": false,
+          "label": "Cluster2",
+          "multi": false,
+          "name": "Cluster2",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
     },
     "time": {
       "from": "now-15m",

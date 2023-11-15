@@ -33,7 +33,7 @@ NAME
    ./$EXECUTABLE - Update the cluster specific variables in all dashaboards
 
 SYNOPSIS
-   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-clusters cluster_list] [-type single|dual|all] [-readonly] [-?]
+   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-type single|dual|all] [-readonly] [-?]
 
 DESCRIPTION
    Updates cluster specific variables in all dashboards. The cluster variable take
@@ -81,14 +81,9 @@ DESCRIPTION
    
       ../etc/prometheus.yml
 
-   Note that the default value of 'job_name' and the '-clusters' option is '$DEFAULT_CLUSTERS'.
-
    You can substitute the default '$DEFAULT_LABEL' label with any label that the underlying
-   Prometheus server supports. For example, in Kubernetes, you may want to substitute
-   it with 'namespace' (or 'service) since a Hazelcast cluster is deployed per Kubernetes
-   namespace.
-
-   See the EXAMPLES section for adding multiple clusters to Grafana dashboards.
+   Prometheus server supports. For example, in Kubernetes, it should be substitute with
+   'namespace' (or 'service).
 
 OPTIONS
    -folder folder_name
@@ -101,22 +96,6 @@ OPTIONS
              the EXAMPLES section below. For Kubernetes, the 'namespace' label may be
              more approriate since all the members of a Hazelcast cluster start in the
              same namespace. Default: $DEFAULT_LABEL
-
-   -clusters cluster_list
-             A comma-separated pair of default target cluster names. This option only
-             applies to the 'dual' and 'all' dashboards which pass these values
-             when switching to from dual to single, all to single, and all to dual.
-             They are used to set the cluster pulldown values. Without them, the
-             cluster pulldown menus will not have values leading to invalid cluster
-             errors.
-             
-             If this option is not specified then the default cluster, then it sets
-             the default pair of '$DEFAULT_CLUSTERS'.
-
-             The cluster names must match the 'job_name' values in the Prometheus
-             configuration file. For Kubernetes, see below for details.
-
-             Default: $DEFAULT_CLUSTERS
 
    -type single|dual|all
              If 'single', then it adds a single pulldown menu in the toolbar. This
@@ -134,7 +113,7 @@ OPTIONS
            If specified, then the dashboards are for read only. Default: editable
 
 DEFAULT
-   ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL -clusters $DEFAULT_CLUSTERS
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL
 
 EXAMPLES
 
@@ -156,17 +135,6 @@ EXAMPLES
              static_configs:
                  - targets: [localhost:8391, localhost:8392, localhost:8393, localhost:8394, localhost:8395, localhost:8396, localhost:8397, localhost:8398, localhost:8399]
 
-      To include 'myhz' and 'myhz2' in Grafana dashboards, execute this command as follows.
-
-         ./$EXECUTABLE -clusters "myhz,myhz2"
-
-      The above command updates the JSON files in the following directory.
-
-         $DASHBOARDS_DIR/$DEFAULT_FOLDER
-
-      You can now update the entire $DEFAULT_FOLDER folder in Granana by deleting and importing
-      it as follows.
-
          ./delete_folder -folder $DEFAULT_FOLDER
          ./import_folder -folder $DEFAULT_FOLDER
 
@@ -178,7 +146,7 @@ EXAMPLES
       'service' labels which we can use to filter the clusters. For example, we can use the
       '-label' option to specify the 'namespace' label as follows.
 
-      ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2"
+      ./$EXECUTABLE -label namespace
 
    Example 3: Dual Clusters
 
@@ -187,15 +155,23 @@ EXAMPLES
       monitoring two clusters in a single view. To import 'HazelcastDual' individually, you would
       execute the following command.
 
-      ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2" -folder HazelcastDual -type dual
+      Using 'job' label:
+         ./$EXECUTABLE -label job -folder HazelcastDual -type dual
+
+      Using 'namespace' for Kubernetes:
+         ./$EXECUTABLE -label namespace -folder HazelcastDual -type dual
 
    Example 4: All Clusters
 
-      If your dashboards require all metrics from all clusters, then you can use the option '-all'.
+      If your dashboards require metrics from all clusters, then you can use the option '-all'.
       The 'HazelcastAll' folder contains dashboards that use the \$ClusterList variable in
       regex to filter metrics. The following imports the 'HazelcastAll' folder.
 
-      ./$EXECUTABLE -label namespace -clusters "namespace1,namespace2" -folder HazelcastAll -type all
+      Using 'job' label:
+         ./$EXECUTABLE -label job -folder HazelcastAll -type all
+
+      Using 'namespace' label for Kubernetes:
+         ./$EXECUTABLE -label namespace -folder HazelcastAll -type all
 
 SEE ALSO
    ../etc/prometheus.yml
@@ -233,13 +209,38 @@ for CLUSTER in $CLUSTERS; do
    let INDEX=INDEX+1
 done
 
-DATASOURCE_OPTIONS="
+DATASOURCE_SINGLE_OPTIONS="
 [
 {
   \"hide\": 0,
   \"includeAll\": false,
   \"label\": \"Source\",
   \"multi\": false,
+  \"name\": \"DataSource\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+#
+# Grafana does not support mixing metrics from multiple data sources 
+# via a data source variable. The mixed data source support is limited
+# to individual data source selection per metric. (11/15/2003)
+# The following is meant for the 'all' type allowing selection of multiple
+# data sources.
+#
+DATASOURCE_MULTI_OPTIONS="
+[
+{
+  \"hide\": 0,
+  \"includeAll\": true,
+  \"label\": \"Source\",
+  \"multi\": true,
   \"name\": \"DataSource\",
   \"options\": [],
   \"query\": \"prometheus\",
@@ -362,37 +363,8 @@ CLUSTER2_OPTIONS="
 ]
 "
 
-#
-# $Cluster - constant for "all" dashboards. This value required by both non-dual and dual dashboards.
-#
-CLUSTER_CONSTANT_OPTIONS="
-[
-{
- \"hide\": 2,
- \"name\": \"Cluster\",
- \"query\": \"$cluster\",
- \"skipUrlSync\": false,
- \"type\": \"constant\",
- \"datasource\": \"\${DATASOURCE}\"
-}
-]
-"
-
-#
-# $Cluster2 - constant for non-dual dashboards. This value required by dual dashboards.
-#
-CLUSTER2_CONSTANT_OPTIONS="
-[
-{
- \"hide\": 2,
- \"name\": \"Cluster2\",
- \"query\": \"$cluster2\",
- \"skipUrlSync\": false,
- \"type\": \"constant\",
- \"datasource\": \"\${DATASOURCE}\"
-}
-]
-"
+CLUSTER_HIDE_OPTIONS=$(echo $CLUSTER_OPTIONS | sed 's/"hide": 0/"hide": 2/')
+CLUSTER2_HIDE_OPTIONS=$(echo $CLUSTER2_OPTIONS | sed 's/"hide": 0/"hide": 2/')
 
 #
 # $ClusterFilterLabel
@@ -422,11 +394,11 @@ FOLDER_PATH="$DASHBOARDS_DIR/$FOLDER"
 
 case "$TYPE_ARG" in
 single)
-   CLUSTER2_OPTIONS=$CLUSTER2_CONSTANT_OPTIONS
+   CLUSTER2_OPTIONS=$CLUSTER2_HIDE_OPTIONS
    ;;
 all)
-   CLUSTER_OPTIONS=$CLUSTER_CONSTANT_OPTIONS
-   CLUSTER2_OPTIONS=$CLUSTER2_CONSTANT_OPTIONS
+   CLUSTER_OPTIONS=$CLUSTER_HIDE_OPTIONS
+   CLUSTER2_OPTIONS=$CLUSTER2_HIDE_OPTIONS
    ;;
 dual)
    ;;
@@ -446,7 +418,7 @@ all)
                   | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
                   | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
-                  | .dashboard.templating.list |= $DATASOURCE_OPTIONS + .
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
    done
@@ -463,7 +435,7 @@ all)
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
-                  | .dashboard.templating.list |= $DATASOURCE_OPTIONS + .
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
    done

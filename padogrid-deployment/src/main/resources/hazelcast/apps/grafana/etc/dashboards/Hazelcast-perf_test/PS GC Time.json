@@ -4,7 +4,10 @@
       "list": [
         {
           "builtIn": 1,
-          "datasource": "${DATASOURCE}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
           "enable": true,
           "hide": true,
           "iconColor": "rgba(0, 211, 255, 1)",
@@ -19,11 +22,25 @@
     "graphTooltip": 0,
     "links": [
       {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/efe1db63-f668-47ff-abc1-628930e3a365/00main-perf-test?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
+      },
+      {
         "asDropdown": true,
         "icon": "external link",
         "includeVars": false,
         "keepTime": true,
-        "tags": [],
+        "tags": [
+          "perf_test"
+        ],
         "targetBlank": false,
         "title": "perf_test",
         "tooltip": "",
@@ -46,7 +63,36 @@
     "liveNow": false,
     "panels": [
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "",
+        "gridPos": {
+          "h": 3,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 8,
+        "options": {
+          "code": {
+            "language": "plaintext",
+            "showLineNumbers": false,
+            "showMiniMap": false
+          },
+          "content": "*This dashboard displays PS (Parallel Scavenge) garbage collector metrics, which are typically used in JDK 1.8.* [Go to G1 Garbage Collector.](/d/b37afb56-a1ba-4146-9b90-d3159850e518/g1-gc-time?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range})",
+          "mode": "markdown"
+        },
+        "pluginVersion": "10.2.0",
+        "title": "PS (Parallel Scavenge) Garbage Collector",
+        "type": "text"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "",
         "fieldConfig": {
           "defaults": {
@@ -54,6 +100,7 @@
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -106,7 +153,7 @@
           "h": 5,
           "w": 12,
           "x": 0,
-          "y": 0
+          "y": 3
         },
         "id": 7,
         "links": [],
@@ -125,9 +172,12 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
             "editorMode": "code",
-            "expr": "jvm_gc_collection_seconds_sum{gc=~\"PS Scavenge|.+Old Generation\"}/jvm_gc_collection_seconds_count{gc=~\"PS Scavenge|.+Old Generation\"}",
+            "expr": "jvm_gc_collection_seconds_sum{$ClusterFilterLabel=\"$Cluster\",gc=~\"PS Scavenge|.+Old Generation\"}/jvm_gc_collection_seconds_count{gc=~\"PS Scavenge|.+Old Generation\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -139,7 +189,10 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "description": "",
         "fieldConfig": {
           "defaults": {
@@ -147,6 +200,7 @@
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -199,7 +253,7 @@
           "h": 5,
           "w": 12,
           "x": 12,
-          "y": 0
+          "y": 3
         },
         "id": 4,
         "links": [],
@@ -218,8 +272,11 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_gc_collection_seconds_sum{gc=\"PS MarkSweep\"} /jvm_gc_collection_seconds_count{gc=\"PS MarkSweep\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_gc_collection_seconds_sum{$ClusterFilterLabel=\"$Cluster\",gc=\"PS MarkSweep\"} /jvm_gc_collection_seconds_count{gc=\"PS MarkSweep\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -230,13 +287,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -289,7 +350,7 @@
           "h": 5,
           "w": 12,
           "x": 0,
-          "y": 5
+          "y": 8
         },
         "id": 2,
         "links": [],
@@ -308,8 +369,11 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_gc_collection_seconds_count{gc=\"PS Scavenge\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_gc_collection_seconds_count{$ClusterFilterLabel=\"$Cluster\",gc=\"PS Scavenge\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -320,13 +384,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -379,7 +447,7 @@
           "h": 5,
           "w": 12,
           "x": 12,
-          "y": 5
+          "y": 8
         },
         "id": 5,
         "links": [],
@@ -398,8 +466,11 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_gc_collection_seconds_count{gc=\"PS MarkSweep\"}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_gc_collection_seconds_count{$ClusterFilterLabel=\"$Cluster\",gc=\"PS MarkSweep\"}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -410,13 +481,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -469,7 +544,7 @@
           "h": 5,
           "w": 12,
           "x": 0,
-          "y": 10
+          "y": 13
         },
         "id": 3,
         "links": [],
@@ -488,8 +563,11 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_gc_collection_seconds_sum{gc=\"PS Scavenge\",}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_gc_collection_seconds_sum{$ClusterFilterLabel=\"$Cluster\",gc=\"PS Scavenge\",}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -500,13 +578,17 @@
         "type": "timeseries"
       },
       {
-        "datasource": "${DATASOURCE}",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
         "fieldConfig": {
           "defaults": {
             "color": {
               "mode": "palette-classic"
             },
             "custom": {
+              "axisBorderShow": false,
               "axisCenteredZero": false,
               "axisColorMode": "text",
               "axisLabel": "",
@@ -559,7 +641,7 @@
           "h": 5,
           "w": 12,
           "x": 12,
-          "y": 10
+          "y": 13
         },
         "id": 6,
         "links": [],
@@ -578,8 +660,11 @@
         "pluginVersion": "10.1.1",
         "targets": [
           {
-            "datasource": "${DATASOURCE}",
-            "expr": "jvm_gc_collection_seconds_sum{gc=\"PS MarkSweep\",}",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "expr": "jvm_gc_collection_seconds_sum{$ClusterFilterLabel=\"$Cluster\",gc=\"PS MarkSweep\",}",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{instance}}",
@@ -592,13 +677,99 @@
     ],
     "refresh": "5s",
     "schemaVersion": 38,
-    "style": "dark",
     "tags": [
       "gc",
       "perf_test"
     ],
     "templating": {
-      "list": []
+      "list": [
+        {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
+          "hide": 2,
+          "name": "ClusterFilterLabel",
+          "query": "job",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Cluster",
+          "multi": false,
+          "name": "Cluster",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(job)",
+          "hide": 2,
+          "includeAll": false,
+          "label": "Cluster2",
+          "multi": false,
+          "name": "Cluster2",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(job)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
     },
     "time": {
       "from": "now-5m",
