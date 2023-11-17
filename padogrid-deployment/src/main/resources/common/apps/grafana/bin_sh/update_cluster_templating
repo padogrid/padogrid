@@ -192,23 +192,25 @@ if [ "$TYPE_ARG" != "single" ] && [ "$TYPE_ARG" != "dual" ] && [ "$TYPE_ARG" != 
    exit 1
 fi
 
+PADOGRID_LINK_OPTIONS="
+[
+{
+   \"asDropdown\": false,
+   \"icon\": \"dashboard\",
+   \"includeVars\": false,
+   \"keepTime\": false,
+   \"tags\": [],
+   \"targetBlank\": false,
+   \"title\": \"PadoGrid\",
+   \"tooltip\": \"About PadoGrid\",
+   \"type\": \"link\",
+   \"url\": \"/d/fdf91a72-5304-4ac4-bb42-9e30f0f0ec11/padogrid\${__url_time_range}\"
+}]
+"
 
 #
-# $Cluster, $Cluster2
+# Data Sources
 #
-CLUSTERS=$(echo $CLUSTERS | sed 's/,/ /g')
-cluster=$DEFAULT_CLUSTERS
-cluster2=$DEFAULT_CLUSTERS
-INDEX=0
-for CLUSTER in $CLUSTERS; do
-   if [ $INDEX -eq 0 ]; then
-      cluster="$CLUSTER"
-   fi
-   # cluster2 constant value for going from non-dual to dual dashboards
-   cluster2=$CLUSTER
-   let INDEX=INDEX+1
-done
-
 DATASOURCE_SINGLE_OPTIONS="
 [
 {
@@ -217,6 +219,60 @@ DATASOURCE_SINGLE_OPTIONS="
   \"label\": \"Source\",
   \"multi\": false,
   \"name\": \"DataSource\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+DATASOURCE2_SINGLE_OPTIONS="
+[
+{
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Source2\",
+  \"multi\": false,
+  \"name\": \"DataSource2\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+DATASOURCE_HIDE_SINGLE_OPTIONS="
+[
+{
+  \"hide\": 2,
+  \"includeAll\": false,
+  \"label\": \"Source\",
+  \"multi\": false,
+  \"name\": \"DataSource\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+DATASOURCE2_HIDE_SINGLE_OPTIONS="
+[
+{
+  \"hide\": 2,
+  \"includeAll\": false,
+  \"label\": \"Source2\",
+  \"multi\": false,
+  \"name\": \"DataSource2\",
   \"options\": [],
   \"query\": \"prometheus\",
   \"queryValue\": \"\",
@@ -340,7 +396,7 @@ CLUSTER2_OPTIONS="
   },
   \"datasource\": {
     \"type\": \"prometheus\",
-    \"uid\": \"\${DataSource}\"
+    \"uid\": \"\${DataSource2}\"
   },
   \"definition\": \"label_values(job)\",
   \"hide\": 0,
@@ -395,10 +451,12 @@ FOLDER_PATH="$DASHBOARDS_DIR/$FOLDER"
 case "$TYPE_ARG" in
 single)
    CLUSTER2_OPTIONS=$CLUSTER2_HIDE_OPTIONS
+   DATASOURCE2_SINGLE_OPTIONS=$DATASOURCE2_HIDE_SINGLE_OPTIONS
    ;;
 all)
    CLUSTER_OPTIONS=$CLUSTER_HIDE_OPTIONS
    CLUSTER2_OPTIONS=$CLUSTER2_HIDE_OPTIONS
+   DATASOURCE2_SINGLE_OPTIONS=$DATASOURCE2_HIDE_SINGLE_OPTIONS
    ;;
 dual)
    ;;
@@ -409,16 +467,43 @@ case "$TYPE_ARG" in
 all)
    for file in *; do
       cat "$file" | jq "
-                  del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
                   | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
                   | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
                   | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
-                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
-                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
-                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
-                  | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
                   | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
                   | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+   done
+   ;;
+
+dual)
+   for file in *; do
+      cat "$file" | jq "
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
    done
@@ -427,15 +512,20 @@ all)
 *)
    for file in *; do
       cat "$file" | jq "
-                  del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
                   | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
                   | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
-                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
-                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
-                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
                   | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
    done

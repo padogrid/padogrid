@@ -70,13 +70,16 @@ DATASOURCE_OPTION="{
 }
 "
 
+DATASOURCE2_OPTION="{
+ \"type\": \"prometheus\",
+ \"uid\": \"\${DataSource}\"
+}
+"
+
 pushd $EXPORT_DASHBOARD_DIR > /dev/null 2>&1
 for EXPORT_FOLDER_DIR in *; do
    FOLDER_NAME=$(basename "$EXPORT_FOLDER_DIR")
-#   if [ "$FOLDER_NAME" != "Test" ]; then
-#      continue;
-#   fi
-   
+
    # Create the folder dir in the template dir
    if [ -d $EXPORT_TEMPLATE_DIR/$FOLDER_NAME ]; then
       rm -rf $EXPORT_TEMPLATE_DIR/$FOLDER_NAME
@@ -85,19 +88,36 @@ for EXPORT_FOLDER_DIR in *; do
 
    # Convert the exported files to templates and place them 
    # in the template dir.
+   IS_DUAL_FOLDER="false"
+   for i in $DUAL_FOLDERS; do
+      if [ "$i" == "$FOLDER_NAME" ]; then
+         IS_DUAL_FOLDER="true"
+      fi
+   done
    if [ ! -z "$(ls -A $FOLDER_NAME)" ]; then
       pushd $FOLDER_NAME > /dev/null 2>&1
-      for file in *; do
-#        `cat "$file" | jq --arg DATASOURCE $DATASOURCE_OPTION ".dashboard.annotations.list[].datasource=\"$DATASOURCE_OPTION\" 
-        `cat "$file" | jq ".dashboard.annotations.list[].datasource=$DATASOURCE_OPTION
-                     | .dashboard.panels[].datasource=$DATASOURCE_OPTION
-                     | .dashboard.panels[].targets[]?.datasource=$DATASOURCE_OPTION
-                     | .dashboard.templating.list[]?.datasource=$DATASOURCE_OPTION
-                     | del(.meta) 
-                     | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
-                     | del(.dashboard.version, .dashboard.id)
-                     " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
-      done
+      # Dual folders contain 2 data sources making difficult to update them.
+      # We update only the folder ID for these folders. The user is responsible
+      # for properly adding data sources from Grafana.
+      if [ "$IS_DUAL_FOLDER" == "true" ]; then
+         for file in *; do
+           `cat "$file" | jq "del(.meta) 
+                        | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
+                        | del(.dashboard.version, .dashboard.id)
+                        " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
+         done
+     else
+         for file in *; do
+           `cat "$file" | jq ".dashboard.annotations.list[].datasource=$DATASOURCE_OPTION
+                        | .dashboard.panels[].datasource=$DATASOURCE_OPTION
+                        | .dashboard.panels[].targets[]?.datasource=$DATASOURCE_OPTION
+                        | .dashboard.templating.list[]?.datasource=$DATASOURCE_OPTION
+                        | del(.meta) 
+                        | .folderId=\"\\${FOLDER_ID}\" | .overWrite=false
+                        | del(.dashboard.version, .dashboard.id)
+                        " > "$EXPORT_TEMPLATE_DIR/$FOLDER_NAME/$file" `
+         done
+      fi
       popd > /dev/null 2>&1
    fi
    if [ -z "$(ls -A $FOLDER_NAME)" ]; then

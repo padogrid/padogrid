@@ -105,7 +105,7 @@
 # them using the following environment variables. Folder names must not
 # include spaces.
 #
-SINGLE_FOLDERS="Hazelcast Hazelcast-perf_test"
+SINGLE_FOLDERS="Hazelcast Hazelcast-perf_test Padogrid"
 DUAL_FOLDERS="HazelcastDual"
 ALL_FOLDERS="HazelcastAll"
 
