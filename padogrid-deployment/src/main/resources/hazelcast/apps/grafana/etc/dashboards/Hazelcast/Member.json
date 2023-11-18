@@ -17,7 +17,7 @@
       ]
     },
     "description": "",
-    "editable": true,
+    "editable": false,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -234,7 +234,8 @@
         "options": {
           "displayLabels": [
             "name",
-            "value"
+            "value",
+            "percent"
           ],
           "legend": {
             "displayMode": "list",
@@ -262,12 +263,12 @@
             },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "sum(com_hazelcast_Metrics_usedMemory{instance=\"$Member\"})",
+            "expr": "sum(com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\"})",
             "hide": false,
             "instant": true,
-            "legendFormat": "Used Memory",
+            "legendFormat": "Map Memory",
             "range": false,
-            "refId": "Used Memory"
+            "refId": "Map Memory"
           },
           {
             "datasource": {
@@ -276,7 +277,21 @@
             },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "sum(com_hazelcast_Metrics_freeMemory{instance=\"$Member\"})",
+            "expr": "sum(com_hazelcast_Metrics_usedMemory{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\"})-sum(com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\"})",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Other Used Memory",
+            "range": false,
+            "refId": "Other Used Memory"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_freeMemory{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\"})",
             "hide": false,
             "instant": true,
             "legendFormat": "Free Memory",
@@ -1510,7 +1525,7 @@
         "type": "timeseries"
       },
       {
-        "collapsed": true,
+        "collapsed": false,
         "datasource": {
           "type": "prometheus",
           "uid": "${DataSource}"
@@ -1522,2083 +1537,2289 @@
           "y": 39
         },
         "id": 22,
-        "panels": [
-          {
-            "datasource": "Prometheus",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Time/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "dateTimeAsIsoNoDateIfToday"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "List"
-                  },
-                  "properties": [
-                    {
-                      "id": "color",
-                      "value": {
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 5,
-              "w": 24,
-              "x": 0,
-              "y": 2
-            },
-            "id": 25,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_creationTime{instance=\"$Member\", prefix=\"list\"} ",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_lastUpdateTime{instance=\"$Member\", prefix=\"list\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_lastAccessTime{instance=\"$Member\", prefix=\"list\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "C"
-              }
-            ],
-            "title": "Lists",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {},
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_creationTime": "Creation Time",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lastAccessTime": "Access Time",
-                    "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "localhost:8291": "Count",
-                    "tag0": "List"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "List"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "com_hazelcast_Metrics_ownedEntryCount"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "none"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Memory/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "bytes"
-                    },
-                    {
-                      "id": "links",
-                      "value": []
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Map"
-                  },
-                  "properties": [
-                    {
-                      "id": "links",
-                      "value": [
-                        {
-                          "title": "Map Link",
-                          "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
-                        }
-                      ]
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "blue",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 8,
-              "w": 24,
-              "x": 0,
-              "y": 7
-            },
-            "id": 26,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": true
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "C"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_lockedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "D"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_backupEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "E"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_backupEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "F"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "G"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_dirtyEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "H"
-              }
-            ],
-            "title": "Maps",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {},
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "localhost:8291": "Count",
-                    "tag0": "Map"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "Map"
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "filterByValue",
-                "options": {
-                  "filters": [
-                    {
-                      "config": {
-                        "id": "regex",
-                        "options": {
-                          "value": "__.*"
-                        }
-                      },
-                      "fieldName": "Map"
-                    }
-                  ],
-                  "match": "any",
-                  "type": "exclude"
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "description": "",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Memory/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "bytes"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Latency/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "ms"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Multi Map"
-                  },
-                  "properties": [
-                    {
-                      "id": "links",
-                      "value": [
-                        {
-                          "title": "Multi Map Link",
-                          "url": "/d/ea7dd3d2-355c-4b5a-b48a-c7ffd46939bc/multi-map?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Map=${__value.text}&var-MapType=multiMap&${__url_time_range}"
-                        }
-                      ]
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "blue",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 6,
-              "w": 24,
-              "x": 0,
-              "y": 15
-            },
-            "id": 23,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_putCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "C"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "D"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalMaxPutLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "E"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalMaxGetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "F"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "G"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "H"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_getCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "I"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "J"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalMaxSetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "K"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalMaxRemoveLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "L"
-              }
-            ],
-            "title": "Multi Maps",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {
-                    "com_hazelcast_Metrics_getCount": 6,
-                    "com_hazelcast_Metrics_hits": 4,
-                    "com_hazelcast_Metrics_numberOfEvents": 3,
-                    "com_hazelcast_Metrics_ownedEntryCount": 1,
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": 2,
-                    "com_hazelcast_Metrics_putCount": 5,
-                    "com_hazelcast_Metrics_queryCount": 7,
-                    "com_hazelcast_Metrics_removeCount": 8,
-                    "com_hazelcast_Metrics_totalMaxGetLatency": 11,
-                    "com_hazelcast_Metrics_totalMaxPutLatency": 9,
-                    "com_hazelcast_Metrics_totalMaxSetLatency": 10,
-                    "tag0": 0
-                  },
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_getCount": "Gets",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "com_hazelcast_Metrics_putCount": "Puts",
-                    "com_hazelcast_Metrics_queryCount": "Queries",
-                    "com_hazelcast_Metrics_removeCount": "Removes",
-                    "com_hazelcast_Metrics_totalMaxGetLatency": "Max Get Latency",
-                    "com_hazelcast_Metrics_totalMaxPutLatency": "Max Put Latency",
-                    "com_hazelcast_Metrics_totalMaxRemoveLatency": "Max Remove Latency",
-                    "com_hazelcast_Metrics_totalMaxSetLatency": "Max Set Latency",
-                    "localhost:8291": "Count",
-                    "tag0": "Multi Map"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "Multi Map"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Time/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "dateTimeAsIsoNoDateIfToday"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "PN Counter"
-                  },
-                  "properties": [
-                    {
-                      "id": "color",
-                      "value": {
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 6,
-              "w": 24,
-              "x": 0,
-              "y": 21
-            },
-            "id": 27,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_creationTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalIncrementOperationCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalDecrementOperationCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "F"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_value{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "G"
-              }
-            ],
-            "title": "PN Counters",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {},
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_creationTime": "Creation Time",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "com_hazelcast_Metrics_totalDecrementOperationCount": "Total Decrements",
-                    "com_hazelcast_Metrics_totalIncrementOperationCount": "Total Increments",
-                    "com_hazelcast_Metrics_value": "Value",
-                    "localhost:8291": "Count",
-                    "tag0": "PN Counter"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "PN Counter"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Age/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "ms"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Queue"
-                  },
-                  "properties": [
-                    {
-                      "id": "links",
-                      "value": [
-                        {
-                          "title": "Queue Link",
-                          "url": "/d/e0670375-c477-4f7e-82c8-92f3ddfc2209/queue?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Queue=${__value.text}&var-MapType=queue&${__url_time_range}"
-                        }
-                      ]
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "blue",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 6,
-              "w": 24,
-              "x": 0,
-              "y": 27
-            },
-            "id": 28,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_ownedItemCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_backupItemCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_maxAge{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "F"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_minAge{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "G"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_averageAge{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "C"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfOffers{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "D"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfPolls{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "E"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "I"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfOtherOperations{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "J"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfRejectedOffers{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "K"
-              }
-            ],
-            "title": "Queues",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {},
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_averageAge": "Average Age",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_backupItemCount": "Backups",
-                    "com_hazelcast_Metrics_creationTime": "Creation Time",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_maxAge": "Max Age",
-                    "com_hazelcast_Metrics_minAge": " Min Age",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_numberOfOffers": "Offers",
-                    "com_hazelcast_Metrics_numberOfOtherOperations": "Other Operations",
-                    "com_hazelcast_Metrics_numberOfPolls": "Polls",
-                    "com_hazelcast_Metrics_numberOfRejectedOffers": "Rejected Offers",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "com_hazelcast_Metrics_ownedItemCount": "Items",
-                    "com_hazelcast_Metrics_totalDecrementOperationCount": "Total Decrements",
-                    "com_hazelcast_Metrics_totalIncrementOperationCount": "Total Increments",
-                    "com_hazelcast_Metrics_value": "Value",
-                    "localhost:8291": "Count",
-                    "tag0": "Queue"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "Queue"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "description": "",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Memory/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "bytes"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Latency/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "ms"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Replicated Map"
-                  },
-                  "properties": [
-                    {
-                      "id": "links",
-                      "value": [
-                        {
-                          "title": "Replicated Map Link",
-                          "url": "/d/dd73acf6-0007-473a-a497-54253d0e7329/replicated-map?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Map=${__value.text}&var-MapType=replicatedMap&${__url_time_range}"
-                        }
-                      ]
-                    },
-                    {
-                      "id": "color",
-                      "value": {
-                        "fixedColor": "blue",
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 6,
-              "w": 24,
-              "x": 0,
-              "y": 33
-            },
-            "id": 29,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_putCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "C"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "D"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalMaxPutLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "E"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalMaxGetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "F"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "G"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "H"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_getCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "I"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "J"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_maxPutLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "L"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_maxGetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "K"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_maxRemoveLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "M"
-              }
-            ],
-            "title": "Replicated Maps",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {
-                    "com_hazelcast_Metrics_getCount": 6,
-                    "com_hazelcast_Metrics_hits": 4,
-                    "com_hazelcast_Metrics_numberOfEvents": 3,
-                    "com_hazelcast_Metrics_ownedEntryCount": 1,
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": 2,
-                    "com_hazelcast_Metrics_putCount": 5,
-                    "com_hazelcast_Metrics_queryCount": 7,
-                    "com_hazelcast_Metrics_removeCount": 8,
-                    "com_hazelcast_Metrics_totalMaxGetLatency": 11,
-                    "com_hazelcast_Metrics_totalMaxPutLatency": 9,
-                    "com_hazelcast_Metrics_totalMaxSetLatency": 10,
-                    "tag0": 0
-                  },
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_getCount": "Gets",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_maxGetLatency": "Max Get Latency",
-                    "com_hazelcast_Metrics_maxPutLatency": "Max Put Latency",
-                    "com_hazelcast_Metrics_maxRemoveLatency": "Max Remove Latency",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "com_hazelcast_Metrics_putCount": "Puts",
-                    "com_hazelcast_Metrics_queryCount": "Queries",
-                    "com_hazelcast_Metrics_removeCount": "Removes",
-                    "com_hazelcast_Metrics_totalMaxGetLatency": "Max Get Latency",
-                    "com_hazelcast_Metrics_totalMaxPutLatency": "Max Put Latency",
-                    "com_hazelcast_Metrics_totalMaxRemoveLatency": "Max Remove Latency",
-                    "com_hazelcast_Metrics_totalMaxSetLatency": "Max Set Latency",
-                    "localhost:8291": "Count",
-                    "tag0": "Replicated Map"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "Map"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Time/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "dateTimeAsIsoNoDateIfToday"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Set"
-                  },
-                  "properties": [
-                    {
-                      "id": "color",
-                      "value": {
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 6,
-              "w": 24,
-              "x": 0,
-              "y": 39
-            },
-            "id": 30,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_creationTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"set\"} ",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_lastUpdateTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"set\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_lastAccessTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"set\"}",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "C"
-              }
-            ],
-            "title": "Sets",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {},
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_creationTime": "Creation Time",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lastAccessTime": "Access Time",
-                    "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "localhost:8291": "Count",
-                    "tag0": "Set"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "Map"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Time/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "dateTimeAsIsoNoDateIfToday"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Topic"
-                  },
-                  "properties": [
-                    {
-                      "id": "color",
-                      "value": {
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 6,
-              "w": 12,
-              "x": 0,
-              "y": 45
-            },
-            "id": 31,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": [
-                {
-                  "desc": false,
-                  "displayName": "Total Received Messages"
-                }
-              ]
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalPublishes{instance=\"$Member\", prefix=\"topic\"} ",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalReceivedMessages{instance=\"$Member\", prefix=\"topic\"} ",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              }
-            ],
-            "title": "Topics",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {},
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_creationTime": "Creation Time",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lastAccessTime": "Access Time",
-                    "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "com_hazelcast_Metrics_totalPublishes": "Total Publishe Messages",
-                    "com_hazelcast_Metrics_totalReceivedMessages": "Total Received Messages",
-                    "localhost:8291": "Count",
-                    "tag0": "Topic"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "Map"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          },
-          {
-            "datasource": "Prometheus",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "mode": "thresholds"
-                },
-                "custom": {
-                  "align": "auto",
-                  "cellOptions": {
-                    "type": "color-text"
-                  },
-                  "filterable": true,
-                  "inspect": false
-                },
-                "mappings": [
-                  {
-                    "options": {
-                      "pattern": "^.*(=)(\\w.*).*\"$",
-                      "result": {
-                        "index": 0,
-                        "text": "$2"
-                      }
-                    },
-                    "type": "regex"
-                  }
-                ],
-                "thresholds": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "green"
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": [
-                {
-                  "matcher": {
-                    "id": "byRegexp",
-                    "options": "/.*Time/"
-                  },
-                  "properties": [
-                    {
-                      "id": "unit",
-                      "value": "dateTimeAsIsoNoDateIfToday"
-                    }
-                  ]
-                },
-                {
-                  "matcher": {
-                    "id": "byName",
-                    "options": "Topic"
-                  },
-                  "properties": [
-                    {
-                      "id": "color",
-                      "value": {
-                        "mode": "fixed"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            "gridPos": {
-              "h": 6,
-              "w": 12,
-              "x": 12,
-              "y": 45
-            },
-            "id": 32,
-            "options": {
-              "cellHeight": "sm",
-              "footer": {
-                "countRows": false,
-                "fields": "",
-                "reducer": [
-                  "sum"
-                ],
-                "show": false
-              },
-              "showHeader": true,
-              "sortBy": []
-            },
-            "pluginVersion": "10.2.0",
-            "targets": [
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalPublishes{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"reliableTopic\"} ",
-                "format": "time_series",
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "A"
-              },
-              {
-                "datasource": "Prometheus",
-                "editorMode": "code",
-                "exemplar": false,
-                "expr": "com_hazelcast_Metrics_totalReceivedMessages{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"reliableTopic\"} ",
-                "format": "time_series",
-                "hide": false,
-                "instant": true,
-                "legendFormat": "__auto",
-                "range": false,
-                "refId": "B"
-              }
-            ],
-            "title": "Reliable Topics",
-            "transformations": [
-              {
-                "id": "joinByLabels",
-                "options": {
-                  "join": [
-                    "tag0"
-                  ],
-                  "value": "__name__"
-                }
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {},
-                  "indexByName": {},
-                  "renameByName": {
-                    "Map": "",
-                    "com_hazelcast_Metrics_backupEntryCount": "Backups",
-                    "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
-                    "com_hazelcast_Metrics_creationTime": "Creation Time",
-                    "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
-                    "com_hazelcast_Metrics_hits": "Hits",
-                    "com_hazelcast_Metrics_lastAccessTime": "Access Time",
-                    "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
-                    "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
-                    "com_hazelcast_Metrics_numberOfEvents": "Events",
-                    "com_hazelcast_Metrics_ownedEntryCount": "Entries",
-                    "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
-                    "com_hazelcast_Metrics_totalPublishes": "Total Publishe Messages",
-                    "com_hazelcast_Metrics_totalReceivedMessages": "Total Received Messages",
-                    "localhost:8291": "Count",
-                    "tag0": "Topic"
-                  }
-                }
-              },
-              {
-                "id": "sortBy",
-                "options": {
-                  "fields": {},
-                  "sort": [
-                    {
-                      "desc": false,
-                      "field": "Topic"
-                    }
-                  ]
-                }
-              }
-            ],
-            "type": "table"
-          }
-        ],
+        "panels": [],
         "title": "Data Structures",
         "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Time/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "List"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 5,
+          "w": 24,
+          "x": 0,
+          "y": 40
+        },
+        "id": 25,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_creationTime{instance=\"$Member\", prefix=\"list\"} ",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lastUpdateTime{instance=\"$Member\", prefix=\"list\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lastAccessTime{instance=\"$Member\", prefix=\"list\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "C"
+          }
+        ],
+        "title": "Lists",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_creationTime": "Creation Time",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lastAccessTime": "Access Time",
+                "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "localhost:8291": "Count",
+                "tag0": "List"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "List"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "com_hazelcast_Metrics_ownedEntryCount"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "none"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Memory/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                },
+                {
+                  "id": "links",
+                  "value": []
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 45
+        },
+        "id": 26,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": true
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "C"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lockedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "D"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_backupEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "E"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_backupEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "F"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "G"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_dirtyEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"map\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "H"
+          }
+        ],
+        "title": "Maps",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "localhost:8291": "Count",
+                "tag0": "Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "Map"
+                }
+              ]
+            }
+          },
+          {
+            "id": "filterByValue",
+            "options": {
+              "filters": [
+                {
+                  "config": {
+                    "id": "regex",
+                    "options": {
+                      "value": "__.*"
+                    }
+                  },
+                  "fieldName": "Map"
+                }
+              ],
+              "match": "any",
+              "type": "exclude"
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Memory/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Latency/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "ms"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Multi Map"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Multi Map Link",
+                      "url": "/d/ea7dd3d2-355c-4b5a-b48a-c7ffd46939bc/multi-map?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Map=${__value.text}&var-MapType=multiMap&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 53
+        },
+        "id": 23,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_putCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "C"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "D"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalMaxPutLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "E"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalMaxGetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "F"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "G"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "H"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_getCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "I"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "J"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalMaxSetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "K"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalMaxRemoveLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"multiMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "L"
+          }
+        ],
+        "title": "Multi Maps",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "com_hazelcast_Metrics_getCount": 6,
+                "com_hazelcast_Metrics_hits": 4,
+                "com_hazelcast_Metrics_numberOfEvents": 3,
+                "com_hazelcast_Metrics_ownedEntryCount": 1,
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": 2,
+                "com_hazelcast_Metrics_putCount": 5,
+                "com_hazelcast_Metrics_queryCount": 7,
+                "com_hazelcast_Metrics_removeCount": 8,
+                "com_hazelcast_Metrics_totalMaxGetLatency": 11,
+                "com_hazelcast_Metrics_totalMaxPutLatency": 9,
+                "com_hazelcast_Metrics_totalMaxSetLatency": 10,
+                "tag0": 0
+              },
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_getCount": "Gets",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "com_hazelcast_Metrics_putCount": "Puts",
+                "com_hazelcast_Metrics_queryCount": "Queries",
+                "com_hazelcast_Metrics_removeCount": "Removes",
+                "com_hazelcast_Metrics_totalMaxGetLatency": "Max Get Latency",
+                "com_hazelcast_Metrics_totalMaxPutLatency": "Max Put Latency",
+                "com_hazelcast_Metrics_totalMaxRemoveLatency": "Max Remove Latency",
+                "com_hazelcast_Metrics_totalMaxSetLatency": "Max Set Latency",
+                "localhost:8291": "Count",
+                "tag0": "Multi Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "Multi Map"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Time/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "PN Counter"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 59
+        },
+        "id": 27,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_creationTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalIncrementOperationCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalDecrementOperationCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "F"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_value{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"pnCounter\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "G"
+          }
+        ],
+        "title": "PN Counters",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_creationTime": "Creation Time",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "com_hazelcast_Metrics_totalDecrementOperationCount": "Total Decrements",
+                "com_hazelcast_Metrics_totalIncrementOperationCount": "Total Increments",
+                "com_hazelcast_Metrics_value": "Value",
+                "localhost:8291": "Count",
+                "tag0": "PN Counter"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "PN Counter"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Age/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "ms"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Queue"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Queue Link",
+                      "url": "/d/e0670375-c477-4f7e-82c8-92f3ddfc2209/queue?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Queue=${__value.text}&var-MapType=queue&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 65
+        },
+        "id": 28,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedItemCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_backupItemCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_maxAge{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "F"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_minAge{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "G"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_averageAge{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "C"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfOffers{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "D"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfPolls{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "E"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "I"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfOtherOperations{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "J"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfRejectedOffers{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"queue\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "K"
+          }
+        ],
+        "title": "Queues",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_averageAge": "Average Age",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_backupItemCount": "Backups",
+                "com_hazelcast_Metrics_creationTime": "Creation Time",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_maxAge": "Max Age",
+                "com_hazelcast_Metrics_minAge": " Min Age",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_numberOfOffers": "Offers",
+                "com_hazelcast_Metrics_numberOfOtherOperations": "Other Operations",
+                "com_hazelcast_Metrics_numberOfPolls": "Polls",
+                "com_hazelcast_Metrics_numberOfRejectedOffers": "Rejected Offers",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "com_hazelcast_Metrics_ownedItemCount": "Items",
+                "com_hazelcast_Metrics_totalDecrementOperationCount": "Total Decrements",
+                "com_hazelcast_Metrics_totalIncrementOperationCount": "Total Increments",
+                "com_hazelcast_Metrics_value": "Value",
+                "localhost:8291": "Count",
+                "tag0": "Queue"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "Queue"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Memory/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Latency/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "ms"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Replicated Map"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Replicated Map Link",
+                      "url": "/d/dd73acf6-0007-473a-a497-54253d0e7329/replicated-map?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Map=${__value.text}&var-MapType=replicatedMap&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 71
+        },
+        "id": 29,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_numberOfEvents{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_putCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "C"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_queryCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "D"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalMaxPutLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "E"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalMaxGetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "F"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "G"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "H"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_getCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "I"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_removeCount{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "J"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_maxPutLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "L"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_maxGetLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "K"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_maxRemoveLatency{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"replicatedMap\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "M"
+          }
+        ],
+        "title": "Replicated Maps",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "com_hazelcast_Metrics_getCount": 6,
+                "com_hazelcast_Metrics_hits": 4,
+                "com_hazelcast_Metrics_numberOfEvents": 3,
+                "com_hazelcast_Metrics_ownedEntryCount": 1,
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": 2,
+                "com_hazelcast_Metrics_putCount": 5,
+                "com_hazelcast_Metrics_queryCount": 7,
+                "com_hazelcast_Metrics_removeCount": 8,
+                "com_hazelcast_Metrics_totalMaxGetLatency": 11,
+                "com_hazelcast_Metrics_totalMaxPutLatency": 9,
+                "com_hazelcast_Metrics_totalMaxSetLatency": 10,
+                "tag0": 0
+              },
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_getCount": "Gets",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_maxGetLatency": "Max Get Latency",
+                "com_hazelcast_Metrics_maxPutLatency": "Max Put Latency",
+                "com_hazelcast_Metrics_maxRemoveLatency": "Max Remove Latency",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "com_hazelcast_Metrics_putCount": "Puts",
+                "com_hazelcast_Metrics_queryCount": "Queries",
+                "com_hazelcast_Metrics_removeCount": "Removes",
+                "com_hazelcast_Metrics_totalMaxGetLatency": "Max Get Latency",
+                "com_hazelcast_Metrics_totalMaxPutLatency": "Max Put Latency",
+                "com_hazelcast_Metrics_totalMaxRemoveLatency": "Max Remove Latency",
+                "com_hazelcast_Metrics_totalMaxSetLatency": "Max Set Latency",
+                "localhost:8291": "Count",
+                "tag0": "Replicated Map"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "Map"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Time/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Set"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 77
+        },
+        "id": 30,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_creationTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"set\"} ",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lastUpdateTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"set\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_lastAccessTime{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"set\"}",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "C"
+          }
+        ],
+        "title": "Sets",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_creationTime": "Creation Time",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lastAccessTime": "Access Time",
+                "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "localhost:8291": "Count",
+                "tag0": "Set"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "Map"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Time/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Topic"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 83
+        },
+        "id": 31,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": false,
+              "displayName": "Total Received Messages"
+            }
+          ]
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalPublishes{instance=\"$Member\", prefix=\"topic\"} ",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalReceivedMessages{instance=\"$Member\", prefix=\"topic\"} ",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          }
+        ],
+        "title": "Topics",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_creationTime": "Creation Time",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lastAccessTime": "Access Time",
+                "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "com_hazelcast_Metrics_totalPublishes": "Total Publishe Messages",
+                "com_hazelcast_Metrics_totalReceivedMessages": "Total Received Messages",
+                "localhost:8291": "Count",
+                "tag0": "Topic"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "Map"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "color-text"
+              },
+              "filterable": true,
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*Time/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Topic"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 83
+        },
+        "id": 32,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalPublishes{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"reliableTopic\"} ",
+            "format": "time_series",
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_Metrics_totalReceivedMessages{$ClusterFilterLabel=\"$Cluster\", instance=\"$Member\", prefix=\"reliableTopic\"} ",
+            "format": "time_series",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "B"
+          }
+        ],
+        "title": "Reliable Topics",
+        "transformations": [
+          {
+            "id": "joinByLabels",
+            "options": {
+              "join": [
+                "tag0"
+              ],
+              "value": "__name__"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Map": "",
+                "com_hazelcast_Metrics_backupEntryCount": "Backups",
+                "com_hazelcast_Metrics_backupEntryMemoryCost": "Backup Memory",
+                "com_hazelcast_Metrics_creationTime": "Creation Time",
+                "com_hazelcast_Metrics_dirtyEntryCount": "Dirty Entries",
+                "com_hazelcast_Metrics_hits": "Hits",
+                "com_hazelcast_Metrics_lastAccessTime": "Access Time",
+                "com_hazelcast_Metrics_lastUpdateTime": "Update Time",
+                "com_hazelcast_Metrics_lockedEntryCount": "Locked Entries",
+                "com_hazelcast_Metrics_numberOfEvents": "Events",
+                "com_hazelcast_Metrics_ownedEntryCount": "Entries",
+                "com_hazelcast_Metrics_ownedEntryMemoryCost": "Memory",
+                "com_hazelcast_Metrics_totalPublishes": "Total Publishe Messages",
+                "com_hazelcast_Metrics_totalReceivedMessages": "Total Received Messages",
+                "localhost:8291": "Count",
+                "tag0": "Topic"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "desc": false,
+                  "field": "Topic"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
       }
     ],
     "refresh": "5s",

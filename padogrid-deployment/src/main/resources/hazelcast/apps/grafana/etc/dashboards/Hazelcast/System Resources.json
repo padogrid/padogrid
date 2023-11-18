@@ -17,7 +17,7 @@
       ]
     },
     "description": "",
-    "editable": true,
+    "editable": false,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -658,12 +658,26 @@
             },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "sum(com_hazelcast_Metrics_usedMemory{$ClusterFilterLabel=\"$Cluster\"})",
+            "expr": "sum(com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\"})",
             "hide": false,
             "instant": true,
-            "legendFormat": "Used Memory",
+            "legendFormat": "Map Memory",
             "range": false,
-            "refId": "Used Memory"
+            "refId": "Map Memory"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "sum(com_hazelcast_Metrics_usedMemory{$ClusterFilterLabel=\"$Cluster\"})-sum(com_hazelcast_Metrics_ownedEntryMemoryCost{$ClusterFilterLabel=\"$Cluster\"})",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Other Used Memory",
+            "range": false,
+            "refId": "Other Used Memory"
           },
           {
             "datasource": {

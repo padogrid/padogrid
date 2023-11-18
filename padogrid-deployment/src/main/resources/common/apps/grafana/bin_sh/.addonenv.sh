@@ -326,13 +326,11 @@ function getAllGrafanaRwePaths
 #
 DATASOURCE_REGEX=""
 
-EDITABLE="true"
-READONLY_SPECIFIED="false"
+EDITABLE="false"
 for i in "$@"; do
    case "$i" in 
-   -readonly)
-      READONLY_SPECIFIED="true"
-      EDITABLE="false"
+   -editable)
+      EDITABLE="true"
       ;;
    esac
 done
@@ -352,4 +350,4 @@ fi
 #
 # PadoGrid provided folders
 #
-PADOGRID_FOLDERS="Hazelcast HazelcastDual HazelcastAll Hazelcast-perf_test"
+PADOGRID_FOLDERS="Hazelcast HazelcastDual HazelcastAll Hazelcast-perf_test Padogrid"

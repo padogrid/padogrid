@@ -14,18 +14,16 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
-- *October 28, 2023 - [Hazelcast Multi-Cluster Demo released.](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-grafana) This bundle automates multi-cluster installtion steps and includes a full set of Grafana dashboards including a WAN discovery plugin dashboard.*
-- *October 23, 2023 - [PadoGrid v0.9.30 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.30) This release overhauls the PadoGrid commands in preparation for the v1.0.0 release. It also includes Hazelcast Grafana dashboards for monitoring multi-cluster metrics along with a complete set of scripts for exporting, creating, and importing Grafana dashboard templates.*
-- *October 1, 2023 - [Hazelcast Kubernetes Helm Charts updated.](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm) This bundle now includes support for Prometheus/Grafana.*
+- *November 18, 2023 - [PadoGrid v0.9.31 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.31) This release includes new Hazelcast Grafana dashboards for monitoring single, dual, and all clusters with support for multiple Prometheus data sources.*
+- *October 18, 2023 - [Hazelcast Multi-Cluster Demo updated.](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-grafana) This bundle automatically installs five (5) Hazelcast clusters along with data ingestion scripts for demonstrating the latest Grafana dashboards.*
 
 ---
 
 ## Tips of the Day
 
-1. Need Hazelcast Managment Center dashboards in Granana? Check out [Hazelcast Grafana Dashboards](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App).
-1. Testing cluster scalability? It's as simple as running [`add_member`/`remove_member`](https://github.com/padogrid/padogrid/wiki/Running-Clusters) in PadoGrid.
-1. How do I integrate database with Geode/GemFire? [GemFire/Geode and MySQL Sync](https://github.com/padogrid/bundle-geode-1-docker-dbsync_mysql).
-1. Hands on integration: Database-->Kafka-->Geode/GemFire-->Power BI. Over 20 endpoints! [Debezium-ksqlDB-Confluent Geode Connector](https://github.com/padogrid/bundle-geode-1-docker-debezium_ksqldb_confluent)
+1. Wish to quickly test and monitor multiple Hazelcast clusters on your laptop? [Hazelcast Multi-Cluster Demo](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-grafana) does all the heavy lifting for you.
+1. What happens when a cluster split-brain occurs in Hazelcast? [Hazelcast Split-Brain](https://github.com/padogrid/bundle-hazelcast-3-app-perf_test_sb-cluster-sb).
+1. Try Geode/GemFire WAN an easy way. [Geode/GemFire WAN](https://github.com/padogrid/bundle-geode-1-app-perf_test_wan-cluster-ln-ny).
 
 ---
 
