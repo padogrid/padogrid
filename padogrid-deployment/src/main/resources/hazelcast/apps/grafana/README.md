@@ -257,14 +257,21 @@ The following dashboard folders are included in this distribution.
 - **HazelcastAll** - A set of dashboards for federating multiple Hazelcast clusters.
 - **Padogrid** - A set of dashboards for PadoGrid specific dashboards.
 
-To import the default folder, i.e., `Hazelcast-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as folllows:
+To import all folders, run `import_folder -all` as follows.
+
+```bash
+cd bin_sh
+./import_folder -all
+```
+
+To import the default folder, i.e., `Hazelcast-perf_test`, run `import_folder` as follows.
 
 ```bash
 cd bin_sh
 ./import_folder
 ```
 
-To import folders individually, specify the `-folder` or `-all` option.
+To import folders individually, specify the `-folder` option.
 
 ```bash
 # To import the Hazelcast-perf_test folder in 'etc/dashboards':
@@ -288,7 +295,7 @@ To import folders individually, specify the `-folder` or `-all` option.
 
 ### 6.1.  App: `perf_test`
 
-The `Hazelcast-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, perf_test, in your workspace.
+The `Hazelcast-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, `perf_test`, in your workspace.
 
 ```bash
 create_app
