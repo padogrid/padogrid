@@ -255,8 +255,9 @@ The following dashboard folders are included in this distribution.
 - **Hazelcast** - A set of dashboards for monitoring a single Hazelcast cluster.
 - **HazelcastDual** - A set of dashboards for comparing two (2) Hazelcast clusters side-by-side.
 - **HazelcastAll** - A set of dashboards for federating multiple Hazelcast clusters.
+- **Padogrid** - A set of dashboards for PadoGrid specific dashboards.
 
-To import the default folder, i.e., `padogrid-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as folllows:
+To import the default folder, i.e., `Hazelcast-perf_test`, first, make sure Grafana is running, and run the `import_folder` command as folllows:
 
 ```bash
 cd bin_sh
@@ -266,8 +267,8 @@ cd bin_sh
 To import folders individually, specify the `-folder` or `-all` option.
 
 ```bash
-# To import the padogrid-perf_test folder in 'etc/dashboards':
-./import_folder -folder padogrid-perf_test
+# To import the Hazelcast-perf_test folder in 'etc/dashboards':
+./import_folder -folder Hazelcast-perf_test
 
 # To import the Hazelcast folder in 'etc/dashboards':
 ./import_folder -folder Hazelcast
@@ -278,13 +279,16 @@ To import folders individually, specify the `-folder` or `-all` option.
 # To import the HazelcastAll folder in 'etc/dashboards':
 ./import_folder -folder HazelcastAll
 
-# To imporal all folders in 'etc/dashboards':
+# To import the Padogrid folder in 'etc/dashboards':
+./import_folder -folder Padogrid
+
+# To import all folders in 'etc/dashboards':
 ./import_folder -all
 ```
 
 ### 6.1.  App: `perf_test`
 
-The `padogrid-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, perf_test, in your workspace.
+The `Hazelcast-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, perf_test, in your workspace.
 
 ```bash
 create_app
@@ -294,7 +298,7 @@ For `perf_test` details, see [perf\_test README](https://github.com/padogrid/pad
 
 ### 6.2. Hazelcast Dashboards
 
-The `Hazelcast*` folders contain the main dashboard with the prefix, `00Main`. The main dashboards are the main console for navigating all the dashboards in the respective folder. They have the layout similar to the Management Center as shown in the screen shot in Section [10.2 Hazelcast Folder](#102-hazelcast-folder).
+The `Hazelcast*` folders contain the main dashboard with the prefix, `00Main`. The main dashboard is the main console for navigating all the dashboards in the respective folder. It has the layout similar to the Management Center as shown in the screen shot in Section [10.2 Hazelcast Folder](#102-hazelcast-folder).
 
 To quickly activate the dashboards with data, you can run [`perf_test`](../perf_test/README.md) with the `group-workflow-*.properties` files.
 
@@ -324,36 +328,23 @@ You must convert the exported dashboards to templates by executing the `export_t
 
 ## 8. Synchronizing Folders
 
-The following command sequence synchronizes the browser dashboards and templates. 
-
-```bash
-./export_folder -folder Hazelcast
-./export_to_template
-./copy_template_to_etc -folder Hazelcast
-./update_cluster_templating_padogrid
-```
-
-
-If you made changes to dashboards from the browser and want to save them in the templates, then you must follow 
-
-, then you can execute several commands in the `bin_sh` directory. An easier way to accomplish the same  execute the 'sync_hazelcast_folders` command.
-execute the `sync_hazelcast_folders` command. This command exports all of the dashboards in the `Hazelcast*` folders, creates templates, applies the required Grafana variables to the templates, and re-imports the templates to Grafana. Upon completion of `sync_hazelcast_folders` execution, the browser contents and the template files in `etc/dashboards/Hazelcast*` will be in sync.
+If you made changes to dashboards from the browser and want to save them in the local file system in the form of templates then execute the `padogrid_sync_folders` command. This command exports all of the dashboards in the `Hazelcast*` folders, creates templates, applies the required Grafana variables to the templates, and re-imports the templates to Grafana.
 
 ```bash
 # Using 'job':
-./sync_hazelcast_folders -label job
+./padogrid_sync_folders -label job
 # To make dashboards read only
-./sync_hazelcast_folders -label job -readonly
+./padogrid_sync_folders -label job -readonly
 
 # For Kubernetes:
-./sync_hazelcast_folders -label namespace
+./padogrid_sync_folders -label namespace
 # To make dashboards read only
-./sync_hazelcast_folders -label namespace -readonly
+./padogrid_sync_folders -label namespace -readonly
 ```
 
 ## 9. Other Commands
 
-The `bin_sh` directory contains several other useful commands. You can display the usage of each command by specifying the `-?` option as shown below.
+The `bin_sh` directory contains many useful commands for working with dashboards. You can display the usage of each command by specifying the `-?` option as shown below.
 
 ```bash
 ./create_folder -?
@@ -362,7 +353,7 @@ Usage:
 
    Creates the specified Grafana folder.
 
-Default: ./create_folder -folder padogrid-perf_test
+Default: ./create_folder -folder Hazelcast-perf_test
 ```
 
 ## 10. Screenshots
