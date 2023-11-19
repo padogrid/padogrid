@@ -19,8 +19,8 @@
 #
 # All of the variables set with the default values shown below. If you need to override any of them
 # set them in this file.
-#   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
-#   DEFAULT_DATASOURCE   The default data source name. Default: padogrid-perf_test
+#   DEFAULT_FOLDER       The default folder name. Default: Hazelcast-perf_test
+#   DEFAULT_DATASOURCE   The default data source name. Default: Prometheus
 #   GRAFANA_PROTOCOL     'http' or 'https'. Default: http
 #   GRAFANA_HOST         Grafana host name. Default: localhost
 #   GRAFANA_PORT         Grafana port number. Default: 3000
@@ -36,7 +36,7 @@
 #
 # Default folder name
 #
-DEFAULT_FOLDER="padogrid-perf_test"
+#DEFAULT_FOLDER="Hazelcast-perf_test"
 
 #
 # Default data source name
@@ -101,10 +101,15 @@ DEFAULT_FOLDER="padogrid-perf_test"
 
 #
 # Folders provided by PadoGrid. If you want to use
-# 'update_cluster_templating_padogrid' to update your folders, then list
+# 'padogrid_update_cluster_templating' to update your folders, then list
 # them using the following environment variables. Folder names must not
 # include spaces.
 #
-SINGLE_FOLDERS="Hazelcast"
+SINGLE_FOLDERS="Hazelcast Hazelcast-perf_test Padogrid"
 DUAL_FOLDERS="HazelcastDual"
 ALL_FOLDERS="HazelcastAll"
+
+#
+# Regex for filtering Prometheus data source names. Empty string includes all.
+#
+#DATASOURCE_REGEX=""
