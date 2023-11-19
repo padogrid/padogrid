@@ -251,7 +251,7 @@ ls etc/dashboards
 
 The following dashboard folders are included in this distribution.
 
-- **padogrid-perf_test** - A set of dashboards for monitoring the metrics specific to the `perf_test` app.
+- **Hazelcast-perf_test** - A set of dashboards for monitoring the metrics specific to the `perf_test` app.
 - **Hazelcast** - A set of dashboards for monitoring a single Hazelcast cluster.
 - **HazelcastDual** - A set of dashboards for comparing two (2) Hazelcast clusters side-by-side.
 - **HazelcastAll** - A set of dashboards for federating multiple Hazelcast clusters.
