@@ -16,7 +16,7 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -147,12 +147,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -166,7 +167,32 @@
             },
             "unit": "locale"
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
           "h": 7,
@@ -209,6 +235,14 @@
         "title": "Query Count",
         "transformations": [
           {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|tag0|Value"
+              }
+            }
+          },
+          {
             "id": "groupBy",
             "options": {
               "fields": {
@@ -297,7 +331,6 @@
                 "tag0": 1
               },
               "renameByName": {
-                "job": "Cluster",
                 "job\\tag0": "Cluster",
                 "tag0": "Map",
                 "tag1": "Map"
@@ -340,12 +373,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -359,7 +393,32 @@
             },
             "unit": "locale"
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
           "h": 7,
@@ -401,6 +460,14 @@
         ],
         "title": "Indexed Query Count",
         "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|tag0|Value"
+              }
+            }
+          },
           {
             "id": "groupBy",
             "options": {
@@ -490,7 +557,6 @@
                 "tag0": 1
               },
               "renameByName": {
-                "job": "Cluster",
                 "job\\tag0": "Cluster",
                 "tag0": "Map",
                 "tag1": "Map"
@@ -532,12 +598,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -555,12 +622,65 @@
             {
               "matcher": {
                 "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
                 "options": "Map"
               },
               "properties": [
                 {
-                  "id": "custom.width",
-                  "value": 211
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
                 }
               ]
             }
@@ -695,12 +815,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -714,7 +835,73 @@
             },
             "unit": "ns"
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
           "h": 7,
@@ -760,8 +947,8 @@
             "options": {
               "join": [
                 "tag1",
-                "tag0",
-                "job"
+                "job",
+                "tag0"
               ],
               "value": "instance"
             }
@@ -843,12 +1030,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -866,12 +1054,65 @@
             {
               "matcher": {
                 "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
                 "options": "Map"
               },
               "properties": [
                 {
-                  "id": "custom.width",
-                  "value": 211
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
                 }
               ]
             }
@@ -1006,12 +1247,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1025,7 +1267,73 @@
             },
             "unit": "ns"
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
           "h": 7,
@@ -1071,8 +1379,8 @@
             "options": {
               "join": [
                 "tag1",
-                "tag0",
-                "job"
+                "job",
+                "tag0"
               ],
               "value": "instance"
             }
@@ -1154,12 +1462,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1177,12 +1486,65 @@
             {
               "matcher": {
                 "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
                 "options": "Map"
               },
               "properties": [
                 {
-                  "id": "custom.width",
-                  "value": 211
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
                 }
               ]
             }
@@ -1317,12 +1679,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1335,7 +1698,73 @@
             },
             "unit": "ns"
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
           "h": 7,
@@ -1381,8 +1810,8 @@
             "options": {
               "join": [
                 "tag1",
-                "tag0",
-                "job"
+                "job",
+                "tag0"
               ],
               "value": "instance"
             }
@@ -1464,12 +1893,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1486,12 +1916,65 @@
             {
               "matcher": {
                 "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
                 "options": "Map"
               },
               "properties": [
                 {
-                  "id": "custom.width",
-                  "value": 211
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
                 }
               ]
             }
@@ -1626,12 +2109,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1644,7 +2128,73 @@
             },
             "unit": "ns"
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Map"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
           "h": 7,
@@ -1690,8 +2240,8 @@
             "options": {
               "join": [
                 "tag1",
-                "tag0",
-                "job"
+                "job",
+                "tag0"
               ],
               "value": "instance"
             }
@@ -1773,12 +2323,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1795,12 +2346,65 @@
             {
               "matcher": {
                 "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
                 "options": "Map"
               },
               "properties": [
                 {
-                  "id": "custom.width",
-                  "value": 211
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
                 }
               ]
             }
@@ -1935,12 +2539,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1957,12 +2562,65 @@
             {
               "matcher": {
                 "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
                 "options": "Map"
               },
               "properties": [
                 {
-                  "id": "custom.width",
-                  "value": 211
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
                 }
               ]
             }
@@ -2097,12 +2755,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -2119,12 +2778,65 @@
             {
               "matcher": {
                 "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/^((?!Index).)*$/"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__field.name}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
                 "options": "Map"
               },
               "properties": [
                 {
-                  "id": "custom.width",
-                  "value": 211
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Map Link",
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
                 }
               ]
             }
@@ -2287,7 +2999,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -2296,7 +3008,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -2333,7 +3045,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -2342,7 +3054,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -2365,7 +3077,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -2374,7 +3086,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,

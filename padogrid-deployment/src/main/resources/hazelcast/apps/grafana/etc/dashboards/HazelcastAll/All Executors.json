@@ -16,7 +16,7 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -164,6 +164,10 @@
                 {
                   "id": "unit",
                   "value": "ms"
+                },
+                {
+                  "id": "custom.width",
+                  "value": 164
                 }
               ]
             },
@@ -209,6 +213,40 @@
                 {
                   "id": "unit",
                   "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.raw}&${__url_time_range}"
+                    }
+                  ]
                 }
               ]
             }
@@ -422,7 +460,7 @@
           {
             "id": "joinByField",
             "options": {
-              "byField": "tag0",
+              "byField": "instance",
               "mode": "outer"
             }
           },
@@ -430,28 +468,63 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "pattern": "^job|^instance|tag0|Value.*"
+                "pattern": "^job$|^instance$|Value.*"
               }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "instance"
+                }
+              ]
             }
           },
           {
             "id": "organize",
             "options": {
-              "excludeByName": {},
+              "excludeByName": {
+                "job 10": true,
+                "job 11": true,
+                "job 12": true,
+                "job 2": true,
+                "job 3": true,
+                "job 4": true,
+                "job 5": true,
+                "job 6": true,
+                "job 7": true,
+                "job 8": true,
+                "job 9": true
+              },
               "indexByName": {
-                "Value #Cancelled": 4,
-                "Value #Completed": 3,
-                "Value #Completed Tasks": 5,
-                "Value #Creation Time": 12,
-                "Value #Max Pool Size": 11,
-                "Value #Pending": 2,
-                "Value #Pool Size": 10,
-                "Value #Queue Size": 6,
-                "Value #Remaining Queue Capacity": 7,
-                "Value #Started": 1,
+                "Value #Cancelled": 13,
+                "Value #Completed": 12,
+                "Value #Completed Tasks": 2,
+                "Value #Creation Time": 7,
+                "Value #Max Pool Size": 6,
+                "Value #Pending": 11,
+                "Value #Pool Size": 5,
+                "Value #Queue Size": 3,
+                "Value #Remaining Queue Capacity": 4,
+                "Value #Started": 10,
                 "Value #Total Execution Time": 8,
                 "Value #Total Start Latency": 9,
-                "tag0": 0
+                "instance": 1,
+                "job": 0,
+                "job 10": 22,
+                "job 11": 23,
+                "job 12": 24,
+                "job 2": 14,
+                "job 3": 15,
+                "job 4": 16,
+                "job 5": 17,
+                "job 6": 18,
+                "job 7": 19,
+                "job 8": 20,
+                "job 9": 21
               },
               "renameByName": {
                 "Value #A": "",
@@ -483,8 +556,22 @@
                 "Value #Total Execution Time": "Total Execution Time",
                 "Value #Total Operations": "Total Operations",
                 "Value #Total Start Latency": "Total Start Latency",
+                "instance": "Member",
+                "job": "Cluster",
+                "job 1": "Cluster",
                 "tag0": "Executor"
               }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -495,7 +582,7 @@
           "type": "prometheus",
           "uid": "${DataSource}"
         },
-        "description": "Number of started, completed, and cancelled operations on the executor service across all clusters",
+        "description": "Number of started, completed, and cancelled operations on the executor job across all clusters",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -525,12 +612,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -572,7 +660,7 @@
           "showValue": "never",
           "stacking": "none",
           "tooltip": {
-            "mode": "single",
+            "mode": "multi",
             "sort": "none"
           },
           "xTickLabelRotation": 0,
@@ -636,29 +724,29 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "pattern": "job|instance|tag0|Value.*"
+                "pattern": "^job$|^instance$|tag0|Value.*"
               }
             }
           },
           {
             "id": "organize",
             "options": {
-              "excludeByName": {},
+              "excludeByName": {
+                "job 2": true,
+                "job 3": true
+              },
               "indexByName": {
-                "Value #Average Age": 5,
-                "Value #Backups": 2,
-                "Value #Events": 6,
-                "Value #Items": 1,
-                "Value #Max Age": 3,
-                "Value #Min Age": 4,
-                "Value #Offers": 7,
-                "Value #Other Operations": 9,
-                "Value #Polls": 8,
-                "Value #Rejected Offers": 10,
-                "Value #Total Operations": 11,
+                "Value #Cancelled": 5,
+                "Value #Completed": 4,
+                "Value #Started": 3,
+                "instance": 2,
+                "job": 1,
+                "job 2": 6,
+                "job 3": 7,
                 "tag0": 0
               },
               "renameByName": {
+                "Cluster": "",
                 "Value #A": "",
                 "Value #Average Age": "Average Age",
                 "Value #Backups": "Backups",
@@ -676,6 +764,8 @@
                 "Value #Started": "Started",
                 "Value #Total": "Total",
                 "Value #Total Operations": "Total Operations",
+                "instance": "Member",
+                "job": "Cluster",
                 "tag0": "Executor"
               }
             }
@@ -1059,7 +1149,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -1068,7 +1158,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -1105,7 +1195,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -1114,7 +1204,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -1137,7 +1227,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -1146,7 +1236,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,

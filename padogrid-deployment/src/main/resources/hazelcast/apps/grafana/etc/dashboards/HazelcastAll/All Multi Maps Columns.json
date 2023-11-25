@@ -16,7 +16,7 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -30,7 +30,7 @@
         "title": "Charts",
         "tooltip": "",
         "type": "link",
-        "url": "/d/adfcc868-2f03-4ba4-aa33-23cacc6ef5d9/all-multi-maps-columns-charts?${__url_time_range}"
+        "url": "/d/c6a2d158-bc99-49ac-b077-b054332db49b/all-multi-maps-columns-charts?${__url_time_range}"
       },
       {
         "asDropdown": false,
@@ -172,12 +172,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -201,7 +202,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -253,9 +287,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -266,19 +309,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -297,6 +344,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -324,12 +382,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -353,7 +412,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -405,9 +497,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -418,19 +519,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -449,6 +554,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -472,7 +588,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -494,7 +621,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -550,9 +710,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -563,19 +732,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -594,6 +767,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -617,7 +801,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -639,7 +834,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -695,9 +923,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -708,19 +945,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -739,6 +980,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -762,7 +1014,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -782,13 +1045,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -812,7 +1104,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -840,9 +1132,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -853,19 +1154,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -884,6 +1189,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -907,7 +1223,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -927,13 +1254,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -984,9 +1340,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -997,19 +1362,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -1028,6 +1397,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -1051,7 +1431,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1071,13 +1462,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -1101,7 +1521,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -1129,9 +1549,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -1142,19 +1571,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -1173,6 +1606,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -1196,7 +1640,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1216,13 +1671,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -1246,7 +1730,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -1274,9 +1758,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -1287,19 +1780,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -1318,6 +1815,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -1341,7 +1849,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1361,13 +1880,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -1391,7 +1939,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -1419,9 +1967,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -1432,19 +1989,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -1464,6 +2025,17 @@
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
             }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
+            }
           }
         ],
         "type": "table"
@@ -1473,7 +2045,7 @@
           "type": "prometheus",
           "uid": "${DataSource}"
         },
-        "description": "Number of hits (reads) of the locally owned entries",
+        "description": "Total number of indexed local queries performed on the multimap",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -1486,7 +2058,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1506,13 +2089,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -1536,7 +2148,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -1550,7 +2162,7 @@
             },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_hits{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"multiMap\"}",
+            "expr": "com_hazelcast_Metrics_indexedQueryCount{$ClusterFilterLabel=~\"$ClusterList\",prefix=\"multiMap\"}",
             "format": "time_series",
             "instant": true,
             "legendFormat": "__auto",
@@ -1558,15 +2170,24 @@
             "refId": "A"
           }
         ],
-        "title": "Multi Maps: Hits",
+        "title": "Multi Maps: Indexed Query Count",
         "transformations": [
           {
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -1577,19 +2198,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -1608,6 +2233,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -1631,7 +2267,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1651,13 +2298,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -1681,7 +2357,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -1709,9 +2385,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -1722,19 +2407,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -1753,6 +2442,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -1776,7 +2476,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1796,13 +2507,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -1826,7 +2566,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -1854,9 +2594,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -1867,19 +2616,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -1898,6 +2651,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -1921,7 +2685,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -1941,13 +2716,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -1971,7 +2775,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -1999,9 +2803,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -2012,19 +2825,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -2043,6 +2860,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -2066,7 +2894,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -2086,13 +2925,42 @@
               },
               "properties": [
                 {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
                   "id": "links",
-                  "value": []
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
                 },
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -2116,7 +2984,7 @@
             "reducer": [
               "sum"
             ],
-            "show": false
+            "show": true
           },
           "showHeader": true,
           "sortBy": []
@@ -2144,9 +3012,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -2157,19 +3034,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -2188,6 +3069,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -2211,7 +3103,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -2233,7 +3136,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -2285,9 +3221,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -2298,19 +3243,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -2329,6 +3278,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -2352,7 +3312,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -2374,7 +3345,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -2426,9 +3430,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -2439,19 +3452,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -2470,6 +3487,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -2493,7 +3521,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -2515,7 +3554,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -2567,9 +3639,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -2580,19 +3661,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -2611,6 +3696,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -2634,7 +3730,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -2656,7 +3763,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -2708,9 +3848,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -2721,19 +3870,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -2752,6 +3905,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -2775,7 +3939,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -2797,7 +3972,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -2820,7 +4028,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -2848,9 +4056,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -2861,19 +4078,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -2892,6 +4113,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -2915,7 +4147,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -2937,7 +4180,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -2960,7 +4236,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -2988,9 +4264,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -3001,19 +4286,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -3032,6 +4321,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -3055,7 +4355,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -3077,7 +4388,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -3100,7 +4444,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -3128,9 +4472,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -3141,19 +4494,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -3172,6 +4529,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -3195,7 +4563,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -3217,7 +4596,40 @@
                 {
                   "id": "color",
                   "value": {
-                    "fixedColor": "purple",
+                    "fixedColor": "blue",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&var-Member=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Cluster"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "System Link",
+                      "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-Cluster=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "blue",
                     "mode": "fixed"
                   }
                 }
@@ -3240,7 +4652,7 @@
             "reducer": [
               "sum"
             ],
-            "show": true
+            "show": false
           },
           "showHeader": true,
           "sortBy": []
@@ -3268,9 +4680,18 @@
             "id": "joinByLabels",
             "options": {
               "join": [
-                "instance"
+                "instance",
+                "job"
               ],
               "value": "tag0"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|^instance|\"name=.*"
+              }
             }
           },
           {
@@ -3281,19 +4702,23 @@
             }
           },
           {
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "\"name=eligibility\"",
-                  "\"name=map1\"",
-                  "\"name=map2\"",
-                  "\"name=profile\"",
-                  "\"name=summary\"",
-                  "Member"
-                ],
-                "pattern": "(.*=[a-zA-Z0-9].*)"
-              }
+              "regex": "job",
+              "renamePattern": "Cluster"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {
+                "\"name=mmap1\"": 2,
+                "\"name=mmap2\"": 3,
+                "Cluster": 0,
+                "Member": 1
+              },
+              "renameByName": {}
             }
           },
           {
@@ -3312,6 +4737,17 @@
             "options": {
               "regex": "^.*(=)(\\w.*).*\"$",
               "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Cluster"
+                }
+              ]
             }
           }
         ],
@@ -3363,7 +4799,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -3372,7 +4808,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -3409,7 +4845,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -3418,7 +4854,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -3441,7 +4877,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -3450,7 +4886,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,

@@ -324,7 +324,7 @@ CLUSTER_LIST_OPTIONS="
     \"type\": \"prometheus\",
     \"uid\": \"\${DataSource}\"
   },
-  \"definition\": \"label_values($LABEL)\",
+  \"definition\": \"label_values(\$ClusterFilterLabel)\",
   \"hide\": 0,
   \"includeAll\": true,
   \"label\": \"Clusters\",
@@ -333,7 +333,7 @@ CLUSTER_LIST_OPTIONS="
   \"options\": [],
   \"query\": {
     \"qryType\": 1,
-    \"query\": \"label_values($LABEL)\",
+    \"query\": \"label_values(\$ClusterFilterLabel)\",
     \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
   },
   \"refresh\": 1,
@@ -361,7 +361,7 @@ CLUSTER_OPTIONS="
     \"type\": \"prometheus\",
     \"uid\": \"\${DataSource}\"
   },
-  \"definition\": \"label_values($LABEL)\",
+  \"definition\": \"label_values(\$ClusterFilterLabel)\",
   \"hide\": 0,
   \"includeAll\": false,
   \"label\": \"Cluster\",
@@ -370,7 +370,7 @@ CLUSTER_OPTIONS="
   \"options\": [],
   \"query\": {
     \"qryType\": 1,
-    \"query\": \"label_values($LABEL)\",
+    \"query\": \"label_values(\$ClusterFilterLabel)\",
     \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
   },
   \"refresh\": 1,
@@ -398,7 +398,7 @@ CLUSTER2_OPTIONS="
     \"type\": \"prometheus\",
     \"uid\": \"\${DataSource2}\"
   },
-  \"definition\": \"label_values($LABEL)\",
+  \"definition\": \"label_values(\$ClusterFilterLabel)\",
   \"hide\": 0,
   \"includeAll\": false,
   \"label\": \"Cluster2\",
@@ -407,7 +407,7 @@ CLUSTER2_OPTIONS="
   \"options\": [],
   \"query\": {
     \"qryType\": 1,
-    \"query\": \"label_values($LABEL)\",
+    \"query\": \"label_values(\$ClusterFilterLabel)\",
     \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
   },
   \"refresh\": 1,
@@ -532,6 +532,25 @@ dual)
 ;;
 esac
 popd > /dev/null 2>&1
+
+#
+# Special cases
+#
+
+if [ "$FOLDER" == "HazelcastAll" ]; then
+   pushd "$FOLDER_PATH" > /dev/null 2>&1
+   for file in *; do
+      if [ "$file" == "All Jet.json" ]; then
+         sed -i$__SED_BACKUP -e "s/{{job}}/{{$LABEL}}/g" -e "s/\\^job\\$/\\^$LABEL\\$/g" -e "s/\"job\"/\"$LABEL\"/g" -e "s/{{namespace}}/{{$LABEL}}/g" -e "s/\\^namespace\\$/\\^$LABEL\\$/g" -e "s/\"namespace\"/\"$LABEL\"/g" -e "s/\\^service\\$/\\^$LABEL\\$/g" -e "s/{{service}}/{{$LABEL}}/g" -e "s/\"service\"/\"$LABEL\"/g" "$TMP_DIR/$FOLDER/${file}"
+      else
+         sed -i$__SED_BACKUP -e "s/job/$LABEL/g" -e "s/namespace/$LABEL/g" -e "s/service/$LABEL/g" "$TMP_DIR/$FOLDER/${file}"
+      fi
+   done
+   popd > /dev/null 2>&1
+
+   # Remove backup files
+   rm "$TMP_DIR/$FOLDER"/*0
+fi
 
 cp -r $TMP_DIR/$FOLDER/* "$FOLDER_PATH/"
 

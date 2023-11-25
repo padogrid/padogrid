@@ -16,10 +16,22 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Tables",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/d118dda2-e987-43ac-ae32-74dade452528/all-maps-rows-total?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
+      },
       {
         "asDropdown": false,
         "icon": "dashboard",
@@ -31,18 +43,6 @@
         "tooltip": "",
         "type": "link",
         "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
-      },
-      {
-        "asDropdown": false,
-        "icon": "dashboard",
-        "includeVars": false,
-        "keepTime": true,
-        "tags": [],
-        "targetBlank": false,
-        "title": "Charts",
-        "tooltip": "",
-        "type": "link",
-        "url": "/d/f85a965f-c2ef-425a-98e0-ae4c4cdc695f/maps-rows-charts&${__url_time_range}"
       },
       {
         "asDropdown": true,
@@ -160,8 +160,8 @@
           "overrides": [
             {
               "matcher": {
-                "id": "byName",
-                "options": "Map"
+                "id": "byRegexp",
+                "options": "/^((?!Map).)*$/"
               },
               "properties": [
                 {
@@ -169,16 +169,9 @@
                   "value": [
                     {
                       "title": "Map Link",
-                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Map=${__value.text}&var-MapType=map&${__url_time_range}"
+                      "url": "/d/cbb05a48-aa4b-4f7f-b2e7-12ed29394b3a/map?var-DataSource=$DataSource&var-Cluster=${__field.name}&var-Map=${__data.fields.Map}&var-MapType=map&${__url_time_range}"
                     }
                   ]
-                },
-                {
-                  "id": "color",
-                  "value": {
-                    "fixedColor": "blue",
-                    "mode": "fixed"
-                  }
                 }
               ]
             }
@@ -234,6 +227,14 @@
         ],
         "title": "Maps: Entries",
         "transformations": [
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|tag0|Value"
+              }
+            }
+          },
           {
             "id": "groupBy",
             "options": {
@@ -561,8 +562,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -773,8 +773,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -985,8 +984,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -1197,8 +1195,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -1409,8 +1406,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -1621,8 +1617,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -1834,8 +1829,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -2046,8 +2040,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 }
               ]
             },
@@ -2258,7 +2251,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -2267,7 +2260,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -2304,7 +2297,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -2313,7 +2306,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -2336,7 +2329,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -2345,7 +2338,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,

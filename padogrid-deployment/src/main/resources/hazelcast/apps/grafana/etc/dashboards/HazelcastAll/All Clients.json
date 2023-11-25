@@ -16,7 +16,7 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -274,10 +274,38 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
+                },
+                {
+                  "id": "custom.width",
+                  "value": 321
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0 2"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 181
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tag0 1"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 200
                 }
               ]
             }
@@ -302,14 +330,9 @@
           },
           "frameIndex": 0,
           "showHeader": true,
-          "sortBy": [
-            {
-              "desc": true,
-              "displayName": "Value #CPU"
-            }
-          ]
+          "sortBy": []
         },
-        "pluginVersion": "10.2.0",
+        "pluginVersion": "10.2.2",
         "targets": [
           {
             "datasource": {
@@ -435,6 +458,15 @@
         "title": "Clients",
         "transformations": [
           {
+            "id": "filterFieldsByName",
+            "options": {
+              "byVariable": false,
+              "include": {
+                "pattern": "$ClusterFilterLabel|Value|^instance"
+              }
+            }
+          },
+          {
             "id": "sortBy",
             "options": {
               "fields": {},
@@ -453,67 +485,45 @@
             }
           },
           {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^(Value #)(.*)$",
+              "renamePattern": "$2"
+            }
+          },
+          {
             "id": "organize",
             "options": {
-              "excludeByName": {},
+              "excludeByName": {
+                "job 2": true,
+                "job 3": true,
+                "job 4": true,
+                "job 5": true,
+                "job 6": true,
+                "job 7": true,
+                "job 8": true
+              },
               "indexByName": {
-                "Time": 10,
-                "Time 2": 14,
-                "Time 3": 20,
-                "Time 4": 26,
-                "Time 5": 32,
-                "Time 6": 38,
-                "Time 7": 44,
-                "Time 8": 50,
-                "Value #Client Total Registrations": 9,
-                "Value #Clients": 2,
-                "Value #Completed Blocking Tasks": 5,
-                "Value #Completed Queries": 4,
-                "Value #Max Pool Size": 7,
-                "Value #Pool Size": 6,
-                "Value #Query Queue Size": 3,
-                "Value #Remaining Queue Capacity": 8,
-                "__name__ 1": 11,
-                "__name__ 2": 15,
-                "__name__ 3": 21,
-                "__name__ 4": 27,
-                "__name__ 5": 33,
-                "__name__ 6": 39,
-                "__name__ 7": 45,
-                "__name__ 8": 51,
-                "exported_instance": 12,
-                "exported_instance 2": 16,
-                "exported_instance 3": 22,
-                "exported_instance 4": 28,
-                "exported_instance 5": 34,
-                "exported_instance 6": 40,
-                "exported_instance 7": 46,
-                "exported_instance 8": 52,
-                "instance": 1,
-                "job": 0,
-                "job 2": 17,
-                "job 3": 23,
-                "job 4": 29,
-                "job 5": 35,
-                "job 6": 41,
-                "job 7": 47,
-                "job 8": 53,
-                "prefix 1": 13,
-                "prefix 2": 18,
-                "prefix 3": 24,
-                "prefix 4": 30,
-                "prefix 5": 36,
-                "prefix 6": 42,
-                "prefix 7": 48,
-                "prefix 8": 54,
-                "tag0 1": 19,
-                "tag0 2": 25,
-                "tag0 3": 31,
-                "tag0 4": 37,
-                "tag0 5": 43,
-                "tag0 6": 49
+                "Client Total Registrations": 32,
+                "Clients": 11,
+                "Completed Blocking Tasks": 20,
+                "Completed Queries": 17,
+                "Max Pool Size": 26,
+                "Pool Size": 23,
+                "Query Queue Size": 14,
+                "Remaining Queue Capacity": 29,
+                "instance": 3,
+                "job": 1,
+                "job 2": 13,
+                "job 3": 16,
+                "job 4": 19,
+                "job 5": 22,
+                "job 6": 25,
+                "job 7": 28,
+                "job 8": 31
               },
               "renameByName": {
+                "Clients": "",
                 "Value": "Clients",
                 "Value #A": "Client Total Registrations",
                 "Value #Blocking Tasks": "Blocking Tasks",
@@ -537,35 +547,8 @@
                 "Value #Total Heap": "Total Heap",
                 "Value #Used Heap": "Used Heap",
                 "Value #Used Native Memory": "Used Native Memory",
-                "instance": "00Member",
-                "job": "00Cluster"
-              }
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "pattern": "00.*"
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
-              "indexByName": {},
-              "renameByName": {
-                "00Client Total Registrations": "Client Total Registrations",
-                "00Clients": "Clients",
-                "00Cluster": "Cluster",
-                "00Completed Blocking Tasks": "Completed Blocking Tasks",
-                "00Completed Queries": "Completed Queries",
-                "00Max Pool Size": "Max Pool Size",
-                "00Member": "Member",
-                "00Pool Size": "Pool Size",
-                "00Query Queue Size": "Query Queue Size",
-                "00Remaining Max Pool Size": "Remaining Max Pool Size"
+                "instance": "Member",
+                "job": "Cluster"
               }
             }
           }
@@ -617,7 +600,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -626,7 +609,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -663,7 +646,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -672,7 +655,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -695,7 +678,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -704,7 +687,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,

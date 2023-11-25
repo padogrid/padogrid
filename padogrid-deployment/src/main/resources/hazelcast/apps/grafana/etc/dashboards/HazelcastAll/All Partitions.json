@@ -16,7 +16,7 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -131,7 +131,18 @@
               },
               "inspect": false
             },
-            "mappings": [],
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
             "thresholds": {
               "mode": "absolute",
               "steps": [
@@ -199,7 +210,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -402,7 +413,7 @@
             },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "com_hazelcast_Metrics_publicationCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"event\",tag0=\"\\\"service=hz:core:partitionService\\\"\"}",
+            "expr": "com_hazelcast_Metrics_publicationCount{$ClusterFilterLabel=~\"$ClusterList\", prefix=\"event\",tag0=\"\\\"job=hz:core:partitionService\\\"\"}",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -450,34 +461,60 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "pattern": "^job 1$|^instance$|^Value.*"
+                "pattern": "job|^instance$|^Value.*"
               }
+            }
+          },
+          {
+            "disabled": true,
+            "id": "renameByRegex",
+            "options": {
+              "regex": "job",
+              "renamePattern": "Cluster"
             }
           },
           {
             "id": "organize",
             "options": {
-              "excludeByName": {},
+              "excludeByName": {
+                "job 10": true,
+                "job 11": true,
+                "job 12": true,
+                "job 2": true,
+                "job 3": true,
+                "job 4": true,
+                "job 5": true,
+                "job 6": true,
+                "job 7": true,
+                "job 8": true,
+                "job 9": true
+              },
               "indexByName": {
                 "Value #Active Partitions": 4,
                 "Value #Completed Migrations": 3,
-                "Value #Executed Operations": 18,
+                "Value #Executed Operations": 13,
                 "Value #Local Partitions": 2,
-                "Value #Publication Events": 16,
                 "Value #Replica Sync Requests": 5,
                 "Value #Replica Sync Semaphores": 6,
-                "Value #Running Partitions": 14,
+                "Value #Running Partitions": 12,
                 "Value #State Stamp": 7,
                 "Value #Total Completed Migrations": 8,
                 "Value #Total Elapsed Destination Commit Time": 9,
                 "Value #Total Elapsed Migration Operation Time": 10,
-                "Value #Total Elapsed Migration Time": 12,
+                "Value #Total Elapsed Migration Time": 11,
                 "instance": 1,
                 "job 1": 0,
-                "job 10": 11,
-                "job 11": 13,
-                "job 12": 15,
-                "job 13": 17
+                "job 10": 22,
+                "job 11": 23,
+                "job 12": 24,
+                "job 2": 14,
+                "job 3": 15,
+                "job 4": 16,
+                "job 5": 17,
+                "job 6": 18,
+                "job 7": 19,
+                "job 8": 20,
+                "job 9": 21
               },
               "renameByName": {
                 "Value": "Local Partitions",
@@ -505,6 +542,7 @@
                 "Value #Used Heap": "Used Heap",
                 "Value #Used Native Memory": "Used Native Memory",
                 "instance": "Member",
+                "job": "Cluster",
                 "job 1": "Cluster"
               }
             }
@@ -561,12 +599,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -585,28 +624,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -649,7 +666,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -720,13 +737,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -846,12 +857,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -870,28 +882,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -931,7 +921,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -1002,13 +992,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -1134,12 +1118,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1158,28 +1143,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -1219,7 +1182,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -1290,13 +1253,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -1422,12 +1379,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1446,28 +1404,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -1507,7 +1443,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -1578,13 +1514,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -1716,12 +1646,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -1740,28 +1671,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -1801,7 +1710,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -1872,13 +1781,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -1992,12 +1895,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -2016,28 +1920,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -2077,7 +1959,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -2148,13 +2030,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -2268,12 +2144,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -2292,28 +2169,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -2353,7 +2208,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -2424,13 +2279,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -2550,12 +2399,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -2574,28 +2424,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -2635,7 +2463,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -2706,13 +2534,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -2832,12 +2654,13 @@
             "mappings": [
               {
                 "options": {
-                  "^.*(=)(\\w.*).*\"$": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
                     "index": 0,
                     "text": "$2"
                   }
                 },
-                "type": "value"
+                "type": "regex"
               }
             ],
             "thresholds": {
@@ -2856,28 +2679,6 @@
             "unit": "locale"
           },
           "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "tag0"
-              },
-              "properties": [
-                {
-                  "id": "mappings",
-                  "value": [
-                    {
-                      "options": {
-                        "^.*(=)(\\w.*).*\"$": {
-                          "index": 0,
-                          "text": "$2"
-                        }
-                      },
-                      "type": "value"
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "matcher": {
                 "id": "byName",
@@ -2917,7 +2718,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -2988,13 +2789,7 @@
             "id": "filterFieldsByName",
             "options": {
               "include": {
-                "names": [
-                  "job",
-                  "tag0",
-                  "Value",
-                  "instance"
-                ],
-                "pattern": "Value.*"
+                "pattern": "$ClusterFilterLabel|^instance$|Value.*"
               }
             }
           },
@@ -3139,7 +2934,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -3148,7 +2943,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -3185,7 +2980,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -3194,7 +2989,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -3217,7 +3012,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -3226,7 +3021,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,

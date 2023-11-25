@@ -16,7 +16,7 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -267,7 +267,7 @@
           ]
         },
         "gridPos": {
-          "h": 20,
+          "h": 18,
           "w": 24,
           "x": 0,
           "y": 0
@@ -447,6 +447,24 @@
         "title": "Members",
         "transformations": [
           {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|Value|^instance"
+              }
+            }
+          },
+          {
+            "disabled": true,
+            "id": "filterFieldsByName",
+            "options": {
+              "byVariable": false,
+              "include": {
+                "pattern": "^job$|Value|^instance"
+              }
+            }
+          },
+          {
             "id": "sortBy",
             "options": {
               "fields": {},
@@ -465,101 +483,51 @@
             }
           },
           {
-            "disabled": true,
-            "id": "filterFieldsByName",
+            "id": "renameByRegex",
             "options": {
-              "include": {
-                "names": [
-                  "Value #CPU",
-                  "Value #Used Heap",
-                  "Value #Total Heap",
-                  "Value #Heap Usage",
-                  "Value #Used Native Memory",
-                  "Value #Committed Native Memory",
-                  "Value #GC Major Count",
-                  "Value #GC Major Time",
-                  "Value #GC Minor Count",
-                  "Value #GC Minor Time",
-                  "instance"
-                ],
-                "pattern": "Value.*"
-              }
+              "regex": "^(Value #)(.*)$",
+              "renamePattern": "$2"
             }
           },
           {
             "id": "organize",
             "options": {
-              "excludeByName": {},
-              "indexByName": {},
-              "renameByName": {
-                "Value #CPU": "00CPU",
-                "Value #Committed Native Memory": "00Committed Native Memory",
-                "Value #GC Major Count": "00GC Major Count",
-                "Value #GC Major Time": "00GC Major Time",
-                "Value #GC Minor Count": "00GC Minor Count",
-                "Value #GC Minor Time": "00GC Minor Time",
-                "Value #Heap Usage": "00Heap Usage",
-                "Value #Total Heap": "00Total Heap",
-                "Value #Used Heap": "00Used Heap",
-                "Value #Used Native Memory": "00Used Native Memory",
-                "instance": "00Member",
-                "job": "00Cluster"
-              }
-            }
-          },
-          {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "names": [
-                  "00Member",
-                  "00CPU",
-                  "00Used Heap",
-                  "00Total Heap",
-                  "00Heap Usage",
-                  "00Used Native Memory",
-                  "00Committed Native Memory",
-                  "00GC Major Count",
-                  "00GC Major Time",
-                  "00GC Minor Count",
-                  "00GC Minor Time"
-                ],
-                "pattern": "00.*"
-              }
-            }
-          },
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {},
+              "excludeByName": {
+                "job 10": true,
+                "job 2": true,
+                "job 3": true,
+                "job 4": true,
+                "job 5": true,
+                "job 6": true,
+                "job 7": true,
+                "job 8": true,
+                "job 9": true
+              },
               "indexByName": {
-                "00CPU": 2,
-                "00Cluster": 0,
-                "00Committed Native Memory": 7,
-                "00GC Major Count": 8,
-                "00GC Major Time": 9,
-                "00GC Minor Count": 10,
-                "00GC Minor Time": 11,
-                "00Heap Usage": 5,
-                "00Member": 1,
-                "00Total Heap": 4,
-                "00Used Heap": 3,
-                "00Used Native Memory": 6
+                "CPU": 4,
+                "Committed Native Memory": 24,
+                "GC Major Count": 28,
+                "GC Major Time": 32,
+                "GC Minor Count": 36,
+                "GC Minor Time": 40,
+                "Heap Usage": 16,
+                "Total Heap": 12,
+                "Used Heap": 8,
+                "Used Native Memory": 20,
+                "instance": 3,
+                "job": 2,
+                "job 10": 39,
+                "job 2": 7,
+                "job 3": 11,
+                "job 4": 15,
+                "job 5": 19,
+                "job 6": 23,
+                "job 7": 27,
+                "job 8": 31,
+                "job 9": 35
               },
               "renameByName": {
-                "00CPU": "CPU",
-                "00Cluster": "Cluster",
-                "00Committed Native Memory": "Committed Native Memory",
-                "00GC Major Count": "GC Major Count",
-                "00GC Major Time": "GC Major Time",
-                "00GC Minor Count": "GC Minor Count",
-                "00GC Minor Time": "GC Minor Time",
-                "00Heap Usage": "Heap Usage",
-                "00Member": "Member",
-                "00Total Heap": "Total Heap",
-                "00Used Heap": "Used Heap",
-                "00Used Native Memory": "Used Native Memory",
-                "Member": "Member",
+                "instance": "Member",
                 "job": "Cluster"
               }
             }
@@ -612,7 +580,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -621,7 +589,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -658,7 +626,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -667,7 +635,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -690,7 +658,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -699,7 +667,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,

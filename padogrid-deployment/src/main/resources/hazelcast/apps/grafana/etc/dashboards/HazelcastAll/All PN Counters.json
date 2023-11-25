@@ -16,7 +16,7 @@
         }
       ]
     },
-    "editable": false,
+    "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
     "links": [
@@ -198,7 +198,7 @@
                   "id": "links",
                   "value": [
                     {
-                      "title": "Cluster Link",
+                      "title": "System Link",
                       "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resource?var-DataSource=$DataSource&var-Cluster=${__data.fields.Cluster}&${__url_time_range}"
                     }
                   ]
@@ -309,12 +309,20 @@
         "title": "PN Counters: Value",
         "transformations": [
           {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "$ClusterFilterLabel|Value|^instance$|^tag0$"
+              }
+            }
+          },
+          {
             "id": "sortBy",
             "options": {
               "fields": {},
               "sort": [
                 {
-                  "field": "tag0"
+                  "field": "instance"
                 }
               ]
             }
@@ -327,25 +335,30 @@
             }
           },
           {
-            "id": "filterFieldsByName",
-            "options": {
-              "include": {
-                "pattern": "^job$|^instance$|^tag0$|^Value.*"
-              }
-            }
-          },
-          {
             "id": "organize",
             "options": {
-              "excludeByName": {},
+              "excludeByName": {
+                "job 2": true,
+                "job 3": true,
+                "job 4": true,
+                "tag0 2": true,
+                "tag0 3": true,
+                "tag0 4": true
+              },
               "indexByName": {
-                "Value #Creation Time": 3,
-                "Value #Decrement Count": 5,
-                "Value #Increment Count": 4,
-                "Value #Value": 6,
+                "Value #Creation Time": 12,
+                "Value #Decrement Count": 11,
+                "Value #Increment Count": 10,
+                "Value #Value": 3,
                 "instance": 1,
                 "job": 0,
-                "tag0": 2
+                "job 2": 4,
+                "job 3": 5,
+                "job 4": 6,
+                "tag0": 2,
+                "tag0 2": 7,
+                "tag0 3": 8,
+                "tag0 4": 9
               },
               "renameByName": {
                 "Value #A": "Creation Time",
@@ -362,6 +375,17 @@
                 "tag0": "PN Counter",
                 "tag0 1": "PNCounter"
               }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "PN Counter"
+                }
+              ]
             }
           },
           {
@@ -424,7 +448,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster",
@@ -433,7 +457,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -470,7 +494,7 @@
             "type": "prometheus",
             "uid": "${DataSource2}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 2,
           "includeAll": false,
           "label": "Cluster2",
@@ -479,7 +503,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -502,7 +526,7 @@
             "type": "prometheus",
             "uid": "${DataSource}"
           },
-          "definition": "label_values(job)",
+          "definition": "label_values($ClusterFilterLabel)",
           "hide": 0,
           "includeAll": true,
           "label": "Clusters",
@@ -511,7 +535,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(job)",
+            "query": "label_values($ClusterFilterLabel)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -534,7 +558,7 @@
       ]
     },
     "time": {
-      "from": "now-6h",
+      "from": "now-5m",
       "to": "now"
     },
     "timepicker": {},
