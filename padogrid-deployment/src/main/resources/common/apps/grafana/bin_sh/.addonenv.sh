@@ -348,6 +348,12 @@ else
 fi
 
 #
+# Allowed labels
+#
+ALLOWED_LABELS_HELP="job|namespace|service"
+
+
+#
 # PadoGrid provided folders
 #
 PADOGRID_FOLDERS="Hazelcast HazelcastDual HazelcastAll Hazelcast-perf_test Padogrid"

@@ -31,7 +31,7 @@ NAME
    ./$EXECUTABLE - Update all folders provided by PadoGrid
 
 SYNOPSIS
-   ./$EXECUTABLE [-label prometheus_label] [-?]
+   ./$EXECUTABLE [-label $ALLOWED_LABELS_HELP] [-?]
 
 
 DESCRIPTION
@@ -42,7 +42,7 @@ DESCRIPTION
       - dual:   $DUAL_FOLDERS
       - all:    $ALL_FOLDERS
 
-   -label prometheus_label
+   -label $ALLOWED_LABELS_HELP
              The name of the Prometheus label to apply the cluster list filter. This
              label is typically introduced by Prometheus. For example, you can assign a
              list of target endpoints under the '$DEFAULT_LABEL' label as shown in the
@@ -61,6 +61,11 @@ SEE ALSO
 
 EOF
 exit
+fi
+
+if [[ "$ALLOWED_LABELS_HELP" != *"$LABEL"* ]]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid label [$LABEL]. Allowed labels are $ALLOWED_LABELS_HELP. Command aborted."
+   exit 1
 fi
 
 if [ "$SINGLE_FOLDERS" == "" ]; then

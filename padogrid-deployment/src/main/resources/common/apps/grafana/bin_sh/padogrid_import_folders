@@ -31,9 +31,9 @@ NAME
    ./$EXECUTABLE - Update and import PadoGrid provided dashboard templates
 
 SYNOPSIS
-   ./$EXECUTABLE [-editable] [-label prometheus_label] [-?]
+   ./$EXECUTABLE [-editable] [-label $ALLOWED_LABELS_HELP] [-?]
 
-   -label prometheus_label
+   -label $ALLOWED_LABELS_HELP
              The name of the Prometheus label to apply the cluster list filter. This
              label is typically introduced by Prometheus. For example, you can assign a
              list of target endpoints under the '$DEFAULT_LABEL' label as shown in the EXAMPLES
@@ -60,6 +60,11 @@ SEE ALSO
 
 EOF
 exit
+fi
+
+if [[ "$ALLOWED_LABELS_HELP" != *"$LABEL"* ]]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid label [$LABEL]. Allowed labels are $ALLOWED_LABELS_HELP. Command aborted."
+   exit 1
 fi
 
 # Update PadoGrid folders

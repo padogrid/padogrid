@@ -33,7 +33,7 @@ NAME
    ./$EXECUTABLE - Update the cluster specific variables in all dashaboards
 
 SYNOPSIS
-   ./$EXECUTABLE [-folder folder_name] [-label prometheus_label] [-type single|dual|all] [-editable] [-?]
+   ./$EXECUTABLE [-folder folder_name] [-label $ALLOWED_LABELS_HELP] [-type single|dual|all] [-editable] [-?]
 
 DESCRIPTION
    Updates cluster specific variables in all dashboards. The cluster variable take
@@ -73,8 +73,8 @@ DESCRIPTION
                      dashboards.
 
       - ClusterFilterLabel: This variable defines the label used to filter Hazelcast
-                     clusters. It is set by specifying the '-label' option. The
-                     default value is '$DEFAULT_LABEL'.
+                     clusters. It is set by specifying the '-label' option.
+                     Default: $DEFAULT_LABEL.
 
    The default value '$DEFAULT_LABEL' of ClusterFilterLabel is associated with the
    'job_name' parameter in the following Prometheus configuration file.
@@ -89,7 +89,7 @@ OPTIONS
    -folder folder_name
              Folder name. Default: $DEFAULT_FOLDER
 
-   -label prometheus_label
+   -label $ALLOWED_LABELS_HELP
              The name of the Prometheus label to apply the cluster list filter. This
              label is typically introduced by Prometheus. For example, you can assign
              a list of target endpoints under the '$DEFAULT_LABEL' label as shown in
@@ -178,6 +178,11 @@ SEE ALSO
 
 EOF
 exit
+fi
+
+if [[ "$ALLOWED_LABELS_HELP" != *"$LABEL"* ]]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid label [$LABEL]. Allowed labels are $ALLOWED_LABELS_HELP. Command aborted."
+   exit 1
 fi
 
 if [ "$FOLDER" == "" ]; then
@@ -534,16 +539,26 @@ esac
 popd > /dev/null 2>&1
 
 #
-# Special cases
+# Update labels
 #
+ALLOWED_LABELS=$(echo $ALLOWED_LABELS_HELP | sed 's/|/ /g')
+
+ENTRY=""
+ENTRY_JET=""
+for i in $ALLOWED_LABELS; do
+  ENTRY="$ENTRY -e s/$i/$LABEL/g"
+  ENTRY_JET="$ENTRY_JET -e s/{{$i}}/{{$LABEL}}/g -e s/\\^$i\\$/\\^$LABEL\\$/g -e s/\"$i\"/\"$LABEL\"/g"
+done
 
 if [ "$FOLDER" == "HazelcastAll" ]; then
    pushd "$FOLDER_PATH" > /dev/null 2>&1
    for file in *; do
       if [ "$file" == "All Jet.json" ]; then
-         sed -i$__SED_BACKUP -e "s/{{job}}/{{$LABEL}}/g" -e "s/\\^job\\$/\\^$LABEL\\$/g" -e "s/\"job\"/\"$LABEL\"/g" -e "s/{{namespace}}/{{$LABEL}}/g" -e "s/\\^namespace\\$/\\^$LABEL\\$/g" -e "s/\"namespace\"/\"$LABEL\"/g" -e "s/\\^service\\$/\\^$LABEL\\$/g" -e "s/{{service}}/{{$LABEL}}/g" -e "s/\"service\"/\"$LABEL\"/g" "$TMP_DIR/$FOLDER/${file}"
+         # sed -i$__SED_BACKUP -e "s/{{job}}/{{$LABEL}}/g" -e "s/\\^job\\$/\\^$LABEL\\$/g" -e "s/\"job\"/\"$LABEL\"/g" -e "s/{{namespace}}/{{$LABEL}}/g" -e "s/\\^namespace\\$/\\^$LABEL\\$/g" -e "s/\"namespace\"/\"$LABEL\"/g" -e "s/\\^service\\$/\\^$LABEL\\$/g" -e "s/{{service}}/{{$LABEL}}/g" -e "s/\"service\"/\"$LABEL\"/g" "$TMP_DIR/$FOLDER/${file}"
+         sed -i$__SED_BACKUP $ENTRY_JET "$TMP_DIR/$FOLDER/${file}"
       else
-         sed -i$__SED_BACKUP -e "s/job/$LABEL/g" -e "s/namespace/$LABEL/g" -e "s/service/$LABEL/g" "$TMP_DIR/$FOLDER/${file}"
+         # sed -i$__SED_BACKUP -e "s/job/$LABEL/g" -e "s/namespace/$LABEL/g" -e "s/service/$LABEL/g" "$TMP_DIR/$FOLDER/${file}"
+         sed -i$__SED_BACKUP $ENTRY "$TMP_DIR/$FOLDER/${file}"
       fi
    done
    popd > /dev/null 2>&1
