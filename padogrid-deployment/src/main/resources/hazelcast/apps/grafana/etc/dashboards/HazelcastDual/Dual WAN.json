@@ -450,7 +450,7 @@
             "refId": "Ack Delay Total Time"
           }
         ],
-        "title": "Members ($Cluster)",
+        "title": "Members ($Cluster: $Wan $WanPublisherId)",
         "transformations": [
           {
             "id": "joinByField",
@@ -822,7 +822,7 @@
             "refId": "Ack Delay Total Time"
           }
         ],
-        "title": "Members ($Cluster2)",
+        "title": "Members ($Cluster2: $Wan2 $WanPublisherId2)",
         "transformations": [
           {
             "id": "joinByField",
@@ -1007,7 +1007,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Entry Update Events ($Cluster)",
+        "title": "Maps: Entry Update Events ($Cluster: $Wan $WanPublisherId)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -1157,7 +1157,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Entry Update Events ($Cluster2)",
+        "title": "Maps: Entry Update Events ($Cluster2: $Wan2 $WanPublisherId2)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -1307,7 +1307,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Entry Remove Events ($Cluster)",
+        "title": "Maps: Entry Remove Events ($Cluster: $Wan $WanPublisherId)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -1457,7 +1457,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Entry Remove Events ($Cluster2)",
+        "title": "Maps: Entry Remove Events ($Cluster2: $Wan2 $WanPublisherId2)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -1611,7 +1611,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Entry Sync Events ($Cluster)",
+        "title": "Maps: Entry Sync Events ($Cluster: $Wan $WanPublisherId)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -1765,7 +1765,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Entry Sync Events ($Cluster2)",
+        "title": "Maps: Entry Sync Events ($Cluster2: $Wan2 $WanPublisherId2)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -1915,7 +1915,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Dropped Entry Events ($Cluster)",
+        "title": "Maps: Dropped Entry Events ($Cluster: $Wan $WanPublisherId)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -2065,7 +2065,7 @@
             "refId": "A"
           }
         ],
-        "title": "Maps: Dropped Entry Events ($Cluster2)",
+        "title": "Maps: Dropped Entry Events ($Cluster2: $Wan2 $WanPublisherId2)",
         "transformations": [
           {
             "id": "joinByLabels",
@@ -2122,7 +2122,7 @@
         },
         "id": 22,
         "panels": [],
-        "title": "WAN Discovery Plugin",
+        "title": "WAN Discovery Plugin ($Cluster: $Wan $WanPublisherId) ($Cluster2: $Wan 2$WanPublisherId2)",
         "type": "row"
       },
       {
@@ -3048,6 +3048,65 @@
           "type": "query"
         },
         {
+          "current": {
+            "isNone": true,
+            "selected": false,
+            "text": "None",
+            "value": ""
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"\"},tag1)",
+          "description": "WAN replication names",
+          "hide": 0,
+          "includeAll": false,
+          "label": "WAN",
+          "multi": false,
+          "name": "Wan",
+          "options": [],
+          "query": {
+            "query": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"$Cluster\"},tag1)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "/\"replication=(?<text>[^\"]+)/",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query"
+        },
+        {
+          "current": {
+            "isNone": true,
+            "selected": false,
+            "text": "None",
+            "value": ""
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"$Cluster\", tag1=~\".*replication=$Wan.*\"},tag0)",
+          "description": "WAN publisher ID",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Publisher",
+          "multi": false,
+          "name": "WanPublisherId",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"$Cluster\", tag1=~\".*replication=$Wan.*\"},tag0)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "/\"publisherId=(?<text>[^\"]+)/",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query"
+        },
+        {
           "hide": 0,
           "includeAll": false,
           "label": "Source2",
@@ -3091,64 +3150,6 @@
           "regex": "",
           "skipUrlSync": false,
           "sort": 0,
-          "type": "query"
-        },
-        {
-          "current": {
-            "isNone": true,
-            "selected": false,
-            "text": "None",
-            "value": ""
-          },
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DataSource}"
-          },
-          "definition": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"$Cluster\"},tag1)",
-          "description": "WAN replication names",
-          "hide": 0,
-          "includeAll": false,
-          "label": "WAN",
-          "multi": false,
-          "name": "Wan",
-          "options": [],
-          "query": {
-            "query": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"$Cluster\"},tag1)",
-            "refId": "PrometheusVariableQueryEditor-VariableQuery"
-          },
-          "refresh": 1,
-          "regex": "/\"replication=(?<text>[^\"]+)/",
-          "skipUrlSync": false,
-          "sort": 1,
-          "type": "query"
-        },
-        {
-          "current": {
-            "isNone": true,
-            "selected": false,
-            "text": "None",
-            "value": ""
-          },
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DataSource}"
-          },
-          "definition": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"$Cluster\", tag1=~\"\\\"replication=$Wan\\\"\"},tag0)",
-          "description": "WAN publisher ID",
-          "hide": 0,
-          "includeAll": false,
-          "label": "Publisher",
-          "multi": false,
-          "name": "WanPublisherId",
-          "options": [],
-          "query": {
-            "query": "label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\"wan\", $ClusterFilterLabel=\"$Cluster\", tag1=~\"\\\"replication=$Wan\\\"\"},tag0)",
-            "refId": "PrometheusVariableQueryEditor-VariableQuery"
-          },
-          "refresh": 1,
-          "regex": "/\"publisherId=(?<text>[^\"]+)/",
-          "skipUrlSync": false,
-          "sort": 1,
           "type": "query"
         },
         {
