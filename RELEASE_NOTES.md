@@ -6,9 +6,10 @@ https://github.com/padogrid
 
 ## Version 0.9.32-SNAPSHOT
 
-### Release Date: 11/18/23
+### Release Date: 11/28/23
 
-- Initial snapshot.
+- Fixed numerouse Hazelcast dashboard issues mostly pertaining to improper web links and panel contents. The dashboards have been thoroughly tested in both Kubernetes and local environments.
+- Fixed `show_products` to highlight the PadoGrid version in the current cluster context.
 
 ---
 

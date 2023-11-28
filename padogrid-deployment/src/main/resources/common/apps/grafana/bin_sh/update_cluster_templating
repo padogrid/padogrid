@@ -288,6 +288,141 @@ DATASOURCE2_HIDE_SINGLE_OPTIONS="
 }]
 "
 
+WAN_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"$Cluster\\\"},tag1)\",
+  \"description\": \"WAN replication names\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"WAN\",
+  \"multi\": false,
+  \"name\": \"Wan\",
+  \"options\": [],
+  \"query\": {
+    \"query\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster\\\"},tag1)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"replication=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
+WAN2_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\"},tag1)\",
+  \"description\": \"WAN replication names\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"WAN 2\",
+  \"multi\": false,
+  \"name\": \"Wan2\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\"},tag1)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"replication=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
+PUBLISHER_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster\\\", tag1=~\\\".*replication=\$Wan.*\\\"},tag0)\",
+  \"description\": \"WAN publisher ID\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Publisher\",
+  \"multi\": false,
+  \"name\": \"WanPublisherId\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster\\\", tag1=~\\\".*replication=\$Wan.*\\\"},tag0)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"publisherId=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
+PUBLISHER2_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\", tag1=~\\\".*replication=\$Wan2.*\\\"},tag0)\",
+  \"description\": \"WAN publisher ID\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Publisher 2\",
+  \"multi\": false,
+  \"name\": \"WanPublisherId2\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(com_hazelcast_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\", tag1=~\\\".*replication=\$Wan2.*\\\"},tag0)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"publisherId=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
 #
 # Grafana does not support mixing metrics from multiple data sources 
 # via a data source variable. The mixed data source support is limited
@@ -494,6 +629,34 @@ all)
 
 dual)
    for file in *; do
+      if [ "$file" == "Dual WAN.json" ]; then
+      cat "$file" | jq "
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"WanPublisherId2\"))
+                  | .dashboard.templating.list |= $PUBLISHER2_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Wan2\"))
+                  | .dashboard.templating.list |= $WAN2_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"WanPublisherId\"))
+                  | .dashboard.templating.list |= $PUBLISHER_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Wan\"))
+                  | .dashboard.templating.list |= $WAN_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+      else
       cat "$file" | jq "
                   del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
                   | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
@@ -511,6 +674,7 @@ dual)
                   | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
+      fi
    done
    ;;
 
