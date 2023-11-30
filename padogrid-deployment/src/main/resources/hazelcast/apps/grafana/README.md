@@ -76,11 +76,9 @@ export PATH=~/bin:$PATH
 
 ### 5.2. Prometheus
 
----
+#### 5.2.1. Installing and Starting Prometheus
 
-#### 5.2.1. PadoGrid 0.9.22+
-
-PadoGrid 0.9.22 includes integrated support for Prometheus and Grafana, greatly simplifying the installation and management steps.
+PadoGrid includes integrated support for Prometheus and Grafana, greatly simplifying the installation and management steps.
 
 Install Prometheus using `install_padogrid` and `update_products`:
 
@@ -96,64 +94,7 @@ cd_app grafana/bin_sh
 ./start_prometheus
 ```
 
----
-
-#### 5.2.2. PadoGrid 0.9.21 or Older Versions
-
-*If you are using PadoGrid 0.9.21 or older, then we recommend upgrading PadoGrid to the latest version and follow the instructions in the previous section.*
-
-Download and install Prometheus:
-
-**URL:** [https://prometheus.io/download](https://prometheus.io/download/)
-
-If you have enabled Prometheus for Management Center, then you must also include the Management Center as one of the targets in the Prometheus configuration files.
-
-```bash
-cd_app grafana
-vi etc/prometheus.yml
-```
-Using our example in the [3. Enabling Prometheus for Management Center](#3-Enabling-Prometheus-for-Management-Center) section, add `localhost:2222` in the `targets` parameter.
-
-```yaml
-...
-  scrape_configs:
-...
-      static_configs:
-        - targets: [localhost:2222, localhost:8091, localhost:8092, localhost:8093, localhost:8094, localhost:8095, localhost:8096, localhost:8097, localhost:8098, localhost:8099, localhost:8100]
-...
-```
-
-To run Prometheus, include its home directory in your `PATH` and run the `prometheus` executable as follows:
-
-**Unix:**
-
-```bash
-export PATH=$PATH:<path to Prometheus installation directory>
-
-# Using relative path:
-cd_app grafana
-prometheus --config.file=etc/prometheus.yml
-
-# Using absolute path
-prometheus --config.file=$PADOGRID_WORKSPACE/apps/grafana/etc/prometheus.yml
-```
-
-**Cygwin:**
-
-```bash
-export PATH=$PATH:<path to Prometheus installation directory>
-
-# Using relative path:
-cd_app grafana
-prometheus.exe --config.file=$(cygpath -wp etc/prometheus.yml)
-
-# Using absolute path
-prometheus --config.file=$(cygpath -wp "$PADOGRID_WORKSPACE/apps/grafana/etc/prometheus.yml")
-```
-
----
-
-#### 5.2.3. Monitoring Prometheus
+#### 5.2.2. Monitoring Prometheus
 
 You can monitor Prometheus from your browser:
 
@@ -174,7 +115,7 @@ curl -G http://localhost:9090/federate -d 'match[]={__name__!=""}'
 
 ---
 
-#### 5.3.1. PadoGrid 0.9.22+
+#### 5.3.1. Installing and StartingGrafana
 
 Install Grafana  using `install_padogird` and `update_products`:
 
@@ -195,35 +136,7 @@ cd_app grafana/bin_sh
 ./start_grafana
 ```
 
----
-
-#### 5.3.2. PadoGrid 0.9.21 or Older Versions
-
-Download and install Grafana:
-
-**URL:** [https://grafana.com/grafana/download](https://grafana.com/grafana/download)
-
-Include Grafana in your `PATH` and run the following (`GRAFANA_HOME` is the Grafana installation root directory path):
-
-**Unix**
-
-```bash
-export GRAFANA_HOME=<grafana-installation-directory>
-export PATH=$PATH:$GRAFANA_HOME/bin
-grafana-server -homepath $GRAFANA_HOME
-```
-
-**Cygwin**
-
-```bash
-export GRAFANA_HOME=<grafana-installation-directory>
-export PATH=$PATH:$GRAFANA_HOME/bin
-grafana-server -homepath $(cygpath -wp "$GRAFANA_HOME")
-```
-
----
-
-#### 5.3.3. Monitoring Grafana
+#### 5.3.2. Monitoring Grafana
 
 Once Grafana is running, use your web browser to set the user account as follows:
 
@@ -257,6 +170,14 @@ The following dashboard folders are included in this distribution.
 - **HazelcastAll** - A set of dashboards for federating multiple Hazelcast clusters.
 - **Padogrid** - A set of dashboards for PadoGrid specific dashboards.
 
+If Hazelcast is running on Kubernetes, then you need to change the default label value to `namespace` or `service` by executing `padogrid_update_cluster_templating` as follows.
+
+```bash
+./padogrid_update_cluster_templating -label namespace
+```
+
+The above command changes the default label, `job`, to `namespace` so that the Hazelcast metrics can be filtered by Kubernetes namespace. For non-Kubernetes, `padogrid_update_cluster_templating` is not necessary since the dashboards are predefined with the default label, `job`.
+ 
 To import all folders, run `import_folder -all` as follows.
 
 ```bash
@@ -375,22 +296,8 @@ Default: ./create_folder -folder Hazelcast-perf_test
 
 ## 11. Teardown
 
-### 11.1. PadoGrid 0.9.22+
-
 ```bash
 cd_app grafana/bin_sh
 ./stop_grafana
 ./stop_prometheus
-```
-
-### 11.2. PadoGrid 0.9.21 or Older Versions
-
-Fnd the Prometheus and Grafana process IDs and send the TERM signal.
-
-```bash
-ps -efwww | grep grafana-server
-kill -15 <grafana-pid>
-
-ps -efwww | grep prometheus
-kill -15 <prometheus-pid>
 ```
