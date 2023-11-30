@@ -340,13 +340,13 @@ If you made changes to dashboards from the browser and want to save them in the 
 ```bash
 # Using 'job':
 ./padogrid_sync_folders -label job
-# To make dashboards read only
-./padogrid_sync_folders -label job -readonly
+# To make dashboards editable
+./padogrid_sync_folders -label job -editable
 
 # For Kubernetes:
 ./padogrid_sync_folders -label namespace
-# To make dashboards read only
-./padogrid_sync_folders -label namespace -readonly
+# To make dashboards editable
+./padogrid_sync_folders -label namespace -editable
 ```
 
 ## 9. Other Commands

@@ -14,15 +14,14 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
-- *November 18, 2023 - [PadoGrid v0.9.31 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.31) This release includes new Hazelcast Grafana dashboards for monitoring single, dual, and all clusters with support for multiple Prometheus data sources.*
-- *October 18, 2023 - [Hazelcast Multi-Cluster Demo updated.](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-grafana) This bundle automatically installs five (5) Hazelcast clusters along with data ingestion scripts for demonstrating the latest Grafana dashboards.*
+- *November 28, 2023 - [PadoGrid v0.9.32 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.32) This release fixes Hazelcast dashboards with web link issues in the previous release. The dashboards are now fully operational in Kubernetes environments.*
 
 ---
 
 ## Tips of the Day
 
-1. Wish to quickly test and monitor multiple Hazelcast clusters on your laptop? [Hazelcast Multi-Cluster Demo](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-grafana) does all the heavy lifting for you.
-1. What happens when a cluster split-brain occurs in Hazelcast? [Hazelcast Split-Brain](https://github.com/padogrid/bundle-hazelcast-3-app-perf_test_sb-cluster-sb).
+1. Need comprehensive sets of Grafana dashboards for monitoring multiple Hazelcast clusters running on Kubernetes? [Hazelcast Kubernetes Helm Charts](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm).
+1. In need of quickly testing and monitoring multiple Hazelcast clusters on your laptop? [Hazelcast Multi-Cluster Demo](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-grafana) does all the heavy lifting and more for you.
 1. Try Geode/GemFire WAN an easy way. [Geode/GemFire WAN](https://github.com/padogrid/bundle-geode-1-app-perf_test_wan-cluster-ln-ny).
 
 ---
@@ -54,8 +53,7 @@ chmod 755 install_padogrid
 To run PadoGrid as a container, please follow the instructions in the links below.
 
 - [Running PadoGrid using Docker and Podman](#running-padogrid-using-docker-and-podman)
-- [Running PadoGrid in Kubernetes](#running-padogrid-in-kubernetes)
-
+- [Running PadoGrid on Kubernetes](#running-padogrid-on-kubernetes)
 
 ## Downloads
 
@@ -225,9 +223,9 @@ poman exec -it padogrid /bin/bash
 
 For additional details, see the [Docker](https://github.com/padogrid/padogrid/wiki/Docker) section of the manual.
 
-## Running PadoGrid in Kubernetes
+## Running PadoGrid on Kubernetes
 
-You can run PadoGrid in Kubernetes as shown below. The PadoGird container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
+You can run PadoGrid on Kubernetes as shown below. The PadoGrid container stores workspaces in the `/opt/padogrid/workspaces` directory, which you can mount to a persistent volume as needed.
 
 ```bash
 # kubectl
