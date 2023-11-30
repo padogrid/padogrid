@@ -12,7 +12,7 @@ https://github.com/padogrid
 
 ---
 
-## Version 0.9.32-SNAPSHOT
+## Version 0.9.32
 
 ### Release Date: 11/28/23
 
@@ -21,7 +21,7 @@ https://github.com/padogrid
 
 ---
 
-## Version 0.9.31-SNAPSHOT
+## Version 0.9.31
 
 ### Release Date: 11/18/23
 
