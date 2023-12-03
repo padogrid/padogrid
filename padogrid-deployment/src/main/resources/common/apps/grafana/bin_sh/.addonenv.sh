@@ -86,9 +86,9 @@ DEFAULT_DATASOURCE="Prometheus"
 DEFAULT_LABEL="job"
 
 #
-# Default cluter list (comma-separated)
+# Regex for filtering Prometheus data source names. Empty string includes all.
 #
-DEFAULT_CLUSTERS="hazelcast,hazelcast"
+DATASOURCE_REGEX=""
 
 #
 # Source in app specifics
@@ -322,10 +322,8 @@ function getAllGrafanaRwePaths
 }
 
 #
-# Regex for filtering Prometheus data source names. Empty string includes all.
+# Set EDITABLE
 #
-DATASOURCE_REGEX=""
-
 EDITABLE="false"
 for i in "$@"; do
    case "$i" in 
@@ -335,12 +333,9 @@ for i in "$@"; do
    esac
 done
 
-if [ "$CLUSTERS_ARG" == "" ]; then
-   CLUSTERS="$DEFAULT_CLUSTERS"
-else
-   CLUSTERS="$CLUSTERS_ARG"
-fi
-
+#
+# Set LABEL
+#
 if [ "$LABEL_ARG" == "" ]; then
    LABEL="$DEFAULT_LABEL"
 else
@@ -351,7 +346,6 @@ fi
 # Allowed labels
 #
 ALLOWED_LABELS_HELP="job|namespace|service"
-
 
 #
 # PadoGrid provided folders
