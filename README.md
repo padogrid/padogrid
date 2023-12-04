@@ -14,6 +14,7 @@ The PadoGrid project aims to deliver a data grid platform with out-of-the-box tu
 
 ## Announcements
 
+- *December 2, 2023 - [PadoGrid Grafana container image released.](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) This inaugural release automatically installs [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App) to Grafana instances running on Docker and Kubernetes.*
 - *November 28, 2023 - [PadoGrid v0.9.32 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.32) This release fixes Hazelcast dashboards with web link issues in the previous release. The dashboards are now fully operational in Kubernetes environments.*
 
 ---
@@ -42,11 +43,11 @@ chmod 755 install_padogrid
 ./install_padogrid
 ```
 
-:pencil2: *Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
+✏️  *Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
 
 [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
 
-:pencil2: *The latest PadoGrid snapshot release is available if you cannot wait till the next release. It is automatically built when there were changes made in [RELEASE_NOTES.md](RELEASE_NOTES.md). You can download it from [Releases](https://github.com/padogrid/padogrid/releases) or using `install_padogrid`.*
+✏️  *The latest PadoGrid snapshot release is available if you cannot wait till the next release. It is automatically built when there were changes made in [RELEASE_NOTES.md](RELEASE_NOTES.md). You can download it from [Releases](https://github.com/padogrid/padogrid/releases) or using `install_padogrid`.*
 
 ## PadoGrid Container
 
@@ -140,15 +141,15 @@ Inflate one of the distribution files in your file system. For example,
 
 ```bash
 mkdir -p ~/Padogrid/products
-tar -C ~/Padogrid/products/ -xzf padogrid_0.9.29-SNAPSHOT.tar.gz
+tar -C ~/Padogrid/products/ -xzf padogrid_0.9.33-SNAPSHOT.tar.gz
 cd ~/Padogrid/products
-tree -L 1 padogrid_0.9.29-SNAPSHOT
+tree -L 1 padogrid_0.9.33-SNAPSHOT
 ```
 
 **Output:**
 
 ```bash
-padogrid_0.9.29-SNAPSHOT
+padogrid_0.9.33-SNAPSHOT
 ├── LICENSE
 ├── NOTICE
 ├── README.md
@@ -171,14 +172,14 @@ padogrid_0.9.29-SNAPSHOT
 └── workspace
 ```
 
-## Initializing PadoGrid
+### Initializing PadoGrid
 
-:pencil2: If you have run `install_padogrid`, then you have already initialized PadoGrid and you can skip this section.
+✏️  If you have run `install_padogrid`, then you have already initialized PadoGrid and you can skip this section.
 
 To use PadoGrid, you must first create an RWE (Root Workspace Environment) by running the interactive command, `create_rwe`, to specify the workspaces directory and the product installation paths.
 
 ```bash
-~/Padogrid/products/padogrid_0.9.29-SNAPSHOT/bin_sh/create_rwe
+~/Padogrid/products/padogrid_0.9.33-SNAPSHOT/bin_sh/create_rwe
 ```
 
 ## Running PadoGrid using Docker and Podman
@@ -189,16 +190,19 @@ To save your workspaces created in the container, it is recommended that you mou
 # Docker
 docker run --name padogrid -h padogrid -d \
    --mount type=volume,source=padogrid,target=/opt/padogrid \
-   -p 8888:8888 -p 5701:5701 -p 5702:5702 -p 5703:5703 -p 8080:8080 \
-   -p 9401:9401 -p 9402:9402 -p 9403:9403 -p 3000:3000 -p 9090:9090 \
+   -p 8888:8888 -p 1883:1883 -p 1884:1883 -p 1885:1883 \
+   -p 8080:8080 -p 5701:5701 -p 5702:5702 -p 5703:5703 \
+   -p 9401:9401 -p 9402:9402 -p 9403:9403 \
+   -p 3000:3000 -p 9090:9090 \
    -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
 
 # Podman
 podman run --name padogrid -h padogrid -d \
    --mount type=volume,source=padogrid,target=/opt/padogrid \
-   -p 8888:8888 -p 5701:5701 -p 5702:5702 -p 5703:5703 -p 8080:8080 \
-   -p 1883:1883 -p 1884:1883 -p 1885:1883 -p 5703:5703 \
-   -p 9401:9401 -p 9402:9402 -p 9403:9403 -p 3000:3000 -p 9090:9090 \
+   -p 8888:8888 -p 1883:1883 -p 1884:1883 -p 1885:1883 \
+   -p 8080:8080 -p 5701:5701 -p 5702:5702 -p 5703:5703 \
+   -p 9401:9401 -p 9402:9402 -p 9403:9403 \
+   -p 3000:3000 -p 9090:9090 \
    -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
 ```
 
@@ -219,7 +223,7 @@ docker exec -it padogrid /bin/bash
 poman exec -it padogrid /bin/bash
 ```
 
-:pencil2: PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.29-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
+✏️  PadoGrid Docker containers follow the same version conventions as the build except for the SNAPSHOT versions which also include a build number starting from 1. For example, the `padogrid/paadogrid:0.9.33-SNAPSHOT-2` image has the build number 2. The SNAPSHOT versions are for testing only and subject to removal without notice.
 
 For additional details, see the [Docker](https://github.com/padogrid/padogrid/wiki/Docker) section of the manual.
 
@@ -245,7 +249,9 @@ kubectl exec -it padogrid -- bash
 oc exec -it padogrid -- bash
 ```
 
-If you have a Hazelcast cluster running in the same namespace (project) as PadoGrid, then you can run the `perf_test` app as follows.
+If you have a Hazelcast cluster running in the same namespace (project) as PadoGrid, then you can run the `perf_test` app immediately without any manking changes.
+
+If they are running in different namespaces, then set the PadoGrid container environment variables as follows before running the the `perf_test` app.
 
 ```bash
 export NAMESPACE=<Kubernetes namespace/project>

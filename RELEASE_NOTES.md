@@ -6,9 +6,9 @@ https://github.com/padogrid
 
 ## Version 0.9.33-SNAPSHOT
 
-### Release Date: 11/28/23
+### Release Date: 12/02/23
 
-- Initial snapshot.
+- Released [PadoGrid Grafana container image.](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) This inaugural release automatically installs [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App) to Grafana instances running on Docker and Kubernetes.
 
 ---
 
