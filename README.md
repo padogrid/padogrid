@@ -193,7 +193,7 @@ docker run --name padogrid -h padogrid -d \
    -p 8888:8888 -p 1883:1883 -p 1884:1883 -p 1885:1883 \
    -p 8080:8080 -p 5701:5701 -p 5702:5702 -p 5703:5703 \
    -p 9401:9401 -p 9402:9402 -p 9403:9403 \
-   -p 3000:3000 -p 9090:9090 \
+   -p 3000:3000 -p 9090:9090 -p 5006:5006 \
    -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
 
 # Podman
@@ -202,7 +202,7 @@ podman run --name padogrid -h padogrid -d \
    -p 8888:8888 -p 1883:1883 -p 1884:1883 -p 1885:1883 \
    -p 8080:8080 -p 5701:5701 -p 5702:5702 -p 5703:5703 \
    -p 9401:9401 -p 9402:9402 -p 9403:9403 \
-   -p 3000:3000 -p 9090:9090 \
+   -p 3000:3000 -p 9090:9090 -p 5006:5006 \
    -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
 ```
 
