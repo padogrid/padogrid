@@ -1,0 +1,974 @@
+{
+  "dashboard": {
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": false,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "links": [
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "System",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/c7d2bda7-2511-40fb-aaa1-c7ca8563b528/system-resources?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/a310264b-af07-4113-a2ca-e40d86499d3a/00main?var-DataSource=$DataSource&var-Cluster=$Cluster&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "Dual Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/c285e20e-3b2a-4108-bc28-69238459027a/00dual-main?var-DataSource=$DataSource&var-Cluster=$Cluster&var-Cluster2=$Cluster2&${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "dual hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "Dual Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [],
+        "targetBlank": false,
+        "title": "All Main",
+        "tooltip": "",
+        "type": "link",
+        "url": "/d/d3a660bb-5588-491e-849b-6e40b6c0de0e/00main-all?${__url_time_range}"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": false,
+        "keepTime": true,
+        "tags": [
+          "all hazelcast"
+        ],
+        "targetBlank": false,
+        "title": "All Hazelcast",
+        "tooltip": "",
+        "type": "dashboards",
+        "url": ""
+      },
+      {
+        "asDropdown": false,
+        "icon": "dashboard",
+        "includeVars": false,
+        "keepTime": false,
+        "tags": [],
+        "targetBlank": false,
+        "title": "PadoGrid",
+        "tooltip": "About PadoGrid",
+        "type": "link",
+        "url": "/d/fdf91a72-5304-4ac4-bb42-9e30f0f0ec11/padogrid${__url_time_range}"
+      }
+    ],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DataSource}"
+        },
+        "description": "$Cluster: Consolidated job status metrics. Each job is uniquely identified by the Jet generated Job ID. The optional job name may be shown if it is set by the application.",
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [
+              {
+                "options": {
+                  "pattern": "^.*(=)(\\w.*).*\"$",
+                  "result": {
+                    "index": 0,
+                    "text": "$2"
+                  }
+                },
+                "type": "regex"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "locale"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Member"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Member Link",
+                      "url": "/d/f1746acb-12a3-41f4-9d8c-6834afcdda98/member?orgId=1&refresh=5s&var-DataSource=$DataSource&var-Cluster=$Cluster&var-Member=${__value.raw}&${__url_time_range|"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Start Time"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Completion Time"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsIsoNoDateIfToday"
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "-1": {
+                          "color": "green",
+                          "index": 0,
+                          "text": "Running"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Snapshot Size"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.*WM/"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "-9223372036854776000": {
+                          "index": 0,
+                          "text": "N/A"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Job Name"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Job Link",
+                      "url": "/d/ede5631a-3192-477c-98ad-71db6ae498b0/jet-job?var-DataSource=$DataSource&var-Cluster=$Cluster&var-JobId=${__data.fields[\"Job ID\"]}&${__url_time_range}"
+                    }
+                  ]
+                },
+                {
+                  "id": "custom.width",
+                  "value": 281
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Job ID"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 215
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Job ID"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Job Link",
+                      "url": "/d/ede5631a-3192-477c-98ad-71db6ae498b0/jet-job?var-DataSource=$DataSource&var-Cluster=$Cluster&var-JobId=${__value.text}&${__url_time_range}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Start Time"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "-1": {
+                          "color": "green",
+                          "index": 0,
+                          "text": "Starting"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/Bytes.*/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 20,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 30,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "10.2.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_executionStartTime{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "Start Time",
+            "range": false,
+            "refId": "Start Time"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_executionCompletionTime{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Completion Time",
+            "range": false,
+            "refId": "Completion Time"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_snapshotBytes{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Snapshot Size",
+            "range": false,
+            "refId": "Snapshot Size"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_snapshotKeys{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Snapshot Keys",
+            "range": false,
+            "refId": "Snapshot Keys"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_distributedBytesIn{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Bytes In",
+            "range": false,
+            "refId": "Bytes In"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_distributedBytesOut{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Bytes Out",
+            "range": false,
+            "refId": "Bytes Out"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_distributedItemsIn{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Items In",
+            "range": false,
+            "refId": "Items In"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_distributedItemsOut{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Items Out",
+            "range": false,
+            "refId": "Items Out"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_topObservedWm{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Top Observed WM",
+            "range": false,
+            "refId": "Top Observed WM"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_coalescedWm{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Coalesced WM",
+            "range": false,
+            "refId": "Coalesced WM"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_lastForwardedWm{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Last Forwarded WM",
+            "range": false,
+            "refId": "Last Forwarded WM"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_queuesCapacity{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Queues Capacity",
+            "range": false,
+            "refId": "Queues Capacity"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_queuesSize{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Queues Size",
+            "range": false,
+            "refId": "Queues Size"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_emittedCount{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Emitted Count",
+            "range": false,
+            "refId": "Emitted Count"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_receivedCount{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Received Count",
+            "range": false,
+            "refId": "Received Count"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_receivedBatches{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Received Batches",
+            "range": false,
+            "refId": "Received Batches"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_receivedCount{$ClusterFilterLabel=\"$Cluster\"}/com_hazelcast_jet_Metrics_receivedBatches{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Avg Batch Size",
+            "range": false,
+            "refId": "Avg Batch Size"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_numInFlightOps{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Pending Operations",
+            "range": false,
+            "refId": "Pending Operations"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_totalKeys{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Total Keys",
+            "range": false,
+            "refId": "Total Keys"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_totalWindows{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Total Windows",
+            "range": false,
+            "refId": "Total Windows"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_totalFrames{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Total Frames",
+            "range": false,
+            "refId": "Total Frames"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_totalKeysInFrames{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Total Keys In Frames",
+            "range": false,
+            "refId": "Total Keys In Frames"
+          },
+          {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "com_hazelcast_jet_Metrics_lateEventsDropped{$ClusterFilterLabel=\"$Cluster\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "Late Events Dropped",
+            "range": false,
+            "refId": "Late Events Dropped"
+          }
+        ],
+        "title": "Job Status",
+        "transformations": [
+          {
+            "id": "joinByField",
+            "options": {
+              "byField": "tag0",
+              "mode": "outer"
+            }
+          },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "pattern": "^instance$|^instance 1$|Value.*|tag0|^tag1$|^tag1 1$|^tag2$"
+              }
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "(Value #)(.*)",
+              "renamePattern": "$2"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "tag0",
+              "renamePattern": "Job ID"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "tag1.*",
+              "renamePattern": "Job Name"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "tag2.*",
+              "renamePattern": "Execution ID"
+            }
+          },
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "instance.*",
+              "renamePattern": "Member"
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Member": true,
+                "instance 1": false
+              },
+              "indexByName": {
+                "Avg Batch Size": 12,
+                "Bytes In": 7,
+                "Bytes Out": 8,
+                "Coalesced WM": 19,
+                "Completion Time": 4,
+                "Emitted Count": 9,
+                "Items In": 5,
+                "Items Out": 6,
+                "Job ID": 2,
+                "Job Name": 1,
+                "Last Forwarded WM": 20,
+                "Late Events Dropped": 21,
+                "Member": 0,
+                "Pending Operations": 13,
+                "Queues Capacity": 16,
+                "Queues Size": 14,
+                "Received Batches": 11,
+                "Received Count": 10,
+                "Snapshot Keys": 17,
+                "Snapshot Size": 15,
+                "Start Time": 3,
+                "Top Observed WM": 18
+              },
+              "renameByName": {
+                "Value": "",
+                "Value #Completed Successfully": "Completed",
+                "Value #Completion Time": "Completion Time",
+                "Value #Execution Started": "Execution Started",
+                "Value #Failed": "Failed",
+                "Value #Snapshot Size": "Snapshot Size",
+                "Value #Start Time": "Start Time",
+                "Value #Started": "Started",
+                "Value #Submitted": "Submitted",
+                "instance": "Member",
+                "instance 1": "Member",
+                "tag0": "Job ID",
+                "tag1": "Job Name",
+                "tag1 1": "Job Name",
+                "tag2": "Execution ID"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [
+                {
+                  "field": "Job Name"
+                }
+              ]
+            }
+          }
+        ],
+        "type": "table"
+      }
+    ],
+    "refresh": false,
+    "schemaVersion": 38,
+    "tags": [
+      "hazelcast",
+      "jet"
+    ],
+    "templating": {
+      "list": [
+        {
+          "hide": 2,
+          "name": "ClusterFilterLabel",
+          "query": "job",
+          "skipUrlSync": false,
+          "type": "constant",
+          "datasource": "${DATASOURCE}"
+        },
+        {
+          "hide": 0,
+          "includeAll": false,
+          "label": "Source",
+          "multi": false,
+          "name": "DataSource",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "definition": "label_values($ClusterFilterLabel)",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Cluster",
+          "multi": false,
+          "name": "Cluster",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values($ClusterFilterLabel)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "hide": 2,
+          "includeAll": false,
+          "label": "Source2",
+          "multi": false,
+          "name": "DataSource2",
+          "options": [],
+          "query": "prometheus",
+          "queryValue": "",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        },
+        {
+          "current": {
+            "selected": true,
+            "text": [
+              ""
+            ],
+            "value": [
+              ""
+            ]
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource2}"
+          },
+          "definition": "label_values($ClusterFilterLabel)",
+          "hide": 2,
+          "includeAll": false,
+          "label": "Cluster2",
+          "multi": false,
+          "name": "Cluster2",
+          "options": [],
+          "query": {
+            "qryType": 1,
+            "query": "label_values($ClusterFilterLabel)",
+            "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DataSource}"
+          },
+          "filters": [],
+          "hide": 0,
+          "name": "Filters",
+          "skipUrlSync": false,
+          "type": "adhoc"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-5m",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "timezone": "",
+    "title": "Jet Jobs",
+    "uid": "fdd77668-8e16-43fb-8095-dc73ac06712b",
+    "weekStart": ""
+  },
+  "folderId": "${FOLDER_ID}",
+  "overWrite": false
+}

@@ -8,6 +8,7 @@ https://github.com/padogrid
 
 ### Release Date: 12/02/23
 
+- Added Hazelcast Jet job dashboards.
 - Released [PadoGrid Grafana container image.](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) This inaugural release automatically installs [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App) to Grafana instances running on Docker and Kubernetes.
 
 ---
@@ -60,7 +61,7 @@ https://github.com/padogrid
   - Updated the Hazelcast Grafana templates to align with the metrics that are available on Kubernetes. The [Hazelcast Kubernetes Helm Charts](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm) bundle has been updated with Prometheus/Grafana support.
   - Added the *Hazelcast* folder containing the *System Resources* dashboard that mimic the Hazelcast Management Center main page.
 - Migrated the old Table and Graph widgets in Grafana dashboard templates to Time Series widgets.
-- Hazelcast clusters created using `make_cluster' or `create_cluster` now include the `hazelcast-indexes.xml` and `hazecast-indexes.yaml` files for testing indexes.
+- Hazelcast clusters created using `make_cluster` or `create_cluster` now include the `hazelcast-indexes.xml` and `hazecast-indexes.yaml` files for testing indexes.
 - Fixed hazelcast mc and grafana version update issues. Prior to this fix, `update_products -version` hanged for `hazelcast-mc` and `grafana`.
 - Added support for the `-product` option to `create_cluster`. With this change, `make_cluster` is now deprecated.
 
