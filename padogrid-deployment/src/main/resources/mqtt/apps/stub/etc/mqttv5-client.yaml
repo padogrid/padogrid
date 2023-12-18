@@ -1,0 +1,435 @@
+#
+# Copyright (c) 2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# true to enable the cluster service, false to disable.
+# Default: true
+enabled: true
+
+# Default cluster name.
+# Default: cluster-default
+defaultCluster: cluster-default
+
+# Tag name that describes this JVM.
+# Default: cluster-tag
+tag: cluster-tag
+
+# Cluster probe delay interval in milliseconds. The cluster service periodically
+# probes the endpoints defined in each cluster.
+# Default: 5000 
+probeDelay: 5000
+
+# Define persistence class that persists messages for QoS 1 and 2.
+persistence:
+  # Persistence type. Specify the fully-qualified class name and
+  # the constructor argument list. Paho provides the following
+  # persistence classes:
+  #
+  #   MemoryPersistence, MqttDefaultFilePersistence
+  #
+  # MemoryPersistence does not take properties. All properties are ignored.
+  #
+  # MqttDefaultFilePersistence takes the 'path' property for the directory path
+  # where the persistence data is to be stored. If the 'path' property is not
+  # defined the working directory is used. All other properties are ignored.
+  #
+  # A custom persistence class must implement MqttClientPersistence and include
+  # a constuctor with a single argument with the Properties type if the properties
+  # are required. If such a constructor does not exist then the default no-arg
+  # constructor is used to instantiate the class. In that case, the properties
+  # are ignored. Unlike the Paho's builtin persistence classes described above,
+  # a custom class requires the fully-quailifed class name. 
+  #
+  # All cluster clients use the top-level 'persistence' element unless they have
+  # their own 'persistence' element defined.
+  #
+  # Example: Persist in 'persist' directory.
+  # className: MqttDefaultFilePersistence
+  # properties:
+  #  - key: path
+  #    value: persist
+  #
+  # Default:
+  #   className: MemoryPersistence
+  className: MqttDefaultFilePersistence
+  properties:
+    - key: path
+      value: ${persistence.dir}
+    
+# Optional 'plugins' specifies a list of plugin classes such as connectors that 
+# implement padogrid.mqtt.client.cluster.IHaMqttPlugin for applying application
+# specific logic on published and/or received data. Connectors may cleanse, filter
+# and/or transform data, save data to databases, stream data to another product
+# such as Kafka and data grids, plot real-time data, and etc.
+# 
+# The plugins come in three flavors: IHaMqttPlugin, IHaMqttConnectorPublisher,
+# IHaMqttConnectorSubscriber.
+#
+#   - IHaMqttPlugin - Application plugin. Starts during the application startup
+#     time and has no association with virtual clusters.
+
+#   - IHaMqttConnectorPublisher - Publisher connector. Launches during cluster
+#     initialization. Responsible for intercepting publishing or published messages
+#     by the application.
+#
+#   - IHaMqttConnectorSubscriber - Subscriber connector. Luanches during cluster
+#     initialization. Responsible for intercepting subscribed messages.
+#
+# Example:
+#   - name: plugin_name
+#     enabled: true
+#     className: myplugins.QuestDbJsonConnector
+#     properties:
+#       - key: endpoint
+#         value: localhost:9090
+#       - key: callback
+plugins:
+    # Plugin name. If null, then the plugin cannot and will never be created.
+  - name: null
+    # Optional plugin description.
+    description: null
+    # true enable, false to disable. If disabled, the plugin is not created.
+    enabled: true
+    # Plugin context. The plugin context determines the plugin bootstrap
+    # environment. Valid values are CLUSTER, APP. If CLUSTER, the plugin is
+    # associated with the cluster that has the matching 'pluginNames' value
+    # and launched during the cluster initialization time. If APP, then
+    # the plugin is launched after the cluster service is initialized.
+    # For IHaMqttConnectorPublisher and IHaMqttConnectorSubscriber, the
+    # 'context' value is always CLUSTER.
+    # Default: CLUSTER
+    context: CLUSTER
+    # Fully-qualified class that implements padogrid.mqtt.client.cluster.IHaMqttPlugin.
+    # If null, then the connector cannot be created.
+    className: null
+    # Initialization properties passed into the 'init(Properties)' method.
+    properties: null
+      #- key:
+      #  value: null
+    # The 'subscriptions' element is for IHaMqttConnectorSubscriber plugins
+    # to automatically subscribe to the specified topic filters. For other plugin
+    # types, i.e., IHaMqttConnectorPublisher and IHaMqttPlugin, this element
+    # may be used explicitly in the plugin implementation.
+    subscriptions:
+        # Topic filters for IHaMqttConnectorSubscriber. IHaMqttConnectorSubscriber
+        # automatically subscribes to the specified topic filters.
+      - topicFilters: []
+        # QoS for the topic filters. Valid values are 0, 1, 2. If it is invalid or
+        # unspecified, then it defaults to 1.
+        # Default: 1
+        qos: 1
+      
+# Cluster definitions. HaMqttClient supports multiple clusters.
+clusters:
+    # Unique cluster name. Each cluster name defined in this file must be unique.
+    # Default: cluster-default
+  - name: ${cluster.name}
+  
+    # Optional cluster description.
+    description: MQTT virtual cluster for perf_test client
+  
+    # true to enable the cluster, false to disable.
+    # Default: true
+    enabled: true
+    
+    # true to auto connect as part of cluster service initialization,
+    # false to connect when HaMqttClient.connect() is invoked.
+    # Default: true
+    autoConnect: true
+    
+    # Connection time to wait in milliseconds. Each client in the cluster waits
+    # for this amount of time before they timeout. Timed out clients are moved
+    # to the dead client list. This parameter only applies to the connections
+    # created by this cluster. If liveEndpointPoolEnabled is true (default), then
+    # this parameter will not be applied to the connections created by other clusters.
+    # Default: 5000
+    timeToWait: 5000
+    
+    # Failover Service (FoS). Valid values are 0, 1, 2, 3. HaMqttClient provides
+    # a subscriber failover service in four (4) levels.
+    #
+    # 0 - all subscribers, all connections. This level is default. It makes
+    #     subscriptions and connections to all endpoints.
+    #
+    # 1 - one subscriber, two connections. This level opens connections to two
+    #     endpoints, but sticks topic subscriptions only to one endpoint. No
+    #     subscriptions are made to the other endpoint. Only when the sticky
+    #     endpoint fails, subscriptions are made to the other endpoint at that
+    #     time. Failover is quick but there is a subscription delay which could
+    #     lead to data loss.
+    #
+    # 2 - two subscribers, two connections. Like FoS 1, this level opens two (2)
+    #     connections but increases the number of endpoints that make subscriptions
+    #     to two (2). That means, with FoS 2, HaMqttClient receives duplicate messages,
+    #     one from each endpoint. HaMqttClient sticks to one of the endpoints and
+    #     delivers data only from that sticky endpoint to the application. It discards
+    #     the data from the other endpoint. The other endpoint replaces the sticky
+    #     endpoint upon failure. Failover is immediate with no data loss.
+    #
+    # 3 - select subscribers, select connections. FoS 3 allows configuration of both
+    #     subscriberCount and liveEndpointCount. By default, FoS 3 makes subscriptions
+    #     to all of the endpoints. This is rather expensive and wasteful if there are
+    #     many endpoints. The higher the numbers the higher the HA at the expense of
+    #     higher volume of duplicate data and higher network traffic.
+    #
+    # Default: 0
+    fos: 0
+    
+    # Initial number of endpoints to connect. If intialEndpointCount is set,
+    # then the cluster service first makes connections up to that number of
+    # endpoints and defers the rest of the endpoints to the next probing cycle.
+    # This can significantly reduce the time to complete HaMqttClient.connect()
+    # call if there are a large number of endpoints. A negative value is equivalent
+    # to all endpoints.
+    # Default: -1
+    initialEndpointCount: -1
+    
+    # Number of live endpoints to maintain. -1 for all endpoints. This parameter is
+    # configurable only for FoS 3. For other FoS levels, it is hard wired as follows.
+    #    FoS 0: -1
+    #    FoS 1: 2
+    #    FoS 2: 2 
+    # Default: -1
+    liveEndpointCount: -1
+    
+    # Maximum number of subscribers. -1 for all endpoints. This parameter is
+    # configurable only for FoS 3. For other FoS levels, it is hard wired as follows.
+    #    FoS 0: -1
+    #    FoS 1: 1
+    #    FoS 2: 2 
+    # Default: -1
+    subscriberCount: -1
+    
+    # By default, HaMqttClient shares MQTT connections across clusters. Set this
+    # parameter to false if this cluster is to create its own connections.
+    # Default: true
+    liveEndpointPoolEnabled: true
+    
+    # Publisher Type. Valid values are STICKY, RANDOM, ROUND_ROBIN, ALL.
+    #   STICKY - Use the same server for all publications.
+    #   RANDOM - Randomly select one server from the live list for each publication.
+    #   ROUND_ROBIN - Select the next server from the live list for each publication.
+    #   ALL - Publish each message to all servers in the live list.
+    # If STICKY and primaryServerURI is defined, the cluster client always uses
+    # that server for all operations.
+    # Default: STICKY
+    publisherType: ROUND_ROBIN
+    
+    # Optional primary server URI. For STICKY connection of publisherType, 
+    # the primary server takes a priority over other servers for all operations.
+    # For other publisherType values, it has no effect. The primary server
+    # is automatically added to connection.serverURIs if not included.
+    primaryServerURI: null
+    
+    # Default topic base to bound topics publshed by all publishers. Each publisher
+    # (endpoint) can override this value by setting 'endpoints.topicBase'. If it
+    # is not defined, then by default, the publisher is determined by 'publisherType'.
+    defaultTopicBase: null
+    
+    # 'endpoints' defines a list of named endpoints that can be directly invoked
+    # by the HaMqttClient API. By default, each endpoint name begins with the
+    # cluster name followed by a sequenced number starting from 1. This element
+    # allows you to rename them. Note that endpoints that do not match
+    # 'connection.serverURIs' are also included in the endpoint pool for probing.
+    endpoints:
+        # Name of the endpoint. It must be unique with this cluster. Otherewise,
+        # the last endpoint that defines the same name overrides all.
+      - name: null
+        # A single endpoint. Must not include the range wildcard.
+        endpoint: null
+        # Topic base to bound topics published to this endpoint. It overrides
+        # publisherTopicBase.
+        topicBase: null
+
+    # Optional connector name list. Define the plugin under the 'plugins'
+    # element and specify its name here to activate it for this cluster.
+    # Default: null
+    pluginNames: []
+    
+    # HaMqttClient provides a bridge service incomming and outgoing messages.
+    # Incoming messages are the ones that are received by this application from
+    # the endpoints. Outgoing messages are the ones that are sent (published) by
+    # this application.
+    bridges:
+    
+      # 'in' fowards incoming messages to the target clusters.
+      # Note that this bridge is a single point of failure. If the application
+      # fails, then so do this bridge.
+      in:
+      
+          # Target cluster name. Undefined cluster names are logged and discarded.
+          # If the target cluster name is the parent cluster name, then it is logged
+          # and discarded.
+          # Default: null
+        - cluster: null
+        
+          # A list of topic filters from which the topics are to be filtered
+          # and forwarded to the target cluster.
+          # Default: null
+          topicFilters: []
+          
+          # Set qos to override the caller's qos value. It must be a valid number,
+          # i.e., 0, 1, or 2; otherwise, it deaults to 1.
+          # Note that qos is for subscribing to the topic filters as well as forwarding
+          # (publishing) messages.
+          # Default: 1
+          qos: 1
+        
+      # 'out' sends outgoing messages to the target clusters. 
+      # Note that unlike 'in', 'out' does not suffer from a single point
+      # of failure since the application directly sends data to the target
+      # clusters. Drawbacks are as follows.
+      # 1) It puts additional load on the application. Each publish() call 
+      #    makes additional calls to the target clusters defined under 'out'.
+      # 2) The target clusters must be exposed to the application. Normally,
+      #    a bridge serves as a proxy to overcome firewalls, but 'out'
+      #    requires direct access to the target clusters.
+      out:
+
+          # Target cluster name. Undefined cluster names are logged and discarded.
+          # If the target cluster name is this cluster name, then it is logged and
+          # discarded.
+        - cluster: null
+        
+          # A list of topic filters from which the topics are to be filtered
+          # before sending messages.
+          # Default: null
+          topicFilters: []
+          
+          # Set qos to override the caller's qos value. It must be a valid number,
+          # i.e., 0, 1, or 2; otherwise, it defaults to 1. Unlike the 'in' bridge,
+          # this value may never be used for the 'out' bridge, since the qos
+          # specified by the caller overrides it.
+          # Default: 1
+          qos: 1
+
+    connections:
+      # tls uses an internal socket factory for SSL connections
+      - tls:
+          # TLS protocol version. Valid values are TLSv1.1, TLSv1.2, TLSv1.3
+          # Default: TLSv1.2
+          tlsVersion: TLSv1.2
+          # Path to path to a file containing trusted CA certificates to enable encrypted
+          # communication.
+          cafile: null
+          # client certificate for authentication, if required by server.
+          certfile: null
+          # client private key for authentication, if required by server.
+          keyfile: null
+          # Password to the private key if required.
+          password: null
+
+        # MqttClientConnectionOptions attributes. Each attribute defined in this
+        # file represents the corresponding attribute in MqttConnectionOptions.
+        # Please see MqttConnectionOptions for details.
+        # Attribute values shown below are default values.
+        connection:
+          automaticReconnect: false
+          automaticReconnectMaxDelay: 120
+          automaticReconnectMinDelay: 1
+          cleanStart: true
+          connectionTimeout: 30
+          customWebSocketHeaders: null
+          executorServiceTimeout: 1
+          httpsHostnameVerificationEnabled: true
+          keepAliveInterval: 60
+          maxReconnectDelay: 128000
+          maximumPacketSize: null
+          password: null
+          receiveMaximum: null
+          requestProblemInfo: null
+          requestResponseInfo: null
+          sendReasonMessages: false
+          
+          # serverURIs defines a list of brokers that make up the cluster. URI ranges
+          # are supported for the last IP address octet and the port numbers. If the port
+          # number is not specified then defaults to 1883 for tcp, 8883 for ssl,
+          # 8083 for ws, and 8443 for wss.
+          #
+          #   tcp|ssl|ws|wss://<host-name>[:<port-range>]
+          #     tcp://mqtt.org:1883-1885
+          #     tcp://mqtt.org:1883
+          #     tcp://mqtt.org
+          #
+          #   tcp|ssl|ws|wss://<IPv3>.<octet-range>[:port-range]   
+          #     tcp://192.168.1.10-20:1883-1885
+          #     tcp://192.168.1.10:1883-1885
+          #     tcp://192.168.1.10-20:1883
+          #     tcp://192.168.1.10-20
+          #
+          # Each endpoint is given a unique name in the following format:
+          #
+          #    <clusterName>-<endpointNumber> 
+          #
+          # where <clusterName> is this cluster's name defined by the 'name' attribute,
+          #       <endpointNumber> is a sequence number determined in the order 
+          #                        the endpoints are defined by the 'serverURIs'
+          #                        attribute. endpintNumber begins from 1.
+          #
+          # You can overwrite the default endpoint name by defining it in the 'endpoints'
+          # element.
+          #
+          # Default: [tcp://localhost:1883-1885]
+          serverURIs: [tcp://localhost:1883-1885]
+          
+          sessionExpiryInterval: null
+
+          # sslClientProps:
+          #   - key: key
+          #     value: value
+          sslClientProps: null
+          
+          sslHostnameVerifier: null
+          topicAliasMaximum: null
+          useSubscriptionIdentifiers: true
+          userName: null
+        
+          # userProperties:
+          #   - key: key
+          #     value: value
+          userProperties: null
+          
+          willDestination: null
+          willMessage: null
+          willMessageProperties:
+            assignedClientIdentifier: null
+            authenticationData: null
+            authenticationMethod: null
+            contentType: null
+            correlationData: null
+            maximumPacketSize: null
+            maximumQoS: null
+            messageExpiryInterval: null
+            payloadFormat: false
+            publishSubscriptionIdentifiers: []
+            reasonString: null
+            receiveMaximum: null
+            requestProblemInfo: null
+            requestResponseInfo: null
+            responseInfo: null
+            responseTopic: null
+            retainAvailable: null
+            serverKeepAlive: null
+            serverReference: null
+            sessionExpiryInterval: null
+            sharedSubscriptionAvailable: null
+            subscribeSubscriptionIdentifier: null
+            subscriptionIdentifiersAvailable: null
+            topicAlias: null
+            topicAliasMaximum: null
+            userProperties: []
+            validProperties: null
+            wildcardSubscriptionsAvailable: null
+            willDelayInterval: null

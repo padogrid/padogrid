@@ -44,7 +44,7 @@ SYNOPSIS
    $EXECUTABLE [-user git_user_name]
                [-githost github|gitea]
                [-connect https | ssh]
-               [-all | [-product bundle_product_name] | [-list|-header|-catalog]]
+               [-all | -product bundle_product_name | [-list|-header|-catalog]]
                [-console]
                [bundle_file_name]
                [-?]
@@ -69,18 +69,21 @@ OPTIONS
              Includes all product bundles available in the remote bundle repo.
    
    -product bundle_product_name
-             Search the specified bundle product. Supported bundle product names are: 
+             Searches the specified bundle product. Supported bundle product names are: 
                 $BUNDLE_PRODUCT_LIST
+
+             If this option is not specified, then the current cluster context product
+             is assigned.
 
    -list
              Lists product bundles available in the remote bundle repo. If '-all'
-             is specified then it lists bundles available for all products, other wise, it lists
-             bundles for only the the current workspace product.
+             is specified, then it lists bundles available for all products. If '-product'
+             is specified, then it lists bundles for the specified product.
 
    -header
              Lists product bundles along with header information describing each bundle in the
-             remote bundle repo. If '-all' is specified then it lists bundles available
-             for all products, other wise, it lists bundles for only the the current workspace product.
+             remote bundle repo. If '-all' is specified, then it lists bundles available for all
+             products. If '-product' is specified, then it lists bundles for the specified product.
 
    -console
              Displays README.md on the console. By default, if this option is not specified,
@@ -90,7 +93,6 @@ OPTIONS
    -catalog
              Displays the bundle catalog in the browser. If the browser cannot be launched
              then it lists header information, i.e., the '-header' option is executed.
-
 
    bundle_file_name
              Bundle name or bundle file path
@@ -112,10 +114,10 @@ EXAMPLES
       $EXECUTABLE -catalog
 
    To view a remote bundle help (READEME.md) in the browser:
-      $EXECUTABLE bundle-jet-3-cluster-trade
+      $EXECUTABLE -product mosquitto bundle-mosquitto-tutorial-virtual-clusters
 
    To view a remote bundle help (READEME.md) on the console:
-      $EXECUTABLE -console bundle-jet-3-cluster-trade
+      $EXECUTABLE -product mosquitto -console bundle-mosquitto-tutorial-virtual-clusters
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
@@ -422,7 +424,8 @@ else
          curl -sS -X GET "$README_URL" -H "$AUTH_HEADER" | grep -o "\"content\":\"[^\"]*" | sed 's/"content":"//' | base64 -d
          echo $CONTENT
       else
-         curl $RAW_FILE_URL
+         RAW_FILE_URL="$RAW_BASE_URL/${BUNDLE_NAME}/master/README.md"
+         curl -sL $RAW_FILE_URL | less
       fi
    else
       if [[ ${OS_NAME} == DARWIN* ]]; then
@@ -437,7 +440,7 @@ else
          echo $CONTENT
       else
          RAW_FILE_URL="${RAW_BASE_URL}/${BUNDLE_NAME}/master/README.md"
-         curl $RAW_FILE_URL
+         curl -sL $RAW_FILE_URL | less
       fi
    fi
    

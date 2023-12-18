@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-rwe -vm -?"
+   echo "-rwe -vm -long -short -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -38,15 +38,15 @@ NAME
    $EXECUTABLE - Display all the workspaces in the current padogrid workspaces environment
 
 SYNOPSIS
-   $EXECUTABLE [-rwe rwe_name] [-?]
+   $EXECUTABLE [-rwe rwe_name] [-vm] [-short|-long] [-?]
 
 DESCRIPTION
    Displays a tree view of all the workspaces in the current or specified RWE environment.
 
    Note that the product displayed in a workspace node is the default product configured
-   for that workspace and does not necessarily represent the how the components in the
+   for that workspace and does not necessarily represent how the components in the
    workspace are configured. For example, a workspace may contain a cluster configured
-   with the default product and yet another cluster with another product.
+   with the default product and yet may include another cluster with another product.
 
 OPTIONS
    -rwe rwe_name
@@ -56,8 +56,14 @@ OPTIONS
    -vm
              Displays only VM workspaces.
 
+   -short
+             Display workspace names only.
+
+   -long
+             Display all workspace components. This option is default.
+
 DEFAULT
-   $EXECUTABLE
+   $EXECUTABLE -long
 
 SEE ALSO
 EOF
@@ -73,6 +79,11 @@ fi
 if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
    echo >&2 -e "${CError}ERROR:${CNone} Invalid workspaces. Please run 'create_rwe' to initialize workspaces."
    echo >&2 "       Command aborted."
+   exit 1
+fi
+
+if [ "$SHORT" == "true" ] && [ "$LONG" == "true" ]; then
+   echo >&2 -e "${CError}ERROR:${CNone} Only one of '-short' or '-long' allowed. Command aborted."
    exit 1
 fi
 
@@ -198,6 +209,10 @@ for ((j = 0; j < ${#WORKSPACES[@]}; j++)); do
 	 IS_CURRENT_WORKSPACE="false"
       fi
       LEADING_BAR=" "
+   fi
+
+   if [ "$SHORT" == "true" ]; then
+      continue;
    fi
 
    NODES="apps clusters docker groups k8s pods"

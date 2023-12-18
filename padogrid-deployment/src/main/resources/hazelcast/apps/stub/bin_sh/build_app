@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+NAME
+   $EXECUTABLE - Build the app environment for the workspace
+
+SYNOPSIS
+   $EXECUTABLE [-clean] [-?]
+   
+DESCRIPTION
+   Builds the app for the workspace. It downloads the dependencies and places them
+   in the following workspace lib directory.
+
+   $PADOGRID_WORKSPACE/lib
+   
+OPTIONS
+   -clean
+             Cleans up the build files after the build completes.
+  
+ENVIRONMENT VARIABLES
+   HAZELCAST_VERSION
+             If HAZELCAST_VERSION is set in the 'setenv.sh' file, then this script
+             downloads the specified version of Hazelcast. This variable should be
+             set if your application does not require Hazelcast locally installed.
+
+DEFAULT
+   ./$EXECUTABLE
+EOF
+   exit
+fi
+
+pushd $APP_DIR > /dev/null
+if [ "$HAZELCAST_VERSION" != "" ]; then
+    sed -i$__SED_BACKUP  -e "s/>.*<\/hazelcast.version>/>$HAZELCAST_VERSION<\/hazelcast.version>/" pom-hazelcast.xml
+    mvn install -f pom-hazelcast.xml
+else
+   mvn install
+fi
+popd > /dev/null
+
+cp $APP_DIR/lib/* $PADOGRID_WORKSPACE/lib/
+
+# Remove the build files if the -clean option is specified.
+if [ "$CLEAN" == "true" ]; then
+   rm -rf $APP_DIR/lib
+fi
+
+#
+# Display build information
+#
+echo ""
+echo "Workspace: $PADOGRID_WORKSPACE"
+echo ""
+echo "Downloaded the required library files into the following directory."
+echo ""
+echo "   $PADOGRID_WORKSPACE/lib"
+echo ""
+echo "CLASSPATH includes the above directory for all apps and clusters running under"
+echo "this workspace."
+echo ""
+echo "See ../README.md for configuring the above add-on(s)."
+echo ""

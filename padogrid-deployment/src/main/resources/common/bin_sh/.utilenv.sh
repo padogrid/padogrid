@@ -630,21 +630,21 @@ function getAppOptions
 {
    local __PRODUCT="$1"
    if [ "$__PRODUCT" == "hazelcast" ]; then
-      echo "derby desktop grafana perf_test"
+      echo "derby desktop grafana perf_test stub"
    elif [ "$__PRODUCT" == "jet" ]; then
-      echo "derby desktop jet_demo"
+      echo "derby desktop jet_demo stub"
    elif [ "$__PRODUCT" == "geode" ] || [ "$__PRODUCT" == "gemfire" ]; then
-      echo "derby grafana padodesktop perf_test"
+      echo "derby grafana padodesktop perf_test stub"
    elif [ "$__PRODUCT" == "coherence" ]; then
-      echo "derby perf_test"
+      echo "derby perf_test stub"
    elif [ "$__PRODUCT" == "mosquitto" ]; then
-      echo "derby perf_test"
+      echo "derby perf_test stub"
    elif [ "$__PRODUCT" == "kafka" ]; then
-      echo "derby perf_test"
+      echo "derby perf_test stub"
    elif [ "$__PRODUCT" == "redis" ]; then
-      echo "derby perf_test"
+      echo "derby perf_test stub"
    else
-      echo "derby"
+      echo "derby stub"
    fi
 }
 
@@ -3457,7 +3457,7 @@ function isWorkspaceVmEnabled
 {
    local WORKSPACE="$1"
    local RWE_PATH="$2"
-   local VM_ENABLED
+   local VM_ENABLED="false"
    if [ "$WORKSPACE" == "" ]; then
       VM_ENABLED="false"
    else
@@ -3469,10 +3469,10 @@ function isWorkspaceVmEnabled
          VM_ENABLED="false"
       else
          # If multi-tenant workspace then the user might not have read access.
-         if [ -r "$WORKSPACE_PATH/setenv.sh" ]; then
-            local VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/setenv.sh")
+         if [ -r "$WORKSPACE_PATH/vmenv.sh" ]; then
+            VM_ENABLED=$(grep "VM_ENABLED=" "$WORKSPACE_PATH/vmenv.sh")
          else
-            local VM_ENABLED="false"
+            VM_ENABLED="false"
          fi
          VM_ENABLED=$(echo "$VM_ENABLED" | sed -e 's/^.*VM_ENABLED=//' -e 's/"//g')
       fi

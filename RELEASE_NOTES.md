@@ -6,10 +6,12 @@ https://github.com/padogrid
 
 ## Version 0.9.33-SNAPSHOT
 
-### Release Date: 12/13/23
+### Release Date: 12/18/23
 
 - Added Hazelcast Jet job dashboards.
 - Released [PadoGrid Grafana container image.](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) This inaugural release automatically installs [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App) to Grafana instances running on Docker and Kubernetes.
+- Removed the `change_version` command. The `update_products` command replaces this command.
+- Added support for creating 'stub' apps. A stub app is useful for creating a product-specific custom app.
 
 ---
 

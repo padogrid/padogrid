@@ -54,7 +54,10 @@ SYNOPSIS
 
 DESCRIPTION
    Creates a new app by installing the specified app that is part of the padogrid
-   distribution. This command creates a new app directory in the workspace 'apps' directory.
+   distribution. This command creates a new app directory in in the following workspace
+   'apps' directory.
+
+   $WORKSPACE/apps
 
    You are encouraged to create and configure as many apps as you need by specifying
    different names using the '-name' option. By doing so, you minimize the reconfiguration
@@ -66,14 +69,17 @@ OPTIONS
 
    -app app_name
              Name of the app to create. Use <tab><tab> to see available apps. If not
-             specified, then it defaults to 'perf_test'.
+             specified, then it defaults to 'derby'.
+
+             If app_name is 'stub', then it creates an app consists of product specific stub
+             scripts and configuration files. A stub app is useful for creating a custom app.
 
    -name new_app_name
-             New name of the app. If not specified, then it defaults to 'perf_test' or
+             New name of the app. If not specified, then it defaults to 'derby' or
              the specified app_name.
 
 DEFAULT
-   $EXECUTABLE -app perf_test -name perf_test
+   $EXECUTABLE -app derby -name derby
 
 FILES
    $PADOGRID_WORKSPACE/apps
@@ -146,7 +152,21 @@ else
    #
    # Snappydata specific apps
    #
-   
-   echo "App not supported."
+   cp -r $PADOGRID_HOME/$PRODUCT/apps/$APP $APP_DIR
+
+   # Make bin_sh scripts executables
+   if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+      # Set group permissions for workspace owner
+      chmod -R g+rw,o-rwx $APP_DIR
+      if [ -d "$APP_DIR/bin_sh" ]; then
+         chmod -R 770 $APP_DIR/bin_sh
+         chmod 660 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+      fi
+   else
+      if [ -d "$APP_DIR/bin_sh" ]; then
+         chmod 755 $APP_DIR/bin_sh/*
+         chmod 644 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+      fi
+   fi
 
 fi

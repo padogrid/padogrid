@@ -555,7 +555,8 @@ __padogrid_complete()
             type_list=`$command -options`
          else
             type_list=$(ls $SCRIPT_DIR $COMMON_BIN_SH_DIR | sed -e '/bin_sh.*$/d' | sort)
-            type_list=$(removeTokens "$type_list" "setenv.sh")
+            # Remove setenv.sh. Multiple setenv.sh may exist
+            type_list=$(removeTokens "$type_list" "setenv.sh setenv.sh setenv.sh")
             type_list="-product -rwe -version -? $type_list"
          fi
       fi

@@ -54,7 +54,10 @@ SYNOPSIS
 
 DESCRIPTION
    Creates a new app by installing the specified app that is part of the padogrid
-   distribution. This command creates a new app directory in the workspace 'apps' directory.
+   distribution. This command creates a new app directory in in the following workspace
+   'apps' directory.
+
+   $WORKSPACE/apps
 
    You are encouraged to create and configure as many apps as you need by specifying
    different names using the '-name' option. By doing so, you minimize the reconfiguration
@@ -65,15 +68,14 @@ OPTIONS
              Product name. Supported products are $PRODUCTS_SUPPORTED.
 
    -app app_name
-             Name of the app to create. Use <tab><tab> to see available apps. If not
-             specified, then it defaults to 'perf_test'.
+             Name of the app to create. Use <tab><tab> to see available apps. If this option
+             is not specified, then it defaults to 'derby'.
 
-   -name new_app_name
-             New name of the app. If not specified, then it defaults to 'perf_test' or
-             the specified app_name.
+             If app_name is 'stub', then it creates an app consists of product specific stub
+             scripts and configuration files. A stub app is useful for creating a custom app.
 
 DEFAULT
-   $EXECUTABLE -app perf_test -name perf_test
+   $EXECUTABLE -app derby -name derby
 
 FILES
    $PADOGRID_WORKSPACE/apps
@@ -121,10 +123,6 @@ if [ ! -d "$PADOGRID_HOME/$PRODUCT/apps/$APP" ] && [ ! -d "$PADOGRID_HOME/apps/$
    >&2 echo -e "${CError}ERROR:${CNone} The specified app does not exist. Command aborted."
    exit 1
 fi
-if [ "$APP" == "padodesktop" ] && [ ! -d "$PADODESKTOP_HOME" ]; then
-   >&2 echo -e "${CError}ERROR:${CNone} Pado Desktop not found. Command aborted."
-   exit 1
-fi
 
 # Create apps dir if it does not exist
 if [ ! -d "$APPS_DIR" ]; then
@@ -150,7 +148,21 @@ else
    #
    # Hadoop specific apps
    #
-   
-   echo "App not supported."
+   cp -r $PADOGRID_HOME/$PRODUCT/apps/$APP $APP_DIR
+
+   # Make bin_sh scripts executables
+   if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
+      # Set group permissions for workspace owner
+      chmod -R g+rw,o-rwx $APP_DIR
+      if [ -d "$APP_DIR/bin_sh" ]; then
+         chmod -R 770 $APP_DIR/bin_sh
+         chmod 660 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+      fi
+   else
+      if [ -d "$APP_DIR/bin_sh" ]; then
+         chmod 755 $APP_DIR/bin_sh/*
+         chmod 644 $APP_DIR/bin_sh/.*.sh $APP_DIR/bin_sh/*.sh
+      fi
+   fi
 
 fi
