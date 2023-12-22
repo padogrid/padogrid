@@ -107,7 +107,7 @@ public class GroupTest implements Constants
 	}
 
 	enum TestCaseEnum {
-		set, put, putall, get, getall, predicate, sql, publish, publishall, offer, poll, peek, take;
+		set, put, putall, get, getall, asyncput, asyncget, predicate, sql, publish, publishall, offer, poll, peek, take;
 
 		static TestCaseEnum getTestCase(String testCaseName) {
 			if (set.name().equalsIgnoreCase(testCaseName)) {
@@ -118,6 +118,10 @@ public class GroupTest implements Constants
 				return putall;
 			} else if (get.name().equalsIgnoreCase(testCaseName)) {
 				return get;
+			} else if (asyncput.name().equalsIgnoreCase(testCaseName)) {
+				return asyncput;
+			} else if (asyncget.name().equalsIgnoreCase(testCaseName)) {
+				return asyncget;
 			} else if (getall.name().equalsIgnoreCase(testCaseName)) {
 				return getall;
 			} else if (predicate.name().equalsIgnoreCase(testCaseName)) {
