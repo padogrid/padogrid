@@ -365,7 +365,7 @@ DOCKER_PRODUCT_LIST="geode hazelcast jet mosquitto snappydata"
 K8S_PRODUCT_LIST="geode hazelcast jet mosquitto"
 
 # Supported App Products (all cluster products)
-APP_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka mosquitto redis snappydata spark"
+APP_PRODUCT_LIST="none coherence gemfire geode hadoop hazelcast jet kafka mosquitto redis snappydata spark"
 
 # Common Apps for all products
 COMMON_APP_LIST="derby"
