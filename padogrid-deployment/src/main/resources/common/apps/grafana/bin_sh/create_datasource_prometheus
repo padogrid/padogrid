@@ -31,7 +31,7 @@ NAME
    ./$EXECUTABLE - Create the Prometheus datasource in Grafana
 
 SYNOPSIS
-   /$EXECUTABLE [-datasource datasource_name] [-?]
+   /$EXECUTABLE [-datasource datasource_name] [-url prometheus_url] [-?]
 
 DESCRIPTION
    Creates the Prometheus datasource in Grafana.
@@ -40,8 +40,11 @@ OPTIONS
    -datasource datasource_name
              Datasource name. Default: $DEFAULT_DATASOURCE
 
+   -url prometheus_url
+             Prometheus URL. Default: $PROMETHEUS_URL
+
 DEFAULT
-   ./$EXECUTABLE -datasource $DEFAULT_DATASOURCE
+   ./$EXECUTABLE -datasource $DEFAULT_DATASOURCE -url $PROMETHEUS_URL
 
 EOF
 exit
@@ -49,6 +52,10 @@ fi
 
 if [ "$DATASOURCE" == "" ]; then
    DATASOURCE=$DEFAULT_DATASOURCE
+fi
+
+if [ "$URL_ARG" != "" ]; then
+   PROMETHEUS_URL="$URL_ARG"
 fi
 
 curl -sS -X POST $GRAFANA_URL_REST/api/datasources -H "Content-Type: application/json" -d '{"name": "'"$DATASOURCE"'", "type": "prometheus", "url": "'"$PROMETHEUS_URL"'", "access": "proxy", "basicAuth": false, "jsonData": { "httpMethod": "GET", "keepCookies": [] } }' | jq .
