@@ -88,6 +88,12 @@ Vagrant.configure("2") do |config|
 
   # Provision required software
   config.vm.provision "shell", inline: <<-SHELL
+    # Touch .Xauthority
+    touch /home/vagrant/.Xauthority
+    chmod 600 /home/vagrant/.Xauthority
+    chown vagrant:vagrant /home/vagrant/.Xauthority
+
+    # Install curl
     OS_ID="$(cat /etc/*-release | grep ^ID=)"
     if [[ "$OS_ID" == *"centos"* ]]; then
       # Stop firewall
