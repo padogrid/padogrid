@@ -59,7 +59,7 @@ NAME
 SYNOPSIS
    $EXECUTABLE [-pod pod_name]
                [-primary primary_node_name] [-prefix node_name_prefix]
-               [-ip host_os_private_ip] [-octet node_last_IP_octet]
+               [-ip first_host_only_ip]
                [-pm primary_node_memory_size_in_MiB]
                [-nm data_node_memory_size_in_MiB]
                [-count data_node_count]
@@ -98,9 +98,12 @@ EOF
 fi
 cat <<EOF
 
-   -ip node_IP_last_octet
-             The last octect of the first node IP address. The pod buillder
-             assigns IP addresses to all nodes starting from this octect.
+   -ip first_host_only_ip
+             The first host-only IP address. The pod buillder assigns IP addresses to
+             all nodes starting from this IP address by incrementing the last
+             octet of the address. This is a required option. You can define a
+             host-only interface by seletcting the 'Tools/Host-only Adapters/Networks'
+             menu from the VirtualBox console.
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
@@ -237,14 +240,12 @@ if [ "$POD_SPECIFIED" == "false" ]; then
       done
    fi
 fi
+HOST_PRIVATE_IP=$IP_ADDRESS
 if [ "$PRIMARY" != "" ]; then
    NODE_NAME_PRIMARY=$PRIMARY
 fi
 if [ "$PREFIX" != "" ]; then
    NODE_NAME_PREFIX=$PREFIX
-fi
-if [ "$OCTET" != "" ]; then
-   NODE_IP_LAST_OCTET=$OCTET
 fi
 if [ "$PM" != "" ]; then
    NODE_PRIMARY_MEMORY_SIZE=$PM
@@ -269,30 +270,9 @@ AVAHI_ENABLED=$AVAHI_SPECIFIED
 
 # Interactive mode - collect options inputted by the user.
 if [ "$QUIET" == "false" ]; then
+   HOST_PRIVATE_IP="192.168.56.1"
    EXISTING_PODS=`getPods`
-   AVAILABLE_IP_ADDRESSES=`getPrivateNetworkAddresses`
-   if [ "$AVAILABLE_IP_ADDRESSES" == "" ]; then
-      echo >&2 "----------------------------------------------------------------"
-      echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo >&2 "    ERROR: It seems you have not created host-only VirtualBox network adapter."
-      echo >&2 "           Plase open the VirtualBox Manager and create one."
-      if [[ $OS_NAME == DARWIN* ]]; then
-      echo >&2 "           On Mac OS X, you may need to assign the IP address with a network mask"
-      echo >&2 "           after you have created a host-only adapter. For example, the following"
-      echo >&2 "           command assigns 192.168.56.1 to the network mask 255.255.255.0:"
-      echo >&2 ""
-      echo >&2 "           sudo ifconfig vboxnet0 inet 192.168.56.1 netmask 255.255.255.0"
-      echo >&2 "           See the following file for details:"
-      echo >&2 ""
-      fi
-      echo >&2 "           $PADOGRID_HOME/pods/README.md"
-      echo >&2 "----------------------------------------------------------------"
-      exit 1
-   fi
-   # Pick the first IP as the default IP.
-   for HOST_PRIVATE_IP in $AVAILABLE_IP_ADDRESSES; do
-      break;
-   done
+   
    echo ""
    echo "Please answer the prompts that appear below. You can abort this command at any time"
    echo "by entering 'Ctrl-C'."
@@ -353,13 +333,12 @@ if [ "$QUIET" == "false" ]; then
 
       # HOST_PRIVATE_IP
       __REDO=true
-      echo "This machine has the following IP addresses. Choose one from the list. The IP address"
-      echo "must be a private IP address."
-      for i in $AVAILABLE_IP_ADDRESSES; do
-         echo $i
-      done
+      echo "Enter the host-only IP address for the first VM. This IP address must be"
+      echo "in the range defined by a host-only interface. You can create a host-only"
+      echo -e "interface by selecting the ${CHighlight}Tools/Host-only Adapters/Networks${CNone} menu"
+      echo "from the VirtualBox console. IP address typically begins from 192.168.56.1."
       while [ "$__REDO" == "true" ]; do
-         read -p "Host private IP address [$HOST_PRIVATE_IP]: " INPUT
+         read -p "Enter the host-only IP address for the first VM [$HOST_PRIVATE_IP]: " INPUT
          # trim string
          INPUT=`echo "$INPUT" | xargs`
          if [ "$INPUT" != "" ]; then
@@ -367,25 +346,6 @@ if [ "$QUIET" == "false" ]; then
          fi
          if [ "$HOST_PRIVATE_IP" = "" ]; then
             echo "Invalid IP addres."
-            __REDO=true
-         else
-            __REDO=false
-         fi
-      done
-
-      # NODE_IP_LAST_OCTET
-      __REDO=true
-      while [ "$__REDO" == "true" ]; do
-         read -p "First node IP address' octect [$NODE_IP_LAST_OCTET]: " INPUT
-         # trim string
-         INPUT=`echo "$INPUT" | xargs`
-         if [ "$INPUT" != "" ]; then
-            NODE_IP_LAST_OCTET=$INPUT
-         fi
-         if [[ "$(isNumber $NODE_IP_LAST_OCTET)" == "false" ]] ||
-            [ "$NODE_IP_LAST_OCTET" -le "0" ] || [ "$NODE_IP_LAST_OCTET" -ge 100 ]; then
-            echo "Invalid octet entered. Valid range: [1, 255]."
-            NODE_IP_LAST_OCTET=10
             __REDO=true
          else
             __REDO=false
@@ -419,8 +379,7 @@ if [ "$QUIET" == "false" ]; then
          if [ "$INPUT" != "" ]; then
             NODE_MEMORY_SIZE=$INPUT
          fi
-         if [[ "$(isNumber $NODE_MEMORY_SIZE)" == "false" ]] ||
-            [ "$NODE_IP_LAST_OCTET" -le "0" ]; then
+         if [[ "$(isNumber $NODE_MEMORY_SIZE)" == "false" ]]; then
             echo "Invalid number entered."
             NODE_MEMORY_SIZE=$DEFAULT_NODE_MEMORY_SIZE
             __REDO=true
@@ -507,8 +466,7 @@ if [ "$QUIET" == "false" ]; then
       echo "                       Pod name: $POD"
       echo "              Primary node name: $NODE_NAME_PRIMARY"
       echo "          Data node name prefix: $NODE_NAME_PREFIX"
-      echo "        Host private IP address: $HOST_PRIVATE_IP"
-      echo "      Node IP addres last octet: $NODE_IP_LAST_OCTET"
+      echo "     First host-only IP address: $HOST_PRIVATE_IP"
       echo " Primary node memory size (MiB): $NODE_PRIMARY_MEMORY_SIZE"
       echo "    Data node memory size (MiB): $NODE_MEMORY_SIZE"
       echo "                Data node count: $DATA_NODE_COUNT"
@@ -518,13 +476,12 @@ if [ "$QUIET" == "false" ]; then
 
       REDO=true
       INNER_LOOP=true
+      NODE_IP_LAST_OCTET=${HOST_PRIVATE_IP##*.}
       if [[ "$(isNumber $NODE_IP_LAST_OCTET)" == "false" ]]; then
          echo "Server number must be a number."
-         NODE_IP_LAST_OCTET=10
          INNER_LOOP=false
-      elif [ "$NODE_IP_LAST_OCTET" -le "0" ] || [ "$NODE_IP_LAST_OCTET" -ge 100 ]; then
+      elif [ "$NODE_IP_LAST_OCTET" -le "0" ] || [ "$NODE_IP_LAST_OCTET" -ge 255 ]; then
          echo "Invalid octet number $NODE_IP_LAST_OCTET. Valid range: [1, 255]."
-         NODE_IP_LAST_OCTET=10
          INNER_LOOP=false
       fi
 
@@ -542,8 +499,20 @@ fi
 if [ -z $POD ] || [ "$POD" == "local" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "    ERROR: The pod already exists: [local]. Specify a new pod name using the '-pod' option. Command aborted."
+   echo -e >&2 "    ${CError}ERROR:${CNone} The pod already exists: [local]. Specify a new pod name using the '-pod' option. Command aborted."
    echo >&2 "----------------------------------------------------------------"
+   exit 1
+fi
+
+if [ "$HOST_PRIVATE_IP" == "" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} The '-ip' option is required. Please set it to a host-only interface"
+   echo "       IP address. You can create a host-only interface by selecting the"
+   echo "       'Tools/Host-only Adapters/Networks' menu from the VirtualBox console."
+   exit 1
+fi
+NODE_IP_LAST_OCTET=${HOST_PRIVATE_IP##*.}
+if [[ "$(isNumber $NODE_IP_LAST_OCTET)" == "false" ]] || [ "$NODE_IP_LAST_OCTET" -le "0" ] || [ "$NODE_IP_LAST_OCTET" -ge 255 ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid address [$HOST_PRIVATE_IP]."
    exit 1
 fi
 

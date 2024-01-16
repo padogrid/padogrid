@@ -762,6 +762,9 @@ public class GroupTest implements Constants
 									hazelcastInstance.getSql().execute(operation.sqlObj.getSql());
 								}
 								break;
+								
+							case asyncput:
+								break;
 
 							case putall:
 							default: {
