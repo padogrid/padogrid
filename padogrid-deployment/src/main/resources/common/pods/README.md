@@ -1,10 +1,10 @@
-# Pods
+# Vagrant Pods
 
-We define a *pod* as a collection of VMs configured to run one ore more clusters. In `padogrid` environment, a pod refers to a collection of VirtualBox VMs created and managed by Vagrant on your local machine. To simplify Vagrant configuration, `padogrid` provides commands for building pods and assigning them to individual clusters. With a single command, for example, you can build and run a cluster that spans multiple VMs. As with the local clusters, all of the `padogrid` apps remain intact and are readily available for the pod clusters.
+We define a *pod* as a collection of VMs configured to run one ore more clusters. In PadoGrid, a pod refers to a collection of VirtualBox VMs created and managed by Vagrant on your local machine. To simplify Vagrant configuration, PadoGrid provides commands for building pods and assigning them to individual clusters. With a single command, for example, you can build and run a cluster that spans multiple VMs. As with the local clusters, all of the PadoGrid apps remain intact and are readily available for the pod clusters.
 
 ## Pod Type
 
-There are two types of pods: *local* and *non-local*. The local pod runs on your host OS and non-local pods run on guest OS's. By default, `padogrid` creates clusters on the local pod, which gets implicitly created for you when you install `padogrid`. The non-local pods, on the other hand, must explicitly be created by running the `create_pod` command.
+There are two types of pods: *local* and *non-local*. The local pod runs on your host OS and non-local pods run on guest OS's. By default, PadoGrid creates clusters on the local pod, which gets implicitly created for you when you install PadoGrid. The non-local pods, on the other hand, must explicitly be created by running the `create_pod` command.
 
 ## Pod Name
 
@@ -22,10 +22,10 @@ There are several pod properties that you can optionally set for creating pods p
 | -------- | ------- | ----------- |
 | pod.name | local | Unique pod name. |
 | pod.type | local | Pod type. Valid types are `"local"` and `"vagrant"` |
-| pod.box.image| ubuntu/trusty64 | Vagran box image name. You can choose another from the Vagrant repo: [https://app.vagrantup.com/boxes/search](https://app.vagrantup.com/boxes/search) |
-| node.name.primary | pnode | Primary node name. The primary node is not a data node. It should be used to manage clusters and run client programs.|
+| pod.box.image| ubuntu/jammy64 | Vagrant box image name. You can choose another from the [Vagrant repo](https://app.vagrantup.com/boxes/search). Not all Vagrant boxes will work in PadoGrid since most of them are customized images. The [Tested Vagrant Boxes](https://github.com/padogrid/padogrid/wiki/Tested-Vagrant-Boxes) section of the PadoGrid manual provides a list of recommended Vagrant boxes. |
+| node.name.primary | pnode | Primary node name. The primary node is not a data node. It should be used to manage data grid clusters and run client programs.|
 | node.name.prefix | node | Data node name prefix. Each data node name begins with this prefix followed by a number assigned by the pod builder.|
-| node.ip.lastOctet | 10 | The last octet of the primary node IP address. The pod buillder assigns incremented IP addresses to all nodes starting from this octect. |
+| node.ip.lastOctet | 10 | **Deprecated. Starting PadoGrid 0.9.33, the last octet of the IP address is extracted from the IP address specified by the `create_pod -ip` command.** The last octet of the primary node IP address. The pod buillder assigns incremented IP addresses to all nodes starting from this octect. |
 | node.memory.primary | 2048 | Primary node memory size in MiB. |
 |node.memory.data | 2048 | Data node memory size in MiB. |
 | node.count | 2 | Number of data nodes. A node represents a VM. |
@@ -36,6 +36,16 @@ There are several pod properties that you can optionally set for creating pods p
 To create a pod, you must first create a host-only network in VirtualBox to setup a private network with your host OS so that the VMs and the host OS can communicate each other.
 
 ### Linux/MacOS
+
+#### VirtualBox 7.x
+
+- Open the VirtualBox Manager (tested with v7.0).
+- Select "Tools" at the upper left corner.
+- Select th "Host-only Netowrks" tab.
+- Select the "Create" button at the top.
+- Enter "Lower Bound" and "Upper Bound" IP addresses. VirtualBox 7.x has deprecated host-only adapters in favor of host-only networks. When you create a pod, you will need to supply an IP address in this range.
+
+#### VirtualBox 6.x, 5.x
 
 - Open the VirtualBox Manager (tested with v6.0).
 - Select "Tools" at the upper left corner
@@ -65,6 +75,8 @@ ifconfig vboxnet0
 
 ### Windows
 
+#### VitualBox 6.x, 5.x
+
 - Open the VirtualBox Manager (tested with v5.2.30).
 - Select "File/Host Network Manager..."
 - Select the "Create" button at the upper left.
@@ -89,70 +101,58 @@ Pods share the `products` directory. Before you create a pod, you must first ins
 At a minimum, you need JDK and one of the supported data grid products, i.e., Geode, GemFire, Hazelcast, Jet, etc., installed for your Guest OS. The following is an example list of software that you should consider installing on your host OS.
 
 ```console
-/Users/dpark/Work/linux/
-├── grafana-6.2.5
-├── apache-geode-1.11.0
-├── pivotal-gemfire-9.9.1
-├── hazelcast-jet-enterprise-3.2.2
-├── hazelcast-enterprise-3.12.6
-├── hazelcast-jet-enterprise-3.2.2
-├── jdk1.8.0_212
-├── jq-1.6
-└── prometheus-2.10.0.linux-amd64
-```
-
-### Symbolic Link Example
-
-```console
-# Change directory to the workspace directory
-cd_workspace
-
-# Create the symbolic link to the installed product directory
-ln -s /Users/dpark/Work/linux products
-ls -l products
-lrwxr-xr-x  1 dpark  staff    23 Dec 25 17:02 products -> /Users/dpark/Work/linux
+/Users/dpark/Padogrid/products/linux
+├── apache-geode-1.15.1
+├── grafana-10.2.0
+├── hazelcast-enterprise-5.3.6
+├── jdk-11.0.21
+├── jq-linux-amd64
+├── vmware-gemfire-10.0.2
+└── prometheus-2.49.1.linux-amd64
 ```
 
 ## Pod Example
 
-When you create a pod, the `create_pod` command will prompt for a host private IP address. This address must be a host-only network address. For our example in the previous section, that address would be `192.168.56.1`. Note that you can create multiple host-only networks and configure pods with different networks. Having pods on different networks enables WAN replication tests, for example.
+When you create a pod, the `create_pod` command will prompt for a host private IP address. This address must be a host-only network address. For our example in the previous section, that address would be `192.168.56.1`. Note that you can create multiple host-only networks and configure pods with different networks. Having pods on different networks enables WAN replication tests.
+
+The following shows how to create a pod named `mypod` and run a cluster named `finance` on it. Note that the cluster we associate with the pod has no product dependencies. It can be any PadoGrid supported product, e.g., Geode, Hazelcast, etc.
 
 ```console
-# By default, create_pod adds the primary node and two (2) data nodes.
-create_pod -pod mypod
-
-Please answer the prompts that appear blow. You can abort this command at any time
+Please answer the prompts that appear below. You can abort this command at any time
 by entering 'Ctrl-C'.
 
-Pod name [mypod]: 
-Primary node name [pnode]: 
-Data node name prefix [node]: 
-This machine has the following IP addresses. Choose one from the list. The IP address
-must be a private IP address.
-192.168.1.8
-192.168.56.1
-Host private IP address []: 
-Invalid IP addres.
-Host private IP address []: 192.168.56.1
-First node IP address' octect [10]: 
-Primary node memory size in MiB [2048]: 
-Data node memory size in MiB [2048]: 
-Number of data nodes  [2]: 
-Products installation directory path [/Users/dpark/Work/workspaces/ws-3.12/products]:
-Vagrant box image [ubuntu/trusty64]: 
+Pod name [mypod]:
+Primary node name [pnode]:
+Data node name prefix [node]:
+Enter the host-only IP address for the first VM. This IP address must be
+in the range defined by a host-only interface. You can create a host-only
+interface by selecting the Tools/Host-only Adapters/Networks menu
+from the VirtualBox console. IP address typically begins from 192.168.56.1.
+Enter the host-only IP address for the first VM [192.168.56.1]:
+Primary node memory size in MiB [2048]:
+Data node memory size in MiB [2048]:
+Number of data nodes  [2]:
+Products installation directory path.
+[/Users/dpark/Padogrid/products]:
+/Users/dpark/Padogrid/products/linux
+Install Avahi? This allows VMs to enable local network discovery service via
+the mDNS/DNS-SD protocol. All VM host names can be looked up with the suffix
+'.local', i.e., pnode.local, node-01.local, etc.
+Enter 'true' or 'false' [false]: true
+Vagrant box image [ubuntu/jammy64]:
 
-You have entered the following:
+You have entered the following.
                        Pod name: mypod
               Primary node name: pnode
           Data node name prefix: node
-        Host private IP address: 192.168.56.1
-      Node IP addres last octet: 10
+     First host-only IP address: 192.168.56.1
  Primary node memory size (MiB): 2048
     Data node memory size (MiB): 2048
                 Data node count: 2
-             Products directory: /Users/dpark/Work/workspaces/ws-3.12/products
-              Vagrant box image: ubuntu/trusty64
-Enter 'c' to continue, 'r' to re-enter, 'q' to quit: 
+             Products directory: /Users/dpark/Padogrid/products/linux
+                  Avahi enabled: true
+              Vagrant box image: ubuntu/jammy64
+Enter 'c' to continue, 'r' to re-enter, 'q' to quit:
 
 ...
 
@@ -172,10 +172,20 @@ create_cluster -pod mypod -cluster finance
 build_pod -pod mypod
 
 # Upon completion of the 'build_pod' command, change directory to the pod directory
-# and login to the primary node using the password as shown below.
+# and login to the primary node. Older versions of Vagrant box images may require
+# a login password. If it prompts for a password, then enter 'vagrant'.
 cd_pod mypod
 vagrant ssh
-password: vagrant
+
+# You can also login to any of the nodes using ssh.
+ssh vagrant@192,168.56.1
+ssh vagrant@192,168.56.2
+ssh vagrant@192,168.56.3
+
+# If you enabled Avahi, then you can also login using the VM host names.
+ssh vagrant@pnode.local
+ssh vagrant@node-01.local
+ssh vagrant@node-02.local
  
 # Once logged on to the primary node, switch cluster to finance
 switch_cluster finance
@@ -233,7 +243,7 @@ The Vagrant configuration file generated by the `build_pod` command. Note that `
 
 ## Multicast DNS (mDNS)
 
-`padogrid` relies on Avahi to resolve hostnames to IP addresses. Avahi implements the mDNS/DNS-SD protocol to provide a zero-configration service and is fully compatible with MacOS X. The `build_pod` command you executed in the [Pod Example](#Pod-Example) section automatically installs `avahi` on all guest OS nodes. 
+PadoGrid relies on Avahi to resolve hostnames to IP addresses. Avahi implements the mDNS/DNS-SD protocol to provide a zero-configration service and is fully compatible with MacOS X. The `build_pod` command you executed in the [Pod Example](#Pod-Example) section automatically installs `avahi` on all guest OS nodes. 
 
 For more information on `avahi` and mDNS see the links below:
 
@@ -259,7 +269,7 @@ yum install avahi
 **File:** `C:\Windows\System32\drivers\etc\hosts`
 
 ```console
-# padogrid pods
+# PadoGrid pods
 192.168.56.10	pnode.local
 192.168.56.11	node-01.local
 192.168.56.12	node-02.local
@@ -267,7 +277,7 @@ yum install avahi
 
 ### Guest OS
 
-`padogrid` automatically configures mDNS by installing `avahi` on all Guest OS virtual machines.
+PadoGrid automatically configures mDNS by installing `avahi` on all Guest OS virtual machines.
 
 ## Stopping a Pod
 

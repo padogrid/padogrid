@@ -1,10 +1,10 @@
 # Vagrant Pods
 
-We define a *pod* as a collection of VMs configured to run one ore more data grid clusters. In PadoGrid environment, a pod refers to a collection of VirtualBox VMs created and managed by Vagrant on your local machine. To simplify Vagrant configuration, PadoGrid provides commands for building pods and assigning them to individual data grid clusters. With a single command, for example, you can build and run a cluster that spans multiple VMs. As with the local clusters, all of the PadoGrid apps remain intact and are readily available for the pod clusters.
+We define a *pod* as a collection of VMs configured to run one ore more clusters. In PadoGrid, a pod refers to a collection of VirtualBox VMs created and managed by Vagrant on your local machine. To simplify Vagrant configuration, PadoGrid provides commands for building pods and assigning them to individual clusters. With a single command, for example, you can build and run a cluster that spans multiple VMs. As with the local clusters, all of the PadoGrid apps remain intact and are readily available for the pod clusters.
 
 ## Pod Type
 
-There are two types of pods: *local* and *non-local*. The local pod runs on your host OS and non-local pods run on guest OS's. By default, PadoGrid creates data grid clusters on the local pod, which gets implicitly created for you when you install PadoGrid. The non-local pods, on the other hand, must explicitly be created by running the `create_pod` command.
+There are two types of pods: *local* and *non-local*. The local pod runs on your host OS and non-local pods run on guest OS's. By default, PadoGrid creates clusters on the local pod, which gets implicitly created for you when you install PadoGrid. The non-local pods, on the other hand, must explicitly be created by running the `create_pod` command.
 
 ## Pod Name
 
@@ -12,7 +12,7 @@ Each pod is identifiable by a unique name. The local pod type has the `local` po
 
 ## Nodes
 
-A node is essentially a VM that is fully configured to run a data grid member. There are two types of nodes that belong to a pod: *primary node* and *data nodes*. The primary node is typically used to manage data grid clusters and run client applications. The data nodes, on the other hand, run data grid members. The current implementation dedicates one member per data node.
+A node is essentially a VM that is fully configured to run a cluster member or an app. There are two types of nodes that belong to a pod: *primary node* and *data nodes*. The primary node is typically used to manage clusters and run client applications. The data nodes, on the other hand, run members. The current implementation dedicates one member per data node.
 
 ## Pod Properties
 
@@ -94,11 +94,11 @@ ipconfig
 
 ## Guest OS Software
 
-Pods share the `products` directory. Before you create a pod, you must fist install the OS specific software on your host file system. For example, if your host OS is Mac and the Guest OS is Linux then you would create a directory on your Mac and install all the Linux software in that directory. You would then enter this directory path as the `products` directory path when you execute the `create_pod` command. By default, `create_pod` searches the `products` directory in your workspace. If you want to keep the default directory path then you can create a symbolic link to the Linux installation directory path as shown in the example below.
+Pods share the `products` directory. Before you create a pod, you must first install the OS specific software on your host file system. For example, if your host OS is Mac and the Guest OS is Linux then you would create a directory on your Mac and install all the Linux software in that directory. You would then enter this directory path as the `products` directory path when you execute the `create_pod` command. By default, `create_pod` searches the `products` directory in your workspace. If you want to keep the default directory path then you can create a symbolic link to the Linux installation directory path as shown in the example below.
 
 ### Installed Linux Software Example
 
-At a minimum, you need Java and a data grid product installed for your Guest OS. The following is an example list of software that you should consider installing on your host OS.
+At a minimum, you need JDK and one of the supported data grid products, i.e., Geode, GemFire, Hazelcast, Jet, etc., installed for your Guest OS. The following is an example list of software that you should consider installing on your host OS.
 
 ```console
 /Users/dpark/Padogrid/products/linux
@@ -109,16 +109,6 @@ At a minimum, you need Java and a data grid product installed for your Guest OS.
 ├── jq-linux-amd64
 ├── vmware-gemfire-10.0.2
 └── prometheus-2.49.1.linux-amd64
-```
-
-### Symbolic Link Example
-
-```console
-# Change directory to the workspace directory
-cd_workspace
-ln -s /Users/dpark/padogrid/products products
-ls -l products
-lrwxr-xr-x  1 dpark  staff    23 Dec 25 17:02 products -> /Users/dpark/padogrid/products
 ```
 
 ## Pod Example
@@ -182,8 +172,8 @@ create_cluster -pod mypod -cluster finance
 build_pod -pod mypod
 
 # Upon completion of the 'build_pod' command, change directory to the pod directory
-# and login to the primary node. Older versions of PadoGrid required a login password.
-# If it prompts for a password, then enter 'vagrant'.
+# and login to the primary node. Older versions of Vagrant box images may require
+# a login password. If it prompts for a password, then enter 'vagrant'.
 cd_pod mypod
 vagrant ssh
 
