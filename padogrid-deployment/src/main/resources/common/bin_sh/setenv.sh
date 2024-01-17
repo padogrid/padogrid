@@ -160,8 +160,7 @@ DEFAULT_NODE_MEMORY_SIZE=2048
 DEFAULT_DATA_NODE_COUNT=2
 
 # Default vagrant box image
-#DEFAULT_POD_BOX_IMAGE="hashicorp/precise64"
-DEFAULT_POD_BOX_IMAGE="ubuntu/trusty64"
+DEFAULT_POD_BOX_IMAGE="ubuntu/jammy64"
 
 # Supported pod types
 VALID_POD_TYPE_LIST="local vagrant"
