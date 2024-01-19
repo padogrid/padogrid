@@ -94,13 +94,17 @@ if [ $NODE_COUNT -gt 0 ]; then
    done
 fi
 
-# Deploy the authorized_keys to all nodes.
+# Initialize user environment
 pushd $POD_DIR > /dev/null 2>&1
 for NODE in $HOSTS; do
+   # Deploy the authorized_keys to all nodes.
    vagrant ssh $NODE -c "cp /vagrant/tmp/authorized_keys /home/vagrant/.ssh/"
    # system dir
    #vagrant ssh $NODE -c "sudo ssh-keyscan -t rsa $HOSTS_LOCAL > /etc/ssh/ssh_known_hosts"
    # user's home
    #vagrant ssh $NODE -c "ssh-keyscan -t rsa $HOSTS_LOCAL > /home/vagrant/.ssh/known_hosts"
+
+   # Prepend PadoGrid initialzation to .bashrc
+   vagrant ssh $NODE -c "sed -i '1s|^|# >>> padogrid initialization >>>\n. /vagrant/.nodeenv.sh\n# <<< padogrid initialization <<<\n\n|' .bashrc"
 done
 popd > /dev/null 2>&1
