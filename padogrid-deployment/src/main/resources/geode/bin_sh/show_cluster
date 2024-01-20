@@ -63,7 +63,11 @@ EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-   $EXECUTABLE -cluster $CLUSTER
+   If local host:
+      $EXECUTABLE -cluster $CLUSTER -short
+
+   If VM:
+      $EXECUTABLE -cluster $CLUSTER -long
 
 FILES
    $CLUSTER_DIR/etc/cluster.properties
@@ -112,6 +116,7 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_LOCATOR_HOSTS}; do
       let LOCATOR_COUNT=LOCATOR_COUNT+1
       LOCATOR=`getVmLocatorName $VM_HOST`
+      echo "Probing $LOCATOR..."
       pid=`getVmLocatorPid $VM_HOST $LOCATOR $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_LOCATOR_COUNT=RUNNING_LOCATOR_COUNT+1
@@ -124,12 +129,14 @@ function displayVmClusterShort()
    for VM_HOST in ${VM_HOSTS}; do
       let MEMBER_COUNT=MEMBER_COUNT+1
       MEMBER=`getVmMemberName $VM_HOST`
+      echo "Probing $MEMBER..."
       pid=`getVmMemberPid $VM_HOST $MEMBER $WORKSPACE $RWE`
       if [ "$pid" != "" ]; then
           let RUNNING_MEMBER_COUNT=RUNNING_MEMBER_COUNT+1
       fi
    done
    
+   echo ""
    echo "         CLUSTER: $CLUSTER"
    if [ "$SHORT" == "false" ]; then
    echo "     CLUSTER_DIR: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
