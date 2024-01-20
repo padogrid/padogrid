@@ -73,31 +73,29 @@ if [ ! -d "$PADOGRID_WORKSPACES_HOME" ]; then
    echo >&2 "       Command aborted."
    exit 1
 fi
-
 if [ "$RWE_ARG" == "" ]; then
-   RWE_PATH="$PADOGRID_WORKSPACES_HOME"
+   __RWE_PATH="$PADOGRID_WORKSPACES_HOME"
 else
-   RWE_PATH="$PADOGRID_ENV_BASE_PATH/workspaces/$RWE_ARG"
-   if [ ! -d "$RWE_PATH" ]; then
-      echo -e >&2 "${CError}ERROR:${CNone} Specified RWE does not exist. Command aborted." 
+   RWE_PARENT_DIR="$(dirname "$PADOGRID_WORKSPACES_HOME")"
+   __RWE_PATH="$RWE_PARENT_DIR/$RWE_ARG"
+   RWE_NAME=$RWE_ARG
+   if [ ! -d "$__RWE_PATH" ]; then
+      echo >&2 "ERROR: Specified RWE does not exist [$RWE_ARG]. Command aborted."
       exit 1
-   fi
-   if [ ! -f "$RWE_PATH/initenv.sh" ] \
-      || [ ! -f "$RWE_PATH/.addonenv.sh" ] \
-      || [ ! -f "$RWE_PATH/setenv.sh" ]; then
-      echo -e >&2 "${CError}ERROR:${CNone} Specified RWE is not a invalid RWE. Command aborted." 
+   elif [ "$(isValidRwe $RWE_ARG)" == "false" ]; then
+      echo >&2 "ERROR: Specified RWE is not valid [$RWE_ARG]. Command aborted."
       exit 1
    fi
 fi
 
-__WORKSPACES=`ls $RWE_PATH`
+__WORKSPACES=`ls $__RWE_PATH`
 WORKSPACES=""
 for i in $__WORKSPACES; do
-   if [ -d "$RWE_PATH/$i" ] \
-     && [ -r "$RWE_PATH/$i" ] \
-     && [ -f "$RWE_PATH/$i/initenv.sh" ] \
-     && [ -f "$RWE_PATH/$i/.addonenv.sh" ] \
-     && [ -f "$RWE_PATH/$i/setenv.sh" ]; then
+   if [ -d "$__RWE_PATH/$i" ] \
+     && [ -r "$__RWE_PATH/$i" ] \
+     && [ -f "$__RWE_PATH/$i/initenv.sh" ] \
+     && [ -f "$__RWE_PATH/$i/.addonenv.sh" ] \
+     && [ -f "$__RWE_PATH/$i/setenv.sh" ]; then
       WORKSPACES="$WORKSPACES $i"
    fi
 done
