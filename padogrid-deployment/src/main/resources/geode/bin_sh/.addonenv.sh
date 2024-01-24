@@ -240,6 +240,7 @@ unset __PATH
 #
 # GEODE_VERSION/PRODUCT_VERSION: Determine the Geode/GemFire version
 # Geode and GemFire share the same 'geode' prefix for jar names.
+#
 if [ "$PRODUCT_HOME" == "" ]; then
    GEODE_VERSION=""
    RUN_TYPE="default"
@@ -247,8 +248,13 @@ if [ "$PRODUCT_HOME" == "" ]; then
    PRODUCT_VERSION=""
    PRODUCT_MAJOR_VERSION=""
 else
-   for file in "$PRODUCT_HOME/lib/geode-core-"*; do
-      file=${file##*geode\-core\-}
+   CORE_JAR=$(ls "$PRODUCT_HOME/lib/geode-core-"* 2> /dev/null)
+   if [ "$CORE_JAR" == "" ]; then
+      CORE_JAR=$(ls "$PRODUCT_HOME/lib/gemfire-core-"* 2> /dev/null)
+   fi
+   for file in "$CORE_JAR"; do
+      file=${file##/*/}
+      file=${file##*g*-core\-}
       GEODE_VERSION=${file%.jar}
    done
    if [ -f "$CLUSTER_DIR/bin_sh/import_csv" ]; then

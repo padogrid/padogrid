@@ -49,9 +49,9 @@ NODE_PRIMARY_MEMORY_SIZE=`getPodProperty "node.memory.primary" $NODE_PRIMARY_MEM
 NODE_MEMORY_SIZE=`getPodProperty "node.memory.data" $NODE_MEMORY_SIZE`
 HOST_PRODUCTS_DIR=`getPodProperty "host.productsDir" $HOST_PRODUCTS_DIR`
 
-# Host private IP address. This address must be accessible from VitualBox
+# Host private IP address. This address must be accessible from VirtualBox
 if [ "$HOST_PRIVATE_IP" == "" ]; then
-   HOST_PRIVATE_IP="192.168.56.1"
+   HOST_PRIVATE_IP="192.168.56.2"
 fi
 IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet" $IP_LAST_OCTET`
 if [ "$IP_LAST_OCTET" == "" ]; then
@@ -67,13 +67,19 @@ if [ -z $PADOGRID_WORKSPACE ]; then
    PADOGRID_WORKSPACE=$PADOGRID_HOME
 fi
 GUEST_HOME_DIR="/home/vagrant"
+GUEST_PADOGRID_ENV_BASE_PATH="$GUEST_HOME_DIR/Padogrid"
 PADOGRID_WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
 PADOGRID_WORKSPACES_HOME_NAME=$(basename "$PADOGRID_WORKSPACES_HOME")
-GUEST_PADOGRID_WORKSPACES_HOME="$GUEST_HOME_DIR/$PADOGRID_WORKSPACES_HOME_NAME"
+GUEST_PADOGRID_WORKSPACES_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/workspaces/$PADOGRID_WORKSPACES_HOME_NAME"
 GUEST_PADOGRID_WORKSPACE="$GUEST_PADOGRID_WORKSPACES_HOME/$PADOGRID_WORKSPACE_NAME"
 PADOGRID_DIR_NAME=$(basename "$PADOGRID_HOME")
-VAGRANT_PADOGRID_HOME="$GUEST_HOME_DIR/$PADOGRID_DIR_NAME"
+VAGRANT_PADOGRID_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/products/$PADOGRID_DIR_NAME"
 PODS_DIR=$GUEST_PADOGRID_WORKSPACE/pods
+
+# Install PadoGrid to the host product dir if it does not exist
+if [ ! -d "$HOST_PRODUCTS_DIR/$PADOGRID_DIR_NAME" ]; then
+   cp -rf "$PADOGRID_HOME" "$HOST_PRODUCTS_DIR/"
+fi
 
 # Find all installed products in the host product dir and
 # set the guest environment variables with them.
@@ -87,16 +93,16 @@ JQ_HOME=""
 pushd $HOST_PRODUCTS_DIR > /dev/null 2>&1
 for i in *; do
    if [[ $i == *spark* ]]; then
-      SPARK_HOME="$GUEST_HOME_DIR/products/$i"  
+      SPARK_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/products/$i"  
    elif [[ $i == *java* ]] || [[ $i == *jdk* ]] || [[ $i == *openjdk* ]]; then
-      JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
-      VM_JAVA_HOME="$GUEST_HOME_DIR/products/$i"  
+      JAVA_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/products/$i"  
+      VM_JAVA_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/products/$i"  
    elif [[ $i == prometheus* ]]; then
-      PROMETHEUS_HOME="$GUEST_HOME_DIR/products/$i"  
+      PROMETHEUS_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/products/$i"  
    elif [[ $i == grafana* ]]; then
-      GRAFANA_HOME="$GUEST_HOME_DIR/products/$i"
+      GRAFANA_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/products/$i"
    elif [[ $i == jq* ]]; then
-      JQ_HOME="$GUEST_HOME_DIR/products/$i"
+      JQ_HOME="$GUEST_PADOGRID_ENV_BASE_PATH/products/$i"
    fi
 done
 popd > /dev/null 2>&1

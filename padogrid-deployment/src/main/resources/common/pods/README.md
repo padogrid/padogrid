@@ -1,6 +1,6 @@
 # Vagrant Pods
 
-We define a *pod* as a collection of VMs configured to run one ore more clusters. In PadoGrid, a pod refers to a collection of VirtualBox VMs created and managed by Vagrant on your local machine. To simplify Vagrant configuration, PadoGrid provides commands for building pods and assigning them to individual clusters. With a single command, for example, you can build and run a cluster that spans multiple VMs. As with the local clusters, all of the PadoGrid apps remain intact and are readily available for the pod clusters.
+We define a *pod* as a collection of VMs configured to run one or more clusters. In PadoGrid environments, a pod refers to a collection of VirtualBox VMs created and managed by Vagrant on your local machine. To simplify Vagrant configuration, PadoGrid provides commands for building pods and assigning them to individual clusters. With a single command, for example, you can build and run a cluster that spans multiple VMs. As with the local clusters, all of the PadoGrid apps remain intact and are readily available for the pod clusters.
 
 ## Pod Type
 
@@ -20,16 +20,16 @@ There are several pod properties that you can optionally set for creating pods p
 
 | Property | Default | Description |
 | -------- | ------- | ----------- |
-| pod.name | local | Unique pod name. |
-| pod.type | local | Pod type. Valid types are `"local"` and `"vagrant"` |
+| pod.name | local   | Unique pod name. |
+| pod.type | local   | Pod type. Valid types are `"local"` and `"vagrant"` |
 | pod.box.image| ubuntu/jammy64 | Vagrant box image name. You can choose another from the [Vagrant repo](https://app.vagrantup.com/boxes/search). Not all Vagrant boxes will work in PadoGrid since most of them are customized images. The [Tested Vagrant Boxes](https://github.com/padogrid/padogrid/wiki/Tested-Vagrant-Boxes) section of the PadoGrid manual provides a list of recommended Vagrant boxes. |
 | node.name.primary | pnode | Primary node name. The primary node is not a data node. It should be used to manage data grid clusters and run client programs.|
 | node.name.prefix | node | Data node name prefix. Each data node name begins with this prefix followed by a number assigned by the pod builder.|
-| node.ip.lastOctet | 10 | **Deprecated. Starting PadoGrid 0.9.33, the last octet of the IP address is extracted from the IP address specified by the `create_pod -ip` command.** The last octet of the primary node IP address. The pod buillder assigns incremented IP addresses to all nodes starting from this octect. |
+| node.ip.lastOctet | 10 | The last octet of the primary node IP address. The pod buillder assigns incremented IP addresses to all nodes starting from this octect. **Deprecated. Starting PadoGrid 0.9.33, the last octet of the IP address is extracted from the IP address specified by the `create_pod -ip` command.** |
 | node.memory.primary | 2048 | Primary node memory size in MiB. |
 |node.memory.data | 2048 | Data node memory size in MiB. |
 | node.count | 2 | Number of data nodes. A node represents a VM. |
-| host.productsDir | $PADOGRID_WORKSPACE/products | Host products directory path. |
+| host.productsDir | $PADOGRID_WORKSPACE/products/linux | Host products directory path where Linux products are installed. |
 
 ## Creating VirtualBox Private Network (host-only)
 
@@ -117,6 +117,12 @@ When you create a pod, the `create_pod` command will prompt for a host private I
 
 The following shows how to create a pod named `mypod` and run a cluster named `finance` on it. Note that the cluster we associate with the pod has no product dependencies. It can be any PadoGrid supported product, e.g., Geode, Hazelcast, etc.
 
+```bash
+create_pod -avahi -pod mypod
+```
+
+The `create_pod` prompts for your inputs. Each prompt includes the default value enclosed in square brackets. Take the default values by hitting the *Enter* key.
+
 ```console
 Please answer the prompts that appear below. You can abort this command at any time
 by entering 'Ctrl-C'.
@@ -127,67 +133,130 @@ Data node name prefix [node]:
 Enter the host-only IP address for the first VM. This IP address must be
 in the range defined by a host-only interface. You can create a host-only
 interface by selecting the Tools/Host-only Adapters/Networks menu
-from the VirtualBox console. IP address typically begins from 192.168.56.1.
-Enter the host-only IP address for the first VM [192.168.56.1]:
+from the VirtualBox console. IP address typically begins from 192.168.56.2.
+Enter the host-only IP address for the first VM [192.168.56.2]:
 Primary node memory size in MiB [2048]:
 Data node memory size in MiB [2048]:
 Number of data nodes  [2]:
 Products installation directory path.
-[/Users/dpark/Padogrid/products]:
-/Users/dpark/Padogrid/products/linux
+[/Users/dpark/Padogrid/products/linux]:
+
 Install Avahi? This allows VMs to enable local network discovery service via
 the mDNS/DNS-SD protocol. All VM host names can be looked up with the suffix
 '.local', i.e., pnode.local, node-01.local, etc.
-Enter 'true' or 'false' [false]: true
+Enter 'true' or 'false' [true]:
 Vagrant box image [ubuntu/jammy64]:
 
 You have entered the following.
                        Pod name: mypod
               Primary node name: pnode
           Data node name prefix: node
-     First host-only IP address: 192.168.56.1
+     First host-only IP address: 192.168.56.2
  Primary node memory size (MiB): 2048
     Data node memory size (MiB): 2048
                 Data node count: 2
              Products directory: /Users/dpark/Padogrid/products/linux
                   Avahi enabled: true
               Vagrant box image: ubuntu/jammy64
-Enter 'c' to continue, 'r' to re-enter, 'q' to quit:
+Enter 'c' to continue, 'r' to re-enter, 'q' to quit: c
 
-...
+-------------------------------------------------------------------
+               WORKSPACE: /Users/dpark/Padogrid/workspaces/rwe-bundles/bundle-geode-1-app-perf_test_sb-cluster-sb
+             Pod Created: mypod
+                POD_TYPE: vagrant
+           POD_BOX_IMAGE: ubuntu/jammy64
+       NODE_NAME_PRIMARY: pnode
+        NODE_NAME_PREFIX: node
+         HOST_PRIVATE_IP: 192.168.56.2
+NODE_PRIMARY_MEMORY_SIZE: 2048
+   Data NODE_MEMORY_SIZE: 2048
+      NODE_PRIMARY_COUNT: 1
+         Data NODE_COUNT: 2
+       HOST_PRODUCTS_DIR: /Users/dpark/Padogrid/products/linux
+           AVAHI_ENABLED: true
+           POD_BOX_IMAGE: ubuntu/jammy64
 
+POD_DIR: /Users/dpark/Padogrid/workspaces/rwe-bundles/bundle-geode-1-app-perf_test_sb-cluster-sb/pods/mypod
+
+The specified pod has successfully been created and configured.
+To add more nodes, run 'add_node'.
+To remove nodes, run 'remove_node'.
+The parameters have been saved in the following file (You can edit this
+file before running 'build_pod'):
+
+ETC_DIR: /Users/dpark/Padogrid/workspaces/rwe-bundles/bundle-geode-1-app-perf_test_sb-cluster-sb/pods/mypod/etc/pod.properties
+
+The pod is ready to be built. Execute the following command to build the pod.
+
+   build_pod -pod mypod
+-------------------------------------------------------------------
+```
+
+For our example, let's add one (1) more data node by executing `add_node`.
+
+```bash
 # Add one (1) more data node.
 add_node -pod mypod
+```
 
+Let's view the `mypod` details by executing `show_pod`.
+
+```bash
 # View the pod properties
-show_pod -pod mypod
+show_pod -pod mypod -long
+```
 
-# Create a cluster to run on the 'mypod' pod. The create_cluster command
-# automatically adds members to the cluster to match the number of data nodes
-# in the pod. In this example, it adds two (2) members.
-create_cluster -pod mypod -cluster finance
+**Output:**
 
-# Build the pod. This command builds and launches the Vagrant pod environment with
-# one (1) primary node and three (3) data nodes.
+```console
+         WORKSPACE: /home/dpark/Padogrid/workspaces/myrwe/myws
+               POD: mypod
+          POD_TYPE: vagrant
+      POD_CLUSTERS:
+         POD State: Down
+ NODE_NAME_PRIMARY: pnode
+  NODE_NAME_PREFIX: node
+NODE_PRIMARY_COUNT: 1
+   Data NODE_COUNT: 3
+           POD_DIR: /home/dpark/Padogrid/workspaces/myrwe/myws/pods/mypod
+```
+
+We have configured the pod with one (1) primary node and a total of three (3) data nodes. Let's create a data grid cluster that will use this pod by executing the `create_cluster` command.
+
+```bash
+create_cluster -product geode -pod mypod -cluster finance
+```
+
+We are now ready to build the pod by executing the `build_pod` command, which downloads and configures the Vagrant image.
+
+```bash
 build_pod -pod mypod
+```
 
-# Upon completion of the 'build_pod' command, change directory to the pod directory
-# and login to the primary node. Older versions of Vagrant box images may require
-# a login password. If it prompts for a password, then enter 'vagrant'.
+Upon completion of the `build_pod` command, change directory to the pod directory and login to the primary node as shown below.
+
+```bash
+# Older versions of Vagrant box images may require a login password. If it prompts
+# for a password, then enter 'vagrant'.
 cd_pod mypod
 vagrant ssh
 
 # You can also login to any of the nodes using ssh.
-ssh vagrant@192,168.56.1
 ssh vagrant@192,168.56.2
 ssh vagrant@192,168.56.3
+ssh vagrant@192,168.56.4
+ssh vagrant@192,168.56.5
 
 # If you enabled Avahi, then you can also login using the VM host names.
 ssh vagrant@pnode.local
 ssh vagrant@node-01.local
 ssh vagrant@node-02.local
+ssh vagrant@node-03.local
+```
+
+Once logged on to the primary node, switch cluster to `finance` and start the cluster.
  
-# Once logged on to the primary node, switch cluster to finance
+```bash
 switch_cluster finance
 
 # Start the finance cluster
@@ -197,12 +266,84 @@ start_cluster
 show_cluster
 ```
 
+Your client apps can connect to the cluster from any of the nodes including the host OS. You can use the data node IP addresses or their host names described in the [Multicast DNS (mDNS)](#multicast-dns-mdns) section to connect to the cluster.
+
+The following sections show Geode and Hazelcast `perf_test`  examples.
+
+### Geode
+
+Create `perf_test` and edit the client configuration file.
+
+```console
+create_app
+cd_app perf_test
+vi etc/client-cache.xml
+```
+
+Set the member addresses in the configuration file.
+
+```xml
+<client-cache ...>
+...
+   <pool name="serverPool">
+      <locator host="pnode.local" port="10334" />
+   </pool>
+...
+</client-cache>
+```
+
+Run `perf_test`.
+
+```console
+cd_app perf_test; cd bin_sh
+./test_ingestion -run
+```
+
+
+### Hazelcast
+
+Create `perf_test` and edit the client configuration file.
+
+```console
+create_app
+cd_app perf_test
+vi etc/hazelcast-client.xml
+```
+
+Set the member addresses in the configuration file.
+
+```xml
+<hazelcast-client ...>
+...
+   <network>
+      <cluster-members>
+         <address>node-01.local:5701</address>
+         <address>node-02.local:5701</address>
+         <address>node-03.local:5701</address>
+      </cluster-members>
+   </network>
+...
+</hazelcast-client>
+```
+
+Run `perf_test`.
+
+```console
+cd_app perf_test; cd bin_sh
+./test_ingestion -run
+```
+
 ## Pod Files
 
 Each pod runs in their own directory under the parent directory:
 
 ```console
 ls -l $PADOGRID_WORKSPACE/pods
+```
+
+**Output:**
+
+```console
 -rw-r--r--  1 dpark  staff  3138 Jul  8 21:07 README.md
 drwxr-xr-x  5 dpark  staff   160 Jul 10 14:20 mypod
 ```
@@ -211,15 +352,16 @@ Each pod has the following directory structure:
 
 ```console
 mypod/
-└── Vagrantfile/
-    ├── bin_sh/
-    │   ├── build_app
-    │   ├── configure_nodes
-    │   ├── setenv.sh
-    │   └── etc/
-    │       ├── pod.properties
-    │       └── template-Vagrantfile-*
-    └── log/         
+├── Vagrantfile
+├── bin_sh/
+│   ├── build_app
+│   ├── configure_nodes
+│   └── setenv.sh
+├── bootstrap.sh
+├── etc/
+│   ├── pod.properties
+│   └── template-Vagrantfile-*
+└── log/
 ```
 
 **Vagrantfile**
@@ -243,7 +385,7 @@ The Vagrant configuration file generated by the `build_pod` command. Note that `
 
 ## Multicast DNS (mDNS)
 
-PadoGrid relies on Avahi to resolve hostnames to IP addresses. Avahi implements the mDNS/DNS-SD protocol to provide a zero-configration service and is fully compatible with MacOS X. The `build_pod` command you executed in the [Pod Example](#Pod-Example) section automatically installs `avahi` on all guest OS nodes. 
+PadoGrid relies on Avahi to resolve hostnames to IP addresses. Avahi implements the mDNS/DNS-SD protocol to provide a zero-configration service and is fully compatible with MacOS X. The `build_pod` command you executed in the [Pod Example](#pod-example) section automatically installs `avahi` on all guest OS nodes. 
 
 For more information on `avahi` and mDNS see the links below:
 
@@ -270,9 +412,10 @@ yum install avahi
 
 ```console
 # PadoGrid pods
-192.168.56.10	pnode.local
-192.168.56.11	node-01.local
-192.168.56.12	node-02.local
+192.168.56.2	pnode.local
+192.168.56.3	node-01.local
+192.168.56.4	node-02.local
+192.168.56.5	node-03.local
 ```
 
 ### Guest OS
@@ -297,7 +440,7 @@ vagrant destroy -f && build_pod -pod mypod
 
 ## Removing a Pod
 
-You should stop the pod first before removing it. Otherwise, you would need to stop (halt) nodes (VMs) individually using the VirtualBox Manager. You would also want to create a pod backup by running the 'create_bundle' command as shown below.
+You should stop the pod first before removing it. Otherwise, you would need to stop (halt) nodes (VMs) individually using the VirtualBox Manager. Optionally, you might want to create a pod backup by running the `create_bundle` command before removing the pod as shown below. You can reinstall the backup later to reproduce the same pod environment using the `install_bundle` command.
 
 ```console
 # Backup, stop and remove mypod. Note 'remove_pod' removes the

@@ -241,20 +241,6 @@ if [ ! -d "$MEMBER_DIR" ]; then
    fi
 fi
 
-# If the member is already running, then exit.
-if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
-   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
-   if [ -n "${PID}" ]; then
-      echo "----------------------------------------------------------------"
-      echo "WORKSPACE: $PADOGRID_WORKSPACE"
-      echo "  Cluster: $CLUSTER"
-      echo "   Member: $MEMBER"
-      echo "   Status: This member is already running [Member: $MEMBER, PID=$PID]. Command aborted."
-      echo "----------------------------------------------------------------"
-      exit 1
-   fi
-fi
-
 # Member port number
 LOCATOR_START_PORT=`getClusterProperty "locator.tcp.startPort" $DEFAULT_LOCATOR_START_PORT`
 MEMBER_PROPERTIES=""
@@ -269,7 +255,6 @@ HOSTNAME_FOR_CLIENTS=""
 REDUNDANCY_ZONE=""
 MEMBER_TCP_LIST=""
 if [ "$VM_ENABLED" == "true" ]; then
-
    VM_LOCATOR_HOSTS=$(getClusterProperty "vm.locator.hosts")
    if [ "$VM_LOCATOR_HOSTS" == "" ]; then
       echo >&2 "----------------------------------------------------------------"
@@ -354,6 +339,20 @@ else
    MEMBER_PORT=$MEMBER_START_PORT
    MEMBER_HTTP_PORT=$MEMBER_HTTP_START_PORT
    
+fi
+
+# If the member is already running, then exit.
+if [ "$SIMULATE" == "false" ] && [ "$CREATE_SCRIPT" == "false" ]; then
+   PID=`getMemberPid $MEMBER $WORKSPACE $RWE`
+   if [ -n "${PID}" ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Member: $MEMBER"
+      echo "   Status: This member is already running [Member: $MEMBER, PID=$PID]. Command aborted."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
 fi
 
 if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then

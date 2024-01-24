@@ -78,6 +78,17 @@ fi
 POD_TYPE=`getPodProperty "pod.type" "local"`
 OS_ENV=`getOsEnv`
 
+# Source in the pod setenv.sh file
+HOST_PRIVATE_IP=""
+if [ "$OS_ENV" == "gg" ]; then
+   __SETENV_FILE="/vagrant/bin_sh/setenv.sh"
+else
+   __SETENV_FILE="$PODS_DIR/$POD/bin_sh/setenv.sh"
+fi
+if [ -f "$__SETENV_FILE" ]; then
+   . "$__SETENV_FILE"
+fi
+
 # Display short status of a pod.
 function displayPodShort()
 {
@@ -86,7 +97,6 @@ function displayPodShort()
    NODE_PRIMARY_COUNT=1
    NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix"`
-   NODE_IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet"`
    NODE_COUNT=`getPodProperty "node.count"`
    POD_RUNNING=`isPodRunning $POD`
 
@@ -124,7 +134,6 @@ function displayPodLong()
    NODE_PRIMARY_COUNT=1
    NODE_NAME_PRIMARY=`getPodProperty "node.name.primary"`
    NODE_NAME_PREFIX=`getPodProperty "node.name.prefix"`
-   NODE_IP_LAST_OCTET=`getPodProperty "node.ip.lastOctet"`
    NODE_COUNT=`getPodProperty "node.count"`
    POD_RUNNING=`isPodRunning $POD`
 
@@ -154,11 +163,11 @@ function displayPodLong()
    fi
 
    if [ "$POD" != "local" ]; then
+      echo "   HOST_PRIVATE_IP: $HOST_PRIVATE_IP"
       echo " NODE_NAME_PRIMARY: $NODE_NAME_PRIMARY"
       echo "  NODE_NAME_PREFIX: $NODE_NAME_PREFIX"
       echo "NODE_PRIMARY_COUNT: $NODE_PRIMARY_COUNT"
       echo "   Data NODE_COUNT: $NODE_COUNT"
-      echo "NODE_IP_LAST_OCTET: $NODE_IP_LAST_OCTET"
       echo "           POD_DIR: $POD_DIR"
    fi
    echo ""

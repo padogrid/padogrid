@@ -131,6 +131,9 @@ function getProductVersions
    __PADODESKTOP_VERSION=${PADODESKTOP_HOME#*pado-desktop_}
    __PADOWEB_VERSION=${PADO_HOME#*padoweb_}
    __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
+   if [ "$__GEMFIRE_VERSION" == "" ]; then
+      __GEMFIRE_VERSION=${GEMFIRE_HOME#*vmware-gemfire-}
+   fi
    __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
    __GRAFANA_VERSION=${GRAFANA_HOME#*grafana-}
    __HAZELCAST_ENTERPRISE_VERSION=${HAZELCAST_HOME#*hazelcast-enterprise-}
@@ -950,7 +953,13 @@ function getProductDirName
     $INDEX_PADO ) DIR_NAME="pado_$VERSION";;
     $INDEX_PADODESKTOP ) DIR_NAME="pado-desktop_$VERSION";;
     $INDEX_PADOWEB ) DIR_NAME="padoweb_$VERSION";;
-    $INDEX_GEMFIRE ) DIR_NAME="pivotal-gemfire-$VERSION";;
+    $INDEX_GEMFIRE ) 
+       if [[ "$VERSION" == "9"* ]]; then
+          DIR_NAME="pivotal-gemfire-$VERSION"
+       else
+          DIR_NAME="vmware-gemfire-$VERSION"
+       fi
+       ;;
     $INDEX_GEODE ) DIR_NAME="apache-geode-$VERSION";;
     $INDEX_HAZELCAST )
        if [ "$IS_ENTERPRISE" == "true" ]; then 
@@ -1046,11 +1055,12 @@ function updateEVAL_WORKSPACE
    local IS_ENTERPRISE="$3"
    local ENV_HOME="$4"
    local SETENV_PATH="$5"
+   local IS_VAGRANT="$6"
 
    local PRODUCT_DIR_NAME=$(getProductDirName $INDEX $VERSION $IS_ENTERPRISE)
    local ENV_HOME_PATH=$PRODUCTS_DIR/$PRODUCT_DIR_NAME
 
-   updateEVAL_WORKSPACE_HOME_PATH "$ENV_HOME" "$ENV_HOME_PATH" "$SETENV_PATH"
+   updateEVAL_WORKSPACE_HOME_PATH "$ENV_HOME" "$ENV_HOME_PATH" "$SETENV_PATH" "$IS_VAGRANT"
 }
 
 #
@@ -1059,6 +1069,7 @@ function updateEVAL_WORKSPACE
 # @param homeEnvVar      Home environment variable, e.g. PADOGRID_HOME
 # @param productHomePath Product home path
 # @param setenvPath      setenv.sh path
+# @param isVagrant       If "true" then spaces are not prepended
 # @required PRODUCTS_DIR Products directory path
 #
 function updateEVAL_WORKSPACE_HOME_PATH
@@ -1066,13 +1077,19 @@ function updateEVAL_WORKSPACE_HOME_PATH
    local ENV_HOME="$1"
    local ENV_HOME_PATH="$2"
    local SETENV_PATH="$3"
+   local IS_VAGRANT="$4"
+   local PREFIX="   "
+
+   if [ "$IS_VAGRANT" == "true" ]; then
+      PREFIX=""
+   fi
 
    if [ "$(grep "$ENV_HOME" $SETENV_PATH)" == "" ]; then
       # If env var not found in setenv.sh, then insert this one before PADOGRID_HOME.
-      EVAL_WORKSPACE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'\'$'\n''\1|'"
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|\(^.*export PADOGRID_HOME=.*$\)|${PREFIX}export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'\'$'\n''\1|'"
    elif [ "$(grep "^.*#.*export $ENV_HOME" $SETENV_PATH)" != "" ]; then
       # Replace commented env var
-      EVAL_WORKSPACE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|   export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
+      EVAL_WORKSPACE="$EVAL_RWE -e 's|^.*#.*export $ENV_HOME.*$|${PREFIX}export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
    else
       # Replace the existing env var
       EVAL_WORKSPACE="$EVAL_RWE -e 's|export $ENV_HOME=.*$|export $ENV_HOME='\\\"${ENV_HOME_PATH}\\\"'|'"
@@ -1120,9 +1137,25 @@ elif [ "$UPDATE_WORKSPACES" == "current" ]; then
 else
    WORKSPACES=""
 fi
+
+# Determine Vagrant workspace env file
+IS_VAGRANT="false"
+OS_ENV=`getOsEnv`
+if [ "$POD" != "local" ]; then
+   if [ "$OS_ENV" == "gh" ]; then
+      WORKSPACE_SETENV="$PODS_DIR/$POD/.nodeenv.sh"
+      IS_VAGRANT="true"
+   elif [ "$OS_ENV" == "hg" ]; then
+      WORKSPACE_SETENV="/vagrant/.nodeenv.sh"
+      IS_VAGRANT="true"
+   fi
+fi
+
 for WORKSPACE in $WORKSPACES; do
    EVAL_WORKSPACE=""
-   WORKSPACE_SETENV="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/setenv.sh"
+   if [ "$IS_VAGRANT" == "false" ]; then
+      WORKSPACE_SETENV="$PADOGRID_WORKSPACES_HOME/$WORKSPACE/setenv.sh"
+   fi
    let PRODUCT_INDEX=0
    for i in "${PRODUCT_EVAL_ARRAY[@]}"; do
       if [ "$i" != "(none)" ] && [ "$i" != "none" ]; then
@@ -1133,7 +1166,7 @@ for WORKSPACE in $WORKSPACES; do
          else
             IS_ENTERPRISE="false"
          fi
-         updateEVAL_WORKSPACE $PRODUCT_INDEX $i $IS_ENTERPRISE ${PRODUCT_HOME_ARRAY[$PRODUCT_INDEX]} "$WORKSPACE_SETENV"
+         updateEVAL_WORKSPACE $PRODUCT_INDEX $i $IS_ENTERPRISE ${PRODUCT_HOME_ARRAY[$PRODUCT_INDEX]} "$WORKSPACE_SETENV" "$IS_VAGRANT"
       fi
       let PRODUCT_INDEX=PRODUCT_INDEX+1
    done

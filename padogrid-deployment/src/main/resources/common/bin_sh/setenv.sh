@@ -418,7 +418,7 @@ fi
 
 # Pod host variables
 if [ -z $HOST_PRODUCTS_DIR ]; then
-   HOST_PRODUCTS_DIR=$DEFAULT_HOST_PRODUCTS_DIR
+   HOST_PRODUCTS_DIR=$DEFAULT_HOST_PRODUCTS_DIR/linux
 fi
 
 # Set CLUSTER to the default cluster set in setenv.sh if it 

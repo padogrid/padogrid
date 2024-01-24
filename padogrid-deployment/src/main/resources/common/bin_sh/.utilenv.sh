@@ -3929,6 +3929,10 @@ function determineInstalledProductVersions
             __version=${i#pivotal-gemfire-}
             __versions="$__versions $__version "
          done
+         for i in vmware-gemfire-*; do
+            __version=${i#vmware-gemfire-}
+            __versions="$__versions $__version "
+         done
          GEMFIRE_VERSIONS=$(sortVersionList "$__versions")
       fi
 
