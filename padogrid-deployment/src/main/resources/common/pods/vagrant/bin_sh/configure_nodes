@@ -104,7 +104,7 @@ for NODE in $HOSTS; do
    # user's home
    #vagrant ssh $NODE -c "ssh-keyscan -t rsa $HOSTS_LOCAL > /home/vagrant/.ssh/known_hosts"
 
-   # Prepend PadoGrid initialzation to .bashrc
-   vagrant ssh $NODE -c "sed -i '1s|^|# >>> padogrid initialization >>>\n. /vagrant/.nodeenv.sh\n# <<< padogrid initialization <<<\n\n|' .bashrc"
+   # Prepend PadoGrid initialzation and append PS1 to .bashrc
+   vagrant ssh $NODE -c "sed -i -e \"1s|^|# >>> padogrid initialization >>>\n. /vagrant/.nodeenv.sh\n# <<< padogrid initialization <<<\n\n|\" -e \"$ a export PS1='\\\$(whoami)@\\\$(hostname):\\\${PWD/*\\\\\//}$ ' \" .bashrc"
 done
 popd > /dev/null 2>&1
