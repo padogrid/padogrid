@@ -30,13 +30,7 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Installation
 
-You can install PadoGrid and the supported data grid products by running the interactive [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script. Copy and paste the following command into your terminal.
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid)"
-```
-
-The above command may fail on some Linux variants due the large length of the command line arguments. In that case, you need to download and run `install_padogrid` as follows.
+You can install PadoGrid and the supported data grid products by running the interactive [**install_padogrid**](https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid) script. Copy and paste the following commands into your terminal.
 
 ```bash
 curl -O -fsSL https://raw.githubusercontent.com/padogrid/padogrid/develop/padogrid-deployment/src/main/resources/common/bin_sh/install_padogrid
