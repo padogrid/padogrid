@@ -8,7 +8,7 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 - [**PadoGrid Manual**](https://github.com/padogrid/padogrid/wiki)
 - [**FAQ**](https://github.com/padogrid/padogrid/wiki/faq)
-- [**Install, run, and learn PadoGrid in less than five (5) minutes**](https://github.com/padogrid/padogrid/wiki/PadoGrid-in-5-Minutes)
+- [**PadoGrid in 5 minutes**](https://github.com/padogrid/padogrid/wiki/PadoGrid-in-5-Minutes)
 - [**Bundle Catalogs**](https://github.com/padogrid/catalog-bundles/blob/master/all-catalog.md)
 
 ---
@@ -17,15 +17,14 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 - *January 24, 2024 - [Geode/GemFire Split-Brain bundle updated.](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) This bundle has been updated and tested with the latest versions of Geode/GemFire and PadoGrid 0.9.33-SNAPSHOT.*
 - *December 2, 2023 - [PadoGrid Grafana container image released.](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) This inaugural release automatically installs [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App) to Grafana instances running on Docker and Kubernetes.*
-- *November 28, 2023 - [PadoGrid v0.9.32 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.32) This release fixes Hazelcast dashboards with web link issues in the previous release. The dashboards are now fully operational in Kubernetes environments.*
 
 ---
 
 ## Tips of the Day
 
+1. Want to cluster MQTT brokers? [Try PadoGrid's Mosquitto clusters](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT)
 1. How to detect and recover from a cluster split-brain problem in Geode/GemFire? The [Geode/GemFire Split-Brain](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) bundle walks through all possible scenarios and provides tools and guidelines to quickly recover from the disaster.
 1. Need comprehensive sets of Grafana dashboards for monitoring multiple Hazelcast clusters running on Kubernetes? [Hazelcast Kubernetes Helm Charts](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm).
-1. In need of quickly testing and monitoring multiple Hazelcast clusters on your laptop? [Hazelcast Multi-Cluster Demo](https://github.com/padogrid/bundle-hazelcast-5-cluster-wan-app-grafana) does all the heavy lifting and more for you.
 
 ---
 
