@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -3290,7 +3290,7 @@ cat <<EOF
 |   ___/  /  /_\  \   |  |  |  |  |  |  | |  | |_ | |      /     |  | |  |  |  |
 |  |     /  _____  \  |  '--'  |  '--'  | |  |__| | |  |\  \----.|  | |  '--'  |
 | _|    /__/     \__\ |_______/ \______/   \______| | _| '._____||__| |_______/ 
-Copyright (c) 2020-2023 Netcrest Technologies, LLC. All rights reserved.
+Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
 EOF
 echo -e "Version: v$PADOGRID_VERSION"
 echo -e " Manual: ${CUrl}https://github.com/padogrid/padogrid/wiki${CNone}"
