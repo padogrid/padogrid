@@ -291,12 +291,6 @@ for i in $PADOGRID_HOME/lib/*; do
   fi
 done
 
-#__CLASSPATH="$__CLASSPATH:$PADOGRID_HOME/lib/*"
-if [ "$CLUSTER_TYPE" == "gemfire" ]; then
-   __CLASSPATH="$__CLASSPATH:$GEMFIRE_HOME/lib/geode-dependencies.jar"
-else
-   __CLASSPATH="$__CLASSPATH:$GEODE_HOME/lib/geode-dependencies.jar"
-fi
 if [ "$RUN_TYPE" == "pado" ]; then
    __CLASSPATH="$__CLASSPATH:$PADO_HOME/plugins/*"
 fi

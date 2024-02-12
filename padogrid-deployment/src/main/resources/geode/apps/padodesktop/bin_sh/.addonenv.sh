@@ -130,8 +130,10 @@ if [ "$GEMFIRE_HOME" != "" ]; then
 elif [ "$GEODE_HOME" != "" ]; then
    PRODUCT_HOME=$GEODE_HOME
 fi
-if [ "$PRODUCT_HOME" != "" ]; then
+if [ -f "$PRODUCT_HOME/lib/geode-dependencies.jar" ]; then
    CLASSPATH="$CLASSPATH:$PRODUCT_HOME/lib/geode-dependencies.jar"
+else
+   CLASSPATH="$CLASSPATH:$PRODUCT_HOME/lib/gemfire-dependencies.jar"
 fi
 CLASSPATH="$PADOGRID_WORKSPACE/plugins/*:$PADOGRID_WORKSPACE/lib/*:$CLASSPATH"
 CLASSPATH="$APP_DIR:$APP_DIR/plugins/*:$APP_DIR/lib/*:$APP_JARS:$CLASSPATH"
