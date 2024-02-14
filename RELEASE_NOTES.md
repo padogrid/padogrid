@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 0.9.33-SNAPSHOT
 
-### Release Date: 01/29/24
+### Release Date: 02/14/24
 
 - Added Hazelcast Jet job dashboards to Grafana.
 - Released [PadoGrid Grafana container image.](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) This inaugural release automatically installs [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App) to Grafana instances running on Docker and Kubernetes.
@@ -16,6 +16,7 @@ https://github.com/padogrid
 - Added `create_datasource_prometheus -url` for creating Prometheus datasources.
 - Added VirtualBox 7.x support for host-only networks. With this support, the `create_pod` now requires the first host-only interface IP address. The last octet of the IP address is no longer required as it is now extracted from the IP address.
 - Reorganized Vagrant VM directories to conform to the standard PadoGrid directory structure. All of PadoGrid specifics are now placed in the `/home/vagrant/Padogrid` directory.
+- Deprecated `*_product*` commands in favor of the new `*_padogrid` commands. All `*_product*` commands will be removed in the future.
 
 ---
 
