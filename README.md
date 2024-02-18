@@ -15,16 +15,16 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Announcements
 
+- *February 18, 2024 - [PadoGrid v0.9.33 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.33) This release introduces comprehensive sets of Grafana dashboards for Hazelcast and adds support for VirtualBox 7.x.*
 - *January 24, 2024 - [Geode/GemFire Split-Brain bundle updated.](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) This bundle has been updated and tested with the latest versions of Geode/GemFire and PadoGrid 0.9.33-SNAPSHOT.*
-- *December 2, 2023 - [PadoGrid Grafana container image released.](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) This inaugural release automatically installs [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App) to Grafana instances running on Docker and Kubernetes.*
 
 ---
 
 ## Tips of the Day
 
-1. Want to cluster MQTT brokers? [Try PadoGrid's Mosquitto clusters](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT)
-1. How to detect and recover from a cluster split-brain problem in Geode/GemFire? The [Geode/GemFire Split-Brain](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) bundle walks through all possible scenarios and provides tools and guidelines to quickly recover from the disaster.
+1. Did you know [PadoGrid Hazelcast Dashboards (PHD)](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) can be automatically installed to Grafana instances running on Docker and Kuberntes?
 1. Need comprehensive sets of Grafana dashboards for monitoring multiple Hazelcast clusters running on Kubernetes? [Hazelcast Kubernetes Helm Charts](https://github.com/padogrid/bundle-hazelcast-3n4n5-k8s-kubectl_helm).
+1. How to detect and recover from a cluster split-brain problem in Geode/GemFire? The [Geode/GemFire Split-Brain](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) bundle walks through all possible scenarios and provides tools and guidelines to quickly recover from the disaster.
 
 ---
 
