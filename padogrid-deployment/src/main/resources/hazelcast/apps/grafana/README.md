@@ -80,11 +80,11 @@ export PATH=~/bin:$PATH
 
 PadoGrid includes integrated support for Prometheus and Grafana, greatly simplifying the installation and management steps.
 
-Install Prometheus using `install_padogrid` and `update_products`:
+Install Prometheus using `install_padogrid` and `update_padogrid`:
 
 ```bash
 install_padogrid -product prometheus
-update_products -product prometheus
+update_padogrid -product prometheus
 ```
 
 Start Prometheus from the `grafana` app:
@@ -117,16 +117,16 @@ curl -G http://localhost:9090/federate -d 'match[]={__name__!=""}'
 
 #### 5.3.1. Installing and StartingGrafana
 
-Install Grafana  using `install_padogird` and `update_products`:
+Install Grafana  using `install_padogird` and `update_padogrid`:
 
 ```bash
 # Install Grafana Enterprise
 install_padogrid -product grafana-enterprise
-update_products -product grafana-enterprise
+update_padogrid -product grafana-enterprise
 
 # Or install Grafana OSS
 install_padogrid -product grafana-oss
-update_products -product grafana-oss
+update_padogrid -product grafana-oss
 ```
 
 Start Grafana from the `grafana` app:

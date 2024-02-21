@@ -4,7 +4,7 @@ The `padodesktop` app provides scripts to run PadoDeskop for monitoring Pado clu
 
 ## Installing PadoDesktop App
 
-PadoDesktop requires a Pado or PadoLite cluster. Pado and PadoLite can be installed by running the `install_padogrid` and `update_products` commands.
+PadoDesktop requires a Pado or PadoLite cluster. Pado and PadoLite can be installed by running the `install_padogrid` and `update_padogrid` commands.
 
 ```bash
 # Pado
@@ -16,11 +16,11 @@ install_padogrid -product padolite
 update_padogrid -product padolite
 ```
 
-Similary, PadoDesktop can be installed using the `install_padgrod` and `update_products` commands as follows.
+Similary, PadoDesktop can be installed using the `install_padgrod` and `update_padogrid` commands as follows.
 
 ```bash
 install_padogrid -product padodesktop
-update_products -product padodesktop
+update_padogrid -product padodesktop
 ```
 
 The following commands create a Pado cluster and a PadoDesktop app.

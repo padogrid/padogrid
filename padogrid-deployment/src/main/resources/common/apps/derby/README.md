@@ -8,7 +8,7 @@ Derby DB installation is supported by PadoGrid.
 
 ```bash
 install_padogrid -product derby
-update_products -product derby
+update_padogrid -product derby
 ```
 
 ## 2. Installing Derby App

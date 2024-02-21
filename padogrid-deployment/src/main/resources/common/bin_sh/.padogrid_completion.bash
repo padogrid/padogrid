@@ -291,11 +291,11 @@ __padogrid_complete()
          type_list="$APP_PRODUCT_LIST"
       elif [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
-      elif [ "$command" == "uninstall_padogrid" ] || [ "$command" == "uninstall_product" ]; then
+      elif [ "$command" == "uninstall_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
          type_list="$__DOWNLOADABLE_PRODUCTS gemfire"
-      elif [ "$command" == "update_padogrid" ] || [ "$command" == "update_products" ]; then
+      elif [ "$command" == "update_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
          type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
@@ -313,7 +313,7 @@ __padogrid_complete()
       ;;
 
    -version)
-      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_padogrid" ] || [ "$command" == "update_products" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_padogrid" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -323,7 +323,7 @@ __padogrid_complete()
          fi
          if [ "$command" == "install_padogrid" ] || [ "$command" == "uninstall_padogrid" ] || [ "$command" == "vm_install" ]; then
             type_list=$(getDownloadableProductVersions $product_name)
-         elif [ "$command" == "update_padogrid" ] || [ "$command" == "update_products" ]; then
+         elif [ "$command" == "update_padogrid" ]; then
             type_list=$(getInstalledProductVersions $product_name)
          fi
       fi
@@ -1069,11 +1069,11 @@ __command_complete()
          type_list="$APP_PRODUCT_LIST"
       elif [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
          type_list="$DOWNLOADABLE_PRODUCTS"
-      elif [ "$command" == "uninstall_padogrid" ] || [ "$command" == "uninstall_product" ]; then
+      elif [ "$command" == "uninstall_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
          type_list="$__DOWNLOADABLE_PRODUCTS gemfire"
-      elif [ "$command" == "update_padogrid" ] || [ "$command" == "update_products" ]; then
+      elif [ "$command" == "update_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
          type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
@@ -1087,7 +1087,7 @@ __command_complete()
       fi
       ;;
    -version)
-      if [ "$command" == "install_padogrid" ] || [ "$command" == "uninstall_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_products" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "uninstall_padogrid" ] || [ "$command" == "vm_install" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -1097,7 +1097,7 @@ __command_complete()
          fi
          if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ]; then
             type_list=$(getDownloadableProductVersions $product_name)
-         elif [ "$command" == "update_padogrid" ] || [ "$command" == "uninstall_padogrid" ] || [ "$command" == "update_products" ]; then
+         elif [ "$command" == "update_padogrid" ] || [ "$command" == "uninstall_padogrid" ]; then
             type_list=$(getInstalledProductVersions $product_name)
          fi
       fi

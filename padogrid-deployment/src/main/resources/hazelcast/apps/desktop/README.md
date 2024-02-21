@@ -11,7 +11,7 @@ You can install the Hazelcast Deskop app by running `install_padogrid`.
 ```bash
 # 1. Install hazelcast-desktop.
 install_padogrid -product hazelcast-desktop
-update_products -product hazelcast-desktop
+update_padogrid -product hazelcast-desktop
 
 # 2. Create desktop app.
 create_app -app desktop

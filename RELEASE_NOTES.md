@@ -4,11 +4,21 @@
 
 https://github.com/padogrid
 
-## Version 0.9.34-SNAPSHOT
+## Version 1.0.0-SNAPSHOT
 
-### Release Date: 02/18/24
+### Release Date: 02/21/24
 
-- Initial snapshot
+- This is the first hardened major release that includes support for all PadoGrid commands in the previous release with removal of the following deprecated commands.
+
+| Removed           | Replacment         |
+| ----------------- | ------------------ |
+| make_cluster      | create_cluster     |
+| show_products     | show_padogrid      |
+| uninstall_product | uninstall_padogrid |
+| update_products   | update_padogrid    | 
+| vm_show_products  | vm_show_padogrid   |
+
+- The online bundles and the PadoGrid manual have been updated with the replacement commands. Please use this release or PadoGrid v0.9.33 to run the bundles. If you choose to use a prior release, then you must use the deprecated commands.
 
 ---
 

@@ -3213,6 +3213,7 @@ function cd_app
 #
 # Executes the specified padogrid command.
 #
+# @required SCRIPT_DIR
 # @param command  Command to execute
 # @param ...args  Command argument list
 #
@@ -3257,7 +3258,11 @@ function padogrid
       echo "             One of the PadoGrid commands listed below."
       echo ""
       echo "COMMANDS"
+      echo "+ Product:"
       ls $SCRIPT_DIR
+      echo ""
+      echo "+ Common:"
+      ls $PADOGRID_HOME/bin_sh
       help_padogrid
       return
    fi
