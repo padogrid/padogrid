@@ -73,7 +73,7 @@ else
    done
 fi
 
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby mosquitto"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby mosquitto"
 
 EXECUTABLE="`basename $0`"
 
@@ -118,8 +118,6 @@ HAZELCAST_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.jfrog.io/artifactory/downlo
 HAZELCAST_OSS_DOWNLOAD_URL="https://hazelcast.com/open-source-projects/downloads/archives"
 HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL="https://hazelcast.com/open-source-projects/downloads/archives/"
 HAZELCAST_DESKTOP_DOWNLOAD_URL="https://github.com/netcrest/hazelcast-desktop/releases"
-JET_ENTERPRISE_DOWNLOAD_URL="https://hazelcast.com/get-started/download/"
-JET_OSS_DOWNLOAD_URL="https://github.com/hazelcast/hazelcast-jet/releases"
 REDIS_DOWNLOAD_URL="https://github.com/redis/redis/releases"
 SNAPPYDATA_DOWNLOAD_URL="https://github.com/TIBCOSoftware/snappydata/releases"
 SPARK_DOWNLOAD_URL="https://archive.apache.org/dist/spark/"
@@ -246,8 +244,6 @@ echo -e "      - Hazelcast Enterprise        ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLO
 echo -e "      - Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
 echo -e "      - Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
 echo -e "      - HazelcastDesktop            ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
-echo -e "      - Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
-echo -e "      - Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
 echo -e "      - Redis OSS                   ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
 echo -e "      - TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "      - Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
@@ -321,9 +317,6 @@ NOTES
      - Java 17+ - 10.16.x.x
      - Java 9+ - 10.15.x.x
      - Java 8+ - 10.14.x.x, 10.13.x.x
-
-   - Jet Management Center installation is no longer supported. Install Hazelcast Management Center
-     instead. It supports both IMDG and Jet.
 
    - PadoGrid support for Kafka is limited to the RAFT mode which requires Kafka 2.8.0+ or Confluent 7.0.0+.
 
@@ -438,8 +431,6 @@ echo -e "[2]  Hazelcast Enterprise        ${CUrl}$HAZELCAST_ENTERPRISE_DOWNLOAD_
 echo -e "[3]  Hazelcst OSS                ${CUrl}$HAZELCAST_OSS_DOWNLOAD_URL${CNone}"
 echo -e "[4]  Hazelcast Management Center ${CUrl}$HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_URL${CNone}"
 echo -e "[5]  HazelcastDesktop            ${CUrl}$HAZELCAST_DESKTOP_DOWNLOAD_URL${CNone}"
-echo -e "[6]  Jet Enterprise              ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
-echo -e "[7]  Jet OSS                     ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
 echo -e "[8]  REDIS OSS                   ${CUrl}$REDIS_DOWNLOAD_URL${CNone}"
 echo -e "[9]  TIBCO SnappyData            ${CUrl}$SNAPPYDATA_DOWNLOAD_URL${CNone}"
 echo -e "[10] Apache Spark                ${CUrl}$SPARK_DOWNLOAD_URL${CNone}"
@@ -792,43 +783,6 @@ function getDownloadableHazelcastDesktopVersions
    unique_words "$ALL_HAZELCAST_DESKTOP_VERSIONS"
 }
 
-function getDownloadableJetEnterpriseVersions
-{
-   local ALL_JET_ENTERPRISE_VERSIONS=$(curl -sL $JET_ENTERPRISE_DOWNLOAD_URL | grep "hazelcast-jet-enterprise-" | grep "tar.gz" | sed -e 's/.*hazelcast-jet-enterprise-//' -e 's/\.tar\.gz.*//')
-   unique_words "$ALL_JET_ENTERPRISE_VERSIONS"
-}
-
-function getDownloadableJetOssVersions
-{
-   local is_next_page="true"
-   local page=1
-   local ALL_JET_OSS_VERSIONS=""
-   while [ "$is_next_page" == "true" ]; do
-      download_url="${JET_OSS_DOWNLOAD_URL}?page=$page"
-      local PAGE_VERSIONS=$(curl -sL $download_url | grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
-      PAGE_VERSIONS=$(unique_words "$PAGE_VERSIONS")
-      if [ "$PAGE_VERSIONS" == "" ]; then
-         local assets_urls=$(curl -s $download_url | grep "expanded_assets" | sed -e 's/^.*src="//g' -e 's/".*$//')
-         if [ "$assets_urls" == "" ]; then
-            is_next_page="false"
-         else
-            for url in $assets_urls; do
-               versions=$(curl -sL $url  | grep "hazelcast-jet-" | grep '\.tar\.gz' | sed -e 's/.*hazelcast-jet-//' -e 's/\.tar\.gz.*//' | grep -v elastic)
-               if [ "$versions" != "" ]; then
-                  ALL_JET_OSS_VERSIONS="$ALL_JET_OSS_VERSIONS $versions"
-               fi
-            done
-         fi
-      else
-         ALL_JET_OSS_VERSIONS="$ALL_JET_OSS_VERSIONS $PAGE_VERSIONS"
-      fi
-      let page=page+1
-      # Wait a bit to reset the GitHub rate meter
-      sleep $SLEEP_DELAY
-   done
-   unique_words "$ALL_JET_OSS_VERSIONS"
-}
-
 function getDownloadableRedisVersions
 {
    local is_next_page="true"
@@ -1033,8 +987,6 @@ function sortVersionList
 #    HAZELCAST_OSS_VERSIONS
 #    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
 #    HAZELCAST_DESKTOP_VERSIONS
-#    JET_ENTERPRISE_VERSIONS
-#    JET_OSS_VERSIONS
 #    REDIS_VERSIONS
 #    SNAPPYDATA_VERSIONS
 #    SPARK_VERSIONS
@@ -1061,8 +1013,6 @@ function determineInstalledProductVersions
    HAZELCAST_OSS_VERSIONS=""
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
    HAZELCAST_DESKTOP_CENTER_VERSIONS=""
-   JET_ENTERPRISE_VERSIONS=""
-   JET_OSS_VERSIONS=""
    REDIS_VERSIONS=""
    SNAPPYDATA_VERSIONS=""
    SPARK_VERSIONS=""
@@ -1132,7 +1082,7 @@ function determineInstalledProductVersions
       done
       GEODE_VERSIONS=$(sortVersionList "$__versions")
 
-      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise
+      # Hazelcast OSS, Enterprise, Hazelcast Management Center
       local hossv henterv hmanv hdesktopv jossv jenterv jmanv
       for i in hazelcast-*; do
          if [[ "$i" == "hazelcast-enterprise-"** ]]; then
@@ -1144,12 +1094,6 @@ function determineInstalledProductVersions
          elif [[ "$i" == "hazelcast-desktop_"** ]]; then
             __version=${i#hazelcast-desktop_}
             hdesktopv="$hdesktopv $__version"
-         elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
-            __version=${i#hazelcast-jet-enterprise-}
-            jenterv="$jenterv $__version"
-         elif [[ "$i" == "hazelcast-jet-"** ]]; then
-            __version=${i#hazelcast-jet-}
-            jossv="$jossv $__version"
          elif [[ "$i" == "hazelcast-"** ]]; then
             __version=${i#hazelcast-}
             hossv="$hossv $__version"
@@ -1159,8 +1103,6 @@ function determineInstalledProductVersions
       HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
       HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
       HAZELCAST_DESKTOP_VERSIONS=$(sortVersionList "$hdesktopv")
-      JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
-      JET_OSS_VERSIONS=$(sortVersionList "$jossv")
       HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
 
       # Redis
@@ -1379,7 +1321,7 @@ function doUserInput
 #
 # Installs the specified product in the PadoGrid products directory.
 # @param productName Product name, i.e., padogrid, pado, geode, hazelcast-oss, hazelcast-enterprise, hazelcast-management-center, 
-#                    hazelcast-desktop, jet-oss, jet-enterprise, snappydata, spark
+#                    hazelcast-desktop, snappydata, spark
 # @param simulate If 'true' then outputs the installation commands without actually executing them.
 #
 # @required PADOGRID_PRODUCTS_PATH
@@ -1420,9 +1362,6 @@ function doUserInput
 # @required HAZELCAST_DESKTOP_VERSION
 # @required HAZELCAST_DESKTOP_RELEASE
 # @required HAZELCAST_DESKTOP_TARBALL
-#
-# @required JET_MC_RELEASE
-# @required JET_MC_TARBALL
 #
 # @required REDIS_RELEASE
 # @required REDIS_TARBALL
@@ -1712,55 +1651,6 @@ function installProduct
       else
          tar -C $PADOGRID_PRODUCTS_PATH -xzf $PADOGRID_DOWNLOADS_PATH/$HAZELCAST_DESKTOP_TARBALL
          echo "  Installed - $HAZELCAST_DESKTOP_TARBALL"
-      fi
-      fi
-
-   elif [ "$__PRODUCT" == "jet-oss" ]; then 
-      
-      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$JET_OSS_RELEASE" ]; then
-         echo "Already installed - $JET_OSS_RELEASE"
-      else
-      # --------------
-      # Download Jet OSS
-      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$JET_OSS_TARBALL..."
-      local __JET_OSS_VERSION=${JET_OSS_VERSION%-slim}
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_OSS_TARBALL" "https://github.com/hazelcast/hazelcast-jet/releases/download/v$__JET_OSS_VERSION/$JET_OSS_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_OSS_TARBALL" "https://github.com/hazelcast/hazelcast-jet/releases/download/v$__JET_OSS_VERSION/$JET_OSS_TARBALL"
-      fi
-      
-      # Install Jet OSS
-      echo "  Installing Hazelcast Jet OSS $JET_OSS_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$JET_OSS_TARBALL"
-      else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$JET_OSS_TARBALL"
-         echo "  Installed - $JET_OSS_TARBALL"
-      fi
-      fi
-      
-   elif [ "$__PRODUCT" == "jet-enterprise" ]; then 
-
-      if [ "$QUIET" == "true" ] &&  [ -d "$PADOGRID_PRODUCTS_PATH/$JET_ENTERPRISE_RELEASE" ]; then
-         echo "Already installed - $JET_ENTERPRISE_RELEASE"
-      else
-      # --------------
-      # Download Jet Enterprise
-      echo "+ Downloading $PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL" "https://download.hazelcast.com/jet-enterprise/$JET_ENTERPRISE_TARBALL"
-      else
-         curl -sL -o "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL" "https://download.hazelcast.com/jet-enterprise/$JET_ENTERPRISE_TARBALL"
-      fi
-      
-      # Install Hazelcast Jet Enterprise
-      echo "  Installing Hazelcast Jet Enterprises $JET_ENTERPRISE_TARBALL in $PADOGRID_PRODUCTS_PATH/..."
-      if [ "$__SIMULATE" == "true" ]; then
-         echo tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL"
-      else
-         tar -C $PADOGRID_PRODUCTS_PATH -xzf "$PADOGRID_DOWNLOADS_PATH/$JET_ENTERPRISE_TARBALL"
-         echo "  Installed - $JET_ENTERPRISE_TARBALL"
       fi
       fi
 
@@ -2108,8 +1998,6 @@ if [ "$FILE_SPECIFIED" != "true" ] && [ "$SCAN_SPECIFIED" != "true" ] && [ -f "$
    HAZELCAST_OSS_DOWNLOAD_VERSIONS=($HAZELCAST_OSS_DOWNLOAD_VERSIONS)
    HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=($HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS)
    HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS)
-   JET_ENTERPRISE_DOWNLOAD_VERSIONS=($JET_ENTERPRISE_DOWNLOAD_VERSIONS)
-   JET_OSS_DOWNLOAD_VERSIONS=($JET_OSS_DOWNLOAD_VERSIONS)
    REDIS_DOWNLOAD_VERSIONS=($REDIS_DOWNLOAD_VERSIONS)
    SNAPPYDATA_DOWNLOAD_VERSIONS=($SNAPPYDATA_DOWNLOAD_VERSIONS)
    SPARK_DOWNLOAD_VERSIONS=($SPARK_DOWNLOAD_VERSIONS)
@@ -2161,12 +2049,6 @@ elif [ "$FILE_SPECIFIED" != "true" ]; then
    fi
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
       HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableHazelcastDesktopVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-      JET_ENTERPRISE_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetEnterpriseVersions)"))
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
-      JET_OSS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableJetOssVersions)"))
    fi
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
       REDIS_DOWNLOAD_VERSIONS=($(sortVersionList "$(getDownloadableRedisVersions)"))
@@ -2229,8 +2111,6 @@ if [ "$FILE_SPECIFIED" != "true" ] && [ "$SAVE_SPECIFIED" == "true" ]; then
    echo "HAZELCAST_OSS_DOWNLOAD_VERSIONS=\"${HAZELCAST_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS=\"${HAZELCAST_MANAGEMENT_CENTER_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS=\"${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "JET_ENTERPRISE_DOWNLOAD_VERSIONS=\"${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
-   echo "JET_OSS_DOWNLOAD_VERSIONS=\"${JET_OSS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "REDIS_DOWNLOAD_VERSIONS=\"${REDIS_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "SNAPPYDATA_DOWNLOAD_VERSIONS=\"${SNAPPYDATA_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
    echo "SPARK_DOWNLOAD_VERSIONS=\"${SPARK_DOWNLOAD_VERSIONS[@]}\"" >> "$DOWNLOAD_VERSIONS_FILE"
@@ -2258,8 +2138,6 @@ HAZELCAST_ENTERPRISE_VERSION=""
 HAZELCAST_OSS_VERSION=""
 HAZELCAST_MANAGEMENT_CENTER_VERSION=""
 HAZELCAST_DESKTOP_VERSION=""
-JET_ENTERPRISE_VERSION=""
-JET_OSS_VERSION=""
 REDIS_VERSION=""
 SNAPPYDATA_VERSION=""
 SPARK_VERSION=""
@@ -2424,12 +2302,6 @@ elif [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "true" ]; then
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "hazelcast-desktop" ]; then
       HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_DOWNLOAD_VERSIONS[0]}
    fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-      JET_ENTERPRISE_VERSION=${JET_ENTERPRISE_DOWNLOAD_VERSIONS[0]}
-   fi
-   if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
-      JET_OSS_VERSION=${JET_OSS_DOWNLOAD_VERSIONS[0]}
-   fi
    if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "redis-oss" ]; then
       REDIS_VERSION=${REDIS_DOWNLOAD_VERSIONS[0]}
    fi
@@ -2482,8 +2354,6 @@ elif [ "$FILE_SPECIFIED" != "true" ] && [ "$QUIET" == "true" ]; then
    echo "Hazelcast OSS        $HAZELCAST_OSS_VERSION"
    echo "Hazelcast Man Center $HAZELCAST_MANAGEMENT_CENTER_VERSION"
    echo "HazelcastDesktop     $HAZELCAST_DESKTOP_VERSION"
-   echo "Jet Enterprise       $JET_ENTERPRISE_VERSION"
-   echo "Jet OSS              $JET_OSS_VERSION"
    echo "Redis OSS            $REDIS_VERSION"
    echo "SnappyData           $SNAPPYDATA_VERSION"
    echo "Spark                $SPARK_VERSION"
@@ -2679,34 +2549,6 @@ elif [ "$FILE_SPECIFIED" != "true" ]; then
             let INSTALL_COUNT=INSTALL_COUNT+1
          fi
          HAZELCAST_DESKTOP_VERSION=$INSTALL_VERSION
-         echo ""
-      fi
-      
-      # Jet Enterprise
-      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-enterprise" ]; then
-         PRODUCT_NAME="Jet Enterprise"
-         PRODUCT_DOWNLOAD_VERSIONS=("${JET_ENTERPRISE_DOWNLOAD_VERSIONS[@]}")
-         INSTALLED_VERSIONS=$JET_ENTERPRISE_VERSIONS
-         echo -e "Jet Enterprise ${CUrl}$JET_ENTERPRISE_DOWNLOAD_URL${CNone}"
-         doUserInput
-         if [ "$INSTALL_VERSION" != "" ]; then
-            let INSTALL_COUNT=INSTALL_COUNT+1
-         fi
-         JET_ENTERPRISE_VERSION=$INSTALL_VERSION
-         echo ""
-      fi
-      
-      # Jet OSS
-      if [ "$PRODUCT_ARG" == "" ] || [ "$PRODUCT_ARG" == "jet-oss" ]; then
-         PRODUCT_NAME="Jet OSS"
-         PRODUCT_DOWNLOAD_VERSIONS=("${JET_OSS_DOWNLOAD_VERSIONS[@]}")
-         INSTALLED_VERSIONS=$JET_OSS_VERSIONS
-         echo -e "Jet OSS ${CUrl}$JET_OSS_DOWNLOAD_URL${CNone}"
-         doUserInput
-         if [ "$INSTALL_VERSION" != "" ]; then
-            let INSTALL_COUNT=INSTALL_COUNT+1
-         fi
-         JET_OSS_VERSION=$INSTALL_VERSION
          echo ""
       fi
 
@@ -3000,12 +2842,6 @@ elif [ "$FILE_SPECIFIED" != "true" ]; then
       if [ "$HAZELCAST_DESKTOP_VERSION" != "" ]; then
          echo -e "HazelcastDesktop: ${CGo}$HAZELCAST_DESKTOP_VERSION${CNone}"
       fi
-      if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
-         echo -e "Jet Enterprise: ${CGo}$JET_ENTERPRISE_VERSION${CNone}"
-      fi
-      if [ "$JET_OSS_VERSION" != "" ]; then
-         echo -e "Jet OSS: ${CGo}$JET_OSS_VERSION${CNone}"
-      fi
       if [ "$REDIS_VERSION" != "" ]; then
          echo -e "Redis: ${CGo}$REDIS_VERSION${CNone}"
       fi
@@ -3159,16 +2995,6 @@ if [ "$HAZELCAST_DESKTOP_VERSION" != "" ]; then
    HAZELCAST_DESKTOP_RELEASE="hazelcast-desktop_$HAZELCAST_DESKTOP_VERSION"
    HAZELCAST_DESKTOP_TARBALL="$HAZELCAST_DESKTOP_RELEASE.tar.gz"
    installProduct "hazelcast-desktop" "$SIMULATE"
-fi
-if [ "$JET_ENTERPRISE_VERSION" != "" ]; then
-   JET_ENTERPRISE_RELEASE="hazelcast-jet-enterprise-$JET_ENTERPRISE_VERSION"
-   JET_ENTERPRISE_TARBALL="$JET_ENTERPRISE_RELEASE.tar.gz"
-   installProduct "jet-enterprise" "$SIMULATE"
-fi
-if [ "$JET_OSS_VERSION" != "" ]; then
-   JET_OSS_RELEASE="hazelcast-jet-$JET_OSS_VERSION"
-   JET_OSS_TARBALL="$JET_OSS_RELEASE.tar.gz"
-   installProduct "jet-oss" "$SIMULATE"
 fi
 if [ "$REDIS_VERSION" != "" ]; then
    REDIS_RELEASE="redis-$REDIS_VERSION"
@@ -3362,11 +3188,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
    PADODESKTOP_HOME=""
    PADOWEB_HOME=""
    GEODE_HOME=""
-   JET_HOME=""
    HAZELCAST_MC_HOME=""
    HAZELCAST_DESKTOP_HOME=""
-   JET_MC_HOME=""
-   JET_HOME=""
    HAZELCAST_HOME=""
    REDIS_HOME=""
    SNAPPYDATA_HOME=""
@@ -3384,7 +3207,6 @@ if [ "$RWE_EXISTS" == "false" ]; then
 
    # Find all installed products
    HAZELCAST_OSS_HOME=""
-   JET_OSS_HOME=""
    pushd $PADOGRID_PRODUCTS_PATH > /dev/null 2>&1
    for i in *; do
      if [[ "$i" == **"padogrid_"** ]]; then
@@ -3399,14 +3221,8 @@ if [ "$RWE_EXISTS" == "false" ]; then
        GEODE_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast-enterprise"** ]]; then
        HAZELCAST_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-     elif [[ "$i" == **"hazelcast-jet-enterprise"** ]]; then
-       JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast-management-center"** ]]; then
        HAZELCAST_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-       JET_MC_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-     elif [[ "$i" == **"hazelcast-jet"** ]]; then
-       JET_HOME="$PADOGRID_PRODUCTS_PATH/$i"
-       JET_OSS_HOME="$JET_HOME"
      elif [[ "$i" == **"hazelcast-desktop"** ]]; then
        HAZELCAST_DESKTOP_HOME="$PADOGRID_PRODUCTS_PATH/$i"
      elif [[ "$i" == **"hazelcast"** ]]; then
@@ -3457,15 +3273,10 @@ if [ "$RWE_EXISTS" == "false" ]; then
       if [ "$HAZELCAST_OSS_HOME" != "" ]; then
          HAZELCAST_HOME="$HAZELCAST_OSS_HOME"
       fi
-      if [ "$JET_OSS_HOME" != "" ]; then
-         JET_HOME="$JET_OSS_HOME"
-      fi
       if [ "$HAZELCAST_HOME" != "" ]; then
         PRODUCT_HOME="$HAZELCAST_HOME"
       elif [ "$GEODE_HOME" != "" ]; then
         PRODUCT_HOME="$GEODE_HOME"
-         elif [ "$JET_HOME" != "" ]; then
-        PRODUCT_HOME="$JET_HOME"
       elif [ "$REDIS_HOME" != "" ]; then
         PRODUCT_HOME="$REDIS_HOME"
       elif [ "$SNAPPYDATA_HOME" != "" ]; then
@@ -3497,8 +3308,6 @@ if [ "$RWE_EXISTS" == "false" ]; then
       echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
       echo "HAZELCAST_DESKTOP_HOME=\"$HAZELCAST_DESKTOP_HOME\"" >> $TMP_ENV_FILE
-      echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
-      echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
       echo "MOSQUITTO_HOME=\"$MOSQUITTO_HOME\"" >> $TMP_ENV_FILE
       echo "REDIS_HOME=\"$REDIS_HOME\"" >> $TMP_ENV_FILE
       echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE

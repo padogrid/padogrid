@@ -97,7 +97,7 @@ OPTIONS
              This option applies only for a cluster running locally. It is ignored
              for creating non-local pod and VM clusters.
              
-             Default: 5701 for IMDG, 6701 for Jet
+             Default: 5701
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
@@ -131,18 +131,11 @@ fi
 # provides a way to create any product clusters in the same workspace.
 if [ "$PRODUCT_ARG" != "" ]; then
    PRODUCT=$PRODUCT_ARG
-   if [ "$PRODUCT_ARG" == "jet" ]; then
-      CLUSTER_TYPE="jet"
-   fi
 fi
 
 # Set the default cluster name if not specified
 if [ "$CLUSTER_ARG" == "" ]; then
-   if [ "$PRODUCT" == "jet" ]; then
-      CLUSTER=$DEFAULT_JET_CLUSTER
-   else
-      CLUSTER=$DEFAULT_CLUSTER
-   fi
+   CLUSTER=$DEFAULT_CLUSTER
 fi
 
 if [ -z $CLUSTER ]; then
@@ -188,8 +181,7 @@ fi
 # Check the license key
 #
 if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
-   if [ "$CLUSTER_TYPE" == "jet" ] && [ "$JET_LICENSE_KEY" == "" ] ||
-      [ "$CLUSTER_TYPE" == "imdg" ] && [ "$IMDG_LICENSE_KEY" == "" ] ||
+   if [ "$CLUSTER_TYPE" == "imdg" ] && [ "$IMDG_LICENSE_KEY" == "" ] ||
       [ "$CLUSTER_TYPE" == "hazelcast" ] && [ "$IMDG_LICENSE_KEY" == "" ]; then
       echo "WORKSPACE"
       echo "   $PADOGRID_WORKSPACE"
@@ -213,56 +205,28 @@ fi
 
 function writeCluster() 
 {
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      # Update cluster env file with PRODUCT and CLUSTER_TYPE
-      updateClusterEnvFile
-
-      # Copy the template hazelcast.xml and hazelcast.yaml files
-      cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
-      #cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.yaml $ETC_DIR/hazelcast.yaml
-      # Copy the template hazelcast-jet.xml file
-      cp $BASE_DIR/etc/template-hazelcast-jet-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-jet.xml
-      # Copy the template Jet MC application.properties file
-      cp $BASE_DIR/etc/template-jet-mc-application.properties $ETC_DIR/jet-mc-application.properties
-
-      # Insert cluster member list in hazelcast-client.xml
-      JET_CLUSTER_MEMBERS=""
-      HOST_IP="localhost"
-      HOST_SERVER_PORT=$NEW_MEMBER_START_PORT
-      COUNT=2
-      for i in $(seq 1 $COUNT); do   
-         if [ $i -lt $COUNT ]; then
-            JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
-         else
-            JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS} <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
-         fi
-         let HOST_SERVER_PORT=HOST_SERVER_PORT+1
-      done
-      sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-client.xml
-   else
-      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
-         # Change cluster type to hazelcast. "jet" and "imdg" are for keeping the cluster creation
-         # steps consistent and for setting the initial config file only.
-         CLUSTER_TYPE="hazelcast"
-      fi
-
-      # Update cluster env file with PRODUCT and CLUSTER_TYPE
-      updateClusterEnvFile
-
-      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
-         cp  $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
-         cp  $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.yaml $ETC_DIR/hazelcast.yaml
-         cp  $BASE_DIR/etc/template-hazelcast-indexes-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast-indexes.xml
-         cp  $BASE_DIR/etc/template-hazelcast-indexes-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.yaml $ETC_DIR/hazelcast-indexes.yaml
-         cp  $BASE_DIR/etc/template-hazelcast-workflow-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast-workflow.xml
-         cp  $BASE_DIR/etc/template-hazelcast-workflow-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.yaml $ETC_DIR/hazelcast-workflow.yaml
-      else
-         cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
-         cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.yaml $ETC_DIR/hazelcast.yaml
-         cp $BASE_DIR/etc/template-hazelcast-workflow-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-workflow.xml
-         cp $BASE_DIR/etc/template-hazelcast-workflow-$HAZELCAST_MAJOR_VERSION_NUMBER.yaml $ETC_DIR/hazelcast-workflow.yaml
-       fi
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ]; then
+      # Change cluster type to hazelcast. "imdg" has no purpose
+      # since v1.0.0.
+      CLUSTER_TYPE="hazelcast"
    fi
+
+   # Update cluster env file with PRODUCT and CLUSTER_TYPE
+   updateClusterEnvFile
+
+   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -eq 3 ] && [ $HAZELCAST_MINOR_VERSION_NUMBER -lt 12 ]; then
+      cp  $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast.xml
+      cp  $BASE_DIR/etc/template-hazelcast-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.yaml $ETC_DIR/hazelcast.yaml
+      cp  $BASE_DIR/etc/template-hazelcast-indexes-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast-indexes.xml
+      cp  $BASE_DIR/etc/template-hazelcast-indexes-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.yaml $ETC_DIR/hazelcast-indexes.yaml
+      cp  $BASE_DIR/etc/template-hazelcast-workflow-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.xml $ETC_DIR/hazelcast-workflow.xml
+      cp  $BASE_DIR/etc/template-hazelcast-workflow-${HAZELCAST_MAJOR_VERSION_NUMBER}.x.yaml $ETC_DIR/hazelcast-workflow.yaml
+   else
+      cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
+      cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.yaml $ETC_DIR/hazelcast.yaml
+      cp $BASE_DIR/etc/template-hazelcast-workflow-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-workflow.xml
+      cp $BASE_DIR/etc/template-hazelcast-workflow-$HAZELCAST_MAJOR_VERSION_NUMBER.yaml $ETC_DIR/hazelcast-workflow.yaml
+    fi
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
    # Copy the template prometheus config file

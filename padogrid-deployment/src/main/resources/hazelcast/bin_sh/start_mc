@@ -136,13 +136,8 @@ if [ "$REMOTE_SPECIFIED" == "false" ]; then
 fi
 
 # Make sure Management Center is installed
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   MC_HOME="$JET_MC_HOME"
-   MC_ENV_NAME="JET_MC_HOME"
-else
-   MC_HOME="$HAZELCAST_MC_HOME"
-   MC_ENV_NAME="HAZELCAST_MC_HOME"
-fi
+MC_HOME="$HAZELCAST_MC_HOME"
+MC_ENV_NAME="HAZELCAST_MC_HOME"
 if [ ! -d "$MC_HOME" ]; then
    echo >&2 "----------------------------------------------------------------"
    echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -166,108 +161,29 @@ else
    NODE="`hostname`.local"
 fi
 
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   # Jet MC
-   if [ -z $CLASSPATH ]; then
-      CLASSPATH="$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
-   else
-      CLASSPATH="$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
-   fi
-   
-   # Jet MC requires hazelcast-client.xml to provide the Jet cluster information
-   # Determine the member addresses and feed them to the Jet MC via system properties.
-   # Member port number
-   MEMBER_PROPERTIES=""
-   MEMBER_START_PORT=`getClusterProperty "tcp.startPort" $DEFAULT_MEMBER_START_PORT`
-   MC_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
-   MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
-   MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
-   MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" "false"`
-   let MEMBER_END_PORT=MEMBER_START_PORT+MAX_MEMBER_COUNT-1
-   MEMBER_TCP_LIST=""
-   declare -a MEMBER_ADDRESSES
-   let __INDEX=0
-   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
-   if [ "$VM_SPECIFIED" == "true" ]; then
-      #VM_HOSTS=`getClusterProperty "vm.hosts"
-      if [ "$VM_HOSTS" == "" ]; then
-         echo >&2 "----------------------------------------------------------------"
-         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo >&2 "    ERROR: VM hosts undefined. Set 'vm.hosts' in the following cluster.properties file."  
-         echo >&2 "              $ETC_DIR/cluster.properties"
-         echo >&2 "           Command aborted."
-         echo >&2 "----------------------------------------------------------------"
-         exit 1
-      fi
-      # Replace , with space
-      __VM_HOSTS=$(echo "$VM_HOSTS" | sed "s/,/ /g")
-      for VM_HOST in $__VM_HOSTS; do
-         MEMBER_ADDRESSES[__INDEX]="$VM_HOST:$MEMBER_START_PORT"
-         let __INDEX=__INDEX+1
-      done
-   elif [ "$POD" == "local" ]; then
-      HOST_NAME=`hostname`
-      for i in $(seq $MEMBER_START_PORT $MEMBER_END_PORT); do
-         MEMBER_ADDRESSES[__INDEX]="$HOST_NAME:$i"
-         let __INDEX=__INDEX+1
-      done
-   else
-      MEMBER_PREFIX=`getMemberPrefix`
-      MEMBER_COUNT=`getMemberCount`
-      NODE_COUNT=`getPodProperty "node.count" "$MEMBER_COUNT"`
-      for i in $(seq 1 $MEMBER_COUNT); do
-         __MEMBER_NUM=`getMemberNumWithLeadingZero $i`
-         NODE_LOCAL="${NODE_NAME_PREFIX}-${__MEMBER_NUM}.local"
-         NODE_ADDR="$NODE_LOCAL:$MEMBER_START_PORT"
-         MEMBER_ADDRESSES[__INDEX]="$NODE_ADDR"
-         let __INDEX=__INDEX+1
-      done
-   fi
-   
-   #Set the first two (2) addresses for now
-   #for i in ${MEMBER_ADDRESSES[@]}; do
-   MEMBER_PROPERTIES=""
-   __INDEX=1
-   for i in $(seq 0 1); do
-      if [ "$MEMBER_PROPERTIES" == "" ]; then
-         MEMBER_PROPERTIES="-Dpadogrid.jet.member.address.${__INDEX}=${MEMBER_ADDRESSES[$i]}"
-      else
-         MEMBER_PROPERTIES="$MEMBER_PROPERTIES -Dpadogrid.jet.member.address.${__INDEX}=${MEMBER_ADDRESSES[$i]}"
-      fi
-      let __INDEX=__INDEX+1
-   done
-   MEMBER_PROPERTIES="-Dpadogrid.group=$CLUSTER $MEMBER_PROPERTIES"
-   if [ "$MC_JAVA_OPTS" == "" ]; then
-      MC_JAVA_OPTS="$MEMBER_PROPERTIES"
-   else
-      MC_JAVA_OPTS="$MC_JAVA_OPTS $MEMBER_PROPERTIES"
-   fi
-
+# MC_VERSION: Determine the Hazelcast management center version
+if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
+   WAR_FILE_PREFIX="hazelcast-management-center-"
 else
-   # MC_VERSION: Determine the Hazelcast management center version
-   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
-      WAR_FILE_PREFIX="hazelcast-management-center-"
+   WAR_FILE_PREFIX="hazelcast-mancenter-"
+fi
+LIB_EXTENSION=""
+pushd $MC_HOME/ > /dev/null 2>&1 
+for file in ${WAR_FILE_PREFIX}*; do
+   file=${file#*$WAR_FILE_PREFIX}
+   if [[ $file == *.jar ]]; then
+      MC_VERSION=${file%.jar}
+      LIB_EXTENSION=".jar"
    else
-      WAR_FILE_PREFIX="hazelcast-mancenter-"
+      LIB_EXTENSION=".war"
+      MC_VERSION=${file%.war}
    fi
-   LIB_EXTENSION=""
-   pushd $MC_HOME/ > /dev/null 2>&1 
-   for file in ${WAR_FILE_PREFIX}*; do
-      file=${file#*$WAR_FILE_PREFIX}
-      if [[ $file == *.jar ]]; then
-         MC_VERSION=${file%.jar}
-         LIB_EXTENSION=".jar"
-      else
-         LIB_EXTENSION=".war"
-         MC_VERSION=${file%.war}
-      fi
-   done
-         popd > /dev/null 2>&1 
-   if [ -z $CLASSPATH ]; then
-      CLASSPATH="$MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
-   else
-      CLASSPATH="$MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
-   fi
+done
+popd > /dev/null 2>&1 
+if [ -z $CLASSPATH ]; then
+   CLASSPATH="$MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
+else
+   CLASSPATH="$MC_HOME/${WAR_FILE_PREFIX}${MC_VERSION}${LIB_EXTENSION}:$CLASSPATH:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
 fi
 
 MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
@@ -304,7 +220,6 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
    CLASSPATH="$(cygpath -wp "$CLASSPATH")"
    WORKING_DIR="$(cygpath -wp "$WORKING_DIR")"
-   JET_MC_APPLICATION_PROPERTIES_FILE="$(cygpath -wp "$JET_MC_APPLICATION_PROPERTIES_FILE")"
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
 fi
 
@@ -327,57 +242,26 @@ fi
 
 JAVA_OPTS="$JAVA_OPTS $MC_JAVA_OPTS" 
 
-#JAVA_OPTS="$JAVA_OPTS -Djet.licenseKey=$JET_LICENSE_KEY" 
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   # 2021 MC: IMDG and Jet merged 
-   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT"
-
-   ARGS="--port=$MC_HTTP_PORT --application-config=$JET_MC_APPLICATION_PROPERTIES_FILE --client-config=$CLIENT_CONFIG_FILE"
-   if [ "$JET_LICENSE_KEY" != "" ]; then
-      ARGS="$ARGS -l $JET_LICENSE_KEY" 
-   fi
-
-   # Drop padogrid specific args
-   for i in "$@"; do
-      case "$i" in
-      -remote)
-      ;;
-      -workspace)
-      ;;
-      -all)
-      ;;
-      *)
-      if [ "$__PREV" != "-workspace" ]; then
-         ARGS="$ARGS $i"
-      fi
-      ;;
-      esac
-      __PREV="$i"
-   done
+if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+    MC_HTTP_PORT=$MC_HTTPS_PORT
+fi
+if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MINOR_VERSION_NUMBER -ge 2 ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT -Dhazelcast.mc.contextPath=/hazelcast-mancenter"
    if [ "$SIMULATE" != "true" ]; then
-      "$JAVA" $JAVA_OPTS -jar "$MC_HOME"/$JET_MC_JAR $ARGS > $LOG_FILE 2>&1 &
+      "$JAVA" -server -Dloader.path="${CLASSPATH}" ${JAVA_OPTS} -cp "$HAZELCAST_MC_JAR" org.springframework.boot.loader.PropertiesLauncher > $LOG_FILE 2>&1 &
+   fi
+elif [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT -Dhazelcast.mc.contextPath=hazelcast-mancenter"
+   if [ "$SIMULATE" != "true" ]; then
+      "$JAVA" $JAVA_OPTS -cp $CLASSPATH com.hazelcast.webmonitor.Launcher > $LOG_FILE 2>&1 &
    fi
 else
-   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
-       MC_HTTP_PORT=$MC_HTTPS_PORT
-   fi
-   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MINOR_VERSION_NUMBER -ge 2 ]; then
-      JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT -Dhazelcast.mc.contextPath=/hazelcast-mancenter"
-      if [ "$SIMULATE" != "true" ]; then
-         "$JAVA" -server -Dloader.path="${CLASSPATH}" ${JAVA_OPTS} -cp "$HAZELCAST_MC_JAR" org.springframework.boot.loader.PropertiesLauncher > $LOG_FILE 2>&1 &
-      fi
-   elif [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
-      JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT -Dhazelcast.mc.contextPath=hazelcast-mancenter"
-      if [ "$SIMULATE" != "true" ]; then
-         "$JAVA" $JAVA_OPTS -cp $CLASSPATH com.hazelcast.webmonitor.Launcher > $LOG_FILE 2>&1 &
-      fi
-   else
-      ARGS="$MC_HTTP_PORT $MC_HTTP_PORT hazelcast-mancenter"
-      if [ "$SIMULATE" != "true" ]; then
-         "$JAVA" $JAVA_OPTS -cp $CLASSPATH Launcher $ARGS > $LOG_FILE 2>&1 &
-      fi
+   ARGS="$MC_HTTP_PORT $MC_HTTP_PORT hazelcast-mancenter"
+   if [ "$SIMULATE" != "true" ]; then
+      "$JAVA" $JAVA_OPTS -cp $CLASSPATH Launcher $ARGS > $LOG_FILE 2>&1 &
    fi
 fi
+
 if [ "$SIMULATE" == "true" ]; then
    PID="Simulated"
 else
@@ -389,14 +273,10 @@ echo "        WORKSPACE: $PADOGRID_WORKSPACE"
 echo "             Name: $MC_NAME"
 echo "          Cluster: $CLUSTER"
 echo "Management Center: hazelcast-mancenter"
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-echo "              URL: http://${NODE}:${MC_HTTP_PORT}"
-else
 if [ "$MC_HTTPS_ENABLED" == "false" ]; then
 echo "              URL: http://${NODE}:${MC_HTTP_PORT}/hazelcast-mancenter"
 else
 echo "              URL: https://${NODE}:${MC_HTTPS_PORT}/hazelcast-mancenter"
-fi
 fi
 echo "              PID: $PID"
 echo "      WORKING_DIR: $WORKING_DIR"

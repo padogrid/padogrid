@@ -98,7 +98,7 @@ fi
 cat <<EOF
 
    -product local_product_home_path
-              Local home path of Geode, GemFire, Hazelcast, Jet, Coherence, or Spark.
+              Local home path of Geode, GemFire, Hazelcast, Coherence, or Spark.
 
    -vm-padogrid vm_padogrid_base_path
               VM PadoGrid base path where PadoGrid is deployed. This is the root directory of
@@ -360,9 +360,6 @@ else
          fi
          if [ "$HAZELCAST_HOME" != "" ]; then
             echo "   $HAZELCAST_HOME"
-         fi
-         if [ "$JET_HOME" != "" ]; then
-            echo "   $JET_HOME"
          fi
          if [ "$GEODE_HOME" != "" ]; then
             echo "   $GEODE_HOME"
@@ -687,34 +684,16 @@ elif [ "$PRODUCT" == "confluent" ]; then
 elif [ "$PRODUCT" == "hadoop" ]; then
    echo "   export HADOOP_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
 elif [ "$PRODUCT" == "hazelcast" ]; then
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      echo "   export JET_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-      if [ "$JET_HOME" != "" ]; then
-         if [ -d "$JET_HOME/hazelcast-jet-management-center" ]; then
-            echo "   export HAZELCAST_MC_HOME=\"\$JET_HOME/hazelcast-jet-management-center\"" >> $WORKSPACE_DIR/setenv.sh
-         else
-            echo "   export JET_MC_HOME=\"$JET_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-         fi
+   echo "   export HAZELCAST_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
+   if [ "$HAZELCAST_HOME" != "" ]; then
+      if [ -d "$HAZELCAST_HOME/management-center" ]; then
+         echo "   export HAZELCAST_MC_HOME=\"\$HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
       else
-         echo "   export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-         echo "   export JET_MC_HOME=\"$JET_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-      fi
-      echo "   #export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-      echo "   #export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-   else
-      echo "   export HAZELCAST_HOME=\"$PRODUCT_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-      if [ "$HAZELCAST_HOME" != "" ]; then
-         if [ -d "$HAZELCAST_HOME/management-center" ]; then
-            echo "   export HAZELCAST_MC_HOME=\"\$HAZELCAST_HOME/management-center\"" >> $WORKSPACE_DIR/setenv.sh
-         else
-            echo "   export HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
-         fi
-      else
-         echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
          echo "   export HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
       fi
-      echo "   #export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-      echo "   #export JET_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+   else
+      echo "   export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
+      echo "   export HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $WORKSPACE_DIR/setenv.sh
    fi
 fi
 if [ "$PRODUCT" != "coherence" ]; then
@@ -730,8 +709,6 @@ fi
 if [ "$PRODUCT" != "hazelcast" ]; then
    echo "   #export HAZELCAST_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
    echo "   #export HAZELCAST_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-   echo "   #export JET_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
-   echo "   #export JET_MC_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh
 fi
 if [ "$PRODUCT" != "snappydata" ]; then
    echo "   #export SNAPPYDATA_HOME=\"\"" >> $WORKSPACE_DIR/setenv.sh

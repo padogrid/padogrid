@@ -78,7 +78,7 @@ DESCRIPTION
 
 OPTIONS
    -product product_home_path
-             Default product home path. One of Geode, GemFire, Hazelcast, Jet, Coherence,
+             Default product home path. One of Geode, GemFire, Hazelcast, Coherence,
              SnappyData, Spark, Kafka, and Hadoop home paths.
 
    -rwe rwe_name
@@ -241,7 +241,7 @@ function determineInstalledProducts
          GEMFIRE_HOME=$PADOGRID_ENV_BASE_PATH/products/pivotal-gemfire-$__version
       fi
 
-      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
+      # Hazelcast OSS, Enterprise, Hazelcast Management Center
       local hossv henterv hmanv jossv jenterv jmanv
       for i in hazelcast-*; do
          if [[ "$i" == "hazelcast-enterprise-"** ]]; then
@@ -250,15 +250,9 @@ function determineInstalledProducts
          elif [[ "$i" == "hazelcast-management-center-"** ]]; then
             __version=${i#hazelcast-management-center-}
             hmanv="$hmanv $__version"
-         elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
-            __version=${i#hazelcast-jet-enterprise-}
-            jenterv="$jenterv $__version"
-         elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
-            __version=${i#hazelcast-jet-management-center-}
-            jmanv="$jmanv $__version"
          elif [[ "$i" == "hazelcast-jet-"** ]]; then
-            __version=${i#hazelcast-jet-}
-            jossv="$jossv $__version"
+            # do nothing
+            continue
          elif [[ "$i" == "hazelcast-"** ]]; then
             __version=${i#hazelcast-}
             hossv="$hossv $__version"
@@ -277,21 +271,6 @@ function determineInstalledProducts
          if [ "$hmanv" != "" ]; then
             __version=$(getLatestProductVersion "$hmanv")
             HAZELCAST_MC_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-management-center-$__version
-         fi
-      fi
-      if [ "$JET_HOME" == "" ]; then
-         if [ "$jenterv" != "" ]; then
-            __version=$(getLatestProductVersion "$jenterv")
-            JET_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-jet-enterprise-$__version
-         elif [ "$jossv" != "" ]; then
-            __version=$(getLatestProductVersion "$jossv")
-            JET_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-jet-$__version
-         fi
-      fi
-      if [ "$JET_MC_HOME" == "" ]; then
-         if [ "$jmanv" != "" ]; then
-            __version=$(getLatestProductVersion "$jmanv")
-            JET_MC_HOME=$PADOGRID_ENV_BASE_PATH/products/hazelcast-jet-management-center-$__version
          fi
       fi
 
@@ -371,12 +350,6 @@ function determineInstalledProducts
       if [ ! -d "$HAZELCAST_MC_HOME" ]; then
          HAZELCAST_MC_HOME=""
       fi
-      if [ ! -d "$JET_HOME" ]; then
-         JET_HOME=""
-      fi
-      if [ ! -d "$JET_MC_HOME" ]; then
-         JET_MC_HOME=""
-      fi
       if [ ! -d "$REDIS_HOME" ]; then
          REDIS_HOME=""
       fi
@@ -402,11 +375,7 @@ determineInstalledProducts
 if [ "$__PRODUCT_HOME" == "" ]; then
    if [  "$QUIET" == "true" ]; then
       if [ "$PRODUCT" == "hazelcast" ]; then
-         if [ "$CLUSTER_TYPE" == "jet" ]; then
-            __PRODUCT_HOME="$JET_HOME"
-         else
-            __PRODUCT_HOME="$HAZELCAST_HOME"
-         fi
+         __PRODUCT_HOME="$HAZELCAST_HOME"
       elif [ "$PRODUCT" == "geode" ]; then
          __PRODUCT_HOME="$GEODE_HOME"
       elif [ "$PRODUCT" == "coherence" ]; then
@@ -440,9 +409,6 @@ if [ "$QUIET" == "false" ] && [ "$PRODUCT_ARG" == "" ]; then
       fi
       if [ "$HAZELCAST_HOME" != "" ]; then
          echo "   $HAZELCAST_HOME"
-      fi
-      if [ "$JET_HOME" != "" ]; then
-         echo "   $JET_HOME"
       fi
       if [ "$GEODE_HOME" != "" ]; then
          echo "   $GEODE_HOME"
@@ -540,8 +506,6 @@ echo "GEODE_HOME=\"$GEODE_HOME\"" >> $TMP_ENV_FILE
 echo "GEMFIRE_HOME=\"$GEMFIRE_HOME\"" >> $TMP_ENV_FILE
 echo "HAZELCAST_HOME=\"$HAZELCAST_HOME\"" >> $TMP_ENV_FILE
 echo "HAZELCAST_MC_HOME=\"$HAZELCAST_MC_HOME\"" >> $TMP_ENV_FILE
-echo "JET_HOME=\"$JET_HOME\"" >> $TMP_ENV_FILE
-echo "JET_MC_HOME=\"$JET_MC_HOME\"" >> $TMP_ENV_FILE
 echo "SNAPPYDATA_HOME=\"$SNAPPYDATA_HOME\"" >> $TMP_ENV_FILE
 echo "SPARK_HOME=\"$SPARK_HOME\"" >> $TMP_ENV_FILE
 echo "KAFKA_HOME=\"$KAFKA_HOME\"" >> $TMP_ENV_FILE

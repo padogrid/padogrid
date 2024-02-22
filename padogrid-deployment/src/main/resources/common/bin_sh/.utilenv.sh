@@ -558,15 +558,13 @@ function getK8s {
 
 #
 # Returns a space-sparated list of supported '-k8s' options for the 'create_k8s' command.
-# @param product  Product name. Supported are hazelcast, jet, geode
+# @param product  Product name. Supported are hazelcast, geode
 #
 function getK8sOptions 
 {
    local __PRODUCT="$1"
    if [ "$__PRODUCT" == "hazelcast" ]; then
       echo "minikube minishift openshift gke"
-   elif [ "$__PRODUCT" == "jet" ]; then
-      echo "openshift"
    elif [ "$__PRODUCT" == "geode" ]; then
       echo "minikube"
    else
@@ -630,9 +628,7 @@ function getAppOptions
 {
    local __PRODUCT="$1"
    if [ "$__PRODUCT" == "hazelcast" ]; then
-      echo "derby desktop grafana perf_test stub"
-   elif [ "$__PRODUCT" == "jet" ]; then
-      echo "derby desktop jet_demo stub"
+      echo "derby desktop grafana jet_demo perf_test stub"
    elif [ "$__PRODUCT" == "geode" ] || [ "$__PRODUCT" == "gemfire" ]; then
       echo "derby grafana padodesktop perf_test stub"
    elif [ "$__PRODUCT" == "coherence" ]; then
@@ -664,7 +660,7 @@ function getClusterPortOptions
       __DEFAULT_PORT="$DEFAULT_GEODE_START_PORT";;
    hadoop)
       __DEFAULT_PORT="$DEFAULT_HADOOP_START_PORT";;
-   hazelcast|jet)
+   hazelcast)
       __DEFAULT_PORT="$DEFAULT_HAZELCAST_START_PORT";;
    kafka|confluent)
       __DEFAULT_PORT="$DEFAULT_KAFKA_START_PORT";;
@@ -1640,13 +1636,10 @@ function updateClusterEnvFile
    fi
 
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
-   # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
    local PRODUCT_TYPE="$PRODUCT"
    if [ "$PRODUCT" == "gemfire" ]; then
       echo "PRODUCT=geode" > "$HOME_CLUSTERENV_FILE"
       CLUSTER_TYPE="gemfire"
-   elif [ "$PRODUCT" == "jet" ]; then
-      echo "PRODUCT=hazelcast" > "$HOME_CLUSTERENV_FILE"
    elif [ "$PRODUCT" == "confluent" ]; then
       echo "PRODUCT=kafka" > "$HOME_CLUSTERENV_FILE"
       CLUSTER_TYPE="confluent"
@@ -1697,9 +1690,6 @@ function retrieveClusterEnvFile
          # Set it to geode for now.
          PRODUCT="geode"
          CLUSTER_TYPE=$PRODUCT
-      elif [ -f "$CLUSTER_DIR/etc/hazelcast-jet.xml" ]; then
-         PRODUCT="hazelcast"
-         CLUSTER_TYPE="jet"
       elif [ -f "$CLUSTER_DIR/etc/hazelcast.xml" ]; then
          PRODUCT="hazelcast"
          CLUSTER_TYPE="imdg"
@@ -1735,12 +1725,9 @@ function retrieveClusterEnvFile
       fi
    fi
    # Override "gemfire" with "geode". Both products share resources under the name "geode".
-   # Override "jet" with "hazelcast". Both products share resources under the name "hazelcast".
    # Override "confluent" with "kafka". Both products share resources under the name "kafka".
    if [ "$PRODUCT" == "gemfire" ]; then
       PRODUCT="geode"
-   elif [ "$PRODUCT" == "jet" ]; then
-      PRODUCT="hazelcast"
    elif [ "$PRODUCT" == "confluent" ]; then
       PRODUCT="kafka"
    elif [ "$PRODUCT" == "" ]; then
@@ -2352,14 +2339,7 @@ function __switch_cluster
          export PRODUCT_HOME=$GEMFIRE_HOME
          __PRODUCT="geode"
       elif [ "$PRODUCT" == "hazelcast" ]; then
-         if [ "CLUSTER_TYPE" == "jet" ]; then
-            export PRODUCT_HOME=$JET_HOME
-         else
-            export PRODUCT_HOME=$HAZELCAST_HOME
-         fi
-         __PRODUCT="hazelcast"
-      elif [ "$PRODUCT" == "jet" ]; then
-         export PRODUCT_HOME=$JET_HOME
+         export PRODUCT_HOME=$HAZELCAST_HOME
          __PRODUCT="hazelcast"
       elif [ "$PRODUCT" == "snappydata" ]; then
          export PRODUCT_HOME=$SNAPPYDATA_HOME
@@ -3789,9 +3769,6 @@ function sortVersionList
 #    HAZELCAST_OSS_VERSIONS
 #    HAZELCAST_MANAGEMENT_CENTER_VERSIONS
 #    JAVA_VERSIONS
-#    JET_ENTERPRISE_VERSIONS
-#    JET_OSS_VERSIONS
-#    JET_MANAGEMENT_CENTER_VERSIONS
 #    KAFKA_VERSIONS
 #    MOSQUITTO_VERSIONS
 #    PROMETHEUS_VERSIONS
@@ -3837,10 +3814,7 @@ function determineInstalledProductVersions
    HAZELCAST_MANAGEMENT_CENTER_VERSIONS=""
    HAZELCAST_DESKTOP_VERSIONS=""
    JAVA_VERSIONS=""
-   JET_ENTERPRISE_VERSIONS=""
-   JET_OSS_VERSIONS=""
    HAZELCAST_OSS_VERSIONS=""
-   JET_MANAGEMENT_CENTER_VERSIONS=""
    KAFKA_VERSIONS=""
    CONFLUENT_VERSIONS=""
    MOSQUITTO_VERSIONS=""
@@ -3970,8 +3944,8 @@ function determineInstalledProductVersions
          HADOOP_VERSIONS=$(sortVersionList "$__versions")
       fi
 
-      # Hazelcast OSS, Enterprise, Hazelcast Management Center, Jet OSS, Jet Enterprise, Jet Management Center
-      if [ "$PRODUCT" == "" ] || [[ "$PRODUCT" == "hazelcast"* ]] || [[ "$PRODUCT" == "jet"* ]]; then
+      # Hazelcast OSS, Enterprise, Hazelcast Management Center
+      if [ "$PRODUCT" == "" ] || [[ "$PRODUCT" == "hazelcast"* ]]; then
          local hossv henterv hmanv jossv jenterv jmanv
          for i in hazelcast-*; do
             if [[ "$i" == "hazelcast-enterprise-"** ]]; then
@@ -3991,15 +3965,9 @@ function determineInstalledProductVersions
             elif [[ "$i" == "hazelcast-desktop_"** ]]; then
                __version=${i#hazelcast-desktop_}
                hdesktopv="$hdesktopv $__version"
-            elif [[ "$i" == "hazelcast-jet-enterprise-"** ]]; then
-               __version=${i#hazelcast-jet-enterprise-}
-               jenterv="$jenterv $__version"
-            elif [[ "$i" == "hazelcast-jet-management-center-"** ]]; then
-               __version=${i#hazelcast-jet-management-center-}
-               jmanv="$jmanv $__version"
-            elif [[ "$i" == "hazelcast-jet-"** ]]; then
-               __version=${i#hazelcast-jet-}
-               jossv="$jossv $__version"
+            elif [[ "$i" == "hazelcast-jet"** ]]; then
+               # do nothing
+               continue
             elif [[ "$i" == "hazelcast-"** ]]; then
                __version=${i#hazelcast-}
                hossv="$hossv $__version"
@@ -4017,17 +3985,14 @@ function determineInstalledProductVersions
          HAZELCAST_ENTERPRISE_VERSIONS=$(sortVersionList "$henterv")
          HAZELCAST_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$hmanv")
          HAZELCAST_DESKTOP_VERSIONS=$(sortVersionList "$hdesktopv")
-         JET_ENTERPRISE_VERSIONS=$(sortVersionList "$jenterv")
-         JET_OSS_VERSIONS=$(sortVersionList "$jossv")
          HAZELCAST_OSS_VERSIONS=$(sortVersionList "$hossv")
 
-         # Hazelcast/Jet  management center merged starting 4.2021.02
+         # Hazelcast management center merged starting 4.2021.02
          for i in ${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}; do
             if [[ "$i" == "4.2021"* ]]; then
                jmanv="$i $jmanv"
             fi
          done
-         JET_MANAGEMENT_CENTER_VERSIONS=$(sortVersionList "$jmanv")
       fi
 
       # Java - only the one that is set in the workspace
@@ -4132,19 +4097,18 @@ function determineInstalledProductVersions
 #
 # Determines the product based on the product home path value of PRODUCT_HOME.
 # The following environment variables are set after invoking this function.
-#   PRODUCT         geode, gemfire, hazelcast, jet, snappydata, coherence, mosquitto, redis, hadoop, kafka, spark
-#   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
+#   PRODUCT         geode, gemfire, hazelcast, snappydata, coherence, mosquitto, redis, hadoop, kafka, spark
+#   CLUSTER_TYPE    Set to imdg if PRODUCT is hazelcast,
 #                   Set to geode or gemfire if PRODUCT is geode or gemfire,
 #                   set to standalone if PRODUCT is spark,
 #                   set to kafka or confluent if PRODUCT is kafka or confluent,
 #                   set to pseudo if PRODUCT is hadoop,
 #                   set to PRODUCT for all others.
-#   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, myjet, mysnappy, myspark
+#   CLUSTER         Set to the default cluster name, i.e., mygeode, mygemfire, myhz, mysnappy, myspark
 #                   only if CLUSTER is not set.
 #   GEODE_HOME      Set to PRODUCT_HOME if PRODUCT is geode and CLSUTER_TYPE is geode.
 #   GEMFIRE_HOME    Set to PRODUCT_HOME if PRODUCT is geode and CLUSTER_TYPE is gemfire.
 #   HAZELCAST_HOME  Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is imdg.
-#   JET_HOME        Set to PRODUCT_HOME if PRODUCT is hazelcast and CLUSTER_TYPE is jet.
 #   MOSQUITTO_HOME  Set to PRODUCT_HOME if PRODUCT is mosquitto.
 #   REDIS_HOME      Set to PRODUCT_HOME if PRODUCT is redis.
 #   SNAPPYDATA_HOME Set to PRODUCT_HOME if PRODUCT is snappydata.
@@ -4183,19 +4147,11 @@ function determineProduct
       CLUSTER=$DEFAULT_HADOOP_CLUSTER
    elif [[ "$PRODUCT_HOME" == *"hazelcast"* ]]; then
       PRODUCT="hazelcast"
-      if [[ "$PRODUCT_HOME" == *"hazelcast-jet"* ]]; then
-         CLUSTER_TYPE="jet"
-         if [ "$CLUSTER" == "" ]; then
-            CLUSTER=$DEFAULT_JET_CLUSTER
-         fi
-         JET_HOME="$PRODUCT_HOME"
-      else
-         CLUSTER_TYPE="imdg"
-         if [ "$CLUSTER" == "" ]; then
-            CLUSTER=$DEFAULT_HAZELCAST_CLUSTER
-         fi
-         HAZELCAST_HOME="$PRODUCT_HOME"
+      CLUSTER_TYPE="imdg"
+      if [ "$CLUSTER" == "" ]; then
+         CLUSTER=$DEFAULT_HAZELCAST_CLUSTER
       fi
+      HAZELCAST_HOME="$PRODUCT_HOME"
    elif [[ "$PRODUCT_HOME" == *"kafka"* ]] || [[ "$PRODUCT_HOME" == *"confluent"* ]]; then
       PRODUCT="kafka"
       if [[ "$PRODUCT_HOME" == *"kafka"* ]]; then
@@ -4257,9 +4213,6 @@ function determineProduct
 # __HAZELCAST_ENTERPRISE_VERSION
 # __HAZELCAST_MC_VERSION=${HAZELCAST_MC_HOME#*hazelcast-management-center-}
 # __HAZELCAST_OSS_VERSION=${HAZELCAST_HOME#*hazelcast-}
-# __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
-# __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
-# __JET_MC_VERSION
 # __KAFKA_VERSION
 # __CONFLUENT_VERSION
 # __MOSQUITTO_VERSION
@@ -4306,13 +4259,6 @@ function getCurrentProductVersions
    else
       __HAZELCAST_OSS_VERSION=""
    fi
-   __JET_ENTERPRISE_VERSION=${JET_HOME#*hazelcast-jet-enterprise-}
-   __JET_OSS_VERSION=${JET_HOME#*hazelcast-jet-}
-   if [[ "$JET_MC_HOME" == *"4.2021"* ]]; then
-      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-management-center-}
-   else
-      __JET_MC_VERSION=${JET_MC_HOME#*hazelcast-jet-management-center-}
-   fi
    __KAFKA_VERSION=${KAFKA_HOME#*kafka_}
    __CONFLUENT_VERSION=${CONFLUENT_HOME#*confluent-}
    __MOSQUITTO_VERSION=${MOSQUITTO_HOME#*mosquitto-}
@@ -4345,8 +4291,6 @@ function getCurrentProductVersion
     hazelcast-oss ) echo $__HAZELCAST_OSS_VERSION;;
     hazelcast-mc ) echo $__HAZELCAST_MC_VERSION;;
     hazelcast-desktop ) echo $__HAZELCAST_DESKTOP_VERSION;;
-    jet-enterprise ) echo $__JET_ENTERPRISE_VERSION;;
-    jet-oss ) echo $__JET_OSS_VERSION;;
     mosquitto ) echo $__MOSQUITTO_VERSION;;
     redis ) echo $__REDIS_VERSION;;
     snappydata ) echo $__SNAPPYDATA_VERSION;;
@@ -4389,8 +4333,6 @@ function getInstalledProductVersions
     hazelcast-oss ) VERSIONS=("${HAZELCAST_OSS_VERSIONS[@]}");;
     hazelcast-mc ) VERSIONS=("${HAZELCAST_MANAGEMENT_CENTER_VERSIONS[@]}");;
     hazelcast-desktop ) VERSIONS=("${HAZELCAST_DESKTOP_VERSIONS[@]}");;
-    jet-enterprise ) VERSIONS=("${JET_ENTERPRISE_VERSIONS[@]}");;
-    jet-oss ) VERSIONS=("${JET_OSS_VERSIONS[@]}");;
     mosquitto ) VERSIONS=("${MOSQUITTO_VERSIONS[@]}");;
     redis-oss ) VERSIONS=("${REDIS_VERSIONS[@]}");;
     snappydata ) VERSIONS=("${SNAPPYDATA_VERSIONS[@]}");;
@@ -4411,7 +4353,7 @@ function getInstalledProductVersions
 # Determines the product by examining cluster files. The following environment variables
 # are set after invoking this function.
 #   PRODUCT         geode, hazelcast, snappydata, coherence, mosquitto, redis, spark, hadoop
-#   CLUSTER_TYPE    Set to imdg or jet if PRODUCT is hazelcast,
+#   CLUSTER_TYPE    Set to imdg if PRODUCT is hazelcast,
 #                   set to standalone if PRODUCT is spark,
 #                   set to PRODUCT for all others.
 #
@@ -4460,9 +4402,6 @@ function getInstalledProducts
   fi
   if [ "$HAZELCAST_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS hazelcast"
-  fi
-  if [ "$JET_HOME" != "" ]; then
-     PRODUCTS="$PRODUCTS jet"
   fi
   if [ "$MOSQUITTO_HOME" != "" ]; then
      PRODUCTS="$PRODUCTS mosquitto"
@@ -4520,7 +4459,7 @@ function createProductEnvFile
          echo "# routines here. This file is sourced in by setenv.sh." >> $WORKSPACES_HOME/.geodeenv.sh
          echo "#" >> $WORKSPACES_HOME/.geodeenv.sh
       fi
-   elif [ "$PRODUCT_NAME" == "hazelcast" ] || [ "$PRODUCT_NAME" == "jet" ]; then
+   elif [ "$PRODUCT_NAME" == "hazelcast" ]; then
       if [ "$WORKSPACES_HOME" != "" ] && [ ! -f $WORKSPACES_HOME/.hazelcastenv.sh ]; then
          echo "#" > $WORKSPACES_HOME/.hazelcastenv.sh
          echo "# Enter Hazelcast product specific environment variables and initialization" >> $WORKSPACES_HOME/.hazelcastenv.sh
@@ -4528,11 +4467,10 @@ function createProductEnvFile
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
-         echo "# Set IMDG and/or Jet license keys. Note that you can create multiple workspaces" >> $WORKSPACES_HOME/.hazelcastenv.sh
-         echo "# but each workspace can be configured with only one (1) cluster type, IMDG or Jet." >> $WORKSPACES_HOME/.hazelcastenv.sh
+         echo "# Set IMDG license keys. Note that you can create multiple workspaces" >> $WORKSPACES_HOME/.hazelcastenv.sh
+         echo "# but each workspace can be configured with only one (1) cluster type, IMDG." >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "IMDG_LICENSE_KEY=" >> $WORKSPACES_HOME/.hazelcastenv.sh
-         echo "JET_LICENSE_KEY=" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "#" >> $WORKSPACES_HOME/.hazelcastenv.sh
          echo "# Set Management Center license key. If this key is not set then the enterprise"  >> $WORKSPACES_HOME/.hazelcastenv.sh
@@ -4632,14 +4570,14 @@ function getOptValue
 
 #
 # Returns the default start port number of the specified product.
-# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, jet, snappydata, coherence, mosquitto, redis, spark, kafka.
+# @param product  Product name in lower case, i.e., geode, gemfire, hazelcast, snappydata, coherence, mosquitto, redis, spark, kafka.
 #
 function getDefaultStartPortNumber
 {
    local __PRODUCT=$1
    if [ "$__PRODUCT" == "geode" ] || [ "$__PRODUCT" == "gemfire" ]; then
       echo "10334"
-   elif [ "$__PRODUCT" == "hazelcast" ] || [ "$__PRODUCT" == "jet" ]; then
+   elif [ "$__PRODUCT" == "hazelcast" ]; then
       echo "5701"
    elif [ "$__PRODUCT" == "snappydata" ]; then
       echo "10334"
@@ -5083,8 +5021,6 @@ function getCommonProductName {
    local RETVAL=$PRODUCT_ARG
    if [[ "$PRODUCT_ARG" == "hazelcast"* ]]; then
       RETVAL="hazelcast"
-   elif [[ "$PRODUCT_ARG" == "jet"* ]]; then
-      RETVAL="hazelcast"
    elif [[ "$PRODUCT_ARG" == "redis"* ]]; then
       RETVAL="redis"
    else
@@ -5118,11 +5054,6 @@ function getCreateClusterCommand {
          ;;
       hazelcast)
          if [ "$HAZELCAST_HOME" != "" ]; then
-            COMMAND="$PADOGRID_HOME/hazelcast/bin_sh/create_cluster"
-         fi
-         ;;
-      jet)
-         if [ "$JET_HOME" != "" ]; then
             COMMAND="$PADOGRID_HOME/hazelcast/bin_sh/create_cluster"
          fi
          ;;

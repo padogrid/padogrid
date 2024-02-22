@@ -78,7 +78,6 @@ DEFAULT_GEMFIRE_CLUSTER="mygemfire"
 DEFAULT_GEODE_CLUSTER="mygeode"
 DEFAULT_HADOOP_CLUSTER="myhadoop"
 DEFAULT_HAZELCAST_CLUSTER="myhz"
-DEFAULT_JET_CLUSTER="myjet"
 DEFAULT_KAFKA_CLUSTER="mykafka"
 DEFAULT_CONFLUENT_CLUSTER="myconfluent"
 DEFAULT_MOSQUITTO_CLUSTER="mymosquitto"
@@ -290,8 +289,6 @@ if [ "$IN_POD" != "true" ]; then
    export HADOOP_HOME=""
    export HAZELCAST_HOME=""
    export HAZELCAST_MC_HOME=""
-   export JET_HOME=""
-   export JET_MC_HOME=""
    export KAFKA_HOME=""
    export MOSQUITTO_HOME=""
    export REDIS_HOME=""
@@ -352,19 +349,19 @@ fi
 DEFAULT_HOST_PRODUCTS_DIR="$PADOGRID_ENV_BASE_PATH/products"
 
 # Downloadable products
-DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop jet-enterprise jet-oss redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby mosquitto"
+DOWNLOADABLE_PRODUCTS="padogrid pado padodesktop padoweb padoeclipse geode hazelcast-enterprise hazelcast-oss hazelcast-mc hazelcast-desktop redis-oss snappydata spark kafka confluent hadoop prometheus grafana-enterprise grafana-oss derby mosquitto"
 
 # Supported Bundle Products
-BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast jet kafka confluent mosquitto none redis snappydata spark"
+BUNDLE_PRODUCT_LIST="coherence gemfire geode hadoop hazelcast kafka confluent mosquitto none redis snappydata spark"
 
 # Supported Docker Products
-DOCKER_PRODUCT_LIST="geode hazelcast jet mosquitto snappydata"
+DOCKER_PRODUCT_LIST="geode hazelcast mosquitto snappydata"
 
 # Supported Kubernetes Products
-K8S_PRODUCT_LIST="geode hazelcast jet mosquitto"
+K8S_PRODUCT_LIST="geode hazelcast mosquitto"
 
 # Supported App Products (all cluster products)
-APP_PRODUCT_LIST="none coherence gemfire geode hadoop hazelcast jet kafka mosquitto redis snappydata spark"
+APP_PRODUCT_LIST="none coherence gemfire geode hadoop hazelcast kafka mosquitto redis snappydata spark"
 
 # Common Apps for all products
 COMMON_APP_LIST="derby"
@@ -478,8 +475,6 @@ for i in "${PATH_ARRAY[@]}"; do
    elif [ "$HADOOP_HOME" != "" ] && [[ "$i" == "$HADOOP_HOME"** ]]; then
       continue;
    elif [ "$HAZELCAST_HOME" != "" ] && [[ "$i" == "$HAZELCAST_HOME"** ]]; then
-      continue;
-   elif [ "$JET_HOME" != "" ] && [[ "$i" == "$JET_HOME"** ]]; then
       continue;
    elif [ "$KAFKA_HOME" != "" ] && [[ "$i" == "$KAFKA_HOME"** ]]; then
       continue;

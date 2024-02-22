@@ -96,16 +96,6 @@ fi
 
 POD=`getClusterProperty "pod.name" "local"`
 
-# Script creation support is for imdg only at this time
-if [ "$CREATE_SCRIPT" == "true" ] && [ "$CLUSTER_TYPE" == "jet" ]; then
-   echo >&2 "----------------------------------------------------------------"
-   echo >&2 "   WORKSPACE: $PADOGRID_WORKSPACE"
-   echo >&2 "CLUSTER_TYPE: $CLUSTER_TYPE"
-   echo >&2 "       ERROR: Script creation is currently supported for imdg only. Command aborted."
-   echo >&2 "----------------------------------------------------------------"
-   exit 1
-fi
-
 # Source in Hazelcast specific env
 if [ -f $PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh ]; then
    . $PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh
@@ -370,7 +360,6 @@ if [[ ${OS_NAME} == CYGWIN* ]]; then
    export LOG_FILE="$(cygpath -wp "$LOG_FILE")"
    CONFIG_FILE="$(cygpath -wp "$CONFIG_FILE")"
    CLIENT_CONFIG_FILE="$(cygpath -wp "$CLIENT_CONFIG_FILE")"
-   JET_CONFIG_FILE="$(cygpath -wp "$JET_CONFIG_FILE")"
 fi
 
 # Set heap to the "heap.min/heap.max" values found in the $ETC_DIR/cluster.properties file.
@@ -381,17 +370,8 @@ MAX_HEAP_SIZE=`getClusterProperty "heap.max" $DEFAULT_MAX_HEAP_SIZE`
 JAVA_OPTS="$JAVA_OPTS $MEMBER_PROPERTIES $LOG_PROPERTIES $SHUTDOWN_HOOK_PROPERTIES $JMX_PARAMETERS"
 JAVA_OPTS="$JAVA_OPTS -Xms${MIN_HEAP_SIZE} -Xmx${MAX_HEAP_SIZE}"
 JAVA_OPTS="-Dpado.vm.id=$MEMBER -Dhazelcast.instance.name=$MEMBER -Dpadogrid.workspace=$WORKSPACE -Dpadogrid.rwe=$RWE -Dhazelcast.config=$CONFIG_FILE $JAVA_OPTS"
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-   JAVA_OPTS="$JAVA_OPTS -Djet.home=$JET_HOME"
-#   JAVA_OPTS="$JAVA_OPTS -Djet.home=$MEMBER_DIR"
-   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.client.config=$CLIENT_CONFIG_FILE -Dhazelcast.jet.config=$JET_CONFIG_FILE"
-   if [ "$JET_LICENSE_KEY" != "" ]; then
-      JAVA_OPTS="$JAVA_OPTS -Dhazelcast.enterprise.license.key=$JET_LICENSE_KEY"
-   fi
-else
-   if [ "$IMDG_LICENSE_KEY" != "" ]; then
-      JAVA_OPTS="$JAVA_OPTS -Dhazelcast.enterprise.license.key=$IMDG_LICENSE_KEY"
-   fi
+if [ "$IMDG_LICENSE_KEY" != "" ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.enterprise.license.key=$IMDG_LICENSE_KEY"
 fi
 JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
 
@@ -484,18 +464,10 @@ else
    else
 	   
       pushd ${MEMBER_DIR} > /dev/null 2>&1
-      if [ "$CLUSTER_TYPE" == "jet" ]; then
-         if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
-            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.jet.server.JetMemberStarter >> $LOG_FILE 2>&1 &
-         else
-            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.jet.server.StartServer >> $LOG_FILE 2>&1 &
-	 fi
+      if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
+         nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.HazelcastMemberStarter >> $LOG_FILE 2>&1 &
       else
-         if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 4 ]; then
-            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.HazelcastMemberStarter >> $LOG_FILE 2>&1 &
-         else
-            nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.StartServer >> $LOG_FILE 2>&1 &
-	 fi
+         nohup "$JAVA" -server $JAVA_OPTS com.hazelcast.core.server.StartServer >> $LOG_FILE 2>&1 &
       fi
       popd > /dev/null 2>&1
    fi

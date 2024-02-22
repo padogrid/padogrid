@@ -387,7 +387,7 @@ fi
 # Returns "true" if one of the specfied product versions match the configured product version.
 #
 # @param product        Product name in lowercase. Valid values are hazelcast, hazecast-enterprise,
-#                       jet, jet-enterprise, geode, gemfire, snappydata, spark, coherence, pado, redis.
+#                       geode, gemfire, snappydata, spark, coherence, pado, redis.
 # @param productHome    Product home path, e.g. $HAZELCAST_HOME.
 # @param productVersion Product versions, e.g., "3,4"
 #
@@ -400,9 +400,6 @@ function isProductExist
    local IFS=','
    for token in $productVersions; do
       if [ "$product" == "hazelcast-enterprise" ] && [[ "$productHome" == *"hazelcast-enterprise-$token"* ]]; then
-         found="true"
-         break;
-      elif [ "$product" == "jet-enterprise" ] && [[ "$productHome" == *"jet-enterprise-$token"* ]]; then
          found="true"
          break;
       elif [ "$product" == "mosquitto" ]; then
@@ -672,7 +669,6 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             && [[ "$keyvalue" != "geode"* ]] \
             && [[ "$keyvalue" != "hadoop"* ]] \
             && [[ "$keyvalue" != "hazelcast"* ]] \
-            && [[ "$keyvalue" != "jet"* ]] \
             && [[ "$keyvalue" != "kafka"* ]] \
             && [[ "$keyvalue" != "confluent"* ]] \
             && [[ "$keyvalue" != "mosquitto"* ]] \
@@ -723,12 +719,6 @@ if [ "$DOWNLOAD" == "true" ] || [ "$DOWNLOADED_BUNDLE_FILE_SPECIFIED" == "true" 
             elif [ "$PRODUCT" == "hazelcast-enterprise" ]; then
                found=$(isProductExist "$PRODUCT" "$HAZELCAST_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="imdg"
-            elif [ "$PRODUCT" == "jet" ]; then
-               found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
-               CLUSTER_TYPE="jet"
-            elif [ "$PRODUCT" == "jet-enterprise" ]; then
-               found=$(isProductExist "$PRODUCT" "$JET_HOME" "$PRODUCT_VERSIONS")
-               CLUSTER_TYPE="jet"
             elif [ "$PRODUCT" == "kafka" ]; then
                found=$(isProductExist "$PRODUCT" "$KAFKA_HOME" "$PRODUCT_VERSIONS")
                CLUSTER_TYPE="kafka"

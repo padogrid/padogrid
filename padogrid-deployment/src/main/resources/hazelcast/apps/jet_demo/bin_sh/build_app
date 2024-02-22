@@ -49,7 +49,7 @@ fi
 
 pushd $APP_DIR > /dev/null
 # Change the addon version number in the desktop pom.xml
-sed -i${__SED_BACKUP} 's/<jet.version>.*<\/jet.version>/<jet.version>'$HAZELCAST_VERSION'<\/jet.version>/' pom.xml
+sed -i${__SED_BACKUP} 's/<hazelcast.version>.*<\/hazelcast.version>/<hazelcast.version>'$HAZELCAST_VERSION'<\/hazelcast.version>/' pom.xml
 popd > /dev/null
 
 if [ ! -d "$APP_DIR/books" ]; then
@@ -83,6 +83,7 @@ popd > /dev/null
 #
 # Display build information
 #
+JET_EXECUTABLE="hz-cli -t"
 echo ""
 echo "Workspace: $PADOGRID_WORKSPACE"
 echo ""
@@ -90,17 +91,10 @@ echo "Built jet_demo jar files that are ready to be submitted to Jet in the foll
 echo ""
 echo "   $APP_DIR/lib"
 echo ""
-echo "To submit jar files to Jet run the 'jet.sh' executable. For example,"
+echo "To submit jar files to Jet run the 'hz-cli' executable. For example,"
 echo ""
-echo "   cd $APP_DIR/lib"
-if [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -ge 5 ]; then
-   JET_EXECUTABLE="hz-cli -t"
-elif [ "$HAZELCAST_MAJOR_VERSION_NUMBER" -ge 4 ]; then
-   JET_EXECUTABLE="jet -t"
-else
-   JET_EXECUTABLE="jet.sh -a"
-fi
-echo "   $JET_EXECUTABLE localhost:5701 submit WordCountJob.jar"
+echo "   cd_app $APP_NAME"
+echo "   $JET_EXECUTABLE localhost:5701 submit lib/WordCountJob.jar books/a-tale-of-two-cities.txt books/shakespeare-complete-works.txt"
 echo ""
 echo "If the job outputs can be monitored by running 'show_log'. For example,"
 echo ""

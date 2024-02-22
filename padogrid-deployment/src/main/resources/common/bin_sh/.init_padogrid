@@ -474,13 +474,8 @@ rm $TMP_ENV_FILE
 if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    case "$PRODUCT" in
    hazelcast)
-   	  if [ "$CLUSTER_TYPE" == "jet" ]; then
-         JET_HOME=$PRODUCT_HOME
-         TEMPLATE_PRODUCT_HOME="\$JET_HOME"
-      else
-         HAZELCAST_HOME=$PRODUCT_HOME
-         TEMPLATE_PRODUCT_HOME="\$HAZELCAST_HOME"
-      fi
+      HAZELCAST_HOME=$PRODUCT_HOME
+      TEMPLATE_PRODUCT_HOME="\$HAZELCAST_HOME"
       ;;
    geode)
       if [ "$CLUSTER_TYPE" == "gemfire" ]; then
@@ -525,8 +520,6 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
    TEMPLATE_GEODE_HOME=$(echo $GEODE_HOME | sed 's/\//\\\//g')
    TEMPLATE_HAZELCAST_HOME=$(echo $HAZELCAST_HOME | sed 's/\//\\\//g')
    TEMPLATE_HAZELCAST_MC_HOME=$(echo $HAZELCAST_MC_HOME | sed 's/\//\\\//g')
-   TEMPLATE_JET_HOME=$(echo $JET_HOME | sed 's/\//\\\//g')
-   TEMPLATE_JET_MC_HOME=$(echo $JET_MC_HOME | sed 's/\//\\\//g')
    TEMPLATE_SNAPPYDATA_HOME=$(echo $SNAPPYDATA_HOME | sed 's/\//\\\//g')
    TEMPLATE_COHERENCE_HOME=$(echo $COHERENCE_HOME | sed 's/\//\\\//g')
    TEMPLATE_REDIS_HOME=$(echo $REDIS_HOME | sed 's/\//\\\//g')
@@ -541,8 +534,6 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
        -e "s/\${TEMPLATE_GEODE_HOME}/$TEMPLATE_GEODE_HOME/" \
        -e "s/\${TEMPLATE_HAZELCAST_HOME}/$TEMPLATE_HAZELCAST_HOME/" \
        -e "s/\${TEMPLATE_HAZELCAST_MC_HOME}/$TEMPLATE_HAZELCAST_MC_HOME/" \
-       -e "s/\${TEMPLATE_JET_HOME}/$TEMPLATE_JET_HOME/" \
-       -e "s/\${TEMPLATE_JET_MC_HOME}/$TEMPLATE_JET_MC_HOME/" \
        -e "s/\${TEMPLATE_SNAPPYDATA_HOME}/$TEMPLATE_SNAPPYDATA_HOME/" \
        -e "s/\${TEMPLATE_COHERENCE_HOME}/$TEMPLATE_COHERENCE_HOME/" \
        -e "s/\${TEMPLATE_REDIS_HOME}/$TEMPLATE_REDIS_HOME/" \
@@ -555,7 +546,7 @@ if [ ! -f $WORKSPACES_HOME/setenv.sh ]; then
        > "$WORKSPACES_HOME/setenv.sh"
 fi
 
-# Create .${PRODUCT}env.sh (gemfire->.geodeenv.sh, jet->.hazelcastenv.sh)
+# Create .${PRODUCT}env.sh (gemfire->.geodeenv.sh)
 createProductEnvFile "$PRODUCT" "$WORKSPACES_HOME"
 
 #
@@ -650,11 +641,6 @@ if [ "$JAVA_HOME" == "" ] || [ "$PRODUCT_HOME" == "" ]; then
          echo "   HAZELCAST_HOME"
       fi
       ;;
-   jet)
-      if  [ "$JET_HOME" == "" ]; then
-         echo "   JET_HOME"
-      fi
-      ;;
    geode)
       if  [ "$GEODE_HOME" == "" ]; then
          echo "   GEODE_HOME"
@@ -712,11 +698,11 @@ echo "      PADOGRID_WORKSPACE: $PADOGRID_WORKSPACE"
 echo "     Default Cluster Dir: $PADOGRID_WORKSPACE/clusters/$CLUSTER"
 echo ""
 case $PRODUCT in
-hazelcast|jet)
+hazelcast)
    if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
       echo "License Keys:"
       echo "-------------"
-      echo "Make sure to set your enterprise license keys (IMDG and/or Jet) in the following file:"
+      echo "Make sure to set your enterprise license keys (IMDG) in the following file:"
       echo -e "   ${CLightRed}$PADOGRID_WORKSPACES_HOME/.hazelcastenv.sh${CNone}"
       echo ""
    fi

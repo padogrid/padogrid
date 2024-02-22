@@ -103,15 +103,11 @@ if [ "$PRODUCT_ARG" != "" ]; then
       >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
       exit 1
    fi
-   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ] && [ "$PRODUCT_ARG" != "jet" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
       $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
       exit
    fi
-   if [ "$PRODUCT_ARG" == "jet" ]; then
-      CLUSTER_TYPE="jet"
-    else
-      CLUSTER_TYPE="imdg"
-    fi
+   CLUSTER_TYPE="imdg"
 else
    # Default product is hazelcast and hence CLUSTER_TYPE is "imdg"
    CLUSTER_TYPE="imdg"
@@ -241,16 +237,9 @@ elif [ "$K8S" == "minishift" ]; then
 #  echo "export HAZELCAST_OPENSHIFT_DIR=\$PADOGRID_WORKSPACE/k8s/$CLUSTER" >> $SETENV_FILE
 
 elif [ "$K8S" == "openshift" ]; then
-
-  if [ "$CLUSTER_TYPE" == "jet" ]; then
-     K8S_DOC="README.md"
-     cp -rf $BASE_DIR/k8s/jet/openshift/* $CLUSTER_DIR
-     chmod 755 $CLUSTER_DIR/bin_sh/*
-  else
-     K8S_DOC="README.md"
-     cp -rf $BASE_DIR/k8s/openshift/* $CLUSTER_DIR
-     chmod 755 $CLUSTER_DIR/bin_sh/*
-  fi
+  K8S_DOC="README.md"
+  cp -rf $BASE_DIR/k8s/openshift/* $CLUSTER_DIR
+  chmod 755 $CLUSTER_DIR/bin_sh/*
 fi
 
 # Set group permissions for workspace owner

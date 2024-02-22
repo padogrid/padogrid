@@ -83,7 +83,7 @@ OPTIONS
    -port first_port_number
              First member's port number. Port number is incremented
              starting from this port number for the subsquent members.
-             Default: 5701 for IMDG, 6701 for Jet
+             Default: 5701
 
    -count member_count
              Number of members (servers) in the cluster. Default: 2
@@ -125,15 +125,11 @@ if [ "$PRODUCT_ARG" != "" ]; then
       >&2 echo -e "${CLightRed}ERROR:${CNone} Specified product is not supported: [$PRODUCT_ARG]. Command aborted."
       exit 1
    fi
-   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ] && [ "$PRODUCT_ARG" != "jet" ]; then
+   if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
       $PADOGRID_HOME/$PRODUCT_ARG/bin_sh/$EXECUTABLE "$@"
       exit
    fi
-   if [ "$PRODUCT_ARG" == "jet" ]; then
-      CLUSTER_TYPE="jet"
-    else
-      CLUSTER_TYPE="imdg"
-    fi
+   CLUSTER_TYPE="imdg"
 else
    # Default product is hazelcast and hence CLUSTER_TYPE is "imdg"
    CLUSTER_TYPE="imdg"
@@ -182,7 +178,6 @@ if [ "$HAZELCAST_VERSION" == "" ]; then
    HAZELCAST_VERSION="latest"
    HAZELCAST_MAJOR_VERSION_NUMBER=$DEFAULT_HAZELCAST_MAJOR_VERSION_NUMBER
    HAZELCAST_MC_VERSION=""
-   JET_MC_VERSION=""
 fi
 
 if [ "$DOCKER" == "compose" ]; then
@@ -199,17 +194,7 @@ if [ "$DOCKER" == "compose" ]; then
    cp -rf $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
    cp -rf $BASE_DIR/docker/compose/images $CLUSTER_DIR
    # Copy the template hazelcast.xml file
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      cp $BASE_DIR/etc/template-jet-imdg-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
-      # Copy the template hazelcast-jet.xml file
-      cp $BASE_DIR/etc/template-hazelcast-jet-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-jet.xml
-      # Copy the template MC hazelcast-client.xml file
-      cp $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast-client.xml
-      # Copy the template Jet MC application.properties file
-      cp $BASE_DIR/etc/template-jet-mc-application.properties $ETC_DIR/jet-mc-application.properties
-   else
-      cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
-   fi
+   cp $BASE_DIR/etc/template-hazelcast-$HAZELCAST_MAJOR_VERSION_NUMBER.xml $ETC_DIR/hazelcast.xml
    # Copy the template log4j2.properties file
    cp $BASE_DIR/etc/template-log4j2.properties $ETC_DIR/log4j2.properties
    # Copy the template prometheus config file
@@ -241,58 +226,33 @@ if [ "$DOCKER" == "compose" ]; then
       let SERVER_PORT=SERVER_PORT+1
    done
    if [ "$MC_LICENSE_KEY" == "" ]; then
-      if [ "$CLUSTER_TYPE" == "jet" ]; then
-         MC_LICENSE_KEY="$JET_LICENSE_KEY"
-      else
-         MC_LICENSE_KEY="$HZ_LICENSE_KEY"
-      fi
+      MC_LICENSE_KEY="$HZ_LICENSE_KEY"
    fi
    sed -e "s/\${HOSTNAME_FOR_CLIENTS}/$HOST_IP/g" \
        -e "s/\${CLUSTER_NAME}/$CLUSTER/g" \
        -e "s/\${TCP_MEMBERS}/$TCP_MEMBERS/g" \
        -e "s/\${HZ_LICENSE_KEY}/$IMDG_LICENSE_KEY/g" \
-       -e "s/\${JET_LICENSE_KEY}/$JET_LICENSE_KEY/g" \
        -e "s/\${MC_LICENSE_KEY}/$MC_LICENSE_KEY/g" \
        $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-env > $CLUSTER_DIR/.env
 
    # Update docker-compose.yaml
-   MC_VERSION=""
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      MC_VERSION="$JET_MC_VERSION"
-   else
-      MC_VERSION="$HAZELCAST_MC_VERSION"
-   fi
+   MC_VERSION="$HAZELCAST_MC_VERSION"
    if [ "$MC_VERSION" == "" ]; then
       MC_VERSION="latest"
    fi
    sed -e "s/\${VERSION}/$HAZELCAST_VERSION/g" -e "s/\${MC_VERSION}/$MC_VERSION/g" $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-docker-compose.yaml > $CLUSTER_DIR/docker-compose.yaml
 
    # Append server services to docker-compose.yaml
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
-         IMAGE_NAME="hazelcast-jet-enterprise"
-      else
-         IMAGE_NAME="hazelcast-jet"
-      fi
+   if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
+      IMAGE_NAME="hazelcast-enterprise"
    else
-      if [ "$IS_HAZELCAST_ENTERPRISE" == "true" ]; then
-         IMAGE_NAME="hazelcast-enterprise"
-      else
-         IMAGE_NAME="hazelcast"
-      fi
+      IMAGE_NAME="hazelcast"
    fi
    HOST_SERVER_PORT=$START_PORT
    HOST_JMX_PORT=10991
    HOST_DEBUG_PORT=9101
-   JET_CLUSTER_MEMBERS=""
    WORKSPACE_NAME=$(basename "$PADOGRID_WORKSPACE")
    for i in $(seq 1 $COUNT); do   
-      if [ $i -lt $COUNT ]; then
-         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}            <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address> "
-      else
-         JET_CLUSTER_MEMBERS="${JET_CLUSTER_MEMBERS}            <address>${HOST_IP}:${HOST_SERVER_PORT}<\/address>"
-      fi
-
       SERVER_NAME="server$i"
       sed -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
           -e "s/\${VERSION}/$HAZELCAST_VERSION/g" \
@@ -307,11 +267,6 @@ if [ "$DOCKER" == "compose" ]; then
       let HOST_JMX_PORT=HOST_JMX_PORT+1
       let HOST_DEBUG_PORT=HOST_DEBUG_PORT+1
    done
-
-   # Insert cluster member list in hazelcast-client.xml
-   if [ $HAZELCAST_MAJOR_VERSION_NUMBER -lt 5 ]; then
-      sed -e "s/\${CLUSTER_MEMBERS}/$JET_CLUSTER_MEMBERS/g" $BASE_DIR/etc/template-hazelcast-jet-client-$HAZELCAST_MAJOR_VERSION_NUMBER.xml > $ETC_DIR/hazelcast-jet-client.xml
-   fi
 fi
 
 # Set group permissions for workspace owner

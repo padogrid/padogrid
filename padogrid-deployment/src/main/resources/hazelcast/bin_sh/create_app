@@ -70,32 +70,21 @@ OPTIONS
    -app app_name
              Name of the app to create. Uset <tab><tab> to see available apps. If this option
              is not specified, then it defaults to 'perf_test' if the specified product is
-             'hazelcast' or 'jet_demo' if the specified product is 'jet'.
+             'hazelcast'.
 
              If app_name is 'stub', then it creates an app consists of product specific stub
              scripts and configuration files. A stub app is useful for creating a custom app.
 
    -name new_app_name
              New name of the app. If not specified and the -product option is not specified,
-             then it defaults to 'perf_test' if the specified product is 'hazelcast' or 'jet_demo'
-             if the specified product is 'jet'. If the '-product' option is not specified, then
-             it defaults to 'perf_test' or the specified app_name.
-
+             then it defaults to 'perf_test' if the specified product is 'hazelcast'. If the
+             '-product' option is not specified, then it defaults to 'perf_test' or the
+             specified app_name.
 EOF
 if [ "$MAN_SPECIFIED" == "false" ]; then
 cat <<EOF
 DEFAULT
-EOF
-if [ "$CLUSTER_TYPE" == "jet" ]; then
-cat <<EOF
-   $EXECUTABLE -app jet_demo -name jet_demo
-EOF
-else
-cat <<EOF
    $EXECUTABLE -app perf_test -name perf_test
-EOF
-fi
-cat <<EOF
 
 FILES
    $PADOGRID_WORKSPACE/apps
@@ -121,9 +110,7 @@ if [ "$PRODUCT_ARG" != "" ]; then
    fi
    if [ "$THIS_PRODUCT" != "$PRODUCT_ARG" ]; then
       __PRODUCT=$PRODUCT_ARG
-      if [ "$PRODUCT_ARG" == "jet" ]; then
-         __PRODUCT="hazelcast"
-      elif [ "$PRODUCT_ARG" == "gemfire" ]; then
+      if [ "$PRODUCT_ARG" == "gemfire" ]; then
          __PRODUCT="geode"
       fi
       args="$@"
@@ -133,11 +120,7 @@ if [ "$PRODUCT_ARG" != "" ]; then
       $PADOGRID_HOME/$__PRODUCT/bin_sh/$EXECUTABLE $args
       exit
    fi
-   if [ "$PRODUCT_ARG" == "jet" ]; then
-      CLUSTER_TYPE="jet"
-    else
-      CLUSTER_TYPE="imdg"
-    fi
+   CLUSTER_TYPE="imdg"
 else
    # Default product is hazelcast and hence CLUSTER_TYPE is "imdg"
    CLUSTER_TYPE="imdg"
@@ -148,11 +131,7 @@ if [ "$HAZELCAST_VERSION" == "" ]; then
 fi
 
 if [ "$APP_SPECIFIED" == "false" ]; then
-   if [ "$CLUSTER_TYPE" == "jet" ]; then
-      APP="jet_demo"
-   else
-      APP="perf_test"
-   fi
+   APP="perf_test"
 fi
 if [ "$NAME_ARG" == "" ]; then
    NAME_ARG=$APP

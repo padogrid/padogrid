@@ -31,12 +31,16 @@ COMMON_BIN_SH_DIR=$(dirname $(dirname $SCRIPT_DIR))/bin_sh
 unset IFS
 
 # Unset product specific functions.
-# Hazelcast
+# Hazelcast 3.x, 4.x
 unset -f __cluster_complete
-unset -f __jet_complete
 complete -r cluster.sh > /dev/null 2>&1
-complete -r jet.sh > /dev/null 2>&1
-complete -r jet > /dev/null 2>&1
+
+# Hazelcast 5.x
+complete -r hz > /dev/null 2>&1
+complete -r hz-cluster-admin > /dev/null 2>&1
+complete -r hz-healthcheck > /dev/null 2>&1
+complete -r hz-cluster-cp-admin > /dev/null 2>&1
+complete -r hz-cli > /dev/null 2>&1
 
 __arrayContainsElement ()
 {
@@ -155,7 +159,7 @@ __padogrid_complete()
       ;;
 
    -port)
-      if [ "$command" == "make_cluster" ] || [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
          # If -product specified then get the product's app options
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -232,7 +236,7 @@ __padogrid_complete()
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$command" == "make_cluster" ] || [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
          type_list="default"
          local product=""
          for i in $(seq 1 $len); do
@@ -281,7 +285,7 @@ __padogrid_complete()
    -product)
       if [ "$command" == "show_bundle" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
-      elif [ "$command" == "make_cluster" ] || [ "$command" == "create_cluster" ] || [ "$command" == "add_cluster" ] || [ "$command" == "create_group" ]; then
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "add_cluster" ] || [ "$command" == "create_group" ]; then
          type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"
@@ -298,7 +302,7 @@ __padogrid_complete()
       elif [ "$command" == "update_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
-         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
+         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -313,7 +317,7 @@ __padogrid_complete()
       ;;
 
    -version)
-      if [ "$command" == "install_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_padogrid" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "uninstall_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_padogrid" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -526,7 +530,7 @@ __padogrid_complete()
          is_path="true"
       elif [ "$command" == "vc_start" ] &&  [[ "$cur_word" != "-"* ]] && [ $len -gt 3 ]; then
          is_path="true"
-      elif [ "$command" = "make_cluster" ] || [ "$command" = "create_cluster" ]; then
+      elif [ "$command" = "create_cluster" ]; then
          # If -product specified then get the product's app options
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -539,7 +543,6 @@ __padogrid_complete()
             case $product_name in
             confluent) product_name="kafka" ;;
             gemfire) product_name="geode" ;;
-            jet) product_name="hazelcast" ;;
             *) ;;
             esac
             type_list=`$PADOGRID_HOME/$product_name/bin_sh/create_cluster -options`
@@ -1038,7 +1041,7 @@ __command_complete()
    -type)
       if [ "$command" == "create_pod" ]; then
          type_list="local vagrant"
-      elif [ "$command" == "make_cluster" ] || [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
+      elif [ "$command" == "create_cluster" ] || [ "$command" == "create_group" ]; then
          type_list="default"
          local product=""
          for i in $(seq 1 $len); do
@@ -1059,7 +1062,7 @@ __command_complete()
    -product)
       if [ "$command" == "show_bundle" ]; then
          type_list="$BUNDLE_PRODUCT_LIST"
-      elif [ "$command" == "make_cluster" ] || [ "$command" = "create_cluster" ] || [ "$command" == "add_cluster" ] || [ "$command" == "create_group" ]; then
+      elif [ "$command" = "create_cluster" ] || [ "$command" == "add_cluster" ] || [ "$command" == "create_group" ]; then
          type_list=$(getInstalledProducts)
       elif [ "$command" == "create_docker" ]; then
          type_list="$DOCKER_PRODUCT_LIST"
@@ -1076,7 +1079,7 @@ __command_complete()
       elif [ "$command" == "update_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
-         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java jet-mc"
+         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java"
       else
          is_path="true"
       fi
@@ -1087,7 +1090,7 @@ __command_complete()
       fi
       ;;
    -version)
-      if [ "$command" == "install_padogrid" ] || [ "$command" == "uninstall_padogrid" ] || [ "$command" == "vm_install" ]; then
+      if [ "$command" == "install_padogrid" ] || [ "$command" == "uninstall_padogrid" ] || [ "$command" == "vm_install" ] || [ "$command" == "update_padogrid" ]; then
          # If -product specified then get downlodable product versions
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -1235,7 +1238,7 @@ __command_complete()
       type_list="1 2 3 4 5 6 7 8 9"
      ;;
    -port)
-      if [ "$command" == "make_cluster" ] || [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
+      if [ "$command" == "create_cluster" ] || [ "$command" == "create_docker" ] || [ "$command" == "create_group" ]; then
          # If -product specified then get the product's app options
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -1303,7 +1306,7 @@ __command_complete()
          is_path="true"
       elif [ "$command" == "vc_start" ] &&  [[ "$cur_word" != "-"* ]] && [ $len -gt 2 ]; then
          is_path="true"
-      elif [ "$command" = "make_cluster" ] || [ "$command" = "create_cluster" ]; then
+      elif [ "$command" = "create_cluster" ]; then
          # If -product specified then get the product's app options
          __getArrayElementIndex "-product" "${COMP_WORDS[@]}"
          local index=$?
@@ -1316,7 +1319,6 @@ __command_complete()
             case $product_name in
             confluent) product_name="kafka" ;;
             gemfire) product_name="geode" ;;
-            jet) product_name="hazelcast" ;;
             *) ;;
             esac
             type_list=`$PADOGRID_HOME/$product_name/bin_sh/create_cluster -options`
