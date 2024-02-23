@@ -10,7 +10,7 @@ https://github.com/padogrid
 
 - This is the first hardened major release that includes support for all commands in the previous release with removal of the following deprecated commands.
 
-| Removed           | Replacment         |
+| Removed           | Replacement        |
 | ----------------- | ------------------ |
 | make_cluster      | create_cluster     |
 | show_products     | show_padogrid      |
