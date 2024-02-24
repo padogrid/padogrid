@@ -24,6 +24,7 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
@@ -39,6 +40,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.logging.log4j.Logger;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMDecryptorProvider;
 import org.bouncycastle.openssl.PEMEncryptedKeyPair;
@@ -290,18 +292,25 @@ public final class ConfigUtil {
 		}
 		PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder().build(pwd.toCharArray());
 		JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-		KeyPair key;
+		KeyPair keyPair = null;
+		PrivateKey privateKey = null;
 		if (logger.isDebugEnabled()) {
 			logger.debug("SSLSocketFactory: KeyPair has the type " + object.getClass());
 		}
 		if (object instanceof PEMEncryptedKeyPair) {
 			if (logger.isDebugEnabled())
 				logger.debug("SSLSocketFactory: Encrypted key - Provided password used");
-			key = converter.getKeyPair(((PEMEncryptedKeyPair) object).decryptKeyPair(decProv));
+			keyPair = converter.getKeyPair(((PEMEncryptedKeyPair) object).decryptKeyPair(decProv));
+			privateKey = keyPair.getPrivate();
+		} else if (object instanceof PrivateKeyInfo) {
+			if (logger.isDebugEnabled())
+				logger.debug("PrivateKeyInfo");
+			privateKey = converter.getPrivateKey((PrivateKeyInfo)object);
 		} else {
 			if (logger.isDebugEnabled())
 				logger.debug("SSLSocketFactory: Unencrypted key - no password needed");
-			key = converter.getKeyPair((PEMKeyPair) object);
+			keyPair = converter.getKeyPair((PEMKeyPair) object);
+			privateKey = keyPair.getPrivate();
 		}
 		pemParser.close();
 
@@ -317,7 +326,7 @@ public final class ConfigUtil {
 		KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 		ks.load(null, null);
 		ks.setCertificateEntry("certificate", cert);
-		ks.setKeyEntry("private-key", key.getPrivate(), pwd.toCharArray(),
+		ks.setKeyEntry("private-key", privateKey, pwd.toCharArray(),
 				new java.security.cert.Certificate[] { cert });
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 		kmf.init(ks, pwd.toCharArray());
