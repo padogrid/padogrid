@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-product -docker -host -port -cluster -count -?"
+   echo "-product -docker -host -port -network -cluster -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -51,8 +51,8 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-product $PRODUCT_OPTIONS]
-                 [-docker compose] [-host host_ip] [-port first_locator_port_number]
-                 [-count member_count] -cluster cluster_name [-?]
+                 [-docker compose] [-host host_ip] [-port first_port_number]
+                 [-network network_name] [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
    Creates a Docker environment that includes SnappyData cluster configuration files for
@@ -88,6 +88,13 @@ OPTIONS
              number. Similarly, the JMX Manager's first HTTP port number would be 7072 ($DEFAULT_JMX_MANAGER_HTTP_START_PORT+2).
              Default: $DEFAULT_LOCATOR_START_PORT 
 
+   -network network_name
+            A pre-exising Docker network for the Geode containers to join. You can create
+            a new network and have any containers to join the network. For example, the following
+            creates the default 'bridge' driver for the network names 'my_network'.
+
+            docker network create my_network
+
    -count member_count
              Number of members (servers) in the cluster. Default: 2
 
@@ -110,6 +117,9 @@ EXAMPLES
 
    To create 'mydocker' cluster with the host IP '$HOST_IP':
       $EXECUTABLE -host $HOST_IP -cluster mydocker
+
+   To create 'mydocker' cluster that joins the external network, my_network:
+      $EXECUTABLE -network my_network -cluster mydocker
 
 FILES
    $PADOGRID_WORKSPACE/docker
@@ -283,7 +293,13 @@ if [ "$DOCKER" == "compose" ]; then
       let HOST_DEBUG_PORT=HOST_DEBUG_PORT+1
       let HOST_PROMETHEUS_PORT=HOST_PROMETHEUS_PORT+1
    done
-
+   if [ "$NETWORK_SPECIFIED" == "true" ] && [ "$NETWORK" != "" ]; then
+      echo "" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "networks:" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "  default:" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "    name: $NETWORK" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "    external: true" >> $CLUSTER_DIR/docker-compose.yaml
+   fi
 fi
 
 # Set group permissions for workspace owner

@@ -5118,3 +5118,21 @@ function getCreateClusterCommand {
    fi
    echo $COMMAND
 }
+
+#
+# Returns a list of Docker network names.
+#
+function getDockerNetworkNames() {
+   local __DOCKER_PATH=$(which docker 2> /dev/null)
+   local __NETWORK_LIST=""
+   if [ "$__DOCKER_PATH" != "" ]; then
+      __NETWORK_LIST=$(docker network ls | awk '{print $2}')
+   fi
+   local NETWORK_LIST=""
+   for i in $__NETWORK_LIST; do
+      if [ "$i" != "ID" ] && [ "$i" != "NAME" ] && [ "$i" != "none" ]; then
+         NETWORK_LIST="$NETWORK_LIST $i"
+      fi
+   done
+   echo $NETWORK_LIST
+}

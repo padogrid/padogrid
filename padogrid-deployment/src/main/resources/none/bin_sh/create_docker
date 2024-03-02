@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-product -docker -host -port -cluster -count -?"
+   echo "-product -docker -host -port -network -cluster -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -52,7 +52,7 @@ NAME
 SYNOPSIS
    $EXECUTABLE [-product $PRODUCT_OPTIONS]
                  [-docker compose] [-host host_ip] [-port first_port_number]
-                 [-count member_count] -cluster cluster_name [-?]
+                 [-network network_name] [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
    Creates a Docker environment that includes Geode cluster configuration files for
@@ -60,7 +60,11 @@ DESCRIPTION
  
    compose  docker-compose Dockfile based cluster orchestration
 
-   To use the created environment, you must have the specified Docker tool installed.
+   Make sure your Docker version includes support for 'docker compose'.
+
+   This command generates the 'docker-compose.yaml' file configured with the current workspace's
+   product versions. If the product versions cannot be determined then it defaults to the
+   'latest' tag.
 
 OPTIONS
    -product $PRODUCT_OPTIONS
@@ -88,6 +92,13 @@ OPTIONS
              number. Similarly, the JMX Manager's first HTTP port number would be 7072 ($DEFAULT_JMX_MANAGER_HTTP_START_PORT+2).
              Default: $DEFAULT_LOCATOR_START_PORT 
 
+   -network network_name
+            A pre-exising Docker network for the Geode containers to join. You can create
+            a new network and have any containers to join the network. For example, the following
+            creates the default 'bridge' driver for the network names 'my_network'.
+
+            docker network create my_network
+
    -count member_count
              Number of members (servers) in the cluster. Default: 2
 
@@ -110,6 +121,9 @@ EXAMPLES
 
    To create 'mydocker' cluster with the host IP '$HOST_IP':
       $EXECUTABLE -host $HOST_IP -cluster mydocker
+
+   To create 'mydocker' cluster that joins the external network, my_network:
+      $EXECUTABLE -network my_network -cluster mydocker
 
 FILES
    $PADOGRID_WORKSPACE/docker
@@ -183,6 +197,10 @@ if [ ! -d $CLUSTER_DIR ]; then
    mkdir -p $CLUSTER_DIR
 fi
 
+if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "none" ] || [ "$GEODE_HOME" == "" ]; then
+   GEODE_VERSION="latest"
+fi
+
 if [ "$DOCKER" == "compose" ]; then
 
    RUN_DIR=$CLUSTER_DIR/padogrid/run
@@ -254,9 +272,9 @@ if [ "$DOCKER" == "compose" ]; then
       SERVER_NAME="server$i"
       sed -e "s/\${VERSION}/$GEODE_VERSION/g" \
           -e "s/\${SERVER_NAME}/$SERVER_NAME/g" \
-	  -e "s/\${SERVER_PORT}/$SERVER_PORT/g" \
-	  -e "s/\${HTTP_PORT}/$HTTP_PORT/g" \
-	  -e "s/\${HOST_JMX_PORT}/$HOST_JMX_PORT/g" \
+          -e "s/\${SERVER_PORT}/$SERVER_PORT/g" \
+          -e "s/\${HTTP_PORT}/$HTTP_PORT/g" \
+          -e "s/\${HOST_JMX_PORT}/$HOST_JMX_PORT/g" \
           -e "s/\${HOST_DEBUG_PORT}/$HOST_DEBUG_PORT/g" \
           -e "s/\${HOST_PROMETHEUS_PORT}/$HOST_PROMETHEUS_PORT/g" \
           -e "s/\${PROMETHEUS_JAR}/$PROMETHEUS_JAR/g" \
@@ -267,7 +285,13 @@ if [ "$DOCKER" == "compose" ]; then
       let HOST_DEBUG_PORT=HOST_DEBUG_PORT+1
       let HOST_PROMETHEUS_PORT=HOST_PROMETHEUS_PORT+1
    done
-
+   if [ "$NETWORK_SPECIFIED" == "true" ] && [ "$NETWORK" != "" ]; then
+      echo "" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "networks:" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "  default:" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "    name: $NETWORK" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "    external: true" >> $CLUSTER_DIR/docker-compose.yaml
+   fi
 fi
 
 # Set group permissions for workspace owner

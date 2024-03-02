@@ -75,6 +75,8 @@ HOST=
 HOST_SPECIFIED=false
 IP_ADDRESS=
 IP_SPECIFIED=false
+NETWORK=
+NETWORK_SPECIFIED=false
 COUNT=
 COUNT_ARG=
 INIT_SPECIFIED=false
@@ -278,6 +280,8 @@ do
          HOST=$i
       elif [ "$PREV" == "-ip" ]; then
          IP_ADDRESS=$i
+      elif [ "$PREV" == "-network" ]; then
+         NETWORK=$i
       elif [ "$PREV" == "-group" ]; then
          GROUP=$i
       elif [ "$PREV" == "-clustergroup" ]; then
@@ -489,6 +493,8 @@ do
          HOST_SPECIFIED="true"      
       elif [ "$i" == "-ip" ]; then
          IP_SPECIFIED="true"      
+      elif [ "$i" == "-network" ]; then
+         NETWORK_SPECIFIED="true"      
       elif [ "$i" == "-grid" ]; then
          GRID_SPECIFIED=true
       elif [ "$i" == "-site" ]; then

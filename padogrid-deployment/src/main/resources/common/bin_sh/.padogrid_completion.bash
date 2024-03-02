@@ -181,6 +181,12 @@ __padogrid_complete()
       fi
       ;;
 
+   -network)
+      if [ "$command" == "create_docker" ]; then
+         type_list=$(getDockerNetworkNames)
+      fi
+      ;;
+
    -id)
       case "$PRODUCT" in
       geode|snappydata|spark|coherence)
@@ -1270,6 +1276,12 @@ __command_complete()
          type_list=$(getActiveJupyterPorts)
       fi
      ;;
+
+   -network)
+      if [ "$command" == "create_docker" ]; then
+         type_list=$(getDockerNetworkNames)
+      fi
+      ;;
 
    -vm | -locator | -master)
       case "$PRODUCT" in

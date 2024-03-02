@@ -23,7 +23,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-product -docker -port -cluster -prefix -count -?"
+   echo "-product -docker -port -network -cluster -prefix -count -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -45,7 +45,7 @@ NAME
    $EXECUTABLE - Create a Docker environment in the current workspace
 
 SYNOPSIS
-   $EXECUTABLE [-product $PRODUCT_OPTIONS] [-prefix hostname_prefix] [-port first_port_number] [-count member_count] -cluster cluster_name [-?]
+   $EXECUTABLE [-product $PRODUCT_OPTIONS] [-prefix hostname_prefix] [-port first_port_number] [-network network_name] [-count member_count] -cluster cluster_name [-?]
 
 DESCRIPTION
    Creates a Docker environment that includes Mosquitto cluster configuration files for
@@ -77,6 +77,13 @@ OPTIONS
              starting from this port number for the subsquent members.
              Default: 1883
 
+   -network network_name
+            A pre-exising Docker network for the Geode containers to join. You can create
+            a new network and have any containers to join the network. For example, the following
+            creates the default 'bridge' driver for the network names 'my_network'.
+
+            docker network create my_network
+
    -count member_count
              Number of members (servers) in the cluster. Default: 3
 
@@ -95,6 +102,9 @@ EXAMPLES
 
    To create 'mydocker' cluster with the member (server) count of 5:
       $EXECUTABLE -cluster mydocker -count 5
+      
+   To create 'mydocker' cluster that joins the external network, my_network:
+      $EXECUTABLE -network my_network -cluster mydocker
 
 FILES
    $PADOGRID_WORKSPACE/docker
@@ -211,6 +221,13 @@ if [ "$DOCKER" == "compose" ]; then
           $BASE_DIR/docker/compose/template-$CLUSTER_TYPE-server-docker-compose.yaml >> $CLUSTER_DIR/docker-compose.yaml
       let HOST_SERVER_PORT=HOST_SERVER_PORT+1
    done
+   if [ "$NETWORK_SPECIFIED" == "true" ] && [ "$NETWORK" != "" ]; then
+      echo "" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "networks:" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "  default:" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "    name: $NETWORK" >> $CLUSTER_DIR/docker-compose.yaml
+      echo "    external: true" >> $CLUSTER_DIR/docker-compose.yaml
+   fi
 fi
 
 # Set group permissions for workspace owner
