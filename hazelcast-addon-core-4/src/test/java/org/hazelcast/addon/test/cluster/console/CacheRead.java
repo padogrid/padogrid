@@ -93,6 +93,7 @@ public class CacheRead {
 		}
 
 		instance.getMap(mapName).values().forEach(c -> System.out.println("\t" + c));
-		instance.shutdown();
+		HazelcastClient.shutdownAll();
+		System.exit(0);
 	}
 }
