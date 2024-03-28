@@ -22,7 +22,5 @@ services:
       - bash
       - -c
       - |
-        export LOG_FILE=/padogrid/log/`hostname`.log \
-        && \
-        start locator -name=`hostname` -locators=locator:$LOCATOR_PORT -peer-discovery-address=`hostname` -peer-discovery-port=$LOCATOR_PORT -classpath=/padogrid/plugins/*:/padogrid/lib/* -log-file=/padogrid/log/`hostname`.log -member-timeout=120000 -spark.ui.port=$SPARK_UI_PORT -heap-size=$LOCATOR_HEAP_SIZE -statistic-archive-file=/padogrid/stats/`hostname`.gfs -J-Dlog4j.configurationFile=/padogrid/etc/log4j2.properties -J-Xloggc:/padogrid/log/`hostname`-gc.log -J-XX:+PrintGCDetails -J-XX:+PrintGCDateStamps -J-DgemfirePropertyFile=/padogrid/etc/gemfirexd.properties -client-port=$CLIENT_PORT
+        start locator -name=`hostname` -locators=locator:$LOCATOR_PORT -peer-discovery-address=`hostname` -peer-discovery-port=$LOCATOR_PORT -classpath=/padogrid/plugins/*:/padogrid/lib/* -log-file=$(hostname).log -member-timeout=120000 -spark.ui.port=$SPARK_UI_PORT -heap-size=$LOCATOR_HEAP_SIZE -statistic-archive-file=/padogrid/stats/`hostname`.gfs -J-Dlog4j.logfile=/padogrid/log/$(hostname).log -J-Dlog4j.configurationFile=/padogrid/etc/log4j2.properties -J-Xloggc:/padogrid/log/`hostname`-gc.log -J-XX:+PrintGCDetails -J-XX:+PrintGCDateStamps -J-DgemfirePropertyFile=/padogrid/etc/gemfirexd.properties -client-port=$CLIENT_PORT
     restart: on-failure

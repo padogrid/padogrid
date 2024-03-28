@@ -57,6 +57,7 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 	private String tableName;
 	private boolean isSmtEnabled = true;
 	private boolean isDeleteEnabled = true;
+	private String[] keyColumnNames;
 	private String targetNamesStr;
 	private String[] sourceColumnNames;
 	private String[] targetColumnNames;
@@ -104,10 +105,21 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 		String isDeleteStr = props.get(DebeziumKafkaSinkConnector.CONFIG_DELETE_ENABLED);
 		isDeleteEnabled = isDeleteStr != null && isDeleteStr.equalsIgnoreCase("false") ? false : isDeleteEnabled;
 
-		// Columns
+		// Key
+		String cnames = props.get(DebeziumKafkaSinkConnector.KEY_COLUMN_NAMES_CONFIG);
+		String tokens[];
+	
+		if (cnames != null) {
+			tokens = cnames.split(",");
+			keyColumnNames = new String[tokens.length];
+			for (int j = 0; j < tokens.length; j++) {
+				keyColumnNames[j] = tokens[j].trim();
+			}
+		}
+
+		// Value
 		String scNames = props.get(DebeziumKafkaSinkConnector.CONFIG_SOURCE_COLUMN_NAMES);
 		targetNamesStr = props.get(DebeziumKafkaSinkConnector.CONFIG_TARGET_COLUMN_NAMES);
-		String[] tokens;
 		if (scNames != null) {
 			tokens = scNames.split(",");
 			sourceColumnNames = new String[tokens.length];
@@ -231,6 +243,7 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 			Struct valueStruct = (Struct) sinkRecord.value();
 
 			boolean isDelete = valueStruct == null;
+			Struct beforeStruct = null;
 			Struct afterStruct = null;
 			Object op = null;
 			if (isSmtEnabled) {
@@ -239,69 +252,133 @@ public class DebeziumKafkaSinkTask extends SinkTask implements QueueDispatcherLi
 				op = valueStruct.get("op");
 				isDelete = op != null && op.toString().equals("d");
 				afterStruct = (Struct) valueStruct.get("after");
+				if (afterStruct == null) {
+					beforeStruct = (Struct) valueStruct.get("before");
+				}
 			}
 			if (isDebugEnabled) {
 				logger.info("op=" + op);
 				logger.info("isDelete = " + isDelete);
+				logger.info("keyStruct = " + keyStruct);
+				logger.info("beforeStruct = " + beforeStruct);
 				logger.info("afterStruct = " + afterStruct);
 			}
 
 			/*
 			 * Columns
-			 */
-			Object value;
-
-			// Determine the value column names.
-			if (sourceColumnNames == null) {
-				sourceColumnNames = getColumnNames(valueStruct);
-			}
-
-			Object values[] = new Object[sourceColumnNames.length];
-			for (int j = 0; j < sourceColumnNames.length; j++) {
-				values[j] = afterStruct.get(sourceColumnNames[j]);
-			}
-			if (isDebugEnabled) {
+			 */		
+			if (isDeleteEnabled && isDelete) {
+				if (beforeStruct != null && keyStruct != null) {
+					// Key
+					// Determine the key column names.
+					if (keyColumnNames == null) {
+						keyColumnNames = getColumnNames(keyStruct);
+					}
+					Object keyFieldValues[] = null;
+					if (keyColumnNames != null) {
+						keyFieldValues = new Object[keyColumnNames.length];
+						for (int j = 0; j < keyColumnNames.length; j++) {
+							keyFieldValues[j] = keyStruct.get(keyColumnNames[j]);
+						}
+					}
+					if (isDebugEnabled) {
+						for (int j = 0; j < keyColumnNames.length; j++) {
+							logger.info("keyColumnNames[" + j + "] = " + keyColumnNames[j] + ": " + keyFieldValues[j]);
+						}
+					}
+					
+					StringBuffer buffer = new StringBuffer(100);
+					buffer.append("delete from ");
+					buffer.append(tableName);
+					buffer.append(" where ");
+					for (int i = 0; i < keyFieldValues.length; i++) {
+						if (i > 0) {
+							buffer.append(" and ");
+						}
+						buffer.append(keyColumnNames[i]);
+						buffer.append("=");
+						
+						// STRING comes in as CLOB
+						switch (targetColumnTypes[i]) {
+						case Types.VARCHAR:
+						case Types.CLOB:
+						case Types.DATE:
+						case Types.TIMESTAMP:
+						case Types.BINARY:
+						case Types.VARBINARY:
+							buffer.append("'");
+							buffer.append(keyFieldValues[i]);
+							buffer.append("'");
+							break;
+						default:
+							buffer.append(keyFieldValues[i]);
+							break;
+						}
+					}
+					String sql = buffer.toString();
+					if (isDebugEnabled) {
+						logger.info(sql);
+					}
+					try {
+						stmt.execute(sql);
+					} catch (SQLException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			} else if (afterStruct != null) {
+				Object value;
+				// Determine the value column names.
+				if (sourceColumnNames == null) {
+					sourceColumnNames = getColumnNames(valueStruct);
+				}
+	
+				Object values[] = new Object[sourceColumnNames.length];
 				for (int j = 0; j < sourceColumnNames.length; j++) {
-					logger.info("valueColumnNames[" + j + "] = " + sourceColumnNames[j] + ": " + values[j]);
+					values[j] = afterStruct.get(sourceColumnNames[j]);
 				}
-			}
+				if (isDebugEnabled) {
+					for (int j = 0; j < sourceColumnNames.length; j++) {
+						logger.info("valueColumnNames[" + j + "] = " + sourceColumnNames[j] + ": " + values[j]);
+					}
+				}
 
-			StringBuffer buffer = new StringBuffer(100);
-			buffer.append("put into ");
-			buffer.append(tableName);
-			buffer.append(" (");
-			buffer.append(targetNamesStr);
-			buffer.append(") values (");
-			for (int i = 0; i < values.length; i++) {
-				if (i > 0) {
-					buffer.append(",");
+				StringBuffer buffer = new StringBuffer(100);
+				buffer.append("put into ");
+				buffer.append(tableName);
+				buffer.append(" (");
+				buffer.append(targetNamesStr);
+				buffer.append(") values (");
+				for (int i = 0; i < values.length; i++) {
+					if (i > 0) {
+						buffer.append(",");
+					}
+					// STRING comes in as CLOB
+					switch (targetColumnTypes[i]) {
+					case Types.VARCHAR:
+					case Types.CLOB:
+					case Types.DATE:
+					case Types.TIMESTAMP:
+					case Types.BINARY:
+					case Types.VARBINARY:
+						buffer.append("'");
+						buffer.append(values[i]);
+						buffer.append("'");
+						break;
+					default:
+						buffer.append(values[i]);
+						break;
+					}
 				}
-				// STRING comes in as CLOB
-				switch (targetColumnTypes[i]) {
-				case Types.VARCHAR:
-				case Types.CLOB:
-				case Types.DATE:
-				case Types.TIMESTAMP:
-				case Types.BINARY:
-				case Types.VARBINARY:
-					buffer.append("'");
-					buffer.append(values[i]);
-					buffer.append("'");
-					break;
-				default:
-					buffer.append(values[i]);
-					break;
+				buffer.append(")");
+				String sql = buffer.toString();
+				if (isDebugEnabled) {
+					logger.info(sql);
 				}
-			}
-			buffer.append(")");
-			String sql = buffer.toString();
-			if (isDebugEnabled) {
-				logger.info(sql);
-			}
-			try {
-				stmt.execute(sql);
-			} catch (SQLException e) {
-				throw new RuntimeException(e);
+				try {
+					stmt.execute(sql);
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 			}
 		}
 	}

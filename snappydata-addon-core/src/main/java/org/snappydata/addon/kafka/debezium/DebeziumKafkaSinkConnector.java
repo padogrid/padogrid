@@ -39,6 +39,8 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 	public static final String CONFIG_CONNECTION_DRIVER_CLASS = "connection.driver.class";
 	public static final String CONFIG_CONNECTION_USER = "connection.user";
 	public static final String CONFIG_CONNECTION_PASSWORD = "connection.password";
+	public static final String KEY_COLUMN_NAMES_CONFIG = "key.column.names";
+	public static final String KEY_FIELD_NAMES_CONFIG = "key.field.names";
 	public static final String CONFIG_SOURCE_COLUMN_NAMES = "source.column.names";
 	public static final String CONFIG_TARGET_COLUMN_NAMES = "target.column.names";
 	public static final String CONFIG_QUEUE_BATCH_SIZE = "queue.batch.size";
@@ -60,6 +62,8 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 			.define(CONFIG_CONNECTION_USER, Type.STRING, DEFAULT_USER, Importance.HIGH, "SnappyData connection user.")
 			.define(CONFIG_CONNECTION_PASSWORD, Type.STRING, DEFAULT_PASSWORD, Importance.HIGH,
 					"SnappyData conenction password.")
+			.define(KEY_COLUMN_NAMES_CONFIG, Type.STRING, null, Importance.HIGH,
+					"Comma separated key column names. An ordered list of table column names to be mapped to the key object field (setter) names.")
 			.define(CONFIG_SOURCE_COLUMN_NAMES, Type.STRING, null, Importance.HIGH,
 					"An ordered list of comma separated source table column names to be mapped to the target SnappyData table column names.")
 			.define(CONFIG_TARGET_COLUMN_NAMES, Type.STRING, null, Importance.HIGH,
@@ -79,6 +83,7 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 	private String connectionDriverClassName;
 	private String connectionUser;
 	private String connectionPwd;
+	private String keyColumnNames;
 	private String sourceColumnNames;
 	private String targetColumnNames;
 	private int queueBatchSize = DEFAULT_QUEUE_BATCH_SIZE;
@@ -103,6 +108,7 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 		connectionDriverClassName = props.get(CONFIG_CONNECTION_DRIVER_CLASS);
 		connectionUser = props.get(CONFIG_CONNECTION_USER);
 		connectionPwd = props.get(CONFIG_CONNECTION_PASSWORD);
+		keyColumnNames = props.get(KEY_COLUMN_NAMES_CONFIG);
 		sourceColumnNames = props.get(CONFIG_SOURCE_COLUMN_NAMES);
 		targetColumnNames = props.get(CONFIG_TARGET_COLUMN_NAMES);
 		String intVal = props.get(CONFIG_QUEUE_BATCH_SIZE);
@@ -131,6 +137,7 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 		logger.info(CONFIG_DELETE_ENABLED + " = " + isDeleteEnabled);
 		logger.info(CONFIG_DEBUG_ENABLED + " = " + isDebugEnabled);
 		logger.info(CONFIG_TABLE + " = " + tableName);
+		logger.info(KEY_COLUMN_NAMES_CONFIG + " = " + keyColumnNames);
 		logger.info(CONFIG_SOURCE_COLUMN_NAMES + " = " + sourceColumnNames);
 		logger.info(CONFIG_TARGET_COLUMN_NAMES + " = " + targetColumnNames);
 		logger.info(CONFIG_QUEUE_BATCH_SIZE + " = " + queueBatchSize);
@@ -165,6 +172,9 @@ public class DebeziumKafkaSinkConnector extends SinkConnector {
 			}
 			if (connectionPwd != null) {
 				config.put(CONFIG_CONNECTION_USER, connectionPwd);
+			}
+			if (keyColumnNames != null) {
+				config.put(KEY_COLUMN_NAMES_CONFIG, keyColumnNames);
 			}
 			if (sourceColumnNames != null) {
 				config.put(CONFIG_SOURCE_COLUMN_NAMES, sourceColumnNames);

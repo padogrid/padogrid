@@ -253,14 +253,16 @@ IS_ENTERPRISE=false
 if [ "$SNAPPYDATA_HOME" == "" ]; then
    SNAPPYDATA_VERSION=""
    SNAPPYDATA_MAJOR_VERSION_NUMBER=""
+   SNAPPYDATA_MINOR_VERSION_NUMBER=""
    PRODUCT_VERSION=""
    PRODUCT_MAJOR_VERSION=""
 else
    for file in $SNAPPYDATA_HOME/jars/snappydata-core*; do
-      file=${file##*snappydata\-core*\-}
+      file=${file#*snappydata\-core*\-}
       SNAPPYDATA_VERSION=${file%.jar}
    done
    SNAPPYDATA_MAJOR_VERSION_NUMBER=`expr "$SNAPPYDATA_VERSION" : '\([0-9]*\)'`
+   SNAPPYDATA_MINOR_VERSION_NUMBER=$(echo $SNAPPYDATA_VERSION | awk '{split($0,a,"."); print a[2]'})
    PRODUCT_VERSION=$SNAPPYDATA_VERSION
    PRODUCT_MAJOR_VERSION=$SNAPPYDATA_MAJOR_VERSION_NUMBER
 fi

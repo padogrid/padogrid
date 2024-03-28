@@ -91,7 +91,10 @@ if [ "$PORT_NUMBER" == "" ]; then
    PORT_NUMBER="8888"
 fi
 
-JUPYTER_SERVERS=$(jupyter lab list | grep -v "Currently" | grep $PORT_NUMBER)
+JUPYTER_SERVERS=$(jupyter lab list 2>&1 | grep -v "Currently" | grep $PORT_NUMBER)
+if [ "$JUPYTER_SERVERS" == "" ]; then
+   JUPYTER_SERVERS=$(jupyter lab list | grep -v "Currently" | grep $PORT_NUMBER)
+fi
 
 # Start the notebook server if is not running
 if [ "$JUPYTER_SERVERS" == "" ]; then

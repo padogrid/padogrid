@@ -22,7 +22,5 @@
       - bash
       - -c
       - |
-        export LOG_FILE=/padogrid/log/`hostname`.log \
-        && \
-        start lead -name=`hostname` -locators=locator:$LOCATOR_PORT -classpath=/padogrid/plugins/*:/padogrid/lib/* -log-file=/padogrid/log/`hostname`.log -member-timeout=120000 -spark.ui.port=$SPARK_UI_PORT -heap-size=$LEADER_HEAP_SIZE -statistic-archive-file=/padogrid/stats/`hostname`.gfs -J-Dlog4j.configurationFile=/padogrid/etc/log4j2.properties -J-Xloggc:/padogrid/log/`hostname`-gc.log -J-XX:+PrintGCDetails -J-XX:+PrintGCDateStamps -J-DgemfirePropertyFile=/padogrid/etc/gemfirexd.properties -J-javaagent:/padogrid/lib/${PROMETHEUS_JAR}=$LEADER_PROMETHEUS_PORT:/padogrid/etc/prometheus.yml -spark.jobserver.port=$SPARK_JOBSERVER_PORT
+        start lead -name=`hostname` -locators=locator:$LOCATOR_PORT -classpath=/padogrid/plugins/*:/padogrid/lib/* -log-file=$(hostname).log -member-timeout=120000 -spark.ui.port=$SPARK_UI_PORT -heap-size=$LEADER_HEAP_SIZE -statistic-archive-file=/padogrid/stats/`hostname`.gfs -J-Dlog4j.logfile=/padogrid/log/$(hostname).log -J-Dlog4j.configurationFile=/padogrid/etc/log4j2.properties -J-Xloggc:/padogrid/log/`hostname`-gc.log -J-XX:+PrintGCDetails -J-XX:+PrintGCDateStamps -J-DgemfirePropertyFile=/padogrid/etc/gemfirexd.properties -J-javaagent:/padogrid/lib/${PROMETHEUS_JAR}=$LEADER_PROMETHEUS_PORT:/padogrid/etc/prometheus.yml -spark.jobserver.port=$SPARK_JOBSERVER_PORT
     restart: on-failure
