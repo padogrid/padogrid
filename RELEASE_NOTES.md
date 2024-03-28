@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 1.0.0-SNAPSHOT
 
-### Release Date: 03/02/24
+### Release Date: 03/28/24
 
 - This is the first hardened major release that includes support for all commands in the previous release with removal of the following deprecated commands.
 
@@ -21,6 +21,8 @@ https://github.com/padogrid
 - The online bundles and the PadoGrid manual have been updated with the replacement commands. Please use this release or PadoGrid v0.9.33 to run the bundles. If you choose to use a prior release, then you must use the deprecated (removed) commands.
 - This release drops support for Jet 3.x and Jet 4.x, which have been sunset by Hazelcast in 2022. PadoGrid now supports Jet for Hazelcast 5.x only.
 - Added the `-network` option to `create_docker` for joining an external network.
+- Added a workaround to the SnappyData 1.3.x log file path issue which incorrectly sets the log file path relative to the workding directory. With this workaround, PadoGrid now supports all versions of SnappyData.
+- Added SnappyData Docker images, `padogrid/snappydata:1.3.1` and `padogrid/snappydata:1.3.1-HF-1`. 
 
 ---
 
