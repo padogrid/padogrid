@@ -10,7 +10,7 @@ Make sure you switch into the correct Mosquitto cluster before creating a Docker
 
 ```bash
 # Create and switch into a Mosquitto cluster
-make_cluster -product mosquitto -cluster mymosquitto 
+create_cluster -product mosquitto -cluster mymosquitto 
 switch_cluster mymosquitto
 ```
 
