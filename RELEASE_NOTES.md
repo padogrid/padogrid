@@ -4,11 +4,11 @@
 
 https://github.com/padogrid
 
-## Version 1.0.0-SNAPSHOT
+## Version 1.0.0
 
 ### Release Date: 05/24/24
 
-- This is the first hardened major release that includes support for all commands in the previous release with removal of the following deprecated commands.
+- This is the first hardened major release that includes support for all commands in the previous release with the following deprecated commands removed.
 
 | Removed             | Replacement          |
 | ------------------- | -------------------- |
