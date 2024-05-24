@@ -245,7 +245,12 @@ JAVA_OPTS="$JAVA_OPTS $MC_JAVA_OPTS"
 if [ "$MC_HTTPS_ENABLED" == "true" ]; then
     MC_HTTP_PORT=$MC_HTTPS_PORT
 fi
-if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MINOR_VERSION_NUMBER -ge 2 ]; then
+if [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MINOR_VERSION_NUMBER -ge 4 ]; then
+   JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT -Dhazelcast.mc.contextPath=/hazelcast-mancenter"
+   if [ "$SIMULATE" != "true" ]; then
+      "$JAVA" -server -Dloader.path="${CLASSPATH}" ${JAVA_OPTS} -cp "$HAZELCAST_MC_JAR" org.springframework.boot.loader.launch.PropertiesLauncher > $LOG_FILE 2>&1 &
+   fi
+elif [ $HAZELCAST_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MAJOR_VERSION_NUMBER -ge 5 ] && [ $HAZELCAST_MC_MINOR_VERSION_NUMBER -ge 2 ]; then
    JAVA_OPTS="$JAVA_OPTS -Dhazelcast.mc.http.port=$MC_HTTP_PORT -Dhazelcast.mc.contextPath=/hazelcast-mancenter"
    if [ "$SIMULATE" != "true" ]; then
       "$JAVA" -server -Dloader.path="${CLASSPATH}" ${JAVA_OPTS} -cp "$HAZELCAST_MC_JAR" org.springframework.boot.loader.PropertiesLauncher > $LOG_FILE 2>&1 &
