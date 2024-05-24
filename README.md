@@ -15,16 +15,15 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Announcements
 
-- *March 28, 2024 - SnappyData 1.3.1 and 1.3.1-HF-1 Docker images released. [PadoGrid v1.0.0-SNAPSHOT](https://github.com/padogrid/padogrid/releases/tag/snapshot) now supports all versions of [SnappyData Docker images](https://hub.docker.com/repository/docker/padogrid/snappydata/general) maintained by PadoGrid.*
-- *February 18, 2024 - [PadoGrid v0.9.33 released.](https://github.com/padogrid/padogrid/releases/tag/padogrid_0.9.33) This release introduces comprehensive sets of Grafana dashboards for Hazelcast and adds support for VirtualBox 7.x.*
+- *May 24, 2024 - [PadoGrid v1.0.0 released!](https://github.com/padogrid/padogrid/releases/tag/padogrid_1.0.0) This is the first major release that officially supports product upgrade and maintenance. Look for [![PadoGrid 1.x](https://github.com/padogrid/padogrid/wiki/images/padogrid-padogrid-1.x.drawio.svg)](https://github.com/padogrid/padogrid/wiki/Platform-PadoGrid-1.x) compliant bundles in the [bundle catalogs](https://github.com/padogrid/catalog-bundles/blob/master/all-catalog.md).*
 
 ---
 
 ## Tips of the Day
 
-1. Hands on integration: Database-->Kafka-->Geode/GemFire-->Power BI. Over 20 endpoints! [Debezium-ksqlDB-Confluent Geode Connector](https://github.com/padogrid/bundle-geode-1-docker-debezium_ksqldb_confluent)
-1. Try SnappyData on PadoGrid. You can readily run SnappyData clusters on your host machine or using [SnappyData Docker images](https://github.com/padogrid/padogrid/wiki/SnappyData-Docker-Compose) maintained by PadoGrid.
-1. Did you know [PadoGrid Hazelcast Dashboards (PHD)](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) can be automatically installed to Grafana instances running on Docker and Kuberntes?
+1. Need Hazelcast Managment Center dashboards in Granana? Check out [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App).
+
+1. Did you know PadoGrid can quickly spawn multiple clusters of different products on your laptop without resorting to containers? Check out [Non-Conflicting Clusters Example](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers#non-conflicting-clusters-example).
 
 ---
 
