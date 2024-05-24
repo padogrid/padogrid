@@ -24,6 +24,7 @@ https://github.com/padogrid
 - Added a workaround to the SnappyData 1.3.x log file path issue which incorrectly sets the log file path relative to the workding directory. With this workaround, PadoGrid now supports all versions of SnappyData.
 - Added SnappyData Docker images, `padogrid/snappydata:1.3.1` and `padogrid/snappydata:1.3.1-HF-1`. 
 - To align with Hazelast Platform 5.4+, starting PadoGrid 1.0.0, PadoGrid Docker images now include OpenJDK 17.
+- [![PadoGrid 1.x](https://github.com/padogrid/padogrid/wiki/images/padogrid-padogrid-1.x.drawio.svg)](https://github.com/padogrid/padogrid/wiki/Platform-PadoGrid-1.x) If this icon is present, then the underlying artifacts have been tested and certified to run on PadoGrid 1.x.
 
 ---
 
