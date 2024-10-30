@@ -174,6 +174,15 @@ DEFAULT_JMX_START_PORT=12001
 #
 DEFAULT_LOCATOR_PROMETHEUS_ENABLED=false
 
+#
+# Default PROMETHEUS for GemFire enable/disable.
+#
+DEFAULT_PROMETHEUS_GEMFIRE_ENABLED=false
+
+#
+# Default PROMETHEUS metrics emission rate
+DEFAULT_PROMETHEUS_METRICS_EMISSION=Default
+
 # 
 # Default PROMETHEUS start port number. The ($MEMBER_NUM-1) is added to the Prometheus start port number to
 # determine the member's Prometheus port number.
