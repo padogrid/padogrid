@@ -6,9 +6,11 @@ https://github.com/padogrid
 
 ## Version 1.0.1-SNAPSHOT
 
-### Release Date: 10/30/24
+### Release Date: 11/19/24
 
 - Added support for the GemFire controlled Prometheus metrics. The `create_cluster` command now includes GemFire specific properties to optionally enable GemFire Prometheus properties.
+- Added the missing recovery files used by GemFire tools. These files are inadvently left out in the distribution.
+- Added '-node-` to GemFire member names for the tools commands to isolate the member log files. Some of the tools commands in the previous releases did not work due to this issue.
 
 ---
 
