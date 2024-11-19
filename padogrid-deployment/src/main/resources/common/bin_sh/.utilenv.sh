@@ -890,7 +890,7 @@ function getMemberPrefix
    elif [ "$PRODUCT" == "hadoop" ]; then
       echo "${__CLUSTER}-datanode-`hostname`-"
    else
-      echo "${__CLUSTER}-`hostname`-"
+      echo "${__CLUSTER}-node-`hostname`-"
    fi
 }
 
