@@ -21,9 +21,13 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Tips of the Day
 
-1. Need Hazelcast Managment Center dashboards in Granana? Check out [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App).
+1. How to detect and recover from a cluster split-brain problem in Geode/GemFire? The [Geode/GemFire Split-Brain](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) bundle walks through all possible scenarios and provides tools and guidelines to quickly recover from the disaster.
 
-1. Did you know PadoGrid can quickly spawn multiple clusters of different products on your laptop without resorting to containers? Check out [Non-Conflicting Clusters Example](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers#non-conflicting-clusters-example).
+1. Monitor Geode/GemFire with Grafana/Prometheus. [Geode Grafana App](https://github.com/padogrid/padogrid/wiki/Geode-Grafana-App).
+
+1. Need Hazelcast Managment Center dashboards in Granana? Check out [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App): Comprehensive dashboards that rival Hazelcast Management Center.
+
+1. Did you know [PadoGrid Hazelcast Dashboards (PHD)](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) can be automatically installed to Grafana instances running on Docker and Kuberntes?
 
 ---
 
@@ -180,6 +184,8 @@ To use PadoGrid, you must first create an RWE (Root Workspace Environment) by ru
 
 To save your workspaces created in the container, it is recommended that you mount a data volume along with ports exposed as follows.
 
+### Docker
+
 ```bash
 # Docker
 docker run --name padogrid -h padogrid -d \
@@ -189,7 +195,11 @@ docker run --name padogrid -h padogrid -d \
    -p 9401:9401 -p 9402:9402 -p 9403:9403 \
    -p 3000:3000 -p 9090:9090 -p 5006:5006 \
    -e PADOGRID_HTTPS_ENABLED=true padogrid/padogrid
+```
 
+### Podman
+
+```bash            
 # Podman
 podman run --name padogrid -h padogrid -d \
    --mount type=volume,source=padogrid,target=/opt/padogrid \
