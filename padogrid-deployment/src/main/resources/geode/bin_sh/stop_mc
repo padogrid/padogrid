@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+__options()
+{
+   echo "-cluster -?"
+}
+
+if [ "$OPTIONS" == "true" ]; then
+   __options
+   exit
+fi
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   $EXECUTABLE - Stop GemFire Management Console in the specified cluster
+
+SYNOPSIS
+   $EXECUTABLE [-cluster cluster_name] [-?]
+
+DESCRIPTION
+   Stops GemFire Management Console
+
+OPTIONS
+   -cluster cluster_name
+             Cluster name.
+
+EOF
+if [ "$MAN_SPECIFIED" == "false" ]; then
+cat <<EOF
+DEFAULT
+   $EXECUTABLE -cluster $CLUSTER
+
+EOF
+fi
+cat <<EOF
+SEE ALSO
+EOF
+   printSeeAlsoList "*mc*" $EXECUTABLE
+   exit
+fi
+
+#
+# VM cluster
+#
+THIS_HOST_NAME=`hostname`
+if [ "$REMOTE_SPECIFIED" == "false" ]; then
+   VM_ENABLED=`getClusterProperty "vm.enabled" "false"`
+   if [ "$VM_ENABLED" == "true" ] && [ "$THIS_HOST_NAME" != "$DEFAULT_MC_HOST" ]; then
+      VM_HOST=`getClusterProperty "mc.host" $DEFAULT_MC_HOST`
+      if [ "$VM_HOST" == "" ]; then
+         echo "----------------------------------------------------------------"
+         echo "WORKSPACE: $PADOGRID_WORKSPACE"
+         echo "    ERROR: VM GemFire Management Console host undefined. Set 'mc.hosts' in the following cluster.properties file."  
+         echo "           $ETC_DIR/cluster.properties"
+         echo "           Command aborted."
+         echo "----------------------------------------------------------------"
+         exit 1
+      fi
+
+      # If pod cluster, then source in the pod env vars to set the VM specific variables
+      OS_ENV=`getOsEnv`
+      if [ "$OS_ENV" == "gh" ] && [ "$POD" != "local" ]; then
+         if [ -f "$PODS_DIR/$POD/.nodeenv.sh" ]; then
+            . "$PODS_DIR/$POD/.nodeenv.sh"
+         fi
+      fi
+
+      VM_USER=`getVmUser`
+      VM_KEY=`getVmKeyArg`
+
+      # For Vagrant VMs, run local if '.local' is suffix
+      if [ "$VM_HOST" != "${THIS_HOST_NAME}.local" ] ;  then
+         if [ "$(isVmPrivateHostReachable "$VM_USER" "$VM_KEY")" == "true" ]; then
+            # If private hosts are reachable then execute from here.
+            ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "$COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/stop_mc -remote $VM_HOST -workspace $VM_PADOGRID_WORKSPACE -cluster $CLUSTER $@"
+         else
+            # If private hosts are not reachable then use a public host as a proxy to execute this command.
+            #RWE_NAME=$(basename $PADOGRID_WORKSPACES_HOME)
+            #WORKSPACE=$(basename $PADOGRID_WORKSPACE)
+            RWE_NAME=$(basename $VM_PADOGRID_WORKSPACES_HOME)
+            WORKSPACE=$(basename $VM_PADOGRID_WORKSPACE)
+
+            VM_PUBLIC_HOSTS=`getClusterProperty "vm.public.hosts"`
+            # Replace , with space
+            __VM_HOSTS=$(echo "$VM_PUBLIC_HOSTS" | sed "s/,/ /g")
+            for VM_HOST in $__VM_HOSTS; do
+               ssh -n $VM_KEY $VM_USER@$VM_HOST -o LogLevel=error -o stricthostkeychecking=no -o connecttimeout=$SSH_CONNECT_TIMEOUT "switch_rwe $RWE_NAME/$WORKSPACE && $COMMAND_PREFIX $VM_PADOGRID_HOME/$PRODUCT/bin_sh/$EXECUTABLE -cluster $CLUSTER $@"
+               break;
+            done
+         fi
+         exit
+      fi
+   fi
+fi
+
+# Determine the node host name for URL
+POD=`getClusterProperty "pod.name" "local"`
+NODE_NAME_PREFIX=`getPodProperty "node.name.prefix" $NODE_NAME_PREFIX`
+if [ "$POD" == "local" ]; then
+   NODE=`hostname`
+else
+   NODE="`hostname`.local"
+fi
+
+MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
+MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" "false"`
+MC_JMX_PORT=`getClusterProperty "mc.jmx.port" $DEFAULT_MC_JMX_PORT`
+if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+else
+   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+fi
+WORKING_DIR=$RUN_DIR/$MC_NAME
+LOG_FILE=$LOG_DIR/${MC_NAME}.log
+PID=`getMcPid $MC_NAME $WORKSPACE $RWE`
+
+if [ -z $PID ]; then
+   echo "GemFire Management Console not running [$CLUSTER]. Command aborted."
+   exit
+else
+   if [[ ${OS_NAME} == CYGWIN* ]]; then
+      taskkill /f /pid "${PID}"
+   else
+      kill -9 "${PID}"
+   fi
+
+   echo "----------------------------------------------------------------"
+   echo "         WORKSPACE $PADOGRID_WORKSPACE"
+   echo "              Name: $MC_NAME"
+   echo "           Cluster: $CLUSTER"
+   echo "Management Console: gemfire-manconsole"
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   echo "               URL: https://${NODE}:${MC_HTTPS_PORT}"
+   else
+   echo "               URL: http://${NODE}:${MC_HTTP_PORT}"
+   fi
+   echo "               PID: $PID"
+   if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   echo "        HTTPS_PORT: $MC_HTTPS_PORT"
+   else
+   echo "         HTTP_PORT: $MC_HTTP_PORT"
+   fi
+   echo "          JMX_PORT: $MC_JMX_PORT"
+   echo "           LOG_DIR: $LOG_DIR"
+   echo "          LOG_FILE: $LOG_FILE"
+   echo "       WORKING_DIR: ${WORKING_DIR}"
+   echo "            Status: Stopped"
+   echo "----------------------------------------------------------------"
+fi

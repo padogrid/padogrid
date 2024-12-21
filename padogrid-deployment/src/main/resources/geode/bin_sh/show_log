@@ -42,7 +42,7 @@ NAME
 
 SYNOPSIS
    $EXECUTABLE [-cluster <cluster-name>] [-num <member-number>]
-               [-all | -full] [-log [data|gc|locator]] [-?]
+               [-all | -full] [-log [data|gc|locator|mc]] [-?]
 
 DESCRIPTION
    Displays the specified member's log file. By default, follows the tail
@@ -235,6 +235,16 @@ locator)
 
 esac
 
+MC_HTTP_PORT=`getClusterProperty "mc.http.port" $DEFAULT_MC_HTTP_PORT`
+MC_HTTPS_PORT=`getClusterProperty "mc.https.port" $DEFAULT_MC_HTTPS_PORT`
+MC_HTTPS_ENABLED=`getClusterProperty "mc.https.enabled" "false"`
+if [ "$MC_HTTPS_ENABLED" == "true" ]; then
+   MC_NAME=${CLUSTER}-mc-${MC_HTTPS_PORT}
+else
+   MC_NAME=${CLUSTER}-mc-${MC_HTTP_PORT}
+fi
+MC_DIR=$RUN_DIR/$MC_NAME
+
 if  [ ! -d $CLUSTER_DIR ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
@@ -245,7 +255,16 @@ if  [ ! -d $CLUSTER_DIR ]; then
    exit 1
 fi
 
-if [ ! -d $MEMBER_DIR ]; then
+if [ "$LOG" == "mc" ]; then
+   if [ ! -d $MC_DIR ]; then
+      echo "----------------------------------------------------------------"
+      echo "WORKSPACE: $PADOGRID_WORKSPACE"
+      echo "  Cluster: $CLUSTER"
+      echo "   Status: Management Console has not been started."
+      echo "----------------------------------------------------------------"
+      exit 1
+   fi
+elif [ ! -d $MEMBER_DIR ]; then
    echo "----------------------------------------------------------------"
    echo "WORKSPACE: $PADOGRID_WORKSPACE"
    echo "  Cluster: $CLUSTER"
@@ -277,6 +296,10 @@ gc)
    else
       LOG_FILE=$LOG_DIR/${MEMBER}-gc.log
    fi
+   ;;
+
+mc)
+   LOG_FILE=$LOG_DIR/${MC_NAME}.log
    ;;
 
 *)

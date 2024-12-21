@@ -27,7 +27,7 @@ EXECUTABLE="`basename $0`"
 
 __options()
 {
-   echo "-product -cluster -type -pod -vm -locator -padoweb -port -?"
+   echo "-product -cluster -mc -type -pod -vm -locator -padoweb -port -?"
 }
 
 if [ "$OPTIONS" == "true" ]; then
@@ -52,6 +52,7 @@ SYNOPSIS
                  [-vm [comma_separated_hosts]]
                  [-locator comma_separated_locator_hosts]
                  [-padoweb padoweb_host]
+                 [-mc management_console_host]
                  [-port first_locator_port_number] [-?]
 
 DESCRIPTION
@@ -109,6 +110,13 @@ OPTIONS
              is specified. If this option is not specified but the '-vm' option is
              specified, then the first host from the '-vm' host list is selected
              for PadoWeb.
+
+   -mc management_console_host
+             Management console host name. This option is meaningful only
+             if the '-vm' option is specified. If this option is not
+             specified but the '-vm' option is specified, then the first
+             host from the '-vm' host list is selected for the management
+             console.
 
    -port first_locator_port_number
              First locator's port number. Port number is incremented
@@ -260,6 +268,7 @@ function writeCluster()
       if [ "$PADO_HOME" != "" ] && [ -d "$PADO_HOME/etc" ]; then
           cp $PADO_HOME/etc/pado*.dtd $CLUSTER_DIR/pado/
       fi
+
       # Place Pado biz jars in the plugins directory, which serves as the IBiz repo.
       cp $PADO_HOME/plugins/* $CLUSTER_DIR/plugins/
 
@@ -468,6 +477,16 @@ function writeCluster()
    echo "heap.min=$DEFAULT_MIN_HEAP_SIZE" >> $ETC_DIR/cluster.properties
    echo "heap.max=$DEFAULT_MAX_HEAP_SIZE" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
+
+   # MC
+   echo "# GemFire Management Console host and port numbers" >> $ETC_DIR/cluster.properties
+   echo "mc.host=$MC_HOST" >> $ETC_DIR/cluster.properties
+   echo "mc.http.port=$NEW_MC_HTTP_PORT" >> $ETC_DIR/cluster.properties
+   echo "mc.https.port=$NEW_MC_HTTPS_PORT" >> $ETC_DIR/cluster.properties
+   echo "mc.https.enabled=false" >> $ETC_DIR/cluster.properties
+   echo "mc.jmx.port=$NEW_MC_JMX_PORT" >> $ETC_DIR/cluster.properties
+   echo "mc.jmx.rmi.port=$NEW_MC_JMX_RMI_PORT" >> $ETC_DIR/cluster.properties
+   echo "" >> $ETC_DIR/cluster.properties
    
    # JMX Manager (Pulse)
    echo "# JMX Manager port numbers" >> $ETC_DIR/cluster.properties
@@ -613,6 +632,17 @@ if [ "$VM_ENABLED" == "true" ]; then
       echo "WARNING: VM locator host\(s\) undefined. Configuring with this host."
       VM_LOCATOR_HOSTS=`hostname`
    fi
+
+   if [ "$MC" == "" ]; then
+      # Extract the first host from the VM host list
+      VM_MC_HOSTS=${VM_HOSTS%%,*}
+   else
+      VM_MC_HOSTS=$MC
+   fi
+   if [ "$VM_MC_HOSTS" == "" ]; then
+      echo "WARNING: VM management center (mc) host\(s\) undefined. Configuring with this host."
+      VM_MC_HOSTS=`hostname`
+   fi
    
    # PadoWeb
    if [ "$PADOWEB" == "" ]; then
@@ -634,6 +664,7 @@ else
    VM_LOCATOR_HOSTS=`hostname`
    VM_PADOWEB_HOSTS=`hostname`
    VM_HOSTS=`hostname`
+   VM_MC_HOSTS=`hostname`
 fi
 
 # Collect all clusters
@@ -669,6 +700,11 @@ if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "
    NEW_JMX_MANAGER_START_PORT=$DEFAULT_JMX_MANAGER_START_PORT
    NEW_PADOWEB_HTTP_PORT=$DEFAULT_PADOWEB_HTTP_PORT
    NEW_PADOWEB_HTTPS_PORT=$DEFAULT_PADOWEB_HTTPS_PORT
+   NEW_MC_HTTP_PORT=$DEFAULT_MC_HTTP_PORT
+   NEW_MC_HTTPS_PORT=$DEFAULT_MC_HTTPS_PORT
+   NEW_MC_HTTPS_ENABLED=$DEFAULT_MC_HTTPS_ENABLED
+   NEW_MC_JMX_PORT=$DEFAULT_MC_JMX_PORT
+   NEW_MC_JMX_RMI_PORT=$DEFAULT_MC_JMX_RMI_PORT
 else
    NEW_LOCATOR_START_PORT=$PORT_ARG
    let PORT_DIFF=$NEW_LOCATOR_START_PORT-DEFAULT_LOCATOR_START_PORT
@@ -684,6 +720,10 @@ else
    let NEW_JMX_MANAGER_START_PORT=DEFAULT_JMX_MANAGER_START_PORT+PORT_DIFF
    let NEW_PADOWEB_HTTP_PORT=DEFAULT_PADOWEB_HTTP_PORT+PORT_DIFF
    let NEW_PADOWEB_HTTPS_PORT=DEFAULT_PADOWEB_HTTPS_PORT+PORT_DIFF
+   let NEW_MC_HTTP_PORT=DEFAULT_MC_HTTP_PORT+PORT_DIFF
+   let NEW_MC_HTTPS_PORT=DEFAULT_MC_HTTPS_PORT+PORT_DIFF
+   let NEW_MC_JMX_PORT=DEFAULT_MC_JMX_PORT+PORT_DIFF
+   let NEW_MC_JMX_RMI_PORT=DEFAULT_MC_JMX_RMI_PORT+PORT_DIFF
 fi
 
 # Create the cluster sub-directories and files.
@@ -719,6 +759,7 @@ if [ "$VM_ENABLED" == "true" ]; then
    if [ "POD" == "local" ]; then
       POD_TYPE="local"
    fi
+   MC_HOST=$VM_MC_HOSTS
    PADOWEB_HOST=$VM_PADOWEB_HOSTS
 elif [ "$POD" == "local" ]; then
    LOCATOR_1=`getLocatorName 1`
@@ -731,6 +772,7 @@ elif [ "$POD" == "local" ]; then
    mkdir -p $MEMBER_1_DIR
    mkdir -p $MEMBER_2_DIR
    POD_TYPE="local" 
+   MC_HOST="localhost"
    PADOWEB_HOST="localhost"
 fi
 
@@ -773,6 +815,7 @@ if [ "$POD" != "local" ]; then
       else
          NODE_NAME_PRIMARY="localhost"
       fi
+      MC_HOST=$NODE_NAME_PRIMARY
       PADOWEB_HOST=$NODE_NAME_PRIMARY
 
       for i in $(seq 1 $NODE_COUNT); do
@@ -816,6 +859,7 @@ if [ "$POD" != "local" ]; then
       BASE_PRIVATE_IP_LAST_OCTET=$IP_LAST_OCTET
       BASE_PRIVATE_IP=${BASE_PRIVATE_IP_FIRST_THREE_OCTETS}.${BASE_PRIVATE_IP_LAST_OCTET}
       NODE_NAME_PRIMARY=${BASE_PRIVATE_IP}
+      MC_HOST=$NODE_NAME_PRIMARY
       PADOWEB_HOSTS=$NODE_NAME_PRIMARY
       for i in $(seq 1 $NODE_COUNT); do
          let NODE_OCTET=i+BASE_PRIVATE_IP_LAST_OCTET

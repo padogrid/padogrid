@@ -4234,7 +4234,10 @@ function getCurrentProductVersions
    fi
    __DERBY_VERSION=${DERBY_HOME#*db-derby-}
    __JAVA_VERSION=$JAVA_VERSION
-   __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
+   __GEMFIRE_VERSION=${GEMFIRE_HOME#*vmware-gemfire-}
+   if [ "$__GEMFIRE_VERSION" == "" ]; then
+      __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
+   fi
    __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
    __GRAFANA_VERSION=${GRAFANA_HOME#*grafana-}
    __HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_HOME##*hazelcast-desktop_}
@@ -4612,6 +4615,27 @@ function isPadoCluster
    fi
    local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
    if [ -f "$__CLUSTER_DIR/bin_sh/import_csv" ]; then
+      echo "true" 
+   else
+      echo "false" 
+   fi
+}
+
+#
+# Returns "true" if the specified cluster is a Geode cluster; "false", otherwise.
+#
+# @required PADOGRID_WORKSPACE Current PadoGrid workspace path.
+# @param    clusterName        Optional cluster name. If not specified, then it
+#                              assumes the current cluster.
+#
+function isGeodeCluster
+{
+   local __CLUSTER="$1"
+   if [ "$__CLUSTER" == "" ]; then
+      __CLUSTER=$CLUSTER
+   fi
+   local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
+   if [ -f "$__CLUSTER_DIR/etc/cache.xml" ]; then
       echo "true" 
    else
       echo "false" 

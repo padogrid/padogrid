@@ -443,3 +443,38 @@ function show_recovery
       fi
    fi
 }
+
+#
+# Returns the management console PID if it is running.
+# @param mcName         Unique management console name
+# @param workspaceName  Workspace name
+# @param rweName        RWE name
+#
+function getMcPid
+{
+   __MC=$1
+   __WORKSPACE=$2
+   __RWE=$3
+
+   if [ "$__RWE" == "" ]; then
+      # Use eval to handle commands with spaces
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep padogrid.hazelcast.mc.name=$__MC | grep "padogrid.workspace=$__WORKSPACE " | grep -v grep | awk '{print $(NF-1)}')"
+      else
+         local mcs="$(ps -wweo pid,comm,args | grep java | grep padogrid.gemfire.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
+      fi
+   else
+      # Use eval to handle commands with spaces
+      if [[ "$OS_NAME" == "CYGWIN"* ]]; then
+         local mcs="$(WMIC path win32_process get Caption,Processid,Commandline | grep java | grep padogrid.gemfire.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $(NF-1)}')"
+      else
+         local mcs="$(ps -wweo pid,comm,args | grep java | grep padogrid.gemfire.mc.name=$__MC | grep padogrid.workspace=$__WORKSPACE | grep padogrid.rwe=$__RWE | grep -v grep | awk '{print $1}')"
+      fi
+   fi
+   spids=""
+   for j in $mcs; do
+      spids="$j $spids"
+   done
+   spids=`trimString $spids`
+   echo $spids
+}

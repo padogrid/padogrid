@@ -99,9 +99,24 @@ DEFAULT_CLUSTER="$DEFAULT_GEODE_CLUSTER"
 DEFAULT_LOCATOR_MIN_HEAP_SIZE=512m
 DEFAULT_LOCATOR_MAX_HEAP_SIZE=512m
 
+#
+# Enable/disable Management Center HTTPS
+#
+DEFAULT_MC_HTTPS_ENABLED=false
+
 # ----------------------------------------------------------------------------------------------------
 # NON-CORE ENVIROMENT VARIABLES:
 # ----------------------------------------------------------------------------------------------------
+#
+# Default GemFire Management Console host and ports. These values are initially set
+# in $ETC_DIR/cluster.properties when a new cluster is created using the 'create_cluster' 
+# command. You can change them later in the cluster.properties file.
+#
+DEFAULT_MC_HOST=localhost
+DEFAULT_MC_HTTP_PORT=7070
+DEFAULT_MC_HTTPS_PORT=443
+DEFAULT_MC_JMX_PORT=10001
+DEFAULT_MC_JMX_RMI_PORT=10051
 
 #
 # Default locator TCP start port. The value of ($LOCATOR_NUM-1) is added to the start port number to

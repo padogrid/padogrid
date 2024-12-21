@@ -433,7 +433,7 @@ __padogrid_complete()
          determineClusterProduct $cluster
          case "$PRODUCT" in
          geode)
-            type_list="data gc locator";;
+            type_list="data gc locator mc";;
          hazelcast)
             type_list="data gc diag mc";;
          snappydata)
@@ -452,6 +452,10 @@ __padogrid_complete()
          PRODUCT=$__product
          CLUSTER_TYPE=$__cluster_type
       fi
+      ;;
+
+   -mc)
+      type_list="$(hostname)"
       ;;
 
    -num)
@@ -1220,7 +1224,7 @@ __command_complete()
          determineClusterProduct $cluster
          case "$PRODUCT" in
          geode)
-            type_list="data gc locator";;
+            type_list="data gc locator mc";;
          hazelcast)
             type_list="data gc diag mc";;
          snappydata)
@@ -1240,6 +1244,9 @@ __command_complete()
          CLUSTER_TYPE=$__cluster_type
       fi
      ;;
+   -mc)
+      type_list="$(hostname)"
+      ;;
    -num)
       type_list="1 2 3 4 5 6 7 8 9"
      ;;
