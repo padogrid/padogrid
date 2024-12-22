@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2025 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+# Dashboard folder name in Grafana. The output file should be imported to this folder.
+FOLDER_NAME="GemFireTemplates"
+OUTPUT_DIR="$APP_DIR/templates/$FOLDER_NAME"
+
+# The TemplateCategoryTables.json file is required.
+TEMPLATE_FILE="$OUTPUT_DIR/Template Category Tables.json"
+# The GemFireCategoryTables.json file is the generated file to be imported to Grafana.
+OUTPUT_FILE="$OUTPUT_DIR/GemFire Category Tables.json"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Generate a GemFire stats dashboard file by collecting all GemFire stats that have the label 'Category' from Prometheus
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESCRIPTION
+   Generates the following dashboard file,
+
+   $OUTPUT_FILE
+
+   that contains table panels capturing all GemFire statistics available from Prometheus.
+
+   Once the file is generated, move its folder to the following directory 
+
+   $DASHBOARDS_DIR
+
+   and execute ./import_folder -folder $FOLDER_NAME to import it into Grafana.
+
+DEFAULT
+   ./$EXECUTABLE
+
+SEE ALSO
+   generate_category_tables
+
+EOF
+exit
+fi
+
+if [ ! -d "$OUTPUT_DIR" ]; then
+   mkdir -p "$OUTPUT_DIR"
+fi
+
+# The staging file is a temporary file containing interim results used
+# to build the output contents.
+STAGING_FILE="/tmp/$EXECUTABLE-$(date +%s).json"
+
+echo "Please wait. This takes about a minute..."
+
+# Empty panels. We'll be creating a new list.
+cat "$TEMPLATE_FILE" | jq '.  
+      | .dashboard.title="GemFire Category Tables" 
+      | .dashboard.uid="db7ee8c2-12cf-4d39-b593-f7c2b8163c76"
+      | .dashboard.panels = []' > "$OUTPUT_FILE"
+
+# Build a complete Category list
+RESOURCE_LIST=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP" | sed -e 's/^.*category="//' -e 's/".*//' -e 's/gemfire_.*//' | sort | uniq)
+
+# Create panel template to be used to add category panels. Each panel
+# contains a table displaying a set of GemFire Stats metrics grouped by category.
+TEMPLATE_PANEL=$(cat "$TEMPLATE_FILE" | jq ".  | .dashboard.panels[-1]")
+TEMPLATE_PANEL=$(echo $TEMPLATE_PANEL | jq ". | .targets |= []")
+
+for RESOURCE in $RESOURCE_LIST; do
+   TARGETS='[]'
+   METRICS=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP"| grep $RESOURCE | sed 's/{.*$//' | sort |uniq)
+   for METRIC in $METRICS; do
+      REFID=$(echo $METRIC | sed "s/gemfire_//")
+      TARGETS=$(echo $TARGETS | jq '.[. | length] |= . + 
+         {
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${DataSource}"
+            },
+            "editorMode": "code",
+            "exemplar": false,
+            "expr": "METRIC{$ClusterFilterLabel=\"$Cluster\", category=\"CATEGORY\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "REFID"
+       }
+       ' |  sed -e "s/METRIC/$METRIC/" -e "s/CATEGORY/$RESOURCE/" -e "s/REFID/$REFID/")
+
+   done
+   PANEL=$TEMPLATE_PANEL
+   PANEL=$(echo $PANEL | jq ".targets |= $TARGETS
+      | .title=\"$RESOURCE\"
+      | .description=\"\$Cluster: $RESOURCE\"")
+   
+   # Staging is necessary due to the large content size
+   cp "$OUTPUT_FILE" "$STAGING_FILE"
+   cat "$STAGING_FILE" | jq ".  | .dashboard.panels[.dashboard.panels | length] |= . + $PANEL" > "$OUTPUT_FILE"
+done
+
+# Remove the temporary staging files
+if [ -f "$STAGING_FILE" ]; then
+   rm "$STAGING_FILE"
+fi
+
+echo ""
+echo "Generated: $OUTPUT_FILE"
+echo "Move this file to ../etc/dashboards/$FOLDER_NAME/ and run ./import_folder -folder $FOLDER_NAME"
+echo ""
