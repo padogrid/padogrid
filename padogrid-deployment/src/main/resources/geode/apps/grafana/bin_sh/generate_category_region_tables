@@ -4,8 +4,7 @@
 # Copyright (c) 2020-2025 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# you may not use this file except in compliance with the License.  # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -25,10 +24,10 @@ EXECUTABLE="`basename $0`"
 FOLDER_NAME="GemFireTemplates"
 OUTPUT_DIR="$APP_DIR/templates/$FOLDER_NAME"
 
-# The TemplateCategoryTables.json file is required.
-TEMPLATE_FILE="$OUTPUT_DIR/Template Category Tables.json"
-# The GemFireCategoryTables.json file is the generated file to be imported to Grafana.
-OUTPUT_FILE="$OUTPUT_DIR/GemFire Category Tables.json"
+# The template file
+TEMPLATE_FILE="$OUTPUT_DIR/Template Category Region Tables.json"
+# The file to generate
+OUTPUT_FILE="$OUTPUT_DIR/GemFire Category Region Tables.json"
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -37,7 +36,7 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   ./$EXECUTABLE - Generate a GemFire stats dashboard file by collecting all GemFire stats that have the label 'Category' from Prometheus
+   ./$EXECUTABLE - Generate a GemFire stats dashboard file by collecting region stats
 
 SYNOPSIS
    ./$EXECUTABLE [-?]
@@ -59,7 +58,7 @@ DEFAULT
    ./$EXECUTABLE
 
 SEE ALSO
-   generate_category_tables
+   generate_category_tables, generate_noncategory_tables
 
 EOF
 exit
@@ -73,16 +72,14 @@ fi
 # to build the output contents.
 STAGING_FILE="/tmp/$EXECUTABLE-$(date +%s).json"
 
-echo "Please wait. This takes about a minute..."
-
 # Empty panels. We'll be creating a new list.
 cat "$TEMPLATE_FILE" | jq '.  
-      | .dashboard.title="GemFire Category Tables" 
-      | .dashboard.uid="db7ee8c2-12cf-4d39-b593-f7c2b8163c76"
+      | .dashboard.title="GemFire Category Region Tables" 
+      | .dashboard.uid="ad2e81ff-f283-401e-b693-93c3ba7c59ca"
       | .dashboard.panels = []' > "$OUTPUT_FILE"
 
-# Build a complete Category list
-RESOURCE_LIST=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP" | sed -e 's/^.*category="//' -e 's/".*//' -e 's/gemfire_.*//' | sort | uniq)
+# Categories with region metrics
+RESOURCE_LIST="DiskRegionStatistics LeafDiskStoreStatistics McPartitionedRegionStats PartitionedRegionStats"
 
 # Create panel template to be used to add category panels. Each panel
 # contains a table displaying a set of GemFire Stats metrics grouped by category.
@@ -102,7 +99,7 @@ for RESOURCE in $RESOURCE_LIST; do
             },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "METRIC{$ClusterFilterLabel=\"$Cluster\", category=\"CATEGORY\"}",
+            "expr": "max (METRIC{$ClusterFilterLabel=\"$Cluster\", category=\"CATEGORY\"}) by (exported_instance)",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -115,8 +112,8 @@ for RESOURCE in $RESOURCE_LIST; do
    done
    PANEL=$TEMPLATE_PANEL
    PANEL=$(echo $PANEL | jq ".targets |= $TARGETS
-      | .title=\"$RESOURCE\"
-      | .description=\"\$Cluster: $RESOURCE\"")
+      | .title=\"$RESOURCE (Max)\"
+      | .description=\"\$Cluster: $RESOURCE - max values of all member stats per region\"")
    
    # Staging is necessary due to the large content size
    cp "$OUTPUT_FILE" "$STAGING_FILE"

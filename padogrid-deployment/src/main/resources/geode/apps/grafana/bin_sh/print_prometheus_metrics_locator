@@ -43,13 +43,13 @@ EOF
 exit
 fi
 
-RESOURCE_LIST=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP" | sed -e 's/^.*category="//' -e 's/".*//' -e 's/gemfire_.*//' | sort | uniq)
+RESOURCE_LIST=$(curl -sG http://padogrid:8191/metrics grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP" | sed -e 's/^.*category="//' -e 's/".*//' -e 's/gemfire_.*//' | sort | uniq)
 
 echo ""
 for RESOURCE in $RESOURCE_LIST; do
    echo $RESOURCE
    echo "------------------------------------------------"
-   curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP"| grep $RESOURCE | sed 's/{.*$//' | sort |uniq
+   curl -sG http://padogrid:8191/metrics |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP"| grep $RESOURCE | sed 's/{.*$//' | sort |uniq
    echo ""
 done
 

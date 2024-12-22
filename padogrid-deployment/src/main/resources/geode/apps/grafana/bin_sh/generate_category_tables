@@ -25,10 +25,14 @@ EXECUTABLE="`basename $0`"
 FOLDER_NAME="GemFireTemplates"
 OUTPUT_DIR="$APP_DIR/templates/$FOLDER_NAME"
 
-# The TemplateCategoryTables.json file is required.
+# The template file
 TEMPLATE_FILE="$OUTPUT_DIR/Template Category Tables.json"
-# The GemFireCategoryTables.json file is the generated file to be imported to Grafana.
+# The file to generate
 OUTPUT_FILE="$OUTPUT_DIR/GemFire Category Tables.json"
+
+# Max values of metrics in each member. These categories typically contains many metrics such
+# as region metrics per member. Since there are
+MAX_CATEGORY_LIST="DiskRegionStatistics McPartitionedRegionStats PartitionedRegionStats"
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -94,6 +98,15 @@ for RESOURCE in $RESOURCE_LIST; do
    METRICS=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP"| grep $RESOURCE | sed 's/{.*$//' | sort |uniq)
    for METRIC in $METRICS; do
       REFID=$(echo $METRIC | sed "s/gemfire_//")
+      if [[ "$MAX_CATEGORY_LIST" == *"$RESOURCE"* ]]; then 
+          HEAD="max ("
+          TAIL=") by (instance)"
+          DESCRIPTION=" - max values of all stats per member"
+       else
+          HEAD=""
+          TAIL=""
+          DESCRIPTION=""
+      fi
       TARGETS=$(echo $TARGETS | jq '.[. | length] |= . + 
          {
             "datasource": {
@@ -102,7 +115,7 @@ for RESOURCE in $RESOURCE_LIST; do
             },
             "editorMode": "code",
             "exemplar": false,
-            "expr": "METRIC{$ClusterFilterLabel=\"$Cluster\", category=\"CATEGORY\"}",
+            "expr": "HEAD-METRIC{$ClusterFilterLabel=\"$Cluster\", category=\"CATEGORY\"}-TAIL",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -110,13 +123,13 @@ for RESOURCE in $RESOURCE_LIST; do
             "range": false,
             "refId": "REFID"
        }
-       ' |  sed -e "s/METRIC/$METRIC/" -e "s/CATEGORY/$RESOURCE/" -e "s/REFID/$REFID/")
+       ' |  sed -e "s/HEAD-/$HEAD/" -e "s/-TAIL/$TAIL/" -e "s/METRIC/$METRIC/" -e "s/CATEGORY/$RESOURCE/" -e "s/REFID/$REFID/")
 
    done
    PANEL=$TEMPLATE_PANEL
    PANEL=$(echo $PANEL | jq ".targets |= $TARGETS
       | .title=\"$RESOURCE\"
-      | .description=\"\$Cluster: $RESOURCE\"")
+      | .description=\"\$Cluster: $RESOURCE$DESCRIPTION\"")
    
    # Staging is necessary due to the large content size
    cp "$OUTPUT_FILE" "$STAGING_FILE"

@@ -25,10 +25,10 @@ EXECUTABLE="`basename $0`"
 FOLDER_NAME="GemFireTemplates"
 OUTPUT_DIR="$APP_DIR/templates/$FOLDER_NAME"
 
-# The TemplateCategoryTables.json file is required.
+# The template file
 TEMPLATE_FILE="$OUTPUT_DIR/Template Category Tables.json"
-# The GemFireCategoryTables.json file is the generated file to be imported to Grafana.
-OUTPUT_FILE="$OUTPUT_DIR/GemFire Category Tables.json"
+# The file to generate
+OUTPUT_FILE="$OUTPUT_DIR/GemFire NonCategory Tables.json"
 
 if [ "$HELP" == "true" ]; then
 cat <<EOF
@@ -37,7 +37,7 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   ./$EXECUTABLE - Generate a GemFire stats dashboard file by collecting all GemFire stats that have the label 'Category' from Prometheus
+   ./$EXECUTABLE - Generate a GemFire stats dashboard file by collecting all GemFire stats that do not have the label 'Category' from Prometheus
 
 SYNOPSIS
    ./$EXECUTABLE [-?]
@@ -73,16 +73,14 @@ fi
 # to build the output contents.
 STAGING_FILE="/tmp/$EXECUTABLE-$(date +%s).json"
 
-echo "Please wait. This takes about a minute..."
-
 # Empty panels. We'll be creating a new list.
 cat "$TEMPLATE_FILE" | jq '.  
-      | .dashboard.title="GemFire Category Tables" 
-      | .dashboard.uid="db7ee8c2-12cf-4d39-b593-f7c2b8163c76"
+      | .dashboard.title="GemFire NonCategory Tables" 
+      | .dashboard.uid="96a048d8-9517-41d2-aff3-824fc43c2102"
       | .dashboard.panels = []' > "$OUTPUT_FILE"
 
-# Build a complete Category list
-RESOURCE_LIST=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP" | sed -e 's/^.*category="//' -e 's/".*//' -e 's/gemfire_.*//' | sort | uniq)
+# Build a complete non-Category list
+RESOURCE_LIST=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP" | grep -v "category=" | sed -e 's/{.*//' | sort | uniq | sed -e 's/gemfire_//' -e 's/_.*//' | uniq )
 
 # Create panel template to be used to add category panels. Each panel
 # contains a table displaying a set of GemFire Stats metrics grouped by category.
@@ -91,27 +89,63 @@ TEMPLATE_PANEL=$(echo $TEMPLATE_PANEL | jq ". | .targets |= []")
 
 for RESOURCE in $RESOURCE_LIST; do
    TARGETS='[]'
-   METRICS=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP"| grep $RESOURCE | sed 's/{.*$//' | sort |uniq)
+   METRICS=$(curl -sG $PROMETHEUS_URL/federate -d 'match[]={__name__!=""}' |grep gemfire_ | grep -v "# TYPE" | grep -v "# HELP" | grep -v "category=" | sed -e 's/{.*//' | grep $RESOURCE | sort | uniq)
    for METRIC in $METRICS; do
       REFID=$(echo $METRIC | sed "s/gemfire_//")
-      TARGETS=$(echo $TARGETS | jq '.[. | length] |= . + 
-         {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${DataSource}"
-            },
-            "editorMode": "code",
-            "exemplar": false,
-            "expr": "METRIC{$ClusterFilterLabel=\"$Cluster\", category=\"CATEGORY\"}",
-            "format": "table",
-            "hide": false,
-            "instant": true,
-            "legendFormat": "__auto",
-            "range": false,
-            "refId": "REFID"
-       }
-       ' |  sed -e "s/METRIC/$METRIC/" -e "s/CATEGORY/$RESOURCE/" -e "s/REFID/$REFID/")
-
+      if [[ "$REFID" == "cache_gets_seconds"* ]]; then
+         TARGETS=$(echo $TARGETS | jq '.[. | length] |= . + 
+            {
+               "datasource": {
+                 "type": "prometheus",
+                 "uid": "${DataSource}"
+               },
+               "editorMode": "code",
+               "exemplar": false,
+               "expr": "METRIC{$ClusterFilterLabel=\"$Cluster\",result=\"hit\"}",
+               "format": "table",
+               "hide": false,
+               "instant": true,
+               "legendFormat": "__auto",
+               "range": false,
+               "refId": "REFID"
+          }
+          ' |  sed -e "s/METRIC/$METRIC/" -e "s/REFID/$REFID (hit)/")
+         TARGETS=$(echo $TARGETS | jq '.[. | length] |= . + 
+            {
+               "datasource": {
+                 "type": "prometheus",
+                 "uid": "${DataSource}"
+               },
+               "editorMode": "code",
+               "exemplar": false,
+               "expr": "METRIC{$ClusterFilterLabel=\"$Cluster\",result=\"miss\"}",
+               "format": "table",
+               "hide": false,
+               "instant": true,
+               "legendFormat": "__auto",
+               "range": false,
+               "refId": "REFID"
+          }
+          ' |  sed -e "s/METRIC/$METRIC/" -e "s/REFID/$REFID (miss)/")
+       else
+         TARGETS=$(echo $TARGETS | jq '.[. | length] |= . + 
+            {
+               "datasource": {
+                 "type": "prometheus",
+                 "uid": "${DataSource}"
+               },
+               "editorMode": "code",
+               "exemplar": false,
+               "expr": "METRIC{$ClusterFilterLabel=\"$Cluster\"}",
+               "format": "table",
+               "hide": false,
+               "instant": true,
+               "legendFormat": "__auto",
+               "range": false,
+               "refId": "REFID"
+          }
+          ' |  sed -e "s/METRIC/$METRIC/" -e "s/REFID/$REFID/")
+      fi
    done
    PANEL=$TEMPLATE_PANEL
    PANEL=$(echo $PANEL | jq ".targets |= $TARGETS
