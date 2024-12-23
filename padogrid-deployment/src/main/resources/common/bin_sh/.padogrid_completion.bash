@@ -304,11 +304,11 @@ __padogrid_complete()
       elif [ "$command" == "uninstall_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
-         type_list="$__DOWNLOADABLE_PRODUCTS gemfire"
+         type_list="$__DOWNLOADABLE_PRODUCTS gemfire gemfire-mc"
       elif [ "$command" == "update_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
-         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java"
+         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire gemfire-mc java"
       elif [ $len -gt 3 ]; then
          is_path="true"
       fi
@@ -1085,11 +1085,11 @@ __command_complete()
       elif [ "$command" == "uninstall_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
-         type_list="$__DOWNLOADABLE_PRODUCTS gemfire"
+         type_list="$__DOWNLOADABLE_PRODUCTS gemfire gemfire-mc"
       elif [ "$command" == "update_padogrid" ]; then
          # Replace grafana-enterprise and granfana-oss with grafana
          local __DOWNLOADABLE_PRODUCTS=$(echo $DOWNLOADABLE_PRODUCTS | sed -e 's/grafana-enterprise//' -e 's/grafana-oss/grafana/')
-         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire java"
+         type_list="$__DOWNLOADABLE_PRODUCTS coherence gemfire gemfire-mc java"
       else
          is_path="true"
       fi

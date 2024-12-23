@@ -3760,6 +3760,7 @@ function sortVersionList
 #    PADO_VERSIONS
 #    COHERENCE_VERSIONS
 #    GEMFIRE_VERSIONS
+#    GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS
 #    GEODE_VERSIONS
 #    GRAFANA_ENTERPRISE_VERSIONS
 #    GRAFANA_OSS_VERSIONS
@@ -3807,6 +3808,7 @@ function determineInstalledProductVersions
    PADOWEB_VERSIONS=""
    COHERENCE_VERSIONS=""
    GEMFIRE_VERSIONS=""
+   GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS=""
    GEODE_VERSIONS=""
    GRAFANA_VERSIONS=""
    HADOOP_VERSIONS=""
@@ -3913,6 +3915,16 @@ function determineInstalledProductVersions
             __versions="$__versions $__version "
          done
          GEMFIRE_VERSIONS=$(sortVersionList "$__versions")
+      fi
+
+      # GemFire Management Console
+      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "gemfire-mc" ]; then
+         __versions=""
+         for i in gemfire-management-console-*; do
+            __version=${i#gemfire-management-console-}
+            __versions="$__versions $__version "
+         done
+         GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS=$(sortVersionList "$__versions")
       fi
 
       # Geode
@@ -4331,6 +4343,7 @@ function getInstalledProductVersions
     padodesktop ) VERSIONS=("${PADODESKTOP_VERSIONS[@]}");;
     padoweb ) VERSIONS=("${PADOWEB_VERSIONS[@]}");;
     gemfire ) VERSIONS=("${GEMFIRE_VERSIONS[@]}");;
+    gemfire-mc ) VERSIONS=("${GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS[@]}");;
     geode ) VERSIONS=("${GEODE_VERSIONS[@]}");;
     hazelcast-enterprise ) VERSIONS=("${HAZELCAST_ENTERPRISE_VERSIONS[@]}");;
     hazelcast-oss ) VERSIONS=("${HAZELCAST_OSS_VERSIONS[@]}");;
