@@ -13,6 +13,7 @@ https://github.com/padogrid
 - Added the missing recovery files used by GemFire tools. These files were inadvently left out in the distribution.
 - Added `-node-` to GemFire member names for the tools commands to isolate the member log files. Some of the tools commands in the previous releases did not work due to this issue.
 
+
 ---
 
 ## Version 1.0.0
