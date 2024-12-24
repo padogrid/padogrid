@@ -232,6 +232,7 @@ if [ "$VM_ENABLED" == "true" ]; then
 
    HOST_NAME=$REMOTE
    BIND_ADDRESS=`getClusterProperty "vm.${HOST_NAME}.bindAddress"`
+   HTTP_BIND_ADDRESS=`getClusterProperty "vm.${HOST_NAME}.http.bindAddress"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "vm.${HOST_NAME}.hostnameForClients"`
    VM_LOCATOR_HOSTS=`getClusterProperty "vm.locator.hosts"`
    if [ "$VM_LOCATOR_HOSTS" == "" ]; then
@@ -248,8 +249,10 @@ if [ "$VM_ENABLED" == "true" ]; then
    for VM_HOST in $__VM_LOCATOR_HOSTS; do
       if [ "$LOCATOR_TCP_LIST" == "" ]; then
          LOCATOR_TCP_LIST="$VM_HOST[$LOCATOR_START_PORT]"
+         LOCATOR_HTTP_LIST="$VM_HOST:$HTTP_START_PORT"
       else
          LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$VM_HOST[$LOCATOR_START_PORT]"
+         LOCATOR_HTTP_LIST="$LOCATOR_HTTP_LIST,$VM_HOST:$HTTP_START_PORT"
       fi
    done
 
@@ -257,6 +260,7 @@ elif [ "$POD" == "local" ]; then
 
    HOST_NAME=`hostname`
    BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HTTP_BIND_ADDRESS=`getClusterProperty "cluster.http.bindAddress" "$HOST_NAME"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
    LOCATOR_PREFIX=`getLocatorPrefix`
    pushd $RUN_DIR > /dev/null 2>&1
@@ -266,10 +270,13 @@ elif [ "$POD" == "local" ]; then
          __LOCATOR_NUM=${__LOCATOR##$LOCATOR_PREFIX}
          __LOCATOR_NUM=$(trimLeadingZero $__LOCATOR_NUM)
          let __LOCATOR_PORT=LOCATOR_START_PORT+__LOCATOR_NUM-1
+         let __HTTP_PORT=HTTP_START_PORT+__LOCATOR_NUM-1
          if [ "$LOCATOR_TCP_LIST" == "" ]; then
             LOCATOR_TCP_LIST="$BIND_ADDRESS[$__LOCATOR_PORT]"
+            LOCATOR_HTTP_LIST="$HTTP_BIND_ADDRESS:$__HTTP_PORT"
          else
             LOCATOR_TCP_LIST="$LOCATOR_TCP_LIST,$BIND_ADDRESS[$__LOCATOR_PORT]"
+            LOCATOR_HTTP_LIST="$LOCATOR_HTTP_LIST,$HTTP_BIND_ADDRESS:$__HTTP_PORT"
          fi
       fi
    done
@@ -278,6 +285,7 @@ elif [ "$POD" == "local" ]; then
 else
 
    BIND_ADDRESS=`getClusterProperty "cluster.bindAddress" "$HOST_NAME"`
+   HTTP_BIND_ADDRESS=`getClusterProperty "cluster.http.bindAddress" "$HOST_NAME"`
    HOSTNAME_FOR_CLIENTS=`getClusterProperty "cluster.hostnameForClients" "$HOST_NAME"`
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    NODE_NAME_PREFIX=$PRIMARY_NODE_NAME
@@ -370,14 +378,21 @@ JAVA_OPTS="$JAVA_OPTS $LOCATOR_PROPERTIES $SHUTDOWN_HOOK_PROPERTIES $JMX_PARAMET
 JAVA_OPTS="$JAVA_OPTS --J=-Xms${MIN_HEAP_SIZE} --J=-Xmx${MAX_HEAP_SIZE}"
 JAVA_OPTS="$JAVA_OPTS ${DEBUG}"
 
-# Set Pulse
+# Set Pulse/http-service-port JMX_MANAGER_HTTP_START_PORT is deprecated since GemFire 10.x.
+HTTP_START_PORT=`getClusterProperty "locator.http.startPort"`
 JMX_MANAGER_HTTP_START_PORT=`getClusterProperty "locator.jmx.manager.http.startPort" $DEFAULT_JMX_MANAGER_HTTP_START_PORT`
+if [ "$HTTP_START_PORT" == "" ]; then
+   HTTP_START_PORT=$JMX_MANAGER_HTTP_START_PORT
+fi
+if [ "$HTTP_START_PORT" == "" ]; then
+   HTTP_START_PORT=$DEFAULT_LOCATOR_HTTP_START_PORT
+fi
 JMX_MANAGER_START_PORT=`getClusterProperty "locator.jmx.manager.startPort" $DEFAULT_JMX_MANAGER_START_PORT`
 if [ "$POD" == "local" ]; then
-   let JMX_MANAGER_HTTP_PORT=JMX_MANAGER_HTTP_START_PORT+LOCATOR_NUMBER-1
+   let HTTP_PORT=HTTP_START_PORT+LOCATOR_NUMBER-1
    let JMX_MANAGER_PORT=JMX_MANAGER_START_PORT+LOCATOR_NUMBER-1
 else
-   JMX_MANAGER_HTTP_PORT=$JMX_MANAGER_HTTP_START_PORT
+   HTTP_PORT=$HTTP_START_PORT
    JMX_MANAGER_PORT=$JMX_MANAGER_START_PORT
 fi
 
@@ -445,11 +460,24 @@ fi
 export LOG_DIR=$__LOG_DIR
 
 GEMFIRE_PROPERTIES="--J=-Dgemfire.jmx-manager=true \
-   --J=-Dgemfire.jmx-manager-port=$JMX_MANAGER_PORT \
-   --J=-Dgemfire.jmx-manager-http-port=$JMX_MANAGER_HTTP_PORT"
+   --J=-Dgemfire.jmx-manager-port=$JMX_MANAGER_PORT"
+if [ $PRODUCT_MAJOR_VERSION -ge 10 ]; then
+   GEMFIRE_PROPERTIES="$GEMFIRE_PROPERTIES --J=-Dgemfire.http-service-port=$HTTP_PORT"
+   if [ "$HTTP_BIND_ADDRESS" != "" ]; then
+      GEMFIRE_PROPERTIES="$GEMFIRE_PROPERTIES --J=-Dgemfire.http-service-bind-address=$HTTP_BIND_ADDRESS"
+   fi
+else
+   GEMFIRE_PROPERTIES="$GEMFIRE_PROPERTIES --J=-Dgemfire.jmx-manager-http-port=$HTTP_PORT"
+fi
+
 JAVA_OPTS="$JAVA_OPTS $GEMFIRE_PROPERTIES"
 
-PULSE_PROPERTIES="--J=-Dpulse.Log-File-Name=pulse --J=-Dpulse.Log-File-Location=."
+
+if [ $PRODUCT_MAJOR_VERSION -ge 10 ]; then
+   PULSE_PROPERTIES=""
+else
+   PULSE_PROPERTIES="--J=-Dpulse.Log-File-Name=pulse --J=-Dpulse.Log-File-Location=."
+fi
 JAVA_OPTS="$JAVA_OPTS $PULSE_PROPERTIES"
 JAVA_OPTS="--J=-Dpado.vm.id=${LOCATOR} \
    --J=-Dpadogrid.workspace=$WORKSPACE \
@@ -502,8 +530,11 @@ else
    fi
 fi
 
+# HTTP_URL
+HTTP_URL="http://$HTTP_BIND_ADDRESS:$HTTP_PORT"
+
 # PULSE_URL
-PULSE_URL="http://$HOSTNAME_FOR_CLIENTS:$JMX_MANAGER_HTTP_PORT/pulse"
+PULSE_URL="http://$HOSTNAME_FOR_CLIENTS:$HTTP_PORT/pulse"
 
 # JMX_URL
 JMX_URL="service:jmx:rmi:///jndi/rmi://padomac.local:$JMX_PORT/jmxrmi"
@@ -528,7 +559,11 @@ echo "    LOCATOR_PORT: $LOCATOR_PORT"
 echo "      DEBUG_PORT: $DEBUG_PORT"
 echo " PROMETHEUS_PORT: $PROMETHEUS_PORT"
 echo "        JMX_PORT: $JMX_PORT"
+if [ $PRODUCT_MAJOR_VERSION -ge 10 ]; then
+echo "    HTTP SERVICE: $HTTP_URL"
+else
 echo "       PULSE_URL: $PULSE_URL"
+fi
 echo "JMX_MANAGER_PORT: $JMX_MANAGER_PORT"
 if [ "$LOCATOR_JMX_ENABLED" == "true" ]; then
 echo "         JMX_URL: $JMX_URL"

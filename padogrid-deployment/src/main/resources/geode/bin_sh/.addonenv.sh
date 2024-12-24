@@ -161,7 +161,9 @@ DEFAULT_PADOWEB_CONTEXT_PATH="/"
 # when a new cluster is created using the 'create_cluster' command. You can change them later
 # in the cluster.properties file.
 #
+# @deprecated in GemFire 10.x. Use DEFAULT_LOCATOR_HTTP_START_PORT instead.
 DEFAULT_JMX_MANAGER_HTTP_START_PORT=7070
+DEFAULT_LOCATOR_HTTP_START_PORT=7070
 DEFAULT_JMX_MANAGER_START_PORT=9051
 
 #

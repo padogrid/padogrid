@@ -1,6 +1,6 @@
 ## Type 3 Recovery Steps
 
-In Type 3, a quorum is established with only cache servers. The recovery steps are similar to Type 4.
+In Type 3, a quorum is established with cache servers but without locators. The recovery steps are similar to Type 4.
 
 1. Fix network issues if any.
 2. Check each member to see their CPU usage and available system resources.

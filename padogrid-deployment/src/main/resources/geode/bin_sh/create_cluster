@@ -127,7 +127,7 @@ OPTIONS
              number 10336 is specified then the difference of 2 (10336-$DEFAULT_LOCATOR_START_PORT)
              is added to the member's default port number of $DEFAULT_MEMBER_START_PORT
              to obtain the port number 40406 for the member's first port number.
-             Similarly, the JMX Manager's first HTTP port number would be 7072 ($DEFAULT_JMX_MANAGER_HTTP_START_PORT+2).
+             Similarly, the locator's first HTTP port number would be 7072 ($DEFAULT_LOCATOR_HTTP_START_PORT+2).
 
              This option applies only for a cluster running locally. It is ignored
              for creating non-local pod and VM clusters.
@@ -393,6 +393,7 @@ function writeCluster()
    echo "# the local machine. For VM clusters, each locator and member must include" >> $ETC_DIR/cluster.properties
    echo "# their own properties." >> $ETC_DIR/cluster.properties
    echo "cluster.bindAddress=$BIND_ADDRESS" >> $ETC_DIR/cluster.properties
+   echo "cluster.http.bindAddress=$HTTP_BIND_ADDRESS" >> $ETC_DIR/cluster.properties
    echo "cluster.hostnameForClients=$HOSTNAME_FOR_CLIENTS" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
 
@@ -490,12 +491,18 @@ function writeCluster()
    echo "mc.jmx.rmi.port=$NEW_MC_JMX_RMI_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
    
-   # JMX Manager (Pulse)
-   echo "# JMX Manager port numbers" >> $ETC_DIR/cluster.properties
+   # Locator http-service/JMX Manager (Pulse) Pulse is deprecated since GemFire 10.x.
+if [ $PRODUCT_MAJOR_VERSION -ge 10 ]; then
+   echo "# JMX Manager and http-service start port numbers." >> $ETC_DIR/cluster.properties
+   echo "# To disable http-service, set locator.http.startPort to 0." >> $ETC_DIR/cluster.properties
+   echo "locator.http.startPort=$NEW_LOCATOR_HTTP_START_PORT" >> $ETC_DIR/cluster.properties
+else
+   echo "# JMX Manager start port numbers." >> $ETC_DIR/cluster.properties
    echo "locator.jmx.manager.http.startPort=$NEW_JMX_MANAGER_HTTP_START_PORT" >> $ETC_DIR/cluster.properties
+fi
    echo "locator.jmx.manager.startPort=$NEW_JMX_MANAGER_START_PORT" >> $ETC_DIR/cluster.properties
    echo "" >> $ETC_DIR/cluster.properties
-   
+
    # GC logging
    echo "# GC logging flag. If true then GC information is logged." >> $ETC_DIR/cluster.properties
    echo "gc.log.enabled=$DEFAULT_GC_LOG_ENABLED" >> $ETC_DIR/cluster.properties
@@ -569,6 +576,7 @@ function writeCluster()
             VM_PUBLIC_HOST=$VM_HOST
          fi
          echo "#vm.${VM_HOST}.bindAddress=${VM_HOST}" >> $ETC_DIR/cluster.properties
+         echo "#vm.${VM_HOST}.http.bindAddress=${VM_HOST}" >> $ETC_DIR/cluster.properties
          echo "vm.${VM_HOST}.hostnameForClients=${VM_PUBLIC_HOST}" >> $ETC_DIR/cluster.properties
          echo "vm.${VM_HOST}.redundancyZone=" >> $ETC_DIR/cluster.properties
          echo "" >> $ETC_DIR/cluster.properties
@@ -698,6 +706,7 @@ if [ "$PORT_ARG" == "" ] || [ "$CLUSTER" == "" ] || [ "$POD" != "local" ] || [ "
    NEW_JMX_START_PORT=$DEFAULT_JMX_START_PORT
    NEW_LOCATOR_PROMETHEUS_START_PORT=$DEFAULT_LOCATOR_PROMETHEUS_START_PORT
    NEW_PROMETHEUS_START_PORT=$DEFAULT_PROMETHEUS_START_PORT
+   NEW_LOCATOR_HTTP_START_PORT=$DEFAULT_LOCATOR_HTTP_START_PORT
    NEW_JMX_MANAGER_HTTP_START_PORT=$DEFAULT_JMX_MANAGER_HTTP_START_PORT
    NEW_JMX_MANAGER_START_PORT=$DEFAULT_JMX_MANAGER_START_PORT
    NEW_PADOWEB_HTTP_PORT=$DEFAULT_PADOWEB_HTTP_PORT
@@ -718,6 +727,7 @@ else
    let NEW_PROMETHEUS_START_PORT=DEFAULT_PROMETHEUS_START_PORT+PORT_DIFF
    let NEW_LOCATOR_JMX_START_PORT=DEFAULT_LOCATOR_JMX_START_PORT+PORT_DIFF
    let NEW_JMX_START_PORT=DEFAULT_JMX_START_PORT+PORT_DIFF
+   let NEW_LOCATOR_HTTP_START_PORT=DEFAULT_LOCATOR_HTTP_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_HTTP_START_PORT=DEFAULT_JMX_MANAGER_HTTP_START_PORT+PORT_DIFF
    let NEW_JMX_MANAGER_START_PORT=DEFAULT_JMX_MANAGER_START_PORT+PORT_DIFF
    let NEW_PADOWEB_HTTP_PORT=DEFAULT_PADOWEB_HTTP_PORT+PORT_DIFF
@@ -753,6 +763,7 @@ fi
 # For non-local clusters with remote members, we start with an empty cluster and
 # allow the user to identify the VMs to run the members.
 BIND_ADDRESS="localhost"
+HTTP_BIND_ADDRESS="localhost"
 HOSTNAME_FOR_CLIENTS="localhost"
 if [ "$VM_ENABLED" == "true" ]; then
    MEMBER_1=`getMemberName 1`
@@ -793,6 +804,7 @@ if [ "$POD" != "local" ]; then
    PRIMARY_NODE_NAME=`getPodProperty "node.name.primary" "$DEFAULT_NODE_NAME_PRIMARY"`
    PRIMARY_NODE_LOCAL="${PRIMARY_NODE_NAME}.local"
    BIND_ADDRESS=$PRIMARY_NODE_LOCAL
+   HTTP_BIND_ADDRESS=$PRIMARY_NODE_LOCAL
    HOSTNAME_FOR_CLIENTS=$PRIMARY_NODE_LOCAL
 
    # Create locator run directory
@@ -914,7 +926,11 @@ echo "          MEMBER_START_PORT: $NEW_MEMBER_START_PORT"
 echo "     MEMBER_HTTP_START_PORT: $NEW_MEMBER_HTTP_START_PORT"
 echo "           DEBUG_START_PORT: $NEW_DEBUG_START_PORT"
 echo "             JMX_START_PORT: $NEW_JMX_START_PORT"
+if [ $PRODUCT_MAJOR_VERSION -ge 10 ]; then
+echo "    LOCATOR_HTTP_START_PORT: $NEW_LOCATOR_HTTP_START_PORT"
+else
 echo "JMX_MANAGER_HTTP_START_PORT: $NEW_JMX_MANAGER_HTTP_START_PORT"
+fi
 echo "     JMX_MANAGER_START_PORT: $NEW_JMX_MANAGER_START_PORT"
 echo "      PROMETHEUS_START_PORT: $NEW_PROMETHEUS_START_PORT"
 if [ "$PADO_TYPE" == "pado" ] || [ "$PADO_TYPE" == "padolite" ]; then

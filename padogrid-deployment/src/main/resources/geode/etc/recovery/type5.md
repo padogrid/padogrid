@@ -7,7 +7,7 @@ In Type 5, members are able to communicate with locators but members themselves 
 If there were network issues and they have been resolved:
 
 2.  The cluster should be back to normal. Data loss is not expected.
-3.  Nonetheless, check for data loss and inconsistency, and be prepared to reingest data as needed.
+3.  Regardless, to be safe, first check for data loss and inconsistency and be prepared to reingest data as needed.
 4.  Check client applications.
 
 If there were no network issues:

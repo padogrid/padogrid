@@ -1,6 +1,6 @@
 ## Type 1 Recovery Steps
 
-In Type 1, cache servers are isolated.
+In Type 1, multiple cache servers are isolated.
 
 1. Fix network issues if any.
 2. Check each isolated member's CPU usage and available system resources.
