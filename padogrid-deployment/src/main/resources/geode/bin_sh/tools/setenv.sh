@@ -23,7 +23,7 @@ else
 fi
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
-if [ "$HELP" != "true" ] && [ "$MAN_SPECIFIED" != "true" ]; then
+if [ "$MAN_SPECIFIED" != "true" ]; then
    LOCATOR_FILES="*locator*.log"
    SERVER_FILES="$CLUSTER-node*.log"
    ALL_FILES="*.log"
