@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 1.0.1-SNAPSHOT
 
-### Release Date: 12/24/24
+### Release Date: 12/28/24
 
 - Added support for GemFire `http-service`, which replaces the deprecated property, `jmx-manager-http-port`, in GemFire 10.x.
 - Added support for GemFire Management Console (GFMC). GemFire clusters now include the `start_mc`, `stop_mc`, `show_mc` commands for managing GFMC.
