@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+# Get all folders from the dashbarod dir
+pushd $DASHBOARDS_DIR > /dev/null 2>&1
+__FOLDERS=`ls`
+FOLDERS=""
+for i in $__FOLDERS; do
+   FOLDERS="$FOLDERS $i"
+done
+popd > /dev/null 2>&1
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Import all dashboards in the specified folder to Grafana
+
+SYNOPSIS
+   ./$EXECUTABLE [-folder folder_name] [-datasource datasource_name] [-all] [-?]
+
+DESCRIPTION
+   Imports all dashboards in the specified folder to Grafana.
+
+   For a complete list of folders that can be imported, run the 'list_folders' command
+   or see the following directory:
+
+   $DASHBOARDS_DIR
+
+OPTIONS
+   -datasource datasource_name
+             Creates a Prometheus data source instance with the specified name
+             and the following URL:
+
+                $PROMETHEUS_URL
+             
+             You can change the the URL in the 'setenv.sh' file.
+              
+             Default: $DEFAULT_DATASOURCE
+
+   -folder folder_name
+             Folder name. Default: $DEFAULT_FOLDER
+
+   -all
+             Import all folders.
+
+DEFAULT
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER -datasource $DEFAULT_DATASOURCE
+
+EOF
+exit
+fi
+
+if [ "$(which jupyter 2> /dev/null)" == "" ]; then
+   IS_JQ="false"
+else
+   IS_JQ="true"
+fi
+
+if [ "$FOLDER" != "" ]; then
+   FOLDERS=$FOLDER
+elif [ "$ALL" != "true" ]; then
+   FOLDERS=$DEFAULT_FOLDER
+fi
+if [ "$DATASOURCE" == "" ]; then
+   DATASOURCE=$DEFAULT_DATASOURCE
+fi
+
+# 1. create the Prometheus data source
+./create_datasource_prometheus -datasource $DATASOURCE
+
+for FOLDER in $FOLDERS; do
+   # 2. Create the folder to which all of the dashboards are to be imported.
+   ./create_folder -folder $FOLDER
+
+   # 3. Get all folders from Grafana and find this folder's folder ID
+   TMP_FILE=$TMP_DIR/folders-$FOLDER.json
+   ./get_folders > $TMP_FILE
+   __ID=`./get_folder_id -folder $FOLDER`
+
+   # 4. Insert the folder ID to the databoard files and import the modified files to Grafana.
+   if [ ! -d $TMP_DIR/dashboards ]; then
+      mkdir -p $TMP_DIR/dashboards
+   fi
+   DASHBOARD_DIR=$DASHBOARDS_DIR/$FOLDER
+   for FILE in $DASHBOARD_DIR/*.json; do
+      FILE_NAME=$(basename "$FILE")
+      TMP_FILE=$TMP_DIR/dashboards/$FILE_NAME
+      sed 's/\"\${FOLDER_ID}\"/'$__ID'/g' "$FILE" | sed 's/\${DATASOURCE}/'$DATASOURCE'/g' > "$TMP_FILE"
+      if [ "$IS_JQ" == "true" ]; then
+         curl -sS -X POST $GRAFANA_URL_REST/api/dashboards/db -H "Content-Type: application/json" -d "@$TMP_FILE" | jq .
+      else
+         curl -sS -X POST $GRAFANA_URL_REST/api/dashboards/db -H "Content-Type: application/json" -d "@$TMP_FILE"
+      fi
+   done
+done
+
+# 5. Place PadoGrid images in the Grafana directory
+if [ ! -d "$GRAFANA_HOME/public/img/padogrid" ]; then
+   cp -rf $PADOGRID_HOME/workspace/images "$GRAFANA_HOME/public/img/padogrid" > /dev/null 2>&1
+fi

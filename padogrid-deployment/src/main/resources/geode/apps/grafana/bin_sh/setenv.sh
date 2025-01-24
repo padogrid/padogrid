@@ -69,8 +69,8 @@ DEFAULT_FOLDER="padogrid-perf_test"
 # Enter Grafana user name and password. The user name and password are used
 # to invoke the Grafana REST API.
 #
-#GRAFANA_USER_NAME="admin"
-#GRAFANA_PASSWORD="admin"
+GRAFANA_USER_NAME="admin"
+GRAFANA_PASSWORD="padogrid"
 
 #
 # Prometheus Configuration:

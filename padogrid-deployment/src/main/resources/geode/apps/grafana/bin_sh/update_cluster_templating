@@ -1,0 +1,742 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+DEFAULT_FOLDER="GemFire"
+
+echo "This script is still under construction. It will be part of the PadoGrid distribution in the near future."
+exit 0
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Update the cluster specific variables in all dashaboards
+
+SYNOPSIS
+   ./$EXECUTABLE [-folder folder_name] [-label $ALLOWED_LABELS_HELP] [-type single|dual|all] [-editable] [-?]
+
+DESCRIPTION
+   Updates cluster specific variables in all dashboards. The cluster variable takes
+   different values depending on the folder types as described below.
+
+   There are three (3) folder types identified by how the dashboards display GemFire
+   clusters as follows.
+
+      - single: Folders with dashboards diplaying metrics specific to a single cluster
+                at a time. For example, the 'GemFire' folder displays metrics from
+                a single cluster. These folders require the '-type single' option. If
+                '-type' is not specified, then it defaults to this option.
+
+      - dual:   Folders with dashboards displaying metrics from two clusters. For example,
+                the 'GemFireDual' folder displays metrics from two clusters side
+                by side providing a quick way to compare them. These folders require the
+                '-type dual' option.
+
+      - all:    Folders with dashboards displaying metrics from all clusters. For
+                example, the 'GemFireAll' folder provides federated views of metrics 
+                from all clusters. These folders require the '-type all' option.
+
+   The following cluster variables are set in each Grafana dashboard.
+
+      - DataSource:  Data source variable. This variable automatically captures all
+                     Prometheus instances.
+
+      - Cluster:     This variable is for selecting the first cluster. It is available
+                     in both 'single' and 'dual' dashboards. It is automatically set to
+                     all the custers pertaining to the selected Prometheus instance.
+
+      - Cluster2:    This variable is for selecting the second cluster in the 'dual'
+                     dashboards. It is automatically set to all the custers pertaining
+                     to the selected Prometheus instance.
+
+      - ClusterList: This variable is for selecting multiple clusters in the 'all'
+                     dashboards.
+
+      - ClusterFilterLabel: This variable defines the label used to filter GemFire
+                     clusters. It is set by specifying the '-label' option.
+                     Default: $DEFAULT_LABEL.
+
+   The default value '$DEFAULT_LABEL' of ClusterFilterLabel is associated with the
+   'job_name' parameter in the following Prometheus configuration file.
+   
+      ../etc/prometheus.yml
+
+   You can substitute the default '$DEFAULT_LABEL' label with any label that the underlying
+   Prometheus server supports. For example, in Kubernetes, it should be substituted with
+   'namespace' (or 'service).
+
+OPTIONS
+   -folder folder_name
+             Folder name. Default: $DEFAULT_FOLDER
+
+   -label $ALLOWED_LABELS_HELP
+             The name of the Prometheus label to apply the cluster list filter. This
+             label is typically introduced by Prometheus. For example, you can assign
+             a list of target endpoints under the '$DEFAULT_LABEL' label as shown in
+             the EXAMPLES section below. For Kubernetes, the 'namespace' label may be
+             more appropriate since all the members of a GemFire cluster start in the
+             same namespace. Default: $DEFAULT_LABEL
+
+   -type single|dual|all
+             If 'single', then it adds a single pulldown menu in the toolbar. This
+             option is default and should be used if dashboards can show only one (1)
+             cluster at a time.
+
+             If 'dual', then it adds two (2) cluster pulldown menus in the toolbar.  This
+             option should be used only if the dashboards require dual clusters.
+
+            If 'all', then it adds a single cluster pulldown menu with multiple section
+            enabled in the toolbar. This option should be used if the dashboards require
+            all clusters.
+  
+   -editable
+           If specified, then the dashboards are editable. Default: read-only
+
+DEFAULT
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER -label $DEFAULT_LABEL
+
+EXAMPLES
+
+   Example 1: Configuring Prometheus
+
+      The following example configures Prometheus with two (2) GemFire clusters: 'mygemfire'
+      and 'mygemfire2'.
+
+         global:
+           scrape_interval:     5s
+           external_labels:
+             monitor: 'gemfire'
+
+         scrape_configs:
+           - job_name: 'mygemfire'
+             static_configs:
+               - targets: [localhost:8291, localhost:8292, localhost:8293, localhost:8294, localhost:8295, localhost:8296, localhost:8297, localhost:8298, localhost:8299]
+           - job_name: 'mygemfire2'
+             static_configs:
+                 - targets: [localhost:8391, localhost:8392, localhost:8393, localhost:8394, localhost:8395, localhost:8396, localhost:8397, localhost:8398, localhost:8399]
+
+         ./delete_folder -folder $DEFAULT_FOLDER
+         ./import_folder -folder $DEFAULT_FOLDER
+
+   Example 2: Kubernetes
+      
+      In Kubernetes, the default '$DEFAULT_LABEL' label may not be enough to filter clusters if
+      there are more than one cluster since all the clusters are scraped under the same
+      '$DEFAULT_LABEL' label. To address this issue, Prometheus includes the 'namespace' and
+      'service' labels which we can use to filter the clusters. For example, we can use the
+      '-label' option to specify the 'namespace' label as follows.
+
+      ./$EXECUTABLE -label namespace
+
+   Example 3: Dual Clusters
+
+      Dual cluster dashboards are useful for comparing metrics between two clusters. For example,
+      the 'GemFireDual' folder contains dashboards that display a series of paired panels for
+      monitoring two clusters in a single view. To import 'GemFireDual' individually, you would
+      execute the following command.
+
+      Using 'job' label:
+         ./$EXECUTABLE -label job -folder GemFireDual -type dual
+
+      Using 'namespace' for Kubernetes:
+         ./$EXECUTABLE -label namespace -folder GemFireDual -type dual
+
+   Example 4: All Clusters
+
+      If your dashboards require metrics from all clusters, then you can use the option '-all'.
+      The 'GemFireAll' folder contains dashboards that use the \$ClusterList variable in
+      regex to filter metrics. The following imports the 'GemFireAll' folder.
+
+      Using 'job' label:
+         ./$EXECUTABLE -label job -folder GemFireAll -type all
+
+      Using 'namespace' label for Kubernetes:
+         ./$EXECUTABLE -label namespace -folder GemFireAll -type all
+
+SEE ALSO
+   ../etc/prometheus.yml
+
+EOF
+exit
+fi
+
+if [[ "$ALLOWED_LABELS_HELP" != *"$LABEL"* ]]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid label [$LABEL]. Allowed labels are $ALLOWED_LABELS_HELP. Command aborted."
+   exit 1
+fi
+
+if [ "$FOLDER" == "" ]; then
+   FOLDER="$DEFAULT_FOLDER"
+fi
+
+if [ "$TYPE_ARG" == "" ]; then
+   TYPE_ARG="single"
+fi
+if [ "$TYPE_ARG" != "single" ] && [ "$TYPE_ARG" != "dual" ] && [ "$TYPE_ARG" != "all" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid type [$TYPE_ARG]. Must be 'single', 'dual', or 'all'. Command aborted."
+   exit 1
+fi
+
+PADOGRID_LINK_OPTIONS="
+[
+{
+   \"asDropdown\": false,
+   \"icon\": \"dashboard\",
+   \"includeVars\": false,
+   \"keepTime\": false,
+   \"tags\": [],
+   \"targetBlank\": false,
+   \"title\": \"PadoGrid\",
+   \"tooltip\": \"About PadoGrid\",
+   \"type\": \"link\",
+   \"url\": \"/d/96e45270-7f77-4f87-89f3-1ab707a30808/padogrid\${__url_time_range}\"
+}]
+"
+
+#
+# Data Sources
+#
+DATASOURCE_SINGLE_OPTIONS="
+[
+{
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Source\",
+  \"multi\": false,
+  \"name\": \"DataSource\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+DATASOURCE2_SINGLE_OPTIONS="
+[
+{
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Source2\",
+  \"multi\": false,
+  \"name\": \"DataSource2\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+DATASOURCE_HIDE_SINGLE_OPTIONS="
+[
+{
+  \"hide\": 2,
+  \"includeAll\": false,
+  \"label\": \"Source\",
+  \"multi\": false,
+  \"name\": \"DataSource\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+DATASOURCE2_HIDE_SINGLE_OPTIONS="
+[
+{
+  \"hide\": 2,
+  \"includeAll\": false,
+  \"label\": \"Source2\",
+  \"multi\": false,
+  \"name\": \"DataSource2\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+WAN_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"$Cluster\\\"},tag1)\",
+  \"description\": \"WAN replication names\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"WAN\",
+  \"multi\": false,
+  \"name\": \"Wan\",
+  \"options\": [],
+  \"query\": {
+    \"query\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster\\\"},tag1)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"replication=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
+WAN2_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\"},tag1)\",
+  \"description\": \"WAN replication names\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"WAN 2\",
+  \"multi\": false,
+  \"name\": \"Wan2\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\"},tag1)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"replication=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
+PUBLISHER_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster\\\", tag1=~\\\".*replication=\$Wan.*\\\"},tag0)\",
+  \"description\": \"WAN publisher ID\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Publisher\",
+  \"multi\": false,
+  \"name\": \"WanPublisherId\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster\\\", tag1=~\\\".*replication=\$Wan.*\\\"},tag0)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"publisherId=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
+PUBLISHER2_DUAL_OPTIONS="
+[
+{
+  \"current\": {
+    \"isNone\": true,
+    \"selected\": false,
+    \"text\": \"None\",
+    \"value\": \"\"
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\", tag1=~\\\".*replication=\$Wan2.*\\\"},tag0)\",
+  \"description\": \"WAN publisher ID\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Publisher 2\",
+  \"multi\": false,
+  \"name\": \"WanPublisherId2\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(com_gemfire_Metrics_outboundQueueSize{prefix=\\\"wan\\\", \$ClusterFilterLabel=\\\"\$Cluster2\\\", tag1=~\\\".*replication=\$Wan2.*\\\"},tag0)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"/\\\"publisherId=(?<text>[^\\\"]+)/\",
+  \"skipUrlSync\": false,
+  \"sort\": 1,
+  \"type\": \"query\"
+}]
+"
+
+#
+# Grafana does not support mixing metrics from multiple data sources 
+# via a data source variable. The mixed data source support is limited
+# to individual data source selection per metric. (11/15/2003)
+# The following is meant for the 'all' type allowing selection of multiple
+# data sources.
+#
+DATASOURCE_MULTI_OPTIONS="
+[
+{
+  \"hide\": 0,
+  \"includeAll\": true,
+  \"label\": \"Source\",
+  \"multi\": true,
+  \"name\": \"DataSource\",
+  \"options\": [],
+  \"query\": \"prometheus\",
+  \"queryValue\": \"\",
+  \"refresh\": 1,
+  \"regex\": \"$DATASOURCE_REGEX\",
+  \"skipUrlSync\": false,
+  \"type\": \"datasource\"
+}]
+"
+
+CLUSTER_LIST_OPTIONS="
+[
+{
+  \"current\": {
+    \"selected\": true,
+    \"text\": [
+      \"All\"
+    ],
+    \"value\": [
+      \"$__all\"
+    ]
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(\$ClusterFilterLabel)\",
+  \"hide\": 0,
+  \"includeAll\": true,
+  \"label\": \"Clusters\",
+  \"multi\": true,
+  \"name\": \"ClusterList\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(\$ClusterFilterLabel)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"\",
+  \"skipUrlSync\": false,
+  \"sort\": 0,
+  \"type\": \"query\"
+}
+]
+"
+
+CLUSTER_OPTIONS="
+[
+{
+  \"current\": {
+    \"selected\": true,
+    \"text\": [
+      \"\"
+    ],
+    \"value\": [
+      \"\"
+    ]
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource}\"
+  },
+  \"definition\": \"label_values(\$ClusterFilterLabel)\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Cluster\",
+  \"multi\": false,
+  \"name\": \"Cluster\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(\$ClusterFilterLabel)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"\",
+  \"skipUrlSync\": false,
+  \"sort\": 0,
+  \"type\": \"query\"
+}
+]
+"
+
+CLUSTER2_OPTIONS="
+[
+{
+  \"current\": {
+    \"selected\": true,
+    \"text\": [
+      \"\"
+    ],
+    \"value\": [
+      \"\"
+    ]
+  },
+  \"datasource\": {
+    \"type\": \"prometheus\",
+    \"uid\": \"\${DataSource2}\"
+  },
+  \"definition\": \"label_values(\$ClusterFilterLabel)\",
+  \"hide\": 0,
+  \"includeAll\": false,
+  \"label\": \"Cluster2\",
+  \"multi\": false,
+  \"name\": \"Cluster2\",
+  \"options\": [],
+  \"query\": {
+    \"qryType\": 1,
+    \"query\": \"label_values(\$ClusterFilterLabel)\",
+    \"refId\": \"PrometheusVariableQueryEditor-VariableQuery\"
+  },
+  \"refresh\": 1,
+  \"regex\": \"\",
+  \"skipUrlSync\": false,
+  \"sort\": 0,
+  \"type\": \"query\"
+}
+]
+"
+
+CLUSTER_HIDE_OPTIONS=$(echo $CLUSTER_OPTIONS | sed 's/"hide": 0/"hide": 2/')
+CLUSTER2_HIDE_OPTIONS=$(echo $CLUSTER2_OPTIONS | sed 's/"hide": 0/"hide": 2/')
+
+#
+# $ClusterFilterLabel
+#
+cluster_filter_label="$LABEL"
+CLUSTER_FILTER_LABEL_OPTIONS="
+[
+{
+ \"hide\": 2,
+ \"name\": \"ClusterFilterLabel\",
+ \"query\": \"$cluster_filter_label\",
+ \"skipUrlSync\": false,
+ \"type\": \"constant\",
+ \"datasource\": \"\${DATASOURCE}\"
+}
+]
+"
+
+#
+# Update templates
+#
+if [ -d "$TMP_DIR/$FOLDER" ]; then
+   rm -r "$TMP_DIR/$FOLDER"
+fi
+mkdir "$TMP_DIR/$FOLDER"
+FOLDER_PATH="$DASHBOARDS_DIR/$FOLDER"
+
+case "$TYPE_ARG" in
+single)
+   CLUSTER2_OPTIONS=$CLUSTER2_HIDE_OPTIONS
+   DATASOURCE2_SINGLE_OPTIONS=$DATASOURCE2_HIDE_SINGLE_OPTIONS
+   ;;
+all)
+   CLUSTER_OPTIONS=$CLUSTER_HIDE_OPTIONS
+   CLUSTER2_OPTIONS=$CLUSTER2_HIDE_OPTIONS
+   DATASOURCE2_SINGLE_OPTIONS=$DATASOURCE2_HIDE_SINGLE_OPTIONS
+   ;;
+dual)
+   ;;
+esac
+
+pushd "$FOLDER_PATH" > /dev/null 2>&1
+case "$TYPE_ARG" in
+all)
+   for file in *; do
+      cat "$file" | jq "
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+   done
+   ;;
+
+dual)
+   for file in *; do
+      if [ "$file" == "Dual WAN.json" ]; then
+      cat "$file" | jq "
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"WanPublisherId2\"))
+                  | .dashboard.templating.list |= $PUBLISHER2_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Wan2\"))
+                  | .dashboard.templating.list |= $WAN2_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"WanPublisherId\"))
+                  | .dashboard.templating.list |= $PUBLISHER_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Wan\"))
+                  | .dashboard.templating.list |= $WAN_DUAL_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+      else
+      cat "$file" | jq "
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+      fi
+   done
+   ;;
+
+*)
+   for file in *; do
+      cat "$file" | jq "
+                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
+                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                  | .dashboard.editable=$EDITABLE
+                  " > "$TMP_DIR/$FOLDER/${file}"
+   done
+;;
+esac
+popd > /dev/null 2>&1
+
+#
+# Update labels
+#
+ALLOWED_LABELS=$(echo $ALLOWED_LABELS_HELP | sed 's/|/ /g')
+
+ENTRY=""
+ENTRY_JET=""
+for i in $ALLOWED_LABELS; do
+  ENTRY="$ENTRY -e s/$i/$LABEL/g"
+  ENTRY_JET="$ENTRY_JET -e s/{{$i}}/{{$LABEL}}/g -e s/\\^$i\\$/\\^$LABEL\\$/g -e s/\"$i\"/\"$LABEL\"/g"
+done
+
+if [ "$FOLDER" == "GemFireAll" ]; then
+   pushd "$FOLDER_PATH" > /dev/null 2>&1
+   for file in *; do
+      if [ "$file" == "All Jet.json" ]; then
+         # sed -i$__SED_BACKUP -e "s/{{job}}/{{$LABEL}}/g" -e "s/\\^job\\$/\\^$LABEL\\$/g" -e "s/\"job\"/\"$LABEL\"/g" -e "s/{{namespace}}/{{$LABEL}}/g" -e "s/\\^namespace\\$/\\^$LABEL\\$/g" -e "s/\"namespace\"/\"$LABEL\"/g" -e "s/\\^service\\$/\\^$LABEL\\$/g" -e "s/{{service}}/{{$LABEL}}/g" -e "s/\"service\"/\"$LABEL\"/g" "$TMP_DIR/$FOLDER/${file}"
+         sed -i$__SED_BACKUP $ENTRY_JET "$TMP_DIR/$FOLDER/${file}"
+      else
+         # sed -i$__SED_BACKUP -e "s/job/$LABEL/g" -e "s/namespace/$LABEL/g" -e "s/service/$LABEL/g" "$TMP_DIR/$FOLDER/${file}"
+         sed -i$__SED_BACKUP $ENTRY "$TMP_DIR/$FOLDER/${file}"
+      fi
+   done
+   popd > /dev/null 2>&1
+
+   # Remove backup files
+   rm "$TMP_DIR/$FOLDER"/*0
+fi
+
+cp -r $TMP_DIR/$FOLDER/* "$FOLDER_PATH/"
+
+echo ""
+echo "Dashboards updated in the following directory:"
+echo "   $FOLDER_PATH"
+echo ""

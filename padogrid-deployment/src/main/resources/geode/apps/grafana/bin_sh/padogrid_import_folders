@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Update and import PadoGrid provided dashboard templates
+
+SYNOPSIS
+   ./$EXECUTABLE [-editable] [-label $ALLOWED_LABELS_HELP] [-?]
+
+   -label $ALLOWED_LABELS_HELP
+             The name of the Prometheus label to apply the cluster list filter. This
+             label is typically introduced by Prometheus. For example, you can assign a
+             list of target endpoints under the '$DEFAULT_LABEL' label as shown in the EXAMPLES
+             section below. For Kubernetes, the 'namespace' label may be more approriate
+             since all the members of a GemFire cluster start in the same namespace.
+             Default: $DEFAULT_LABEL
+
+DESCRIPTION
+   Updates and imports the PadoGrid provided dashboard templates. This command
+   replaces the following folders in Grafana with the respective templates
+   in the 'etc/dashboards' directory.
+
+   $PADOGRID_FOLDERS
+
+OPTIONS
+   -editable
+           If specified, then the dashboards are editable. Default: read-only
+
+DEFAULT
+   ./$EXECUTABLE
+
+SEE ALSO
+   padogrid_export_folders(1), padogrid_sync_folders(1) 
+
+EOF
+exit
+fi
+
+if [[ "$ALLOWED_LABELS_HELP" != *"$LABEL"* ]]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Invalid label [$LABEL]. Allowed labels are $ALLOWED_LABELS_HELP. Command aborted."
+   exit 1
+fi
+
+# Update PadoGrid folders
+if [ "$EDITABLE" == "true" ]; then
+   ./padogrid_update_cluster_templating -label $LABEL -editable
+else
+   ./padogrid_update_cluster_templating -label $LABEL
+fi
+
+# Delete PadoGrid folders in Grafana
+for FOLDER in $PADOGRID_FOLDERS; do
+   echo "Deleting $FOLDER..."
+   ./delete_folder -folder $FOLDER
+done
+
+# Re-import PadoGrid folders in Grafana
+for FOLDER in $PADOGRID_FOLDERS; do
+   echo "Importing $FOLDER..."
+   ./import_folder -folder $FOLDER
+done

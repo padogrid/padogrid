@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Copy the templates in the 'templates/' directory to 'etc/dashboards'.
+
+SYNOPSIS
+   ./$EXECUTABLE [-folder foler_name] [-all] [-?]
+
+CAUTION
+   This command replaces the entire folder(s) in  'etc/dashboards/'. It first deletes
+   the folder(s) and copies the folder(s) in the 'templates/' directory to 'etc/dashboards/'.
+
+   After executing this command, the previous dashboards in 'etc/dashboards/' will not
+   be recoverable.
+
+   Note that this command does not impact the dashboards in Grafana. It merely copies
+   templates in 'templates/' to 'etc/dashboards/' in your file system.
+
+DESCRIPTION
+      Copies the templates in the 'templates/' directory to 'etc/dashboards/'. Run this
+      script to replace the dashboards in the 'etc/dashboards/' directory after running
+      'export_to_templates' to replace the importable dashboards with the templates. 
+
+      The following steps are noramlly taken when you want to reuse dashboards that
+      you have created or modified.
+
+         1. Update your dashboards in Grafana.
+
+         2. Run './export_folder -folder folder_name' to export the dashboards you
+            modified in Grafana. This command exports the specified folder to
+            the 'export/' directory.
+
+         3. Run './export_to_template" to convert the exported dashboards to templates.
+            This command converts all dashboards found in the 'export/' directory.
+
+         4. Run './$EXECUTABLE' to copy the templates in the 'templates/' directory 
+            to 'etc/dashboards/'.
+
+      Once the new templates are copied to 'etc/dashboards/', they can be imported
+      back into Grafana by executing the following.
+     
+         ./delete_folder -folder folder_name
+         ./import_folder -folder folder_name
+
+OPTIONS
+   -folder folder_name
+             Folder name. Default: $DEFAULT_FOLDER
+
+   -all
+             Copy all templates.
+
+DEFAULT
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER
+
+EOF
+exit
+fi
+
+if [ ! -d $EXPORT_TEMPLATE_DIR ]; then
+   echo -e "${CError}ERROR:${CNone} Templates not found. Command aborted."
+   exit 1
+fi
+
+if [ "$FOLDER" != "" ]; then
+   FOLDERS=$FOLDER
+elif [ "$ALL" != "true" ]; then
+   FOLDERS=$DEFAULT_FOLDER
+else
+   # All folders in 'templates'
+   pushd "$EXPORT_TEMPLATE_DIR" > /dev/null 2>&1
+   FOLDERS=$(ls "$EXPORT_TEMPLATE_DIR")
+   popd > /dev/null 2>&1
+fi
+
+pushd "$EXPORT_TEMPLATE_DIR" > /dev/null 2>&1
+for i in $FOLDERS; do
+   if [ ! -d "$EXPORT_TEMPLATE_DIR/$i" ]; then
+      echo -e "${CError}ERROR:${CNone} Template folder not found [$FOLDER]. Command aborted."
+      popd > /dev/null 2>&1
+      exit 1
+   fi
+   echo "Copying $i..."
+   if [ -d "$DASHBOARDS_DIR/$i" ]; then
+      rm -r "$DASHBOARDS_DIR/$i"
+   fi
+   cp -r $EXPORT_TEMPLATE_DIR/$i $DASHBOARDS_DIR/
+done
+echo "Template copy complete."
+popd > /dev/null 2>&1

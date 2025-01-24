@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+RUN_DIR="$APP_DIR/run/prometheus"
+
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Start Prometheus
+
+SYNOPSIS
+   ./$EXECUTABLE [-?]
+
+DESCRIPTION
+   Starts Prometheus with the following configuration and log files.
+
+      $PROMETHEUS_CONFIG_FILE
+      $PROMETHEUS_LOG_FILE
+
+   Prometheus is started in the following working directory.
+      $RUN_DIR
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+# Exit if config file does not exist
+if [ ! -f "$PROMETHEUS_CONFIG_FILE" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Prometheus configuration file not found. Command aborted."
+   echo >&2 "       $PROMETHEUS_CONFIG_FILE"
+   exit 1
+fi
+
+# Exit if Prometheus is already running
+PID=$(getPrometheusPid "$PROMETHEUS_CONFIG_FILE")
+if [ "$PID" != "" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Prometheus already running: [PID=$PID]. Command aborted."
+   exit 1
+fi
+
+# Launch prometheus in $RUN_DIR
+if [ ! -d "$RUN_DIR" ]; then
+   mkdir -p "$RUN_DIR"
+fi
+pushd $RUN_DIR > /dev/null 2>&1
+$PROMETHEUS_HOME/prometheus $PROMETHEUS_OPTS "$@" > $PROMETHEUS_LOG_FILE 2>&1 &
+PID=$!
+popd > /dev/null 2>&1
+
+# Delay a bit to see if Prometheus starts
+sleep 2
+ADDRESS_IN_USE="$([ "$(grep 'bind: address already in use' $PROMETHEUS_LOG_FILE)" != "" ] && echo "true" || echo "false")"
+if [ "$ADDRESS_IN_USE" == "true" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Address already in use. See log for details. Command aborted."
+   echo "  LOG: $PROMETHEUS_LOG_FILE"
+   exit 1
+fi
+PID="$(getPrometheusPid $PROMETHEUS_CONFIG_FILE)"
+if [ "$PID" == "" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Prometheus not started. See log file for details. Command aborted."
+   echo "  LOG: $PROMETHEUS_LOG_FILE"
+   exit 1
+fi
+
+echo "Prometheus started."
+echo -e "      URL: ${CUrl}$PROMETHEUS_URL${CNone}"
+echo "      PID: $PID"
+echo "     Home: $PROMETHEUS_HOME"
+echo "   Config: $PROMETHEUS_CONFIG_FILE"
+echo "      LOG: $PROMETHEUS_LOG_FILE"
+echo -e "   Status: ${CGo}Running${CNone}"

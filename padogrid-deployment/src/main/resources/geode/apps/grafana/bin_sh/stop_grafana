@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+# ========================================================================
+# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ========================================================================
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+. $SCRIPT_DIR/.addonenv.sh
+
+EXECUTABLE="`basename $0`"
+
+if [ "$HELP" == "true" ]; then
+   echo "Usage:"
+   echo "   ./$EXECUTABLE [-all] [-?]"
+   echo ""
+   echo "   Stops Grafana."
+   echo ""
+   echo "     -all               Stops all Grafana instances"
+   echo ""
+   echo "Default: ./$EXECUTABLE"
+   echo ""
+   exit
+fi
+if [ "$HELP" == "true" ]; then
+cat <<EOF
+
+WORKSPACE
+   $PADOGRID_WORKSPACE
+
+NAME
+   ./$EXECUTABLE - Stop Grafana
+
+SYNOPSIS
+   ./$EXECUTABLE [-all] [-?]
+
+DESCRIPTION
+   Stops Grafana started by this app.
+
+OPTIONS
+   -all
+             Stops all Grafana instances"
+
+DEFAULT
+   ./$EXECUTABLE
+
+EOF
+exit
+fi
+
+if [ "$ALL" == "true" ]; then
+   RWE_PATHS=$(getAllGrafanaRwePaths)
+   if [ "$RWE_PATHS" == "" ]; then
+      echo "Grafana instances not found. Command aborted."
+      exit
+   else
+      count=0
+      echo ""
+      for i in $RWE_PATHS; do
+         if [ $count -eq 0 ]; then
+            echo "        PID: $i"
+            kill -15 $i
+            count=1
+         else
+            echo "   RWE Path: $i"
+            echo -e "     Status: ${CRed}Down${CNone}"
+            echo ""
+            count=0
+         fi
+      done
+      echo "All Grafana instances stopped."
+      echo ""
+   fi
+else
+   PID=$(getGrafanaPid "$GRAFANA_CONFIG_FILE")
+   if [ "$PID" != "" ]; then
+      kill -15 $PID
+      echo -e "      URL: ${CUrl}$GRAFANA_URL${CNone}"
+      echo "      PID: $PID"
+      echo "     Home: $GRAFANA_HOME"
+      echo "   Config: $GRAFANA_CONFIG_FILE"
+      echo "      LOG: $LOG_DIR/grafana.log"
+      echo -e "   Status: ${CRed}Down${CNone}"
+      echo "Grafana stopped."
+   else
+      echo "Grafana not running. Command aborted."
+   fi
+fi
