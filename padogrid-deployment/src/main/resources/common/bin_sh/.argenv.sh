@@ -52,6 +52,7 @@ JAVA_HOME_ARG=
 PATH_ARG=
 FILE_SPECIFIED=false
 FILE_ARG=
+URL_ARG=
 BRIDGE_SPECIFIED=false
 JAR_ARG=
 TAR_SPECIFIED=false
@@ -223,6 +224,8 @@ do
          PATH_ARG=$i
       elif [ "$PREV" == "-file" ]; then
          FILE_ARG=$i
+      elif [ "$PREV" == "-url" ]; then
+        URL_ARG=$i
       elif [ "$PREV" == "-jar" ]; then
          JAR_ARG=$i
       elif [ "$PREV" == "-classpath" ]; then

@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 1.0.2-SNAPSHOT
 
-### Release Date: 01/24/24
+### Release Date: 01/25/24
 
 - The test GemFire/Geode packages are now in its own `geode-addon-core-tests` module to allow easier deployment.
 - Added comprehensive sets of Grafana dashboards in the `grafana` app for monitoring the GemFire 10.x Prometheus metrics. Similar to the PadoGrid Hazelcast Dashboards (PHD), the PadoGrid GemFire Dashboards (PGFD) includes three flavors of dashboards: `single`, `dual` and `all`.
