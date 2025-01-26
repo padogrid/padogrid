@@ -30,7 +30,7 @@ APP_ETC_DIR=$APP_DIR/etc
 
 #
 # Variables in use. Override them in setenv.sh.
-#   DEFAULT_FOLDER       The default folder name. Default: Padogrid
+#   DEFAULT_FOLDER       The default folder name. Default: GemFire-perf_test
 #   DEFAULT_DATASOURCE   The default data source name. Default: Prometheus
 #   DEFAULT_LABEL        The default label for filtering clusters. Default: job
 #   GRAFANA_PROTOCOL     'http' or 'https'. Default: http
@@ -73,7 +73,7 @@ EXPORT_TEMPLATE_DIR=$APP_DIR/templates
 #
 # Default folder name
 #
-DEFAULT_FOLDER="Padogrid"
+DEFAULT_FOLDER="GemFire-perf_test"
 
 #
 # Default data source name
@@ -350,4 +350,4 @@ ALLOWED_LABELS_HELP="job|namespace|service"
 #
 # PadoGrid provided folders
 #
-PADOGRID_FOLDERS="GemFire GemFireDual GemFireAll GemFireTemplates Padogrid"
+PADOGRID_FOLDERS="GemFire GemFireDual GemFireAll GemFire-perf_test Padogrid"

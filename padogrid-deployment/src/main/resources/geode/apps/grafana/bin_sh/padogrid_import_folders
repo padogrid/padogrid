@@ -38,12 +38,12 @@ SYNOPSIS
              label is typically introduced by Prometheus. For example, you can assign a
              list of target endpoints under the '$DEFAULT_LABEL' label as shown in the EXAMPLES
              section below. For Kubernetes, the 'namespace' label may be more approriate
-             since all the members of a GemFire cluster start in the same namespace.
+             since all the members of a cluster start in the same namespace.
              Default: $DEFAULT_LABEL
 
 DESCRIPTION
    Updates and imports the PadoGrid provided dashboard templates. This command
-   replaces the following folders in Grafana with the respective templates
+   replaces the following folders in Grafana with the repective templates
    in the 'etc/dashboards' directory.
 
    $PADOGRID_FOLDERS
@@ -77,7 +77,12 @@ fi
 # Delete PadoGrid folders in Grafana
 for FOLDER in $PADOGRID_FOLDERS; do
    echo "Deleting $FOLDER..."
-   ./delete_folder -folder $FOLDER
+   if [ "$FOLDER" == "Padogrid" ]; then
+      ./delete_dashboard -folder Padogrid -dashboard "PadoGrid GemFire"
+      ./delete_dashboard -folder Padogrid -dashboard "PadoGrid GemFire Dashboards"
+   else
+      ./delete_folder -folder $FOLDER
+   fi
 done
 
 # Re-import PadoGrid folders in Grafana

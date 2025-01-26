@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========================================================================
-# Copyright (c) 2020-2024 Netcrest Technologies, LLC. All rights reserved.
+# Copyright (c) 2020-2025 Netcrest Technologies, LLC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,20 +28,22 @@ WORKSPACE
    $PADOGRID_WORKSPACE
 
 NAME
-   ./$EXECUTABLE - Display the UID of the specified Grafana folder
+   ./$EXECUTABLE - Display the UID of the specified dashboard in the specified Grafana folder
 
 SYNOPSIS
-   ./$EXECUTABLE [-folder folder_name] [-?]
+   ./$EXECUTABLE [-folder folder_name] [-dashboard dashboard_name] [-?]
 
 DESCRIPTION
-   Displays the UID of the specified Grafana folder.
+   Displays the UID of the specified dashboard in the specified Grafana folder.
 
 OPTIONS
    -folder folder_name
              Folder name. Default: $DEFAULT_FOLDER
+   -dashboard dashboard_name
+             Dashboard name. Default: $DEFAULT_DASHBOARD
 
 DEFAULT
-   ./$EXECUTABLE -folder $DEFAULT_FOLDER
+   ./$EXECUTABLE -folder $DEFAULT_FOLDER -dashboard $DEFAULT_DASHBOARD
 
 EOF
 exit
@@ -50,9 +52,12 @@ fi
 if [ "$FOLDER" == "" ]; then
    FOLDER=$DEFAULT_FOLDER
 fi
+if [ "$DASHBOARD" == "" ]; then
+   DASHBOARD=$DEFAULT_DASHBOARD
+fi
 
-TMP_FILE=$TMP_DIR/folders.json
-./get_folders > $TMP_FILE
+TMP_FILE=$TMP_DIR/dashboards.json
+./get_dashboards -folder $FOLDER > $TMP_FILE
 
 # Cygwin path conversion
 if [[ ${OS_NAME} == CYGWIN* ]]; then
@@ -63,10 +68,11 @@ ARRAY_LEN=`jq '.|length' $TMP_FILE`
 let LAST_INDEX=ARRAY_LEN-1
 for i in $(seq 0 $LAST_INDEX); do
    TITLE=`jq '.['$i'].title' $TMP_FILE`
-   TITLE=`trimDoubleQuotes $TITLE`
-   if [ "$TITLE" == "$FOLDER" ]; then
+   TITLE=`trimDoubleQuotes "$TITLE"`
+   if [ "$TITLE" == "$DASHBOARD" ]; then
       __UID=`jq '.['$i'].uid' $TMP_FILE`
       break;
    fi 
 done;
-echo `trimDoubleQuotes $__UID`
+DASHBOARD_UID=$(trimDoubleQuotes $__UID)
+echo "$DASHBOARD_UID"

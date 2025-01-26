@@ -19,8 +19,8 @@
 #
 # All of the variables set with the default values shown below. If you need to override any of them
 # set them in this file.
-#   DEFAULT_FOLDER       The default folder name. Default: padogrid-perf_test
-#   DEFAULT_DATASOURCE   The default data source name. Default: padogrid-perf_test
+#   DEFAULT_FOLDER       The default folder name. Default: GemFire-perf_test
+#   DEFAULT_DATASOURCE   The default data source name. Default: Prometheus
 #   GRAFANA_PROTOCOL     'http' or 'https'. Default: http
 #   GRAFANA_HOST         Grafana host name. Default: localhost
 #   GRAFANA_PORT         Grafana port number. Default: 3000
@@ -36,7 +36,7 @@
 #
 # Default folder name
 #
-DEFAULT_FOLDER="padogrid-perf_test"
+DEFAULT_FOLDER="GemFire-perf_test"
 
 #
 # Default data source name
@@ -69,8 +69,8 @@ DEFAULT_FOLDER="padogrid-perf_test"
 # Enter Grafana user name and password. The user name and password are used
 # to invoke the Grafana REST API.
 #
-GRAFANA_USER_NAME="admin"
-GRAFANA_PASSWORD="padogrid"
+#GRAFANA_USER_NAME="admin"
+#GRAFANA_PASSWORD="admin"
 
 #
 # Prometheus Configuration:
@@ -101,10 +101,15 @@ GRAFANA_PASSWORD="padogrid"
 
 #
 # Folders provided by PadoGrid. If you want to use
-# 'update_cluster_templating_padogrid' to update your folders, then list
+# 'padogrid_update_cluster_templating' to update your folders, then list
 # them using the following environment variables. Folder names must not
 # include spaces.
 #
-SINGLE_FOLDERS=""
-DUAL_FOLDERS=""
-ALL_FOLDERS=""
+SINGLE_FOLDERS="GemFire GemFire-perf_test Padogrid"
+DUAL_FOLDERS="GemFireDual"
+ALL_FOLDERS="GemFireAll"
+
+#
+# Regex for filtering Prometheus data source names. Empty string includes all.
+#
+#DATASOURCE_REGEX=""
