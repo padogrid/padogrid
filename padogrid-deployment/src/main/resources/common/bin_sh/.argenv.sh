@@ -185,6 +185,7 @@ SHORT=false
 LONG=false
 DATASOURCE=
 FOLDER=
+DASHBOARD=
 PRIMARY=
 BOX=
 DIR=
@@ -371,6 +372,8 @@ do
          PREFIX=$i
       elif [ "$PREV" == "-folder" ]; then
          FOLDER=$i
+      elif [ "$PREV" == "-dashboard" ]; then
+         DASHBOARD=$i
       elif [ "$PREV" == "-datasource" ]; then
          DATASOURCE=$i
       elif [ "$PREV" == "-version" ]; then
