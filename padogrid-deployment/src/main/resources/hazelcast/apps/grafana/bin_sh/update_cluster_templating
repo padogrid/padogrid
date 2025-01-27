@@ -209,7 +209,7 @@ PADOGRID_LINK_OPTIONS="
    \"title\": \"PadoGrid\",
    \"tooltip\": \"About PadoGrid\",
    \"type\": \"link\",
-   \"url\": \"/d/fdf91a72-5304-4ac4-bb42-9e30f0f0ec11/padogrid\${__url_time_range}\"
+   \"url\": \"/d/fdf91a72-5304-4ac4-bb42-9e30f0f0ec11/padogrid-hazelcast\${__url_time_range}\"
 }]
 "
 
@@ -683,7 +683,6 @@ dual)
       cat "$file" | jq "
                   del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
                   | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
-                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
                   | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
@@ -697,6 +696,14 @@ dual)
                   | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
                   | .dashboard.editable=$EDITABLE
                   " > "$TMP_DIR/$FOLDER/${file}"
+
+      # Do not add 'Padogrid' menu to itself
+      if [ "$file" != "PadoGrid Hazelcast.json" ]; then
+         cat "$file" | jq "
+                  del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                  " > "$TMP_DIR/$FOLDER/${file}"
+      fi
    done
 ;;
 esac
