@@ -32,6 +32,12 @@ There are many online bundles that are readily available for you to deploy in yo
 
 ![Terminal:](images/terminal.png) `show_bundle -all -header`
 
+## [Dashboards](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general)
+
+PadoGrid includes Grafana dashboards for monitoring GemFire and Hazelcast. These dashboards are made to monitor multiple production systems for quickly detecting root causes of system problems. They complement the GemFire Management Console and Hazelcast Management Center with a series of additional capabilities that are not found in those products.
+
+[![Grafana Dashboards](images/gemfire-all-main-small.png)](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general)
+
 ## [JupyterLab](https://github.com/padogrid/padogrid/wiki/JupyterLab)
 
 PadoGrid natively integrates JupyterLab to bring the server-side tasks to the browser, enabling end users such as data scientists to take control over distributed computing products such as datagrids and stream-processing platforms. PadoGrid achieves this by conjugating PadoGrid and Jupyter workspaces to form *workspace dashboards*.
