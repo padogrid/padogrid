@@ -34,7 +34,7 @@ There are many online bundles that are readily available for you to deploy in yo
 
 ## [Dashboards](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general)
 
-PadoGrid includes Grafana dashboards for monitoring GemFire and Hazelcast. These dashboards are made to monitor multiple production systems for quickly detecting root causes of system problems. They complement the GemFire Management Console and Hazelcast Management Center with a series of additional capabilities that are not found in those products.
+PadoGrid includes Grafana dashboards for monitoring GemFire and Hazelcast. These customizable dashboards complement the GemFire Management Console and Hazelcast Management Center with a series of cluster-wide and individual member views providing comprehensive system health and data movement details that are not found in those products.
 
 [![Grafana Dashboards](images/gemfire-all-main-small.png)](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general)
 
