@@ -607,8 +607,7 @@ case "$TYPE_ARG" in
 all)
    for file in *; do
       cat "$file" | jq "
-                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
-                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  del(.dashboard.links[]|select(.title==\"PadoGrid\"))
                   | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | .dashboard.templating.list |= $CLUSTER_LIST_OPTIONS + .
@@ -631,8 +630,7 @@ dual)
    for file in *; do
       if [ "$file" == "Dual WAN.json" ]; then
       cat "$file" | jq "
-                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
-                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  del(.dashboard.links[]|select(.title==\"PadoGrid\"))
                   | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | del(.dashboard.templating.list[]|select(.name==\"WanPublisherId2\"))
@@ -658,8 +656,7 @@ dual)
                   " > "$TMP_DIR/$FOLDER/${file}"
       else
       cat "$file" | jq "
-                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
-                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                  del(.dashboard.links[]|select(.title==\"PadoGrid\"))
                   | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
                   | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
                   | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
@@ -680,29 +677,41 @@ dual)
 
 *)
    for file in *; do
-      cat "$file" | jq "
-                  del(.dashboard.links[]|select(.title==\"Created by PadoGrid\"))
-                  | del(.dashboard.links[]|select(.title==\"PadoGrid\"))
-                  | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
-                  | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
-                  | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
-                  | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
-                  | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
-                  | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
-                  | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
-                  | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
-                  | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
-                  | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
-                  | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
-                  | .dashboard.editable=$EDITABLE
-                  " > "$TMP_DIR/$FOLDER/${file}"
-
-      # Do not add 'Padogrid' menu to itself
-      if [ "$file" != "PadoGrid Hazelcast.json" ]; then
+      if [ "$file" == "PadoGrid GemFire.json" ]; then
+         # Do not add 'Padogrid' menu to itself
          cat "$file" | jq "
-                  del(.dashboard.links[]|select(.title==\"PadoGrid\"))
-                  | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
-                  " > "$TMP_DIR/$FOLDER/${file}"
+                     del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                     | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                     | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                     | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                     | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                     | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                     | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                     | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                     | .dashboard.editable=$EDITABLE
+                     " > "$TMP_DIR/$FOLDER/${file}"
+      else
+         # Add 'Padogrid' menu
+         cat "$file" | jq "
+                     del(.dashboard.links[]|select(.title==\"PadoGrid\"))
+                     | .dashboard.links |= . + $PADOGRID_LINK_OPTIONS
+                     | del(.dashboard.templating.list[]|select(.name==\"ClusterList\"))
+                     | del(.dashboard.templating.list[]|select(.name==\"Cluster2\"))
+                     | .dashboard.templating.list |= $CLUSTER2_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"DataSource2\"))
+                     | .dashboard.templating.list |= $DATASOURCE2_SINGLE_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"Cluster\"))
+                     | .dashboard.templating.list |= $CLUSTER_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"DataSource\"))
+                     | .dashboard.templating.list |= $DATASOURCE_SINGLE_OPTIONS + .
+                     | del(.dashboard.templating.list[]|select(.name==\"ClusterFilterLabel\"))
+                     | .dashboard.templating.list |= $CLUSTER_FILTER_LABEL_OPTIONS + .
+                     | .dashboard.editable=$EDITABLE
+                     " > "$TMP_DIR/$FOLDER/${file}"
       fi
    done
 ;;
