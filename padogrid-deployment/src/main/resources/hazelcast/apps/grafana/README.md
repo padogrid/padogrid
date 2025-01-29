@@ -108,14 +108,14 @@ To view a complete list of metrics:
 - Federated:
 
 ```bash
-curl -G http://localhost:9090/federate -d 'match[]={__name__!=""}'
+curl -Gs http://localhost:9090/federate -d 'match[]={__name__!=""}'
 ```
 
 ### 5.3. Grafana
 
 ---
 
-#### 5.3.1. Installing and StartingGrafana
+#### 5.3.1. Installing and Starting Grafana
 
 Install Grafana  using `install_padogird` and `update_padogrid`:
 
@@ -153,9 +153,11 @@ The `grafana` app has been preconfigured with the above user name and password. 
 
 ❗️ If you are running this app in the Windows environment then make sure to install **`curl`** from Cygwin. Other implementations may not work properly.
 
-## 6. Importing Dashboards
+## 6. Installing and Uninstalling Dashboards
 
-The dashboards are organized by Grafana folders and they can be found in the following directory:
+### 6.1. Importing Dashboards
+
+The dashboards are organized by Grafana folders and they are stored in the following directory:
 
 ```bash
 cd_app grafana
@@ -214,7 +216,38 @@ To import folders individually, specify the `-folder` option.
 ./import_folder -all
 ```
 
-### 6.1.  App: `perf_test`
+### 6.2. Deleting Dashboards
+
+The `delete_folder` deletes individual folders in Grafana.
+
+```bash
+# To delete the Hazelcast-perf_test in Grafana
+./delete_folder -folder Hazelcast-perf_test
+
+# To delete the Hazelcast folder in Grafana
+./delete_folder -folder Hazelcast
+
+# To delete the HazelcastDual folder in Grafana
+./delete_folder -folder HazelcastDual
+
+# To delete the HazelcastAll folder in Grafana
+./delete_folder -folder HazelcastAll
+
+# To delete the Padogrid folder in Grafana
+./delete_folder -folder Padogrid
+```
+
+### 6.3. Replacing Dashboards
+
+The `padogrid_import_folders` command replaces all the dashboards by first deleting them from Grafana by executing `delete_folder` and then importing the JSON files in `etc/dashboards` by executing `import_folder`.
+
+```bash
+./padogrid_import_folders
+```
+
+## 7. Viewing Dashboards
+
+### 7.1. `perf_test` Dashboards
 
 The `Hazelcast-perf_test` folder includes the `perf_test` app dashboards. To view data in these dashboards, you must run the `perf_test` ingestion and transaction scripts. The following command creates the default app, `perf_test`, in your workspace.
 
@@ -222,19 +255,25 @@ The `Hazelcast-perf_test` folder includes the `perf_test` app dashboards. To vie
 create_app
 ```
 
-For `perf_test` details, see [perf\_test README](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/hazelcast/apps/perf_test/README.md).
+For `perf_test` details, see [perf_test README](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/hazelcast/apps/perf_test/README.md).
 
-### 6.2. Hazelcast Dashboards
+![perf_test Folder](https://github.com/padogrid/padogrid/blob/develop/images/grafana-screenshot.png?raw=true)
 
-The `Hazelcast*` folders contain the main dashboard with the prefix, `00Main`. The main dashboard is the main console for navigating all the dashboards in the respective folder. It has the layout similar to the Management Center as shown in the screen shot in Section [10.2 Hazelcast Folder](#102-hazelcast-folder).
+### 7.2. Hazelcast Dashboards
 
-To quickly activate the dashboards with data, you can run [`perf_test`](../perf_test/README.md) with the `group-workflow-*.properties` files.
+The `Hazelcast*` folders contain the main dashboard with the prefix, `00Main`. The main dashboard is the main console for navigating all the dashboards in the respective folder. It has the layout similar to the Management Center as shown below.
 
-The Hazelcast dasboards support multiple clusters. If you are running Prometheus in PadoGrid, then to include multiple clusters, you must add them in the `etc/prometheus.yml` file. You can use the the included [`etc/prometheus-clusters.yml`](etc/prometheus-clusters.yml) as an example. This file configures two (2) Hazelast clusters named, 'myhz' and 'myhz2'.
+![Hazelcast Folder](https://github.com/padogrid/padogrid/blob/develop/images/grafana-hazelcast-screenshot.png?raw=true)
 
-## 7. Exporting Dashboards
+To quickly activate the dashboards with data, you can run [`perf_test`](https://github.com/padogrid/padogrid/blob/develop/padogrid-deployment/src/main/resources/hazelcast/apps/perf_test/README.md) with the `group-workflow-*.properties` files.
 
-You can also export your dashboards to use them as backup or templates by executing the `export_folder` command.
+The Hazelcast dasboards support multiple clusters. If you are running Prometheus in PadoGrid, then to include multiple clusters, you must add them in the `etc/prometheus.yml` file. You can use the the included [`etc/prometheus-clusters.yml`](etc/prometheus-clusters.yml) as an example. This file configures two (2) Hazelast clusters named, `myhz` and `myhz2`.
+
+## 8. Archiving Dashboards
+
+### 8.1. Exporting Dashboards
+
+You can archive the dashboards in the form of JSON files by exporting them with the `export_folder` command as follows.
 
 ```bash
 # Export all folders found in Grafana. By default, the dashboards are 
@@ -242,9 +281,9 @@ You can also export your dashboards to use them as backup or templates by execut
 ./export_folder -all
 ```
 
-## 8. Creating Dashboard Templates
+### 8.2. Creating Dashboard Templates
 
-You must convert the exported dashboards to templates by executing the `export_to_template` command before you can import them back to Grafana. This is due to the Grafana dependency of non-unique local IDs. The generated templates are portable and can be imported into any instance of Grafana using the `import_folder` command.
+Before you can import the exported dashboards to Grafana, you must convert them templates by executing the `export_to_template` command, which removes the Grafana dependency of non-unique local IDs. The generated templates are portable and can be imported into any instance of Grafana using the `import_folder` command.
 
 ```bash
 # Convert the exported folders to templates. The templates are placed in
@@ -252,11 +291,9 @@ You must convert the exported dashboards to templates by executing the `export_t
 ./export_to_template
 ```
 
-### 8.1. Synchronizing `Hazelcast*` Folders
+## 9. Synchronizing Folders
 
-## 8. Synchronizing Folders
-
-If you made changes to dashboards from the browser and want to save them in the local file system in the form of templates then execute the `padogrid_sync_folders` command. This command exports all of the dashboards in the `Hazelcast*` folders, creates templates, applies the required Grafana variables to the templates, and re-imports the templates to Grafana.
+If you made changes to dashboards from the browser and want to save them in the local file system in the form of templates then execute the `padogrid_sync_folders` command. This command exports all the dashboards in the `Hazelcast*` folders, creates templates, applies the required Grafana variables to the templates, and re-imports the templates to Grafana.
 
 ```bash
 # Using 'job':
@@ -270,29 +307,32 @@ If you made changes to dashboards from the browser and want to save them in the 
 ./padogrid_sync_folders -label namespace -editable
 ```
 
-## 9. Other Commands
+## 10. Other Commands
 
 The `bin_sh` directory contains many useful commands for working with dashboards. You can display the usage of each command by specifying the `-?` option as shown below.
 
 ```bash
 ./create_folder -?
-Usage:
-   ./create_folder [-folder <folder-name>] [-?]
 
-   Creates the specified Grafana folder.
+WORKSPACE
+   /opt/padogrid/workspaces/myrwe/myws
 
-Default: ./create_folder -folder Hazelcast-perf_test
+NAME
+   ./create_folder - Create the specfied Grafana folder
+
+SYNOPSIS
+   ./create_folder [-folder folder_name] [-?]
+
+DESCRIPTION
+   Creates the specfied Grafana folder.
+
+OPTIONS
+   -folder folder_name
+             Folder name. Default: Hazelcast-perf_test
+
+DEFAULT
+   ./create_folder -folder Hazelcast-perf_test
 ```
-
-## 10. Screenshots
-
-### 10.1. padogrid_perf_test Folder
-
-![perf_test Folder](https://github.com/padogrid/padogrid/blob/develop/images/grafana-screenshot.png?raw=true)
-
-### 10.2. Hazelcast Folder
-
-![Hazelcast Folder](https://github.com/padogrid/padogrid/blob/develop/images/grafana-hazelcast-screenshot.png?raw=true)
 
 ## 11. Teardown
 
