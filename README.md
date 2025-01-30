@@ -15,7 +15,7 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Announcements
 
-- *January 30, 2025 - [PadoGrid v1.0.2 released!](https://github.com/padogrid/padogrid/releases/tag/padogrid_1.0.2) This release includes comprehensive Grafana dashboards for monitoring GemFire clusters in real time. The container version is also available at [Docker Hub](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general).*
+- *January 30, 2025 - [PadoGrid v1.0.2 released!](https://github.com/padogrid/padogrid/releases/tag/padogrid_1.0.2) This release includes comprehensive Grafana dashboards for monitoring GemFire clusters in real time. The container version of the Grafana dashboards is also available at [Docker Hub](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general).*
 
 ---
 
