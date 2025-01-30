@@ -4,13 +4,13 @@
 
 https://github.com/padogrid
 
-## Version 1.0.2-SNAPSHOT
+## Version 1.0.2
 
 ### Release Date: 01/30/24
 
 - Added comprehensive sets of Grafana dashboards in the `grafana` app for monitoring the GemFire 10.x Prometheus metrics. Similar to the PadoGrid Hazelcast Dashboards (PHD), the PadoGrid GemFire Dashboards (PGFD) includes three (3) sets of dashboards: `Single`, `Dual` and `All`.
 
-[GemFire Grafana Dashboards](https://github.com/padogrid/padogrid/raw/develop/images/grafana-gemfire-all-screenshot.png?raw=true)
+![GemFire Grafana Dashboards](https://github.com/padogrid/padogrid/raw/develop/images/grafana-gemfire-all-screenshot.png?raw=true)
 
 - Added support for automatically importing GemFire dashboards to containers in Docker and Kubernetes environments. See [Docker Hub](https://hub.docker.com/r/padogrid/padogrid-grafana) for installation details.
 - The `create_cluster` command for GemFire now enables the Prometheus Metrics Endpoint as default for both locators and members. This change impacts only GemFire 10.1 and later versions. The older versions are enabled with the JMX Exporter Endpoint.
