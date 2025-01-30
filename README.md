@@ -15,19 +15,15 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Announcements
 
-- *May 24, 2024 - [PadoGrid v1.0.0 released!](https://github.com/padogrid/padogrid/releases/tag/padogrid_1.0.0) This is the first major release that officially supports product upgrade and maintenance. Look for [![PadoGrid 1.x](https://github.com/padogrid/padogrid/wiki/images/padogrid-padogrid-1.x.drawio.svg)](https://github.com/padogrid/padogrid/wiki/Platform-PadoGrid-1.x) compliant bundles in the [bundle catalogs](https://github.com/padogrid/catalog-bundles/blob/master/all-catalog.md).*
+- *January 30, 2025 - [PadoGrid v1.0.2 released!](https://github.com/padogrid/padogrid/releases/tag/padogrid_1.0.2) This release includes comprehensive Grafana dashboards for monitoring GemFire clusters in real time. The container version is also available at [Docker Hub](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general).*
 
 ---
 
 ## Tips of the Day
 
-1. How to detect and recover from a cluster split-brain problem in Geode/GemFire? The [Geode/GemFire Split-Brain](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) bundle walks through all possible scenarios and provides tools and guidelines to quickly recover from the disaster.
+1. Need GemFire Managment Console dashboards in Grafana? Check out [PadoGrid GemFire Dashboards (PGFD)](https://github.com/padogrid/padogrid/wiki/Geode-Grafana-App): Comprehensive dashboards that complement the GemFire Management Console.
 
-1. Monitor Geode/GemFire with Grafana/Prometheus. [Geode Grafana App](https://github.com/padogrid/padogrid/wiki/Geode-Grafana-App).
-
-1. Need Hazelcast Managment Center dashboards in Granana? Check out [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App): Comprehensive dashboards that rival Hazelcast Management Center.
-
-1. Did you know [PadoGrid Hazelcast Dashboards (PHD)](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) can be automatically installed to Grafana instances running on Docker and Kuberntes?
+1. Did you know [PadoGrid Grafana Dashboards](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) can be automatically installed to Grafana instances running on Docker and Kuberntes?
 
 ---
 

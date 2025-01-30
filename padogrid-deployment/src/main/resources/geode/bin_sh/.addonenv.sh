@@ -187,14 +187,19 @@ DEFAULT_LOCATOR_JMX_START_PORT=12101
 DEFAULT_JMX_START_PORT=12001
 
 #
-# Default PROMETHEUS enable/disable flag.
+# Default locator PROMETHEUS enable/disable flag.
 #
-DEFAULT_LOCATOR_PROMETHEUS_ENABLED=false
+DEFAULT_LOCATOR_PROMETHEUS_ENABLED=true
 
 #
-# Default PROMETHEUS for GemFire enable/disable.
+# Default locator PROMETHEUS for GemFire enable/disable flag.
 #
-DEFAULT_PROMETHEUS_GEMFIRE_ENABLED=false
+DEFAULT_LOCATOR_PROMETHEUS_GEMFIRE_ENABLED=true
+
+#
+# Default PROMETHEUS for GemFire enable/disable flag.
+#
+DEFAULT_PROMETHEUS_GEMFIRE_ENABLED=true
 
 #
 # Default PROMETHEUS metrics emission rate
@@ -289,8 +294,10 @@ else
       RUN_TYPE="default"
    fi
    GEODE_MAJOR_VERSION_NUMBER=`expr "$GEODE_VERSION" : '\([0-9]*\)'`
+   GEODE_MINOR_VERSION_NUMBER=$(echo $GEODE_VERSION | awk '{split($0,a,"."); print a[2]'})
    PRODUCT_VERSION=$GEODE_VERSION
    PRODUCT_MAJOR_VERSION=$GEODE_MAJOR_VERSION_NUMBER
+   PRODUCT_MINOR_VERSION=$GEODE_MINOR_VERSION_NUMBER
 fi
 
 #

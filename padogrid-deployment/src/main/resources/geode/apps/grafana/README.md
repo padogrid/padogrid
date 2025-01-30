@@ -25,49 +25,61 @@ locator.prometheus.enabled=true
 prometheus.enabled=true
 ```
 
-There are two (2) different endpoints that can be configured to emanate GemFire metrics: *Native Promtheus Endpoint* and *JMX Exporter Endpoint*. 
+There are two (2) different endpoints that can be configured to emanate GemFire metrics: *Native Promtheus Metrics Endpoint* and *JMX Exporter Endpoint*. 
 
-✏️  *Note that the metrics from both endpoints are not compatible. The PadoGrid GemFire Dashboards supports only the native Prometheus endpoint.*
+✏️  *Note that the metrics from both endpoints are not compatible. The PadoGrid GemFire Dashboards supports only the Native Prometheus Metrics Endpoint.*
 
 ### 2.1. Native Prometheus Endpoint
 
-GemFire 10.x natively supports the Prometheus endpoint, which emanates thousands of metrics that were only available to VSD before. PadoGrid includes three (3) sets of comprehensive dashboards that touch on all the GemFire metrics in a manageble and organized fashion.
+GemFire 10.x natively supports the Prometheus Metrics Endpoint, which emanates thousands of metrics that were only available to VSD before. PadoGrid includes three (3) sets of comprehensive dashboards that touch on all the GemFire metrics in a manageble and organized fashion.
 
-The `create_cluster` command by default enables the native Prometheus endpoint for both locators and servers. The following shows the default values of the Prometheus properties defined in the `etc/cluster.properties` file.
+The `create_cluster` command by default enables the native Prometheus Metrics Endpoint for both locators and servers. The following shows the default values of the Prometheus properties defined in the `etc/cluster.properties` file.
 
 ```properties
-# Enable/disable locator Prometheus
-locator.prometheus.enabled=true
-# The first locator's PROMETHEUS port number. The port number is incremented starting from this number.
-locator.prometheus.startPort=8191
-# Enable/disable member Prometheus using GemFire. If true, then
-# the GemFire property, gemfire.prometheus.metrics.port is set to
-# the value derived from locator.prometheus.startPort. Default: false
+# Enable/disable locator Prometheus endpoint native to GemFire. This feature is
+# available starting GemFire 10.1. For older versions, this property is ignored
+# and always false.
+# If true, then the Prometheus metrics endpoint is enabled by setting the GemFire property,
+# gemfire.prometheus.metrics.port to the value derived from locator.prometheus.startPort.
+# If false, then the JMX exporter endpoint is enabled.
+# Default: false
 locator.prometheus.gemfire.enabled=true
-# GemFire specific metrics emission rate: Default, All, None. If not specified, then Default.
+# GemFire Prometheus metrics endpoint emission rate: Default, All, None. If unspecified, then Default.
 # This property is ignored if locator.prometheus.gemfire.enabled is false.
-locator.prometheus.metrics.emission=All
+locator.prometheus.metrics.emission=Default
 
 # Enable/disable member Prometheus
 prometheus.enabled=true
-# The first member's PROMETHEUS port number. The port number is incremented starting from this number.
+# The first member's Prometheus port number. The port number is incremented starting from this number.
 prometheus.startPort=8091
-# Enable/disable member Prometheus using GemFire. If true, then
-# the GemFire property, gemfire.prometheus.metrics.port is set to
-# the value derived from prometheus.startPort. Default: true
+
+# Enable/disable member Prometheus endpoint native to GemFire. This feature is
+# available starting GemFire 10.1. For older versions, this property is ignored
+# and always false.
+# If true, then the Prometheus metrics endpoint is enabled by setting the GemFire property,
+# gemfire.prometheus.metrics.port to the value derived from prometheus.startPort.
+# If false, then the JMX exporter endpoint is enabled.
+# Default: true
 prometheus.gemfire.enabled=true
-# GemFire specific metrics emission rate: Default, All, None. If not specified, then Default.
+# GemFire Prometheus metrics endpoint emission rate: Default, All, None. If unspecified, then Default.
 # This property is ignored if prometheus.gemfire.enabled is false.
+prometheus.metrics.emission=Default
+```
+
+❗️ To get all the GemFire metrics into Grafana, the emission rate must be set to `All` as follows.
+
+```properties
+locator.prometheus.metrics.emission=All
 prometheus.metrics.emission=All
 ```
 
 ## 2.2. JMX Exporter Endpoint
 
-Prior to GemFire 10.x, GemFire (and Geode) relied on the JMX exporter maintained by Prometheus. In addtion to the native Prometheus endpoint, PadoGrid continues the support for the Prometheus endpoint via the JMX exporter. You can learn more about the exporter from the following site:
+Prior to GemFire 10.x, GemFire (and Geode) relied on the JMX exporter maintained by Prometheus. In addtion to the native Prometheus Metrics Endpoint, PadoGrid continues the support for the the JMX Exporter Endpoint. You can learn more about the exporter from the following site:
 
 **URL:** [https://github.com/prometheus/jmx_exporter](https://github.com/prometheus/jmx_exporter)
 
-To enable the JMX exporter, you must disable the following properties in the `etc/clusters.properties` file as shown below. If these properties are disabled, then PadoGrid automatically switches to the JMX exporter.
+To enable the JMX Exporter Endpoint, you must disable the following properties in the `etc/clusters.properties` file as shown below. If these properties are disabled, then PadoGrid automatically switches to the JMX Exporter Endpoint.
 
 ```bash
 locator.prometheus.gemfire.enabled=false

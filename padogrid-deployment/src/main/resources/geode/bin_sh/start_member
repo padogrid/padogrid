@@ -449,19 +449,24 @@ if [ "$PROMETHEUS_ENABLED" == "true" ]; then
       # Remove the disk drive letter from the path. A workaround to a bug in the prometheus exporter.
       PROMETHEUS_CONFIG_FILE_PATH=${PROMETHEUS_CONFIG_FILE_PATH:2}
    fi
+
    if [ "$PROMETHEUS_GEMFIRE_ENABLED" == "true" ]; then
-      PROMETHEUS_METRICS_EMISSION=`getClusterProperty "prometheus.metrics.emission" $DEFAULT_PROMETHEUS_METRICS_EMISSION`
-      if [ "$PROMETHEUS_METRICS_EMISSION" != "Default" ] && [ "$PROMETHEUS_METRICS_EMISSION" != "All" ] && [ "$PROMETHEUS_METRICS_EMISSION" != "None" ]; then
-         echo >&2 "----------------------------------------------------------------"
-         echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
-         echo >&2 -e "    ${CError}ERROR:${CNone} Invalid value: prometheus.metrics.emission=$PROMETHEUS_METRICS_EMISSION. Valid values are Default, All, or None."
-         echo >&2 "           Set 'prometheus.metrics.emission' in the following cluster.properties file."  
-         echo >&2 "           $ETC_DIR/cluster.properties"
-         echo >&2 "           Command aborted."
-         echo >&2 "----------------------------------------------------------------"
-         exit 1
+      if [ $PRODUCT_MAJOR_VERSION -ge 10 ] && [ $PRODUCT_MINOR_VERSION -ge 1 ]; then
+         PROMETHEUS_METRICS_EMISSION=`getClusterProperty "prometheus.metrics.emission" $DEFAULT_PROMETHEUS_METRICS_EMISSION`
+         if [ "$PROMETHEUS_METRICS_EMISSION" != "Default" ] && [ "$PROMETHEUS_METRICS_EMISSION" != "All" ] && [ "$PROMETHEUS_METRICS_EMISSION" != "None" ]; then
+            echo >&2 "----------------------------------------------------------------"
+            echo >&2 "WORKSPACE: $PADOGRID_WORKSPACE"
+            echo >&2 -e "    ${CError}ERROR:${CNone} Invalid value: prometheus.metrics.emission=$PROMETHEUS_METRICS_EMISSION. Valid values are Default, All, or None."
+            echo >&2 "           Set 'prometheus.metrics.emission' in the following cluster.properties file."  
+            echo >&2 "           $ETC_DIR/cluster.properties"
+            echo >&2 "           Command aborted."
+            echo >&2 "----------------------------------------------------------------"
+            exit 1
+         fi
+         JAVA_OPTS="$JAVA_OPTS --J=-Dgemfire.prometheus.metrics.emission=$PROMETHEUS_METRICS_EMISSION --J=-Dgemfire.prometheus.metrics.port=$PROMETHEUS_PORT"
+      else
+         JAVA_OPTS="$JAVA_OPTS --J=-javaagent:$PROMETHEUS_JAR_PATH=$PROMETHEUS_PORT:$PROMETHEUS_CONFIG_FILE_PATH"
       fi
-      JAVA_OPTS="$JAVA_OPTS --J=-Dgemfire.prometheus.metrics.emission=$PROMETHEUS_METRICS_EMISSION --J=-Dgemfire.prometheus.metrics.port=$PROMETHEUS_PORT"
    else
       JAVA_OPTS="$JAVA_OPTS --J=-javaagent:$PROMETHEUS_JAR_PATH=$PROMETHEUS_PORT:$PROMETHEUS_CONFIG_FILE_PATH"
    fi
