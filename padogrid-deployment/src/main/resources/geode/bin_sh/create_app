@@ -182,6 +182,14 @@ else
       cp $PADOGRID_HOME/$PRODUCT/etc/template-log4j2.properties $APP_DIR/etc/log4j2.properties
    fi
 
+   # GemFire Prometheus Metrics Endpoint binds to the host address
+   if [ "$APP" == "grafana" ]; then
+      pushd $APP_DIR/etc > /dev/null 2>&1
+      sed -i$__SED_BACKUP "s/HOST-ADDRESS/$(hostname)/g" *.yml
+      rm *.yml0 > /dev/null 2>&1
+      popd > /dev/null 2>&1
+   fi
+
    # Make bin_sh scripts executables
    if [ "$GROUP_PERMISSIONS_ENABLED" == "true" ]; then
       # Set group permissions for workspace owner
