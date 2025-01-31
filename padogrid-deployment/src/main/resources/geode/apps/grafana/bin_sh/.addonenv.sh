@@ -350,4 +350,4 @@ ALLOWED_LABELS_HELP="job|namespace|service"
 #
 # PadoGrid provided folders
 #
-PADOGRID_FOLDERS="GemFire GemFireDual GemFireAll GemFire-perf_test Padogrid"
+PADOGRID_FOLDERS="GemFire GemFireDual GemFireAll GemFireTemplates GemFire-perf_test Padogrid"
