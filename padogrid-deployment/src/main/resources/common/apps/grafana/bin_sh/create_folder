@@ -51,4 +51,10 @@ if [ "$FOLDER" == "" ]; then
    FOLDERS=$DEFAULT_FOLDER
 fi
 
+__UID=`./get_folder_uid -folder $FOLDER`
+if [ "$__UID" != "" ]; then
+   echo -e >&2 "${CError}ERROR:${CNone} Folder exists [$FOLDER]. Command aborted."
+   exit 1
+fi
+
 curl -sS -X POST $GRAFANA_URL_REST/api/folders -H "Content-Type: application/json" -d '{"title": "'"$FOLDER"'"}' | jq .

@@ -276,8 +276,10 @@ if [ "$PRODUCT_HOME" == "" ]; then
    GEODE_VERSION=""
    RUN_TYPE="default"
    GEODE_MAJOR_VERSION_NUMBER=""
+   GEODE_MINOR_VERSION_NUMBER=""
    PRODUCT_VERSION=""
    PRODUCT_MAJOR_VERSION=""
+   PRODUCT_MINOR_VERSION=""
 else
    CORE_JAR=$(ls "$PRODUCT_HOME/lib/geode-core-"* 2> /dev/null)
    if [ "$CORE_JAR" == "" ]; then
