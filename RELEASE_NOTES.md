@@ -6,15 +6,15 @@ https://github.com/padogrid
 
 ## Version 1.0.3-SNAPSHOT
 
-### Release Date: 01/30/24
+### Release Date: 01/30/25
 
-- Initial release.
+- Fixed Grafana issues. Backported to 1.0.2.
 
 ---
 
 ## Version 1.0.2
 
-### Release Date: 01/30/24
+### Release Date: 01/30/25
 
 - Added comprehensive sets of Grafana dashboards in the `grafana` app for monitoring the GemFire 10.x Prometheus metrics. Similar to the PadoGrid Hazelcast Dashboards (PHD), the PadoGrid GemFire Dashboards (PGFD) includes three (3) sets of dashboards: `Single`, `Dual` and `All`.
 
