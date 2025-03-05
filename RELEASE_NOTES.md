@@ -6,10 +6,10 @@ https://github.com/padogrid
 
 ## Version 1.0.3-SNAPSHOT
 
-### Release Date: 02/17/25
+### Release Date: 03/05/25
 
 - Fixed Grafana issues. Backported to 1.0.2.
-- Fixed GemFire version and non-standard product issues that caused `update_padogrid` to output errors.
+- Fixed GemFire version and non-standard product issues that caused `update_padogrid` to output errors. This fix is temporarily on reverted.
 
 ---
 
