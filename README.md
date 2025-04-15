@@ -21,9 +21,9 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Tips of the Day
 
-1. Need GemFire Managment Console dashboards in Grafana? Check out [PadoGrid GemFire Dashboards (PGFD)](https://github.com/padogrid/padogrid/wiki/Geode-Grafana-App): Comprehensive dashboards that complement the GemFire Management Console.
+1. Using Power BI with GemFire? [Bundle: Power BI](https://github.com/padogrid/bundle-geode-1-app-perf_test_powerbi-cluster-powerbi) provides step-by-step instructions.
 
-1. Did you know [PadoGrid Grafana Dashboards](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general) can be automatically installed to Grafana instances running on Docker and Kuberntes?
+1. How to detect and recover from a cluster split-brain problem in Geode/GemFire? The [Geode/GemFire Split-Brain](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) bundle walks through all possible scenarios and provides tools and guidelines to quickly recover from the disaster.
 
 ---
 
@@ -37,7 +37,7 @@ chmod 755 install_padogrid
 ./install_padogrid
 ```
 
-✏️  *Note that `install_padogrid` is part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
+✏️  *Note that `install_padogrid` is a part of PadoGrid. Once PadoGrid is installed, you can run `install_padogrid` at any time to upgrade or downgrade products.*
 
 [**Quick Start**](https://github.com/padogrid/padogrid/wiki/Quick-Start) provides detailed instructions. 
 
