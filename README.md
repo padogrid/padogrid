@@ -21,9 +21,9 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Tips of the Day
 
-1. Using Power BI with GemFire? [Bundle: Power BI](https://github.com/padogrid/bundle-geode-1-app-perf_test_powerbi-cluster-powerbi) provides step-by-step instructions.
+1. Testing cluster scalability? It's as simple as running [`add_member`/`remove_member`](https://github.com/padogrid/padogrid/wiki/Running-Clusters) in PadoGrid.
 
-1. How to detect and recover from a cluster split-brain problem in Geode/GemFire? The [Geode/GemFire Split-Brain](https://github.com/padogrid/bundle-geode-1-app-perf_test_sb-cluster-sb) bundle walks through all possible scenarios and provides tools and guidelines to quickly recover from the disaster.
+1. Did you know PadoGrid can quickly spawn multiple clusters of different products on your laptop without resorting to containers? Check out [Non-Conflicting Clusters Example](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers#non-conflicting-clusters-example)
 
 ---
 
