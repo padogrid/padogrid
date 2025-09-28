@@ -52,7 +52,7 @@ public class VirtualClusters implements Constants {
 		writeLine("   " + executable + " -config config_file [-log log_file] [-?]");
 		writeLine();
 		writeLine("DESCRIPTION");
-		writeLine("   Starts virtual clusters defined by the sepcified configuration file. This");
+		writeLine("   Starts virtual clusters defined by the specified configuration file. This");
 		writeLine("   command is useful for starting plugin-controlled and/or bridged virtual clusters.");
 		writeLine("   A plugin-controlled virtual cluster applies application logic to data and a bridged");
 		writeLine("   virtual cluster moves data from cluster to cluster.");
