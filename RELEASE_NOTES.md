@@ -10,6 +10,10 @@ https://github.com/padogrid
 
 - Fixed Grafana issues. Backported to 1.0.2.
 - Fixed GemFire version and non-standard product issues that caused `update_padogrid` to output errors. This fix is temporarily on reverted. 
+- Updated docker support for the latest WSL 2.
+  - Added write permissions to the Docker `padogrid` directory to allow the WSL system user to run Docker Compose. Note that this now requires `sudo` to remove the `padogrid`directory.
+  - Removed the obsolete version field from the Docker Compose template.
+  - Added support for WSL Linux IP.
 
 ---
 
