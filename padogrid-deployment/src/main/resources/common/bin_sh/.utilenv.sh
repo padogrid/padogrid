@@ -890,7 +890,7 @@ function getMemberPrefix
    elif [ "$PRODUCT" == "hadoop" ]; then
       echo "${__CLUSTER}-datanode-`hostname`-"
    else
-      echo "${__CLUSTER}-node-`hostname`-"
+      echo "${__CLUSTER}-`hostname`-"
    fi
 }
 
@@ -3700,8 +3700,13 @@ function showTree
 function getHostIPv4List
 {
    local HOST_IPS=""
-   if [[ ${OS_NAME} == DARWIN* ]]; then
-      IP_LIST=$(ifconfig -u |grep "inet " |awk '{print $2}')
+   if [[ ${OS_NAME} == DARWIN* || -n "$IS_WSL" || -n "$WSL_DISTRO_NAME" ]]; then
+      if [[ ${OS_NAME} == DARWIN* ]]; then
+         IP_LIST=$(ifconfig -u |grep "inet " |awk '{print $2}')
+      else
+         IP_LIST=$(ifconfig |grep "inet " |awk '{print $2}')
+      fi
+
       for i in $IP_LIST; do
          if [[ "$i" != *".1" ]]; then
             if [ "$HOST_IPS" == "" ]; then
@@ -3713,7 +3718,9 @@ function getHostIPv4List
       done
       # Determine the IP address using the router to the google DNS server
       if [ "$HOST_IPS" == "" ]; then
-         HOST_IPS=$(ipconfig getifaddr $(route get 8.8.8.8 | awk '/interface: / {print $2; }'))
+         if [[ ${OS_NAME} == DARWIN* ]]; then
+            HOST_IPS=$(ipconfig getifaddr $(route get 8.8.8.8 | awk '/interface: / {print $2; }'))
+	 fi
       fi
    else
       for i in $(hostname -i); do
@@ -3760,7 +3767,6 @@ function sortVersionList
 #    PADO_VERSIONS
 #    COHERENCE_VERSIONS
 #    GEMFIRE_VERSIONS
-#    GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS
 #    GEODE_VERSIONS
 #    GRAFANA_ENTERPRISE_VERSIONS
 #    GRAFANA_OSS_VERSIONS
@@ -3808,7 +3814,6 @@ function determineInstalledProductVersions
    PADOWEB_VERSIONS=""
    COHERENCE_VERSIONS=""
    GEMFIRE_VERSIONS=""
-   GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS=""
    GEODE_VERSIONS=""
    GRAFANA_VERSIONS=""
    HADOOP_VERSIONS=""
@@ -3915,16 +3920,6 @@ function determineInstalledProductVersions
             __versions="$__versions $__version "
          done
          GEMFIRE_VERSIONS=$(sortVersionList "$__versions")
-      fi
-
-      # GemFire Management Console
-      if [ "$PRODUCT" == "" ] || [ "$PRODUCT" == "gemfire-mc" ]; then
-         __versions=""
-         for i in gemfire-management-console-*; do
-            __version=${i#gemfire-management-console-}
-            __versions="$__versions $__version "
-         done
-         GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS=$(sortVersionList "$__versions")
       fi
 
       # Geode
@@ -4246,10 +4241,7 @@ function getCurrentProductVersions
    fi
    __DERBY_VERSION=${DERBY_HOME#*db-derby-}
    __JAVA_VERSION=$JAVA_VERSION
-   __GEMFIRE_VERSION=${GEMFIRE_HOME#*vmware-gemfire-}
-   if [ "$__GEMFIRE_VERSION" == "" ]; then
-      __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
-   fi
+   __GEMFIRE_VERSION=${GEMFIRE_HOME#*pivotal-gemfire-}
    __GEODE_VERSION=${GEODE_HOME##*apache-geode-}
    __GRAFANA_VERSION=${GRAFANA_HOME#*grafana-}
    __HAZELCAST_DESKTOP_VERSION=${HAZELCAST_DESKTOP_HOME##*hazelcast-desktop_}
@@ -4343,7 +4335,6 @@ function getInstalledProductVersions
     padodesktop ) VERSIONS=("${PADODESKTOP_VERSIONS[@]}");;
     padoweb ) VERSIONS=("${PADOWEB_VERSIONS[@]}");;
     gemfire ) VERSIONS=("${GEMFIRE_VERSIONS[@]}");;
-    gemfire-mc ) VERSIONS=("${GEMFIRE_MANAGEMENT_CONSOLE_VERSIONS[@]}");;
     geode ) VERSIONS=("${GEODE_VERSIONS[@]}");;
     hazelcast-enterprise ) VERSIONS=("${HAZELCAST_ENTERPRISE_VERSIONS[@]}");;
     hazelcast-oss ) VERSIONS=("${HAZELCAST_OSS_VERSIONS[@]}");;
@@ -4628,27 +4619,6 @@ function isPadoCluster
    fi
    local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
    if [ -f "$__CLUSTER_DIR/bin_sh/import_csv" ]; then
-      echo "true" 
-   else
-      echo "false" 
-   fi
-}
-
-#
-# Returns "true" if the specified cluster is a Geode cluster; "false", otherwise.
-#
-# @required PADOGRID_WORKSPACE Current PadoGrid workspace path.
-# @param    clusterName        Optional cluster name. If not specified, then it
-#                              assumes the current cluster.
-#
-function isGeodeCluster
-{
-   local __CLUSTER="$1"
-   if [ "$__CLUSTER" == "" ]; then
-      __CLUSTER=$CLUSTER
-   fi
-   local __CLUSTER_DIR=$PADOGRID_WORKSPACE/clusters/$__CLUSTER
-   if [ -f "$__CLUSTER_DIR/etc/cache.xml" ]; then
       echo "true" 
    else
       echo "false" 

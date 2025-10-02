@@ -199,6 +199,10 @@ if [ "$DOCKER" == "compose" ]; then
    mkdir -p $ETC_DIR
    mkdir -p $LIB_DIR
    mkdir -p $PLUGINS_DIR
+   # WSL runs docker with a system user, which requires write access to the padogrid directory.
+   if [[ -n "$IS_WSL" || -n "$WSL_DISTRO_NAME" ]]; then
+      chmod 777 $CLUSTER_DIR/padogrid
+   fi
 
    # Copy Docker doc
    cp -rf $BASE_DIR/docker/compose/$DOCKER_DOC $CLUSTER_DIR
