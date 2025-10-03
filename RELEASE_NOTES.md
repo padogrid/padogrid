@@ -6,7 +6,7 @@ https://github.com/padogrid
 
 ## Version 1.0.3-SNAPSHOT
 
-### Release Date: 03/05/25
+### Release Date: 10/03/25
 
 - Fixed Grafana issues. Backported to 1.0.2.
 - Fixed GemFire version and non-standard product issues that caused `update_padogrid` to output errors. This fix is temporarily on reverted. 
@@ -14,6 +14,7 @@ https://github.com/padogrid
   - Added write permissions to the Docker `padogrid` directory to allow the WSL system user to run Docker Compose. Note that this now requires `sudo` to remove the `padogrid`directory.
   - Removed the obsolete version field from the Docker Compose template.
   - Added support for WSL Linux IP.
+- `remove_cluster` and `remove_workspace` now properly remove the environment directories located in the `~/.padogrid`.
 
 ---
 

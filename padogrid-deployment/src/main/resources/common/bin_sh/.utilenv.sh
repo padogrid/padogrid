@@ -1541,6 +1541,47 @@ function updateWorkspaceEnvFile
 }
 
 #
+# Removes the workspace env file, i.e., $HOME/.padogrid/workspaces/<rwe>/<workspace>/workspaceenv.sh.
+# If the workspace env file is not found then it returns silently.
+# @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
+# 
+function removeWorkspaceEnvFile
+{
+   local __WORKSPACE_PATH="$1"
+   if [ "$__WORKSPACE_PATH" == "" ]; then
+      __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
+   fi
+   local RWE=$(basename $(dirname "$__WORKSPACE_PATH"))
+   local WORKSPACE=$(basename "$__WORKSPACE_PATH")
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+   local HOME_WORKSPACEENV_FILE="$HOME_WORKSPACE_DIR/workspaceenv.sh"
+
+   if [ -f "$HOME_WORKSPACE_FILE" ]; then
+      rm -f "$HOME_WORKSPACE_FILE"
+   fi
+}
+
+#
+# Removes the workspace env directory, i.e., $HOME/.padogrid/workspaces/<rwe>/<workspace>.
+# If the workspace env directory is not found then it returns silently.
+# @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
+# 
+function removeWorkspaceEnvDir
+{
+   local __WORKSPACE_PATH="$1"
+   if [ "$__WORKSPACE_PATH" == "" ]; then
+      __WORKSPACE_PATH="$PADOGRID_WORKSPACE"
+   fi
+   local RWE=$(basename $(dirname "$__WORKSPACE_PATH"))
+   local WORKSPACE=$(basename "$__WORKSPACE_PATH")
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+
+   if [ -d "$HOME_WORKSPACE_DIR" ]; then
+      rm -rf "$HOME_WORKSPACE_DIR"
+   fi
+}
+
+#
 # Retrieves the workspace environment variables set in the
 # $HOME/.padogrid/workspaces/<rwe>/<workspace>/workspaceenv.sh file.
 # @param workspacePath Workspace path. If not specified then PADOGRID_WORKSPACE is assigned.
@@ -1647,6 +1688,51 @@ function updateClusterEnvFile
       echo "PRODUCT=$PRODUCT" > "$HOME_CLUSTERENV_FILE"
    fi
    echo "CLUSTER_TYPE=$CLUSTER_TYPE" >> "$HOME_CLUSTERENV_FILE"
+}
+
+#
+# Removes the cluster env file, i.e., $HOME/.padogrid/<rwe>/<workspace>/clusters/<cluster>/clusterenv.sh.
+# If the cluster env file is not found then it returns silently.
+# @param clusterPath Cluster path. If not specified then $PADOGRID_WORKSPACE/clusters/$CLUSTER is assigned.
+# 
+function removeClusterEnvFile
+{
+   local __CLUSTER_PATH="$1"
+   if [ "$__CLUSTER_PATH" == "" ]; then
+      __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   fi
+   local __CLUSTER=$(basename "$__CLUSTER_PATH")
+   local WORKSPACE_DIR=$(dirname $(dirname "$__CLUSTER_PATH"))
+   local WORKSPACE=$(basename "$WORKSPACE_DIR")
+   local RWE=$(basename $(dirname "$WORKSPACE_DIR"))
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+   local HOME_CLUSTER_DIR="$HOME_WORKSPACE_DIR/clusters/$__CLUSTER"
+   local HOME_CLUSTERENV_FILE="$HOME_CLUSTER_DIR/clusterenv.sh"
+   if [ -f "$HOME_CLUSTERENV_FILE" ]; then
+      rm -f "$HOME_CLUSTERENV_FILE"
+   fi
+}
+
+#
+# Removes the cluster env directory, i.e., $HOME/.padogrid/<rwe>/<workspace>/clusters/<cluster>.
+# If the cluster env directory is not found then it returns silently.
+# @param clusterPath Cluster path. If not specified then $PADOGRID_WORKSPACE/clusters/$CLUSTER is assigned.
+# 
+function removeClusterEnvDir
+{
+   local __CLUSTER_PATH="$1"
+   if [ "$__CLUSTER_PATH" == "" ]; then
+      __CLUSTER_PATH="$PADOGRID_WORKSPACE/clusters/$CLUSTER"
+   fi
+   local __CLUSTER=$(basename "$__CLUSTER_PATH")
+   local WORKSPACE_DIR=$(dirname $(dirname "$__CLUSTER_PATH"))
+   local WORKSPACE=$(basename "$WORKSPACE_DIR")
+   local RWE=$(basename $(dirname "$WORKSPACE_DIR"))
+   local HOME_WORKSPACE_DIR="$HOME/.padogrid/workspaces/$RWE/$WORKSPACE"
+   local HOME_CLUSTER_DIR="$HOME_WORKSPACE_DIR/clusters/$__CLUSTER"
+   if [ -d "$HOME_CLUSTER_DIR" ]; then
+      rm -rf "$HOME_CLUSTER_DIR"
+   fi
 }
 
 #
