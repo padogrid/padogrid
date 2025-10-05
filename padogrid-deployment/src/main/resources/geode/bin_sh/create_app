@@ -144,6 +144,12 @@ if [ -d "$APP_DIR" ]; then
    exit 1
 fi
 
+# Get the host IP. Last IPv4 in the list.
+HOST_IP=$(hostname)
+for i in $(getHostIPv4List); do
+   HOST_IP=$i
+done
+
 if [[ "$COMMON_APP_LIST" == *"$APP"* ]]; then
 
    #
@@ -185,7 +191,7 @@ else
    # GemFire Prometheus Metrics Endpoint binds to the host address
    if [ "$APP" == "grafana" ]; then
       pushd $APP_DIR/etc > /dev/null 2>&1
-      sed -i$__SED_BACKUP "s/HOST-ADDRESS/$(hostname)/g" *.yml
+      sed -i$__SED_BACKUP "s/HOST-ADDRESS/$HOST_IP/g" *.yml
       rm *.yml0 > /dev/null 2>&1
       popd > /dev/null 2>&1
    fi
