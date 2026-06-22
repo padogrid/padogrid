@@ -313,6 +313,7 @@ if [ "$POD" != "local" ] && [ "$REMOTE_SPECIFIED" == "false" ]; then
    exit
 elif [ "$SIMULATE" == "true" ]; then
    PID="Simulated"
+   echo "nohup redis-server $CONFIG_FILE --port $MEMBER_PORT >> $LOG_FILE &"
 elif [ "$CREATE_SCRIPT" == "true" ]; then
    PID="Script"
 else
@@ -321,7 +322,7 @@ else
       mkdir -p $LOG_DIR
    fi
    if [ "$RUN_SCRIPT" != "" ]; then
-         nohup $RUN_SCRIPT >> $LOG_FILE &
+      nohup $RUN_SCRIPT >> $LOG_FILE &
    else
       CONFIG_FILE=$MEMBER_DIR/redis.conf
       if [ ! -f "$CONFIG_FILE" ]; then
@@ -405,6 +406,7 @@ echo "MEMBER_HTTP_PORT: $MEMBER_HTTP_PORT"
 if [ "$RUN_SCRIPT" != "" ]; then
 echo -e "      RUN_SCRIPT: ${CLightGreen}$RUN_SCRIPT${CNone}"
 fi
+echo "             PID: $PID"
 echo "----------------------------------------------------------------"
 
 if [ "$SIMULATE" == "true" ]; then

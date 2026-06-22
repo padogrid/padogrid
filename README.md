@@ -15,15 +15,15 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Announcements
 
-- *January 30, 2025 - [PadoGrid v1.0.2 released!](https://github.com/padogrid/padogrid/releases/tag/padogrid_1.0.2) This release includes comprehensive Grafana dashboards for monitoring GemFire clusters in real time. The container version of the Grafana dashboards is also available at [Docker Hub](https://hub.docker.com/repository/docker/padogrid/padogrid-grafana/general).*
+- *June, 2026 - PadoGrid provides an optimal distributed environment for data scientists in top-tier research institutions that face day-to-day time-consuming, complex operation of data-preparation, data-filtering, data-distribution, computation-parallelization, results-collection, and report-generation.*
 
 ---
 
 ## Tips of the Day
 
-1. Testing cluster scalability? It's as simple as running [`add_member`/`remove_member`](https://github.com/padogrid/padogrid/wiki/Running-Clusters) in PadoGrid.
+1. Want to try PadoGrid without installing it on your host? [PadoGrid Tutorial](https://github.com/padogrid/bundle-none-tutorial-padogrid) shows you how.
 
-1. Did you know PadoGrid can quickly spawn multiple clusters of different products on your laptop without resorting to containers? Check out [Non-Conflicting Clusters Example](https://github.com/padogrid/padogrid/wiki/Default-Port-Numbers#non-conflicting-clusters-example)
+1. Want to cluster MQTT brokers? [Try PadoGrid's Mosquitto clusters](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT)
 
 ---
 
