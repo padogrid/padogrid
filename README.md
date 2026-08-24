@@ -21,9 +21,9 @@ PadoGrid provides a *distributed workspace* environment for easily deploying and
 
 ## Tips of the Day
 
-1. Want to try PadoGrid without installing it on your host? [PadoGrid Tutorial](https://github.com/padogrid/bundle-none-tutorial-padogrid) shows you how.
+1. Need the Hazelcast Managment Center dashboards in Grafana? Check out [PadoGrid Hazelcast Dashboards (PHD)](https://github.com/padogrid/padogrid/wiki/Hazelcast-Grafana-App): Comprehensive dashboards that complement the Hazelcast Management Center.
 
-1. Want to cluster MQTT brokers? [Try PadoGrid's Mosquitto clusters](https://github.com/padogrid/padogrid/wiki/Clustering-MQTT)
+1. Need GemFire Managment Console dashboards in Grafana? Check out [PadoGrid GemFire Dashboards (PGFD)](https://github.com/padogrid/padogrid/wiki/Geode-Grafana-App): Comprehensive dashboards that complement the GemFire Management Console.
 
 ---
 
